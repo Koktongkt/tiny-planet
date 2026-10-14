@@ -69,3 +69,30 @@ The day cycles on its own: one full day every 3 minutes. Phase φ=0 is noon and 
   - About 900 swaying **wildflowers** on stems.
   - A **napping cat** curled by the bridge, breathing slowly with its tail twitching.
 - **Views:** `?view=detail` is a fixed close-up of the village and bridge, used for details.png.
+
+## v4: bigger world, biomes, real people
+- **Scale:** the planet radius grew from 5 to 8, about 2.6× the walkable area. Hill amplitude scaled with it. Sizes, colliders and clearances are defined in world units (`K = 5/R`).
+- **Zones**, laid out to stay clear of the path, stream and village (`ZONES` in `world.js`, props in `zones.jsx`):
+  - **Lake:** a carved basin with a sandy shore, a watercolour water cap (ripple noise, foam rim), a plank **dock** with a lantern, a bobbing **rowboat**, reeds, rocks and an angler.
+  - **Cliff and waterfall:** a mesa with rocky sides (vertex colour by slope), an animated falling sheet, foam puffs, a plunge pool and a creek running to the lake.
+  - **Rice terraces:** quantised terrain steps with teal paddy tops, about 1,400 swaying rice clumps, a scarecrow, a hut and two workers.
+  - **Train loop:** two rails around the southern latitude ring with about 220 sleepers, and a steam engine with three coaches (lit windows) and smoke.
+  - **Harbour:** a bay with a pier, three moored boats, a red-and-white lighthouse, crates and barrels, harbour houses and two dock workers.
+  - **Mossy ruins:** broken and tilted columns with moss caps and ivy, an arch, a fallen column, slabs and a visitor gazing up.
+  - **Camphor forest:** 34 broad, multi-blob camphors with ferns, plus a **giant tree** on a hill with flared roots, a shimenawa rope with paper streamers, and a torii.
+  - **Meadow hills:** rolling hills with about 1,500 flowers, and a **windmill field** of six mills.
+- **Performance:** everything repeated is instanced. Zone props, harbour houses and townsfolk are **distance-culled** in walk and close-up views and always shown in planet view. The meadow flowers and ferns are kept simple.
+- **People** (`people.jsx`), built from smooth capsules and lathe shapes:
+  - Lathe torso and skirt, hips, thighs and shins with knees, feet, upper arms and forearms with elbows, and hands.
+  - Faces have eyes with highlights, brows, a nose, a mouth, ears and cheeks.
+  - Hairstyles: short, bob, long, bun and pigtails. Hats: straw, cap and kerchief.
+  - Outfits: dress, overalls, apron dress, shirt with trousers, shorts, and a sailor collar.
+  - Ages and sizes: toddler, kids, teen, adults and elders. Elders are hunched and walk slower.
+  - **Walk cycle:** thighs swing with knees bending as each leg comes forward, feet roll, arms swing opposite the legs with bent elbows, the pelvis bobs and sways, the chest counter-twists, and the head counter-bobs. Idle pose: breathing, glancing around, and some figures wave.
+- **The traveller** is now a kid in a straw hat, overalls and satchel (no cape). Hold Shift to run.
+- **Townsfolk:** 10 walk the path, 3 chat in the village square, and others pace at the harbour, terraces, mills and giant tree, fish from the lake dock, or stand at the ruins.
+- **Views:**
+  - `?view=hero`: front three-quarter shot of the traveller.
+  - `?view=lineup`: every character type standing in a row.
+  - `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills`: zone close-ups.
+  - `&trainAt=<lon>`: parks the train at a set position.
