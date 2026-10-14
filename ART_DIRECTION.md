@@ -96,3 +96,21 @@ The day cycles on its own: one full day every 3 minutes. Phase φ=0 is noon and 
   - `?view=lineup`: every character type standing in a row.
   - `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills`: zone close-ups.
   - `&trainAt=<lon>`: parks the train at a set position.
+
+## Soft-body characters (current default)
+The player and all 22 villagers share one **soft-body** look: an SDF of head, neck, torso, arms and legs blended with smooth-min, baked once per body type with marching cubes, then skinned to a small skeleton (GPU skinning). Limbs grow out of the body with no seams. Clothes (overalls, dresses, aprons, yukata, sailor collars, jackets, cardigans) are painted in the fragment shader from rest-pose regions with anti-aliased edges. Rigid pieces (hair, hats, sleeves, cuffs, scarf, satchel, props) ride on bones.
+
+### Flags
+- **Default:** soft-body player (`GhibliPerson`) and soft-body villagers (`Character` + `villagers.js`).
+- `?oldchar=1`: restores the v4 stick-figure player and villagers.
+- `?char=sprite`: the 2.5D billboard traveller (front/back/side sheet in `src/assets/traveller-sheet.png`).
+- Character studio: `?view=charstudio` with `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`.
+
+### Variety
+Villagers differ by body (tall / short / round / slim, toddler → hunched elder), hair (bob, braids, bun, ponytail, short, long, bald, beard, grey), clothing matching their zone (fishers at the harbour, farmers at the terraces, bakers and elders in the square), props (baskets, fishing rods, parasols, canes, glasses), and walk / idle personality.
+
+### Performance
+- Body meshes are cached per body-parameter set; materials are cached per outfit.
+- Static rigid pieces under each bone (hat, glasses, buttons, props, scarf ring, straps) are **merged** into one cel mesh + one basic mesh + one outline mesh at mount time.
+- Villagers fade through three LOD levels by camera distance (props and sleeves drop first, face detail next). Whole walkers are culled past the planet horizon and, in close views, past ~12 units.
+- A planet-wide **horizon cull** also hides world meshes on the far side (houses, trees, flowers) so the orbit overview stays under ~1,000 draw calls.

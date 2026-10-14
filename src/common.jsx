@@ -12,7 +12,7 @@ export const toon = (c, o = {}) => new THREE.MeshToonMaterial({ color: c, gradie
 export const glowMats = []
 export const glow = (c) => { const m = new THREE.MeshBasicMaterial({ color: c, toneMapped: false }); m.userData.base = C(c); glowMats.push(m); return m }
 export const MAT = { wall: toon('#fbf3e4'), wall2: toon('#f2e2c4'), roofs: ['#d9655b', '#5f8fc4', '#e8a24a', '#c97b9a'].map(c => toon(c)), wood: toon('#8a5a3c'), stone: toon('#cfc3b0'), white: toon('#fffaf0'), win: glow('#ffcf6e'), lamp: glow('#ffd27a'), sail: toon('#f6ead2') }
-export const VIEW = { mode: ['orbit', 'detail', 'lineup', 'zone', 'hero'].includes(q.get('view')) ? q.get('view') : 'follow' }
+export const VIEW = { mode: ['orbit', 'detail', 'lineup', 'zone', 'hero', 'charstudio'].includes(q.get('view')) ? q.get('view') : 'follow' }
 export const OCC = [], occ = (el) => { if (el && !OCC.includes(el)) OCC.push(el) }
 export const RC = new THREE.Raycaster()
 window.__setView = (m) => { VIEW.mode = m }

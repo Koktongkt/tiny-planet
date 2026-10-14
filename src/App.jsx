@@ -6,6 +6,12 @@ import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocess
 import { BlendFunction } from 'postprocessing'
 import { R, K, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W } from './world.js'
 import { Person, PEOPLE } from './people.jsx'
+import { GhibliPerson, Character } from './GhibliPerson.jsx'
+import { VILLAGERS } from './villagers.js'
+import { GhibliPersonV1 } from './GhibliPersonV1.jsx'
+import { SpritePerson } from './SpritePerson.jsx'
+const SPRITE = q.get('char') === 'sprite'
+const NEWCHAR = !q.has('oldchar')
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { INK, T, ss, C, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
@@ -384,6 +390,29 @@ const WALKERS = (() => {
   W.push({ cfg: P_[11], mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.3 })
   return W
 })()
+const NEW_WALKERS = (() => {
+  const W = [], by = z => VILLAGERS.filter(v => v.zone === z)
+  by('path').forEach((cfg, i, a) => W.push({ cfg, mode: 'path', t0: (i / a.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (cfg.age === 'elder' ? 0.55 : 1), off: (rnd() - 0.5) * 0.1 }))
+  const sq = around(VILLAGE, 0.0, 0)
+  by('square').forEach((cfg, j) => { const n = around(sq, 0.22 / R, j * 2.1); W.push({ cfg, mode: 'idle', n, fwd: sq.clone().sub(n) }) })
+  const [fm, fw, sg, db] = by('harbour'), pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
+  W.push({ cfg: fm, mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.22 })
+  W.push({ cfg: fw, mode: 'idle', n: around(Zc.harbour, 0.22 * 1.2, 2.3), fwd: Zc.harbour.clone() })
+  W.push({ cfg: sg, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2 })
+  W.push({ cfg: db, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45 })
+  W.push({ cfg: by('lake')[0], mode: 'idle', n: (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })(), fwd: Zc.lake.clone(), dock: true })
+  const [fa, fwf] = by('terraces')
+  W.push({ cfg: fa, mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18 })
+  W.push({ cfg: fwf, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12 })
+  W.push({ cfg: by('ruins')[0], mode: 'idle', n: around(Zc.ruins, 0.25 / R, 4.0), fwd: Zc.ruins.clone(), look: -0.35 })
+  W.push({ cfg: by('mills')[0], mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35 })
+  const [bs, td] = by('giant')
+  W.push({ cfg: bs, mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3 })
+  W.push({ cfg: td, mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.3 })
+  return W
+})()
+const _c0 = new THREE.Vector3()
+const RATE = { toddler: 12, kid: 10.5, teen: 9, adult: 8, elder: 6 }
 function Walker({ w, i }) {
   const ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0 }), [])
   const camera = useThree(s => s.camera)
@@ -394,18 +423,23 @@ function Walker({ w, i }) {
     else if (w.mode === 'pace') { const ph = t * w.w + i, s = Math.sin(ph), c = Math.cos(ph); n = w.n.clone().addScaledVector(w.tan, s * w.range / R).normalize(); fwd = w.tan.clone().multiplyScalar(c >= 0 ? 1 : -1); mv = ss(0.12, 0.35, Math.abs(c)) }
     else { n = w.n.clone().normalize(); fwd = w.fwd.clone(); mv = 0 }
     fwd.addScaledVector(n, -fwd.dot(n)).normalize()
-    st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move
+    st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (NEWCHAR ? (w.cfg.walk?.rate ?? RATE[w.cfg.age] ?? 8) : w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move
     const g = ref.current; g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(n, fwd), n, fwd))
     g.position.copy(n).multiplyScalar(w.dock ? R + LAKE_W + 0.135 : R + height(n) + 0.005 + bridgeLift(n))
-    if (VIEW.mode !== 'orbit' && planetRef.current) { _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); g.visible = camera.position.distanceTo(_f) < 12 } else g.visible = true
+    if (planetRef.current) { // cull by distance (close views) and by horizon (anything on the planet's far side)
+      _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); _c0.setFromMatrixPosition(planetRef.current.matrixWorld)
+      const up = _f.clone().sub(_c0).normalize(), toCam = camera.position.clone().sub(_f).normalize()
+      g.visible = up.dot(toCam) > -0.05 && (VIEW.mode === 'orbit' || camera.position.distanceTo(_f) < 12) } else g.visible = true
   })
-  return <group ref={ref}><Person cfg={w.cfg} st={st} seed={i} /></group>
+  return <group ref={ref}>{NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 const LINEUP = around(Zc.meadow, 0.1, 2.4)
 function Lineup() {
-  const sts = useMemo(() => PEOPLE.map((_, i) => ({ phase: i * 0.7, move: i % 3 === 0 ? 0 : 1, t: 0, wave: i % 3 === 0 })), [])
+  const LIST = NEWCHAR ? VILLAGERS : PEOPLE
+  const sts = useMemo(() => LIST.map((_, i) => ({ phase: i * 0.7, move: NEWCHAR ? (q.has('walk') ? 1 : 0) : i % 3 === 0 ? 0 : 1, t: 0, wave: i % 3 === 0 })), [])
   useFrame((_, dt) => { sts.forEach((st, i) => { st.t = wind.time.value; st.phase += dt * 8 * st.move }) })
   const f = tangentAt(LINEUP, 0), side = new THREE.Vector3().crossVectors(LINEUP, f)
+  if (NEWCHAR) return LIST.map((cfg, i) => { const row = Math.floor(i / 8), k = i % 8, nr = row < 2 ? 8 : LIST.length - 16; const n = LINEUP.clone().addScaledVector(side, (k - (nr - 1) / 2) * 0.24 / R + (row % 2) * 0.1 / R).addScaledVector(f, -row * 0.4 / R).normalize(); return <Basis key={i} n={n} fwd={f}><Character cfg={cfg} st={sts[i]} res={56} scale={0.8} /></Basis> })
   return PEOPLE.map((cfg, i) => { const n = LINEUP.clone().addScaledVector(side, (i - (PEOPLE.length - 1) / 2) * 0.17 / R).addScaledVector(f, (i % 2) * 0.12 / R).normalize(); return <Basis key={i} n={n} fwd={f}><Person cfg={cfg} st={sts[i]} seed={i} /></Basis> })
 }
 
@@ -465,7 +499,9 @@ function stepPlayer(dt) {
   P.phase += dt * (KEYS.shift ? 13 : 9.5) * P.move
 }
 const PM = { tunic: toon('#5f8fc4'), skin: toon('#f8d9bf'), hat: toon('#e9c46a'), band: toon('#d9655b'), cape: toon('#d9655b', { side: THREE.DoubleSide }), boot: toon('#6b4a3a'), eye: toon('#2e2420'), cheek: toon('#f4a3a0'), bag: toon('#b98a5a') }
-const PST = { phase: 0, move: 0, t: 0 }
+const PST = { phase: 0, move: 0, t: 0, turn: 0, dist: 0 }
+const _pp = new THREE.Vector3()
+const _pf = new THREE.Vector3()
 function Traveller() {
   const ref = useRef()
   useFrame((_, dt) => {
@@ -474,10 +510,15 @@ function Traveller() {
     ref.current.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, P.n, P.fwd))
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h)
     PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
+    if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
+    if (_pf.lengthSq() > 0) { const a = Math.atan2(_pf.clone().cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
   })
-  return <group ref={ref}><Person cfg={PEOPLE[0]} st={PST} /></group>
+  return <group ref={ref}>{SPRITE ? <SpritePerson st={PST} /> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}</group>
 }
+const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
 const ZVIEWS = {
+  'square': { cam: around(VILLAGE, 1.3 / R, 0.4), ch: 0.6, look: VILLAGE, lh: 0.2 },
+  'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 },
   'lake-waterfall': { cam: around(Zc.lake, 0.42, 3.9), ch: 2.4, look: Zc.lake.clone().lerp(Zc.cliff, 0.55), lh: 0.2 },
   'terraces-train': { cam: dir(-1.2, 2.75), ch: 2.0, look: Zc.terraces.clone().lerp(dir(-0.95, 2.7), 0.45), lh: 0.2 },
   'harbour-ruins': { cam: dir(-0.1, 3.7), ch: 3.4, look: Zc.harbour.clone().lerp(Zc.ruins, 0.45), lh: 0.0 },
@@ -507,7 +548,7 @@ function Rig() {
       goal.copy(P.wPos).addScaledVector(P.wFwd, 0.95).addScaledVector(_s, 0.45).addScaledVector(P.wUp, 0.42)
       camera.position.lerp(goal, 1); camera.up.copy(P.wUp); look.copy(P.wPos).addScaledVector(P.wUp, 0.24); camera.lookAt(look)
     } else if (VIEW.mode === 'zone' || VIEW.mode === 'lineup') {
-      const zv_ = VIEW.mode === 'lineup' ? { cam: LINEUP.clone().addScaledVector(tangentAt(LINEUP, 0), 2.4 / R).normalize(), ch: 0.75, look: LINEUP, lh: 0.28 } : ZVIEWS[q.get('z')] || ZVIEWS.lake
+      const zv_ = VIEW.mode === 'lineup' ? { cam: LINEUP.clone().addScaledVector(tangentAt(LINEUP, 0), 2.3 / R).normalize(), ch: 1.1, look: LINEUP.clone().addScaledVector(tangentAt(LINEUP, 0), -0.4 / R).normalize(), lh: 0.25 } : ZVIEWS[q.get('z')] || ZVIEWS.lake
       const camL = zv_.cam.clone().normalize().multiplyScalar(R + Math.max(height(zv_.cam), -0.1) + zv_.ch), lookL = zv_.look.clone().normalize().multiplyScalar(R + height(zv_.look) + zv_.lh)
       camera.position.copy(camL.applyMatrix4(g.matrixWorld)); camera.up.copy(zv_.cam.clone().normalize().transformDirection(g.matrixWorld)); look.copy(lookL.applyMatrix4(g.matrixWorld)); camera.lookAt(look)
     } else if (VIEW.mode === 'detail') {
@@ -532,7 +573,7 @@ function Planet() {
     {HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
     {MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
     {[dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
-    {!q.has('novill') && WALKERS.map((w, i) => <Walker key={i} w={w} i={i} />)}
+    {!q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {VIEW.mode === 'lineup' && <Lineup />}
     <Zones />
     {HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
@@ -542,6 +583,30 @@ function Planet() {
   </group></group>
 }
 
+function Stats() {
+  const gl = useThree(s => s.gl), scene = useThree(s => s.scene)
+  useEffect(() => { gl.info.autoReset = false; window.__scene = scene }, [])
+  useFrame(() => { window.__calls = gl.info.render.calls; window.__tris = gl.info.render.triangles; gl.info.reset() }, -100)
+  return null
+}
+// Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
+// Uses layers, not .visible, so it never fights components that toggle visibility themselves.
+function HorizonCull() {
+  const camera = useThree(s => s.camera), n = useRef(0), list = useRef(null), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), [])
+  useFrame(() => {
+    const pl = planetRef.current; if (!pl || n.current++ % 4) return
+    if (!list.current || n.current % 240 === 1) { list.current = []; pl.traverse(o => { if ((o.isMesh || o.isPoints) && !o.isInstancedMesh && !o.isSkinnedMesh && o.geometry && o !== pl) list.current.push(o) }) }
+    _o.setFromMatrixPosition(pl.matrixWorld); const camD = camera.position.distanceTo(_o)
+    const lim = -Math.min(0.42, 4.5 / camD) // looser when close
+    for (const o of list.current) {
+      _p.setFromMatrixPosition(o.matrixWorld); const r = _p.distanceTo(_o); if (r < R * 0.6) continue // skip big/central stuff (planet, sky)
+      const up = _p.sub(_o).divideScalar(r), toCam = camera.position.clone().sub(_o).normalize()
+      const hide = up.dot(toCam) < lim
+      if (hide) o.layers.disable(0); else o.layers.enable(0)
+    }
+  })
+  return null
+}
 function Drag() {
   const gl = useThree(s => s.gl)
   useEffect(() => { let lx = 0, lt = 0; const el = gl.domElement
@@ -552,10 +617,45 @@ function Drag() {
   return null
 }
 
+// ---------- character studio (?view=charstudio) ----------
+const ANGLES = { front: 0, three: 0.75, side: Math.PI / 2, back: Math.PI }
+function Studio() {
+  const camera = useThree(s => s.camera), scene = useThree(s => s.scene)
+  const compare = q.has('compare'), walk = q.get('pose') === 'walk', ang = ANGLES[q.get('angle')] ?? 0.4
+  const stOld = useMemo(() => ({ phase: 0, move: walk ? 1 : 0, t: 0 }), []), stNew = useMemo(() => ({ phase: 0, move: walk ? 1 : 0, t: 0, turn: 0, dist: 0 }), [])
+  const bg = useMemo(() => new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`, fragmentShader: `varying vec3 vP; void main(){ float y = vP.y*.5+.5; vec3 c = mix(vec3(.98,.93,.86), vec3(.78,.88,.95), smoothstep(.45,.85,y)); gl_FragColor = vec4(c,1.);
+    #include <colorspace_fragment>
+  }` }), [])
+  useFrame((_, dt) => {
+    dt = Math.min(dt, 0.05); wind.time.value += dt
+    T.sun.set(0.55, 0.75, 0.6).normalize(); T.day = 1; T.dusk = 0; T.night = 0
+    for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * 9 * st.move; st.dist += dt * 0.27 * st.move }
+    if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
+    const d = compare ? 1.35 : 0.95, cx = 0
+    camera.position.set(cx + Math.sin(ang) * d, 0.3, Math.cos(ang) * d); camera.up.set(0, 1, 0); camera.lookAt(cx, 0.2, 0)
+  })
+  return <>
+    <mesh material={bg}><sphereGeometry args={[30, 32, 16]} /></mesh>
+    <directionalLight position={[3, 4, 3.5]} intensity={2.4} color="#fff3dc" /><hemisphereLight args={['#cfe6ff', '#e8d8b8', 0.9]} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} material={useMemo(() => toon('#efe6d2'), [])}><circleGeometry args={[1.6, 48]} /></mesh>
+    {(compare ? (SPRITE ? [[-0.25, 'new'], [0.25, 'sprite']] : [[-0.25, 'old'], [0.25, 'new']]) : [[0, q.has('old') ? 'old' : SPRITE ? 'sprite' : 'new']]).map(([x, k]) => <group key={k} position={[x, 0.001, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
+      {k === 'old' ? (NEWCHAR ? <GhibliPersonV1 st={stOld} /> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <SpritePerson st={stNew} /> : <GhibliPerson st={stNew} />}
+    </group>)}
+  </>
+}
+
 export default function App() {
+  if (VIEW.mode === 'charstudio') return <>
+    <Canvas dpr={[1, 2]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+      <Studio />
+      <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
+    </Canvas>
+    <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
+  </>
   return <>
     <Canvas dpr={[1, 2]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
-      <Clock /><Drag /><Rig /><Keys /><Sky /><Lights /><Planet /><Clouds /><Birds />
+      <Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <EffectComposer multisampling={4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
         <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
