@@ -21,6 +21,7 @@ function open(npc) {
   TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; PADUI.hideStick = true; TALK.onOpen && TALK.onOpen(); bump()
 }
 function advance() { if (!TALK.open) return; if (TALK.page < TALK.lines.pages.length - 1) { TALK.page++; bump() } else close() }
+if (typeof window !== 'undefined') window.__openTalk = () => { const n = TALK.near || (window.__npcs || []).find(c => c.ready && c.obj); if (n) open(n) }
 const subs = new Set(); function bump() { for (const f of subs) f() }
 function useTalk() { const [, f] = useState(0); useEffect(() => { const g = () => f(x => x + 1); subs.add(g); return () => subs.delete(g) }, []) }
 
