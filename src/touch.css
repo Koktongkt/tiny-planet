@@ -58,3 +58,34 @@ html.tp-touch .tp-panel .tp-scroll{min-height:0;flex:1 1 auto}
 html.tp-touch .tp-prompt{white-space:nowrap}
 html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-placebar .key{display:none}
 @media (max-height:500px){html.tp-touch .tp-panel{padding:8px 14px}html.tp-touch .tp-head{padding-bottom:4px;margin-bottom:2px}html.tp-touch .tp-head h3{font-size:22px}}
+/* ---- Ghibli storybook skin (visual only: parchment, hand-inked outline, watercolour wash, leaf accents) ---- */
+.tp-pad{--ink:#3b2f22;--paper:#f4ead2;--leaf:#7fa36b;font-family:TPSerif,"Cormorant Garamond",Garamond,Georgia,serif}
+.tp-stick{
+  background:
+    radial-gradient(45% 40% at 70% 72%,#d9c49a40,transparent 70%),
+    radial-gradient(60% 55% at 36% 32%,#fffaf0e6 0,#f4ead2d9 48%,#ead9b3c7 80%,#dcc493b3 100%);
+  box-shadow:
+    inset 0 0 0 2px #3b2f22d9,
+    inset .6px -.8px 0 2.6px #3b2f2238,
+    inset 0 0 14px #a88a5a33,
+    0 0 0 1px #3b2f2214,
+    0 3px 0 #3b2f2224,
+    0 9px 20px #3a2a1a2e}
+.tp-stick::before{background:radial-gradient(closest-side,#7fa36b38,#7fa36b18 70%,transparent)}
+.tp-stick .ring{stroke:#3b2f2250}
+.tp-stick .ring path{fill:#3b2f2260}
+.tp-stick .knob{border:2px solid #3b2f22;
+  background:radial-gradient(40% 35% at 66% 70%,#5f8a4d40,transparent 70%),radial-gradient(70% 60% at 34% 28%,#fffaf0 0,#dfeccb 38%,#a9c58f 72%,#7fa36b 100%);
+  box-shadow:inset .6px -.8px 0 1px #3b2f2230,inset 0 -4px 8px #4f74402e,0 3px 0 #3b2f2240,0 6px 10px #3a2a1a26}
+.tp-stick.on .knob{background:radial-gradient(40% 35% at 66% 70%,#4f744050,transparent 70%),radial-gradient(70% 60% at 34% 28%,#f6fbe9 0,#c8e0ab 38%,#8fb878 72%,#6a9258 100%)}
+.tp-stick.run .knob{background:radial-gradient(70% 60% at 34% 28%,#fffaf0 0,#f8deb0 40%,#e2a95e 100%)}
+.tp-pad .tp-btn{border:0;font:italic 500 14px/1 TPSerif,"Cormorant Garamond",Georgia,serif;letter-spacing:.02em;color:#3b2f22;
+  background:radial-gradient(45% 40% at 70% 74%,#d9c49a3d,transparent 70%),radial-gradient(70% 60% at 34% 28%,#fffaf0f0 0,#f4ead2e6 55%,#e6d3aad9 100%);
+  box-shadow:inset 0 0 0 2px #3b2f22e0,inset .7px -.9px 0 2.5px #3b2f2236,inset 0 -5px 10px #a88a5a2e,0 3px 0 #3b2f2230,0 7px 14px #3a2a1a2e;
+  text-shadow:0 1px 0 #fffaf0b0;transition:transform .09s ease-out,background .15s,box-shadow .15s}
+.tp-pad .tp-btn svg{stroke:#3b2f22}
+.tp-act{background:radial-gradient(45% 40% at 70% 74%,#d8a85a33,transparent 70%),radial-gradient(70% 60% at 34% 28%,#fffaf0 0,#f7e6bd 55%,#ecc98a 100%)!important}
+.tp-jump{background:radial-gradient(45% 40% at 70% 74%,#7aa3bd33,transparent 70%),radial-gradient(70% 60% at 34% 28%,#fffaf0 0,#e6eee6 55%,#bcd3d6 100%)!important}
+.tp-pad .tp-btn.down,.tp-pad .tp-btn.down:hover{transform:scale(.94) rotate(-1.5deg);filter:none;
+  background:radial-gradient(45% 40% at 68% 72%,#4f744040,transparent 70%),radial-gradient(70% 60% at 34% 28%,#f6fbe9 0,#d3e6bd 50%,#9cbf86 100%)!important;
+  box-shadow:inset 0 0 0 2px #3b2f22,inset .7px -.9px 0 2.5px #3b2f2240,inset 0 2px 8px #3f5f3240,0 1px 0 #3b2f2230,0 3px 6px #3a2a1a26}
