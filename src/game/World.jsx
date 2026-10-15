@@ -1,5 +1,6 @@
 // 3D side of Gather & Craft: gatherable props, sheep, fireflies, the Home bench + sign, placed decor + ghost preview,
 // the rope bridge + cliff-top reward, the player's lantern, and the proximity/interaction loop.
+import { onTap } from '../touch.jsx'
 import * as THREE from 'three'
 import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -281,7 +282,7 @@ export function GameWorld() {
   if (!L) return null
   return <group>
     {L.spots.map(sp => <group key={sp.id} ref={el => { if (el) refs.current[sp.id] = el }} position={sp.pos} quaternion={place(sp.water ? sp.n : sp.n, 0, sp.spin).q}
-      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); GAME.actions.tapSpot(sp) }}><Prop item={sp.item} s={sp.s} /></group>)}
+      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}><Prop item={sp.item} s={sp.s} /></group>)}
     <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}

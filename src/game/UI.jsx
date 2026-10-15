@@ -1,4 +1,5 @@
 // DOM side of Gather & Craft: HUD, prompt, bag, recipe book / bench, toasts, fly-to-bag, fishing minigame, placement bar.
+import { TOUCH } from '../touch.jsx'
 import React, { useEffect, useReducer, useRef, useState } from 'react'
 import { G, subscribe, emit, setPanel, count, haveFor, known, owned, canCraft, craft, reset, ITEMS, RECIPES } from './store.js'
 import { TOOLS, DECOR, NEEDS_TOOL } from './items.js'
@@ -91,7 +92,7 @@ function Fishing() {
   return <div className="tp-fish paper" onPointerDown={e => { e.preventDefault(); reel() }}>
     <div className="tp-head small"><Icon id="rod" size={38} /><h3>Something's biting!</h3><span className="tries">{[0, 1, 2].map(i => <Icon key={i} id="fish" size={24} dim={i >= f.tries} />)}</span></div>
     <div className="tp-bar" ref={bar}><div className="zone" style={{ left: (f.zone - w / 2) * 100 + '%', width: w * 100 + '%' }} /><div className="mk" ref={mk}><Icon id="fish" size={34} wash={false} /></div><svg className="waves" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 6 Q5 2 10 6 T20 6 T30 6 T40 6 T50 6 T60 6 T70 6 T80 6 T90 6 T100 6" fill="none" stroke="#fff" strokeOpacity=".6" strokeWidth=".8" /></svg></div>
-    <p>{msg || <>Press <span className="key">E</span> / <span className="key">Space</span> or tap when the fish is in the green</>}</p>
+    <p>{msg || (TOUCH ? <>Tap the bar or ✋ Action when the fish is in the green</> : <>Press <span className="key">E</span> / <span className="key">Space</span> or tap when the fish is in the green</>)}</p>
   </div>
 }
 function PlaceBar() {

@@ -46,6 +46,24 @@ Explore the planet, gather resources in each biome, and craft tools, food and de
 | Placing decor | R rotates, E/Enter places, Esc cancels | Placement bar buttons |
 | Planet view | V | |
 
+### Touch (phones and tablets)
+
+The touch controls appear on touch or coarse-pointer devices. Use `?touch=1` to force them on and `?touch=0` to turn them off.
+
+| Action | Touch |
+|---|---|
+| Walk | Drag the stick (bottom-left). It steers toward the direction you push, and speed follows how far you push |
+| Run | Push the stick to the edge (the knob turns orange) |
+| Jump | **Jump** button (bottom-right) |
+| Gather / interact / reel a fish / place decor | **✋ Action** button, which does the same thing as E. You can also tap the prompt or the prop |
+| Walk to a spot | Tap the ground (a clean tap; drags don't count) |
+| Look around | Drag one finger on empty screen to turn, and drag up or down to tilt |
+| Zoom | Pinch |
+| Planet view | **Planet / Walk** button |
+| Bag / Recipes | Buttons under the clock |
+
+You can use the stick and buttons together with several fingers. Supported devices give light haptic feedback. Page scroll and zoom are locked, and the layout respects safe-area insets. In portrait, a dismissible hint suggests turning sideways; play works either way. On touch devices the render resolution is capped at 1.25x and post-processing MSAA is 2x (4x on desktop). The look is otherwise unchanged.
+
 ### Features
 - **Gathering** in every zone: forest wood and mushrooms, meadow flowers and sheep wool, lake fish and shells, terrace rice and tea, cliff stone and crystal, and night-only glowing moss and fireflies.
 - **Fishing minigame:** stop the marker in the green zone (3 tries).

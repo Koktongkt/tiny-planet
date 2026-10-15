@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tiny Planet</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#e9c3a0"><title>Tiny Planet</title>
 <link rel="preload" href="./fonts/cormorant-500i.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:TPSerif;src:url(./fonts/cormorant-500i.woff2) format("woff2");font-style:italic;font-weight:500;font-display:swap}
@@ -27,6 +27,12 @@
 #go small{display:block;font-size:12px;letter-spacing:.3em;text-transform:uppercase;opacity:.5;margin-top:4px}
 @keyframes br{to{opacity:.72}}
 .out #tt,.out #ft,.out #go{opacity:0!important}
+/* small screens: title card fits phones in portrait and short landscape */
+@media (max-width:600px){#tt{top:calc(env(safe-area-inset-top,0px) + 7%)}#tt h1{font-size:clamp(40px,13vw,64px)}#tt div{font-size:11px;letter-spacing:.24em;margin-top:8px}
+ #ft{bottom:calc(env(safe-area-inset-bottom,0px) + 5%);font-size:11px;letter-spacing:.2em;padding:0 14px}#ft i{width:22px;margin:0 8px}#tip{font-size:15px;letter-spacing:0}
+ #go{font-size:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 5% + 64px);white-space:nowrap}}
+@media (max-height:500px){#tt{top:5%}#tt h1{font-size:clamp(34px,9vh,56px)}#tt div{font-size:10px;margin-top:6px}#ft{bottom:4%;font-size:10px}#tip{font-size:13px;margin-top:6px}#go{font-size:22px;bottom:calc(4% + 44px)}#go small{font-size:10px}}
+html,body{overscroll-behavior:none}#ld{touch-action:none}
 @media (prefers-reduced-motion:reduce){.dr,.sd,.glow,#go.on{animation:none!important}.sd{display:none}.bk,.pl,.ink,.wa,#tt,#go{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
 </style></head><body style="margin:0;overflow:hidden;background:#e9c3a0">
 <div id="ld" role="progressbar" aria-label="Loading Tiny Planet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -86,7 +92,7 @@ function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p
  var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done){$("sl").textContent=L[c];$("sn").textContent=RN[O.indexOf(c)]}window.__loader.p=p}
 var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(en){var n=en.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((S.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(x){}}
 function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="frame"&&v>=1)ready()}
-function ready(){if(done)return;done=1;$("st").style.opacity=0;var b=$("go");setTimeout(function(){b.classList.add("on");b.focus({preventScroll:true})},rm?0:700);if(/[?&]enter/.test(q))setTimeout(enter,rm?0:900)}
+function ready(){if(done)return;done=1;if((/[?&]touch=1/.test(q)||matchMedia("(pointer: coarse)").matches)&&!/[?&]touch=0/.test(q))$("go").querySelector("small").textContent="tap anywhere";$("st").style.opacity=0;var b=$("go");setTimeout(function(){b.classList.add("on");b.focus({preventScroll:true})},rm?0:700);if(/[?&]enter/.test(q))setTimeout(enter,rm?0:900)}
 function enter(){if(!done||ld.classList.contains("out"))return;removeEventListener("keydown",key,true);ld.classList.add("out");if(rm)ld.style.opacity=0;
  var e=1.9;bank("L1",-540*e,150*e);bank("R1",540*e,150*e);bank("L2",-430*e,-30*e);bank("R2",430*e,-30*e);bank("L3",-270*e,40*e);bank("R3",270*e,40*e);setTimeout(function(){ld.remove()},rm?450:2300)}
 function key(e){if(done&&!e.metaKey&&!e.ctrlKey){e.preventDefault();e.stopPropagation();enter()}}

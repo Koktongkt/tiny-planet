@@ -14,6 +14,7 @@ const SpritePerson = lazy(() => import('./SpritePerson.jsx').then(m => ({ defaul
 const SPRITE = q.get('char') === 'sprite'
 const NEWCHAR = !q.has('oldchar')
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
+import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
@@ -497,7 +498,13 @@ function Keys() {
   return null
 }
 function stepPlayer(dt) {
-  const f = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0), turn = (KEYS.a || KEYS.arrowleft ? 1 : 0) - (KEYS.d || KEYS.arrowright ? 1 : 0)
+  let f = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0), turn = (KEYS.a || KEYS.arrowleft ? 1 : 0) - (KEYS.d || KEYS.arrowright ? 1 : 0)
+  if (CAM.yaw) { P.fwd.applyAxisAngle(P.n, -CAM.yaw); CAM.yaw = 0; P.target = null } // touch camera drag turns the traveller; the follow camera swings with them
+  if (PAD.active && PAD.mag > 0.12 && !f && !turn) { // analog stick: steer toward the stick direction (relative to facing), speed from how far it is pushed
+    const a = Math.atan2(-PAD.x, PAD.y); turn = Math.max(-1, Math.min(1, a * 1.6)) * Math.min(1, PAD.mag * 1.4)
+    f = Math.abs(a) < 2.0 ? Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(a) > 1.2 ? 0.5 : 1) : 0
+  }
+  const run = KEYS.shift || (PAD.active && PAD.run)
   let go = f
   if (gameBlocksKeys() && G.ui.panel) go = 0
   if (f || turn) P.target = null
@@ -507,13 +514,13 @@ function stepPlayer(dt) {
     if (P.n.angleTo(P.target) < 0.015 || tg.lengthSq() < 1e-8) P.target = null
     else { P.fwd.lerp(tg.normalize(), Math.min(1, dt * 8)); go = 1 }
   }
-  P.move += ((Math.abs(go) > 0 ? 1 : 0) - P.move) * Math.min(1, dt * 8)
-  P.n.addScaledVector(P.fwd, go * (KEYS.shift ? 2.6 : 1.5) / R * dt).normalize()
+  P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
+  P.n.addScaledVector(P.fwd, go * (run ? 2.6 : 1.5) / R * dt).normalize()
   const pass = ropePass(P.n)
   for (const c of COLLIDERS) { if (pass && c.n === Zc.cliff) continue; const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
   P.fwd.addScaledVector(P.n, -P.fwd.dot(P.n)).normalize()
   const fl = floorLift(P.n); P.vy -= 7 * dt; P.h += P.vy * dt; if (P.h < fl) { if (fl - P.h < 0.12 || P.vy < 0) { P.h = fl; P.vy = 0 } } // gravity toward planet centre
-  P.phase += dt * (KEYS.shift ? 13 : 9.5) * P.move
+  P.phase += dt * (run ? 13 : 9.5) * P.move
 }
 const PM = { tunic: toon('#5f8fc4'), skin: toon('#f8d9bf'), hat: toon('#e9c46a'), band: toon('#d9655b'), cape: toon('#d9655b', { side: THREE.DoubleSide }), boot: toon('#6b4a3a'), eye: toon('#2e2420'), cheek: toon('#f4a3a0'), bag: toon('#b98a5a') }
 const PST = { phase: 0, move: 0, t: 0, turn: 0, dist: 0 }
@@ -555,7 +562,7 @@ function Rig() {
     P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld)
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 4))
     if (VIEW.mode === 'follow') {
-      goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * CAMD).addScaledVector(P.wFwd, -2.1 * CAMD)
+      const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
       const hit = RC.intersectObjects(OCC, false)[0]; if (hit) goal.copy(_v).addScaledVector(_u, Math.max(0.35, hit.distance - 0.12)).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist))
@@ -573,7 +580,7 @@ function Rig() {
       const c = B0.c.clone(); const lookL = bl(B0, -0.3, 0.45).multiplyScalar(R + 0.15), camL = bl(B0, -2.3, 1.7).multiplyScalar(R + 1.25)
       goal.copy(camL).applyMatrix4(g.matrixWorld); camera.position.lerp(goal, k); camera.up.lerp(_u.copy(c).transformDirection(g.matrixWorld), k).normalize(); look.lerp(lookL.applyMatrix4(g.matrixWorld), k); camera.lookAt(look)
     } else {
-      camera.position.lerp(goal.set(0, 5.8, 30), k); camera.up.lerp(_u.set(0, 1, 0), k).normalize(); look.lerp(_v.set(0, 1, 0), k); camera.lookAt(look)
+      camera.position.lerp(goal.set(0, 5.8, 30).multiplyScalar(CAM.zoom), k); camera.up.lerp(_u.set(0, 1, 0), k).normalize(); look.lerp(_v.set(0, 1, 0), k); camera.lookAt(look)
     }
   })
   return null
@@ -581,7 +588,7 @@ function Rig() {
 function Hint() {
   const [m, setM] = React.useState(VIEW.mode)
   useEffect(() => { const id = setInterval(() => setM(VIEW.mode), 300); return () => clearInterval(id) }, [])
-  return <div style={{ fontSize: 15, opacity: 0.85, lineHeight: 1.5 }}>{m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
+  return <div style={{ fontSize: 15, opacity: 0.85, lineHeight: 1.5 }}>{TOUCH ? (m === 'follow' ? <>stick to walk · push to the edge to run · tap the ground to walk<br />drag to look · pinch to zoom · ✋ gather</> : <>drag to spin · pinch to zoom · tap Walk to go back</>) : m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
 }
 
 const GAMEON = VIEW.mode === 'follow' && !q.has('nogame')
@@ -609,7 +616,7 @@ function useSlices() {
 }
 function Planet() {
   const k = useSlices()
-  const onDown = (e) => { if (VIEW.mode !== 'follow') return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); P.target = l }
+  const onDown = (e) => { if (VIEW.mode !== 'follow') return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); onTap(e.nativeEvent || e, () => { P.target = l }) }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
     <Ground /><Path /><Stream />{k >= 2 && <Vegetation />}
     {k >= 2 && HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
@@ -658,6 +665,7 @@ function HorizonCull() {
   })
   return null
 }
+function TouchCam() { const gl = useThree(s => s.gl); useTouchCamera(gl.domElement); return null }
 function Drag() {
   const gl = useThree(s => s.gl)
   useEffect(() => { let lx = 0, lt = 0; const el = gl.domElement
@@ -753,24 +761,25 @@ const COMPOSER = { current: null }
 export default function App() {
   const [live, setLive] = useState(false)
   if (VIEW.mode === 'charstudio') return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
       <Boot player={false} onLive={() => setLive(true)} /><Studio />
       <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
     </Canvas>
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
-      <Boot onLive={() => setLive(true)} /><Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><Sky /><Lights /><Planet /><Clouds /><Birds />
-      <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={4}>
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+      <Boot onLive={() => setLive(true)} /><Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
+      <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={TOUCH ? 2 : 4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
         <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
         <Vignette offset={0.3} darkness={0.55} />
       </EffectComposer>
     </Canvas>
-    <div style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
+    <div className="tp-title" style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
       <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
     </div>
     {GAMEON && <GameSlot ui />}
+    <TouchPad />
   </>
 }
