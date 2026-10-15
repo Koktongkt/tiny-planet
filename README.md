@@ -60,6 +60,7 @@ Explore the planet, gather resources in each biome, and craft tools, food and de
 - **Chunk split:** `vendor-three`, `vendor-r3f` (React, r3f, drei) and `vendor-post` (postprocessing). The game `World` and `UI` are lazy-loaded, and so are the optional character and sprite modes.
 - **Terrain fix:** the curve distance checks behind terrain colouring used to block the main thread for about 35 s. They now run in a fraction of a second.
 - **Before → after** (live site, headless Chromium with software WebGL, time to the first rendered frame): unthrottled **36.4 s → 1.8–3.0 s**; Fast 3G + 4x CPU **147 s → 9.4 s**. Total transfer is about 374 KB gzipped either way.
+- **Smoother loading and play (perf2):** the title card animates as separate composited layers, so filters are drawn once. The world is built in slices, and shaders plus first draws warm up in short tasks behind the loader, so there are no multi-second freezes. Repeated scenery such as grass, flowers and trees is grouped so off-screen and far-side groups are skipped, which roughly halves the triangles in the game views. Render resolution is capped at 1.5x.
 
 ## Licences
 
