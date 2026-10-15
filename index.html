@@ -1,1 +1,59 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tiny Planet</title></head><body style="margin:0;overflow:hidden;background:#cfe3ef"><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tiny Planet</title>
+<style>
+#ld{position:fixed;inset:0;z-index:50;overflow:hidden;font-family:Fredoka,ui-rounded,"Nunito","Segoe UI",system-ui,sans-serif;color:#5a4636;background:radial-gradient(60% 45% at 25% 22%,#fff6e0 0,#fff6e000 70%),radial-gradient(55% 40% at 80% 30%,#f9dfe6 0,#f9dfe600 70%),linear-gradient(#bfe0ee,#e3f0ea 55%,#f5ecd6);transition:opacity .9s ease,filter .9s ease;user-select:none;-webkit-user-select:none}
+#ld.out{opacity:0;filter:blur(6px) saturate(1.2);pointer-events:none}
+#ld:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .45 0 0 0 0 .35 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")}
+#ld svg{position:absolute;left:0;bottom:0;width:100%;height:62%}
+.cl{animation:dr 46s linear infinite}.cl.b{animation-duration:70s;animation-delay:-30s}.cl.c{animation-duration:58s;animation-delay:-12s}
+@keyframes dr{from{transform:translateX(-260px)}to{transform:translateX(1260px)}}
+.tv{transition:transform .8s cubic-bezier(.4,0,.3,1)}.bob{animation:bob .5s ease-in-out infinite alternate}.lg{transform-box:fill-box;transform-origin:50% 0;animation:sw .5s ease-in-out infinite alternate}.lg.r{animation-direction:alternate-reverse}
+@keyframes bob{to{transform:translateY(-2.5px)}}@keyframes sw{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
+.lf{transform-box:fill-box;transform-origin:0 100%;transform:scale(0);transition:transform .7s cubic-bezier(.3,1.6,.5,1)}.lf.on{transform:scale(1)}
+#vn{transition:stroke-dashoffset .6s ease}
+#hd{position:absolute;left:0;right:0;top:11%;text-align:center}
+#hd h1{margin:0;font-weight:500;font-size:clamp(40px,7vw,72px);letter-spacing:.01em;color:#5a4636;text-shadow:0 2px 0 #fff9}
+#st{margin-top:6px;font-size:18px;opacity:.85;min-height:1.4em}#pc{font-variant-numeric:tabular-nums;opacity:.6;margin-left:6px}
+#tp{position:absolute;left:50%;bottom:4.5%;transform:translateX(-50%);width:min(560px,86vw);text-align:center;font-size:17px;line-height:1.4;padding:10px 20px;background:#fffaf0cc;border:2.4px solid #4a3a35;border-radius:18px 22px 17px 24px/22px 17px 24px 18px;box-shadow:0 3px 0 #4a3a3533;transition:opacity .6s}
+#tp b{color:#6f9e4f;font-weight:500}#tp.h{opacity:0}
+#go{position:absolute;left:50%;top:36%;transform:translate(-50%,10px) scale(.9);opacity:0;pointer-events:none;font:inherit;font-size:24px;font-weight:500;color:#4a3a35;padding:14px 34px 16px;background:#fff6d8;border:2.8px solid #4a3a35;border-radius:24px 28px 22px 30px/28px 22px 30px 24px;box-shadow:0 5px 0 #4a3a35;cursor:pointer;transition:all .5s cubic-bezier(.3,1.5,.5,1)}
+#go.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}#go:hover{background:#eaf5d0}#go:active{transform:translate(-50%,3px);box-shadow:0 2px 0 #4a3a35}
+#go small{display:block;font-size:13px;opacity:.6;font-weight:400}
+@media (prefers-reduced-motion:reduce){.cl,.bob,.lg,#go.on{animation:none!important}.tv,#vn,.lf,#tp,#ld{transition:none!important}}
+</style></head><body style="margin:0;overflow:hidden;background:#cfe3ef">
+<div id="ld" role="progressbar" aria-label="Loading Tiny Planet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+<svg viewBox="0 0 1000 400" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs><filter id="wc"><feTurbulence baseFrequency=".035" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter></defs>
+<circle cx="170" cy="60" r="34" fill="#ffe7a8" opacity=".75" filter="url(#wc)"/><g fill="#fffaf0" opacity=".9" filter="url(#wc)"><path class="cl" d="M40 70q8-26 36-20q14-22 40-8q28-6 30 18q16 6 4 18H44q-18-2-4-8z"/><path class="cl b" d="M300 18q8-20 30-16q12-18 32-6q22-4 24 14q12 6 2 14H302q-14-2-2-6z" opacity=".8"/><path class="cl c" d="M620 120q10-24 34-18q16-20 38-6q26-4 28 16q14 6 4 16H622q-16-2-2-8z"/></g>
+<path d="M0 300Q180 205 420 245T1000 225V400H0z" fill="#bcd99a" filter="url(#wc)" opacity=".75"/>
+<path d="M0 340Q220 262 500 290T1000 280V400H0z" fill="#9cc46a" filter="url(#wc)"/>
+<path d="M0 372Q260 330 520 350T1000 338V400H0z" fill="#86b65a" filter="url(#wc)" opacity=".9"/>
+<path id="vn" d="M70 318C170 296 240 284 340 288S520 282 600 276S800 268 930 262" fill="none" stroke="#5f8f4a" stroke-width="4.5" stroke-linecap="round"/>
+<g id="lv"></g>
+<g id="tv" class="tv"><g transform="scale(1.7)"><g class="bob"><rect x="-15" y="-31" width="9" height="14" rx="3" fill="#b98a5a" stroke="#4a3a35" stroke-width="2"/><ellipse cx="0" cy="2" rx="11" ry="3" fill="#4a3a35" opacity=".15"/><rect class="lg" x="-6" y="-14" width="5" height="14" rx="2.5" fill="#3a5f8f"/><rect class="lg r" x="1" y="-14" width="5" height="14" rx="2.5" fill="#3a5f8f"/><rect x="-9" y="-30" width="18" height="18" rx="8" fill="#5f8fc4" stroke="#4a3a35" stroke-width="2"/><rect x="-9" y="-31" width="18" height="7" rx="3" fill="#fffaf0" stroke="#4a3a35" stroke-width="2"/><circle cx="0" cy="-42" r="11" fill="#f8d9bf" stroke="#4a3a35" stroke-width="2"/><path d="M-11-43q1-12 11-12t11 12q-6-5-11-4t-11 4z" fill="#3a2e2a"/><circle cx="-8" cy="-51" r="4.5" fill="#3a2e2a"/><path d="M-8-31h16l-3 4h-10z" fill="#d9655b"/><circle cx="4" cy="-41" r="1.6" fill="#2e2420"/><circle cx="6.5" cy="-37" r="2" fill="#f4a3a0" opacity=".8"/></g></g></g>
+</svg>
+<div id="hd"><h1>Tiny Planet</h1><div id="st">Opening the sketchbook…<span id="pc"></span></div></div>
+<button id="go">Press to enter<small>Enter · Space · tap</small></button>
+<div id="tp"></div>
+</div>
+<script>(function(){
+var W={js:20,fonts:1,world:31,bake:7,shaders:4,frame:37},L={js:"Fetching the scripts",fonts:"Unpacking the fonts",world:"Shaping the planet",bake:"Baking the traveller",shaders:"Mixing the paints (shaders)",frame:"Painting the first frame"},O=["js","fonts","world","bake","shaders","frame"];
+var P={},d=document,$=function(i){return d.getElementById(i)},ld=$("ld"),vn=$("vn"),tv=$("tv"),len=vn.getTotalLength(),q=location.search,done=0,rm=matchMedia("(prefers-reduced-motion: reduce)").matches;
+vn.style.strokeDasharray=len;vn.style.strokeDashoffset=len;
+var lv=$("lv"),LV=[],NS="http://www.w3.org/2000/svg";function el(n,a,p){var e=d.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e}
+for(var i=1;i<14;i++){var t=i/14,pt=vn.getPointAtLength(len*t),s=i%2?1:-1,w=el("g",{transform:"translate("+pt.x+" "+pt.y+") scale("+s+" "+(i%2?1:-1)+")"},lv),g=el("g",{"class":"lf"},w);
+if(i%4==2){el("path",{d:"M0 0q2-9 0-16",stroke:"#5f8f4a","stroke-width":2,fill:"none"},g);for(var k=0;k<5;k++){var a=k*1.2566;el("circle",{cx:Math.cos(a)*4.5,cy:-18+Math.sin(a)*4.5,r:3.6,fill:"#f9b7c8",stroke:"#4a3a35","stroke-width":1.2},g)}el("circle",{cx:0,cy:-18,r:2.2,fill:"#ffd36e"},g)}
+else{el("path",{d:"M0 0C3-9 12-15 23-14C19-4 10 1 0 0Z",fill:i%3?"#7fae5f":"#9cc46a",stroke:"#4a3a35","stroke-width":1.4,"stroke-linejoin":"round"},g);el("path",{d:"M2-1C8-6 13-9 19-12",stroke:"#4a3a3566","stroke-width":1,fill:"none"},g)}
+LV.push([t,g])}
+function draw(){var p=0;for(var k in W)p+=W[k]*(P[k]||0);p/=100;vn.style.strokeDashoffset=len*(1-p);var pt=vn.getPointAtLength(len*Math.max(.02,p));tv.setAttribute("transform","translate("+pt.x+" "+(pt.y-2)+")");LV.forEach(function(l){if(p>=l[0])l[1].classList.add("on")});ld.setAttribute("aria-valuenow",Math.round(p*100));var cur=O.filter(function(k){return(P[k]||0)<1})[0];if(cur&&!done)$("st").firstChild.nodeValue=L[cur]+"…";$("pc").textContent=done?"":Math.round(p*100)+"%";window.__loader.p=p}
+// JS: real bytes from Resource Timing against the build manifest (dev server: stage-level only)
+var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(e){var n=e.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((P.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(e){}}
+function stage(k,p){if(!(k in W))return;P[k]=Math.max(P[k]||0,p);draw();if(k=="frame"&&p>=1)ready()}
+function ready(){if(done)return;done=1;$("st").firstChild.nodeValue="The planet is ready";var b=$("go");b.classList.add("on");setTimeout(function(){b.focus({preventScroll:true})},50);if(/[?&]enter/.test(q))enter()}
+function enter(){if(!done||ld.classList.contains("out"))return;ld.classList.add("out");removeEventListener("keydown",key,true);setTimeout(function(){ld.remove()},rm?0:950)}
+function key(e){if(done&&(e.code=="Enter"||e.code=="Space")){e.preventDefault();e.stopPropagation();enter()}}
+addEventListener("keydown",key,true);$("go").onclick=enter;ld.addEventListener("pointerup",function(){if(done)enter()});
+var TIPS=["Press <b>E</b> near anything that shimmers to gather it.","Craft a <b>Fishing Rod</b> from 2 wood and 3 reeds, then try the lake.","The crafting bench sits beside the house marked <b>Home</b>.","Fireflies and glowing moss only come out <b>at night</b>.","Everything grows back each morning — gather freely.","Shear the meadow sheep for <b>wool</b> (they don’t mind).","A <b>Rope Bridge</b> opens a path up the waterfall cliff…","Place decor around Home: <b>R</b> rotates, <b>E</b> sets it down.","Tap anything on the planet to walk to it."],ti=Math.floor(Math.random()*TIPS.length),tp=$("tp");
+function tip(){tp.classList.add("h");setTimeout(function(){tp.innerHTML="Tip: "+TIPS[ti++%TIPS.length];tp.classList.remove("h")},rm?0:600)}tp.innerHTML="Tip: "+TIPS[ti++%TIPS.length];var tt=setInterval(function(){if(!d.body.contains(ld))return clearInterval(tt);tip()},5200);
+addEventListener("error",function(e){if(!done)$("st").firstChild.nodeValue="Something went wrong — please reload ("+(e.message||"error")+")"});
+window.__loader={stage:stage,p:0,P:P};draw();
+})()</script>
+<div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>

@@ -68,3 +68,25 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 | `?nogame` | Turn the game layer off |
 | `?decor=demo`, `?place=chime` | Demo placements / start placing |
 | `?pick=0.45`, `?fish=1`, `?craft=jam` | Freeze the animation for screenshots |
+
+## Loading screen
+- The loader is inline in `index.html` (about 4.9 KB gzipped, plain HTML, CSS and SVG). It paints before any JS or WebGL runs.
+- It reports real stages, weighted by their measured share of a Fast 3G + 4× CPU load:
+
+  | Stage | Weight | What it covers |
+  |---|---|---|
+  | Scripts | 20% | Byte-weighted from Resource Timing, using the chunk manifest the build injects |
+  | Fonts | 1% | Fredoka |
+  | Planet | 31% | Building the planet |
+  | Traveller | 7% | Baking the traveller |
+  | Shaders | 4% | Shaders precompiled in 16 batches with `renderer.compileAsync` |
+  | First frame | 37% | The first rendered frame |
+
+- When it reaches 100% it shows **Press to enter**. Enter, Space, a click or a tap all work; the key that enters doesn't reach the game. The loader then fades out.
+- After the first frame, Gather & Craft (World + UI chunks), the far zones and the villagers load in idle time. Villagers bake one per idle slot.
+- Debug params:
+  - `?enter`: enter automatically when ready (screenshot tooling uses this).
+  - `?bootpause=shaders`: hold the real loader state just before the first frame.
+- Scripts:
+  - `node shoot-loader.mjs [url] [dir] [prefix]` takes the loader shots on a throttled profile.
+  - `node measure.mjs [port]` reports the local time to first frame.

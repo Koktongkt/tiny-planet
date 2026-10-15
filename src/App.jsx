@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import React, { useMemo, useRef, useEffect } from 'react'
+import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
@@ -8,12 +8,15 @@ import { R, K, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve
 import { Person, PEOPLE } from './people.jsx'
 import { GhibliPerson, Character } from './GhibliPerson.jsx'
 import { VILLAGERS } from './villagers.js'
-import { GhibliPersonV1 } from './GhibliPersonV1.jsx'
-import { SpritePerson } from './SpritePerson.jsx'
+// prototype-only characters load on demand (keeps them, and the 214 KB sprite sheet, out of the startup bundle)
+const GhibliPersonV1 = lazy(() => import('./GhibliPersonV1.jsx').then(m => ({ default: m.GhibliPersonV1 })))
+const SpritePerson = lazy(() => import('./SpritePerson.jsx').then(m => ({ default: m.SpritePerson })))
 const SPRITE = q.get('char') === 'sprite'
 const NEWCHAR = !q.has('oldchar')
-import { GameWorld, PlayerLantern, layout, ropeLift, ropePass, teleport, GAME } from './game/World.jsx'
-import { GameUI, gameBlocksKeys } from './game/UI.jsx'
+import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
+// Gather & Craft is fetched after the first frame; until then these are inert stubs.
+let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
+const GM = { W: null, U: null }
 import { newDay, G } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { INK, T, ss, C, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
@@ -82,13 +85,17 @@ function Ground() {
   const geo = useMemo(() => {
     const g = new THREE.IcosahedronGeometry(R, 64); const p = g.attributes.position, v = new THREE.Vector3(), cols = []
     const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#ecd9a8'), bank = C('#6fa86a'), tmp = new THREE.Color()
+    // the icosphere is non-indexed (~6 copies of each point): shade each unique point once
+    const seen = new Map()
     for (let i = 0; i < p.count; i++) {
+      const key = Math.round(p.getX(i) * 1e4) + ',' + Math.round(p.getY(i) * 1e4) + ',' + Math.round(p.getZ(i) * 1e4), hit = seen.get(key)
+      if (hit) { cols.push(hit[0], hit[1], hit[2]); p.setXYZ(i, hit[3], hit[4], hit[5]); continue }
       v.fromBufferAttribute(p, i).normalize(); const hh = height(v)
       const w = Math.sin(v.x * 6 + v.y * 4) * Math.sin(v.z * 5 - v.y * 3)
       tmp.copy(a).lerp(b, w * 0.5 + 0.5).lerp(c, Math.max(0, Math.sin(v.x * 11 + v.z * 9) * Math.sin(v.y * 13)) )
       const ds = distToCurve(v, streamDir, 420); if (ds < 0.07 * K) tmp.lerp(bank, 1 - ds / (0.07 * K))
       const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.6 * (1 - dp / (0.05 * K)))
-      zoneColour(v, tmp); cols.push(tmp.r, tmp.g, tmp.b); p.setXYZ(i, ...v.multiplyScalar(R + hh - (ds < 0.05 * K ? 0.08 * (1 - ds / (0.05 * K)) : 0)).toArray())
+      zoneColour(v, tmp); cols.push(tmp.r, tmp.g, tmp.b); v.multiplyScalar(R + hh - (ds < 0.05 * K ? 0.08 * (1 - ds / (0.05 * K)) : 0)); p.setXYZ(i, v.x, v.y, v.z); seen.set(key, [tmp.r, tmp.g, tmp.b, v.x, v.y, v.z])
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals(); { const nr = g.attributes.normal, cl = g.attributes.color, nv = new THREE.Vector3(), pv = new THREE.Vector3(), cc = new THREE.Color(); for (let i = 0; i < p.count; i++) { pv.fromBufferAttribute(p, i).normalize(); nv.fromBufferAttribute(nr, i); cc.fromBufferAttribute(cl, i); rockify(pv, nv, cc); cl.setXYZ(i, cc.r, cc.g, cc.b) } } return g
   }, [])
@@ -421,7 +428,7 @@ const NEW_WALKERS = (() => {
 const _c0 = new THREE.Vector3()
 const RATE = { toddler: 12, kid: 10.5, teen: 9, adult: 8, elder: 6 }
 function Walker({ w, i }) {
-  const ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0 }), [])
+  const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0 }), [])
   const camera = useThree(s => s.camera)
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t
@@ -438,7 +445,7 @@ function Walker({ w, i }) {
       const up = _f.clone().sub(_c0).normalize(), toCam = camera.position.clone().sub(_f).normalize()
       g.visible = up.dot(toCam) > -0.05 && (VIEW.mode === 'orbit' || camera.position.distanceTo(_f) < 12) } else g.visible = true
   })
-  return <group ref={ref}>{NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 const LINEUP = around(Zc.meadow, 0.1, 2.4)
 function Lineup() {
@@ -512,7 +519,7 @@ const PST = { phase: 0, move: 0, t: 0, turn: 0, dist: 0 }
 const _pp = new THREE.Vector3()
 const _pf = new THREE.Vector3()
 function Traveller() {
-  const ref = useRef()
+  const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); stepPlayer(dt)
     const side = new THREE.Vector3().crossVectors(P.n, P.fwd)
@@ -522,7 +529,7 @@ function Traveller() {
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_pf.clone().cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
   })
-  return <group ref={ref}>{SPRITE ? <SpritePerson st={PST} /> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}<PlayerLantern /></group>
+  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{GM.W && <GM.W.PlayerLantern />}</group>
 }
 const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
 const ZVIEWS = {
@@ -577,12 +584,20 @@ function Hint() {
 }
 
 const GAMEON = VIEW.mode === 'follow' && !q.has('nogame')
-if (GAMEON) {
-  GAME.P = P
-  layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || distToCurve(n, streamDir, 140) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
-  if (q.has('at')) teleport(P, q.get('at'))
+function loadGame() {
+  return Promise.all([import('./game/World.jsx'), import('./game/UI.jsx')]).then(([W, U]) => {
+    ropeLift = W.ropeLift; ropePass = W.ropePass; gameBlocksKeys = U.gameBlocksKeys
+    W.GAME.P = P
+    W.layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || distToCurve(n, streamDir, 140) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
+    if (q.has('at')) W.teleport(P, q.get('at'))
+    GM.W = W; GM.U = U; bootStage('game', 1)
+  })
 }
+if (GAMEON) onBoot('frame', () => setTimeout(loadGame, 0))
+function GameSlot({ ui }) { const [, f] = useState(0); useEffect(() => onBoot('game', () => f(1)), []); const C = ui ? GM.U?.GameUI : GM.W?.GameWorld; return C ? <C /> : null }
 window.__player = P
+// far zones (lake, harbour, cliff, terraces, ruins…) mount in the first idle slot after the first frame
+function DeferredZones() { return useIdleSlot(-1) ? <Zones /> : null }
 function Planet() {
   const onDown = (e) => { if (VIEW.mode !== 'follow') return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); P.target = l }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
@@ -592,12 +607,12 @@ function Planet() {
     {[dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
     {!q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {VIEW.mode === 'lineup' && <Lineup />}
-    <Zones />
+    <DeferredZones />
     {HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
     {MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
     <Traveller /><Details />
     <Fireflies />
-    {GAMEON && <GameWorld />}
+    {GAMEON && <GameSlot />}
   </group></group>
 }
 
@@ -658,22 +673,48 @@ function Studio() {
     <mesh rotation={[-Math.PI / 2, 0, 0]} material={useMemo(() => toon('#efe6d2'), [])}><circleGeometry args={[1.6, 48]} /></mesh>
     {(compare ? (SPRITE ? [[-0.25, 'new'], [0.25, 'sprite']] : [[-0.25, 'old'], [0.25, 'new']]) : [[0, q.has('old') ? 'old' : SPRITE ? 'sprite' : 'new']]).map(([x, k]) => <group key={k} position={[x, 0.001, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
-      {k === 'old' ? (NEWCHAR ? <GhibliPersonV1 st={stOld} /> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <SpritePerson st={stNew} /> : <GhibliPerson st={stNew} />}
+      {k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : <GhibliPerson st={stNew} />}
     </group>)}
   </>
 }
 
+// Runs once the scene graph is committed: bake the traveller, precompile every shader in batches
+// (so the loader can show real progress), then start the render loop.
+function Boot({ onLive, player = true }) {
+  const gl = useThree(s => s.gl), scene = useThree(s => s.scene), camera = useThree(s => s.camera), live = useRef(false)
+  useEffect(() => { let dead = false; (async () => {
+    bootStage('world', 1); await nextPaint()
+    if (player) { bootStage('bakePlayer', 1); await new Promise(r => onBoot('baked', r)) }
+    bootStage('bake', 1); await nextPaint()
+    // one representative object per distinct program (material + skinning/instancing/vertex colours)
+    const seen = new Set(), reps = []
+    scene.traverse(o => { if (!(o.isMesh || o.isPoints || o.isLine) || !o.material) return; for (const m of [].concat(o.material)) { const k = m.uuid + (o.isSkinnedMesh ? 's' : '') + (o.isInstancedMesh ? 'i' : '') + (o.geometry?.attributes.color ? 'c' : ''); if (!seen.has(k)) { seen.add(k); reps.push(o) } } })
+    const N = Math.min(16, reps.length), per = Math.ceil(reps.length / Math.max(1, N))
+    for (let i = 0; i < N && !dead; i++) {
+      const batch = reps.slice(i * per, (i + 1) * per), proxy = { traverse: f => batch.forEach(f), traverseVisible: () => {} }
+      try { await gl.compileAsync(proxy, camera, scene) } catch (err) { console.warn('compile batch', err) }
+      bootStage('shaders', (i + 1) / N); await nextPaint()
+    }
+    window.__programs = reps.length
+    bootStage('shaders', 1)
+    if (q.get('bootpause') === 'shaders') return // screenshot aid: hold the real loader state before the first frame
+    live.current = true; onLive()
+  })(); return () => { dead = true } }, [])
+  useFrame(() => { if (live.current && !BOOT.done.frame) requestAnimationFrame(() => bootStage('frame', 1)) }, 100)
+  return null
+}
 export default function App() {
+  const [live, setLive] = useState(false)
   if (VIEW.mode === 'charstudio') return <>
-    <Canvas dpr={[1, 2]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
-      <Studio />
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 2]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+      <Boot player={false} onLive={() => setLive(true)} /><Studio />
       <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
     </Canvas>
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
-      <Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><Sky /><Lights /><Planet /><Clouds /><Birds />
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 2]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+      <Boot onLive={() => setLive(true)} /><Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <EffectComposer multisampling={4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
         <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
@@ -683,6 +724,6 @@ export default function App() {
     <div style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
       <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
     </div>
-    {GAMEON && <GameUI />}
+    {GAMEON && <GameSlot ui />}
   </>
 }

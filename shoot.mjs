@@ -9,7 +9,7 @@ let jobs
 if(process.argv[2]==='--custom') jobs=JSON.parse(process.argv[3]).map(([f,qs,keys,vw,js,wait])=>({f,qs,keys,vw,js,wait}))
 else jobs=(process.argv[2]?process.argv[2].split(','):Object.keys(url)).map(t=>({f:`screenshots/${t}.png`,qs:url[t],keys:t==='character-closeup',vw:[1280,800]}))
 for(const j of jobs){const [w,h]=j.vw||[1000,700];const p=await b.newPage({viewport:{width:w,height:h}});p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>m.type()==='error'&&errs.push(m.text()))
- const t0=Date.now();await p.goto('http://localhost:5190/'+j.qs);await p.waitForFunction(()=>window.__calls>0,null,{timeout:120000}).catch(()=>{});const ready=Date.now()-t0
+ const t0=Date.now();await p.goto('http://localhost:5190/'+j.qs+(j.qs.includes('?')?'&':'?')+'enter');await p.waitForFunction(()=>window.__calls>0,null,{timeout:120000}).catch(()=>{});const ready=Date.now()-t0
  await p.waitForTimeout(14000);if(j.keys){await p.keyboard.down('w');await p.waitForTimeout(9000)}
  if(j.js){await p.evaluate(j.js);await p.waitForTimeout(j.wait||1500)}
  const st=await p.evaluate(()=>({calls:window.__calls,tris:window.__tris,bake:window.__bake}))
