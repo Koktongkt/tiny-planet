@@ -32,3 +32,35 @@ export const GEO = (() => {
 })()
 // canvas texture helper (bubbles, signs)
 export function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t }
+// Static batching for the room: after mount, opaque meshes under this group whose material doesn't depend on
+// object-space position (plain toon + the view-space outline hulls; painted materials use object-space noise, so
+// they are left alone) are baked into one merged mesh per material. Originals are hidden, not removed, so React
+// keeps owning them. Same materials, same programs, same pixels; far fewer draw calls.
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+const _inv = new THREE.Matrix4(), _rel = new THREE.Matrix4()
+export function Merge({ children }) {
+  const ref = React.useRef()
+  React.useLayoutEffect(() => {
+    const root = ref.current; if (!root || new URLSearchParams(location.search).has('nomerge')) return
+    root.updateWorldMatrix(true, true); _inv.copy(root.matrixWorld).invert()
+    const groups = new Map()
+    root.traverse(o => {
+      if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || o.userData.merged) return
+      const m = o.material; if (Array.isArray(m) || m.transparent || m.userData.painted || o.morphTargetInfluences) return
+      const plain = (m.isMeshToonMaterial || m.isMeshBasicMaterial) && m.onBeforeCompile === THREE.Material.prototype.onBeforeCompile; if (!plain && !(m.isShaderMaterial && m.vertexShader === OUT_VS)) return
+      let v = true; for (let x = o; x && x !== root; x = x.parent) if (!x.visible) { v = false; break } if (!v) return
+      const g = o.geometry, key = m.uuid + '|' + (g.index ? 'i' : 'n') + '|' + Object.keys(g.attributes).sort().join(',')
+      if (!groups.has(key)) groups.set(key, { m, list: [] }); groups.get(key).list.push(o)
+    })
+    const made = []
+    for (const { m, list } of groups.values()) {
+      if (list.length < 2) continue
+      const geos = list.map(o => { const c = o.geometry.clone(); c.applyMatrix4(_rel.multiplyMatrices(_inv, o.matrixWorld)); return c })
+      const merged = mergeGeometries(geos, false); geos.forEach(g => g.dispose()); if (!merged) continue
+      const mesh = new THREE.Mesh(merged, m); mesh.userData.merged = true; mesh.renderOrder = list[0].renderOrder
+      mesh.layers.mask = list[0].layers.mask; root.add(mesh); made.push(mesh); list.forEach(o => { o.visible = false })
+    }
+    return () => made.forEach(x => { root.remove(x); x.geometry.dispose() })
+  }, [])
+  return <group ref={ref}>{children}</group>
+}

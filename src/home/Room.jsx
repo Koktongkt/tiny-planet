@@ -6,8 +6,8 @@ import * as THREE from 'three'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { HOME, ROOM, DOOR, BLOCKS, resolve, freeAt, roomToWorld } from './state.js'
-import { O, GEO, tm, OUT, canvasTex } from './kit.jsx'
-import { toon, T, C, q, VIEW } from '../common.jsx'
+import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
+import { toon, T, C, CC, q, VIEW } from '../common.jsx'
 import { toonRamp, R, height } from '../world.js'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
@@ -120,7 +120,7 @@ function Floor({ onDown }) {
 function Window() {
   const vm = useMemo(() => new THREE.MeshBasicMaterial({ map: view(), toneMapped: false }), []), wz = 0.15, x = ROOM.x0
   const curtain = useRef()
-  useFrame(() => { vm.color.setRGB(1, 1, 1).lerp(C('#ffc49a'), T.dusk * 0.6).lerp(C('#2a3366'), T.night * 0.85); const t = performance.now() / 1000; if (curtain.current) curtain.current.children.forEach((c, i) => { c.rotation.y = (i ? -1 : 1) * (0.12 + Math.sin(t * 0.9 + i) * 0.05) }) })
+  useFrame(() => { vm.color.setRGB(1, 1, 1).lerp(CC('#ffc49a'), T.dusk * 0.6).lerp(CC('#2a3366'), T.night * 0.85); const t = performance.now() / 1000; if (curtain.current) curtain.current.children.forEach((c, i) => { c.rotation.y = (i ? -1 : 1) * (0.12 + Math.sin(t * 0.9 + i) * 0.05) }) })
   return <group>
     <mesh position={[x - 0.35, 0.66, wz]} rotation={[0, Math.PI / 2, 0]} material={vm}><planeGeometry args={[1.4, 1.05]} /></mesh>
     {[[0.42, 'y'], [0.86, 'y']].map(([y], i) => <Box key={i} p={[x + 0.01, y, wz]} s={[0.1, 0.035, 0.56]} c={W.light} />)}
@@ -318,8 +318,9 @@ export function Room() {
   })
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
-    <Floor onDown={onDown} /><Walls /><Window /><Sunbeam /><Bed /><Shelf /><Kitchen /><Stove /><Table /><Door /><Pictures /><Lamp /><Hanging />
-    <Plant p={[-1.18, 0, 0.82]} s={1.5} big /><Plant p={[0.46, 0, -0.9]} s={0.9} /><Plant p={[1.15, 0.43, 0.68]} s={0.5} />
+    <Floor onDown={onDown} /><Window /><Sunbeam /><Stove /><Door /><Lamp />
+    <Merge><Hanging /><Walls /><Bed /><Shelf /><Kitchen /><Table /><Pictures />
+    <Plant p={[-1.18, 0, 0.82]} s={1.5} big /><Plant p={[0.46, 0, -0.9]} s={0.9} /><Plant p={[1.15, 0.43, 0.68]} s={0.5} /></Merge>
     <InsideDecor />
     <Cat />
   </group>
