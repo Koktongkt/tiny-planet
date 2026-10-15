@@ -16,8 +16,8 @@ export const CAT_CFG = { s: 1, body: [0.05, 0.045, 0.085], legH: 0.055, legR: 0.
 const SPOT = { beam: { x: -0.62, z: 0.25, y: 0 }, bed: { x: -0.92, z: -0.5, y: 0.29, from: { x: -0.5, z: -0.48 } }, sill: { x: -1.2, z: 0.15, y: 0.44, from: { x: -0.98, z: 0.15 } }, bedK: { x: -1.0, z: -0.3, y: 0.29, from: { x: -0.5, z: -0.3 } } }
 const pick = (w) => { let s = 0; for (const k in w) s += w[k]; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return Object.keys(w)[0] }
 const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a))
-export const CAT = { x: -0.3, z: 0.55, y: 0, yaw: 2.4, state: 'wander', t: 0, dur: 3, mood: 0.7, target: null, hop: null, ball: { x: 0.0, z: 0.7, vx: 0, vz: 0, spin: 0 }, ignoreCD: 0, approachCD: 6, name: 'Mochi' }
-if (typeof window !== 'undefined') window.__cat = CAT
+import { CAT } from './catState.js'
+export { CAT }
 const FORCE = q.get('cat')
 
 export function Cat() {

@@ -11,7 +11,8 @@ import { toon, T, C, CC, q, VIEW } from '../common.jsx'
 import { toonRamp, R, height } from '../world.js'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
-import { Cat, CAT } from '../pets/Cat.jsx'
+import { CAT } from '../pets/catState.js'
+const Cat = React.lazy(() => import('../pets/Cat.jsx').then(m => ({ default: m.Cat })))
 const PETCAM = q.get('petcam') // debug: close camera on the cat (?petcam=1, or an angle in radians)
 
 const UP = new THREE.Vector3(0, 1, 0), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3()
@@ -322,6 +323,6 @@ export function Room() {
     <Merge><Hanging /><Walls /><Bed /><Shelf /><Kitchen /><Table /><Pictures />
     <Plant p={[-1.18, 0, 0.82]} s={1.5} big /><Plant p={[0.46, 0, -0.9]} s={0.9} /><Plant p={[1.15, 0.43, 0.68]} s={0.5} /></Merge>
     <InsideDecor />
-    <Cat />
+    <React.Suspense fallback={null}><Cat /></React.Suspense>
   </group>
 }

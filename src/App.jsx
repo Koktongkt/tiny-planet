@@ -362,7 +362,7 @@ function Vegetation() {
     const trunk = new THREE.CylinderGeometry(0.05, 0.1, 0.62, 7); trunk.translate(0, 0.3, 0); { const p = trunk.attributes.position; for (let i = 0; i < p.count; i++) if (p.getY(i) < 0.05) { p.setX(i, p.getX(i) * 1.25); p.setZ(i, p.getZ(i) * 1.25) } trunk.computeVertexNormals() } // root flare
     const fl = new THREE.IcosahedronGeometry(0.035, 1)
     // far LOD (whole clusters swap, see HorizonCull): same silhouette, fewer facets
-    const tuftLo = new THREE.SphereGeometry(0.07, 10, 3, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo.scale(1.08, 0.9, 1.08) // same lobes, smooth normals, a touch fuller so ridges stay full
+    const tuftLo = new THREE.SphereGeometry(0.07, 10, TOUCH ? 2 : 3, /* phones: one ring fewer on far tufts */ 0, Math.PI * 2, 0, Math.PI / 2); tuftLo.scale(1.08, 0.9, 1.08) // same lobes, smooth normals, a touch fuller so ridges stay full
     { const q2 = tuftLo.attributes.position; for (let i = 0; i < q2.count; i++) { const x = q2.getX(i), z = q2.getZ(i), a = Math.atan2(z, x); const w = 1 + 0.18 * Math.sin(a * 5); q2.setX(i, x * w); q2.setZ(i, z * w); q2.setY(i, q2.getY(i) * (1 + 0.25 * Math.sin(a * 5))) } tuftLo.computeVertexNormals() }
     const flLo = new THREE.IcosahedronGeometry(0.039, 0)
     const tuftLo2 = new THREE.SphereGeometry(0.075, 6, 2, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo2.scale(1.1, 0.95, 1.1) // orbit / very far: a soft dome
@@ -756,9 +756,12 @@ function HorizonCull() {
     _o.setFromMatrixPosition(pl.matrixWorld); const camD = camera.position.distanceTo(_o)
     const lim = -Math.min(0.42, 4.5 / camD) // looser when close
     _tc.copy(camera.position).sub(_o).normalize()
+    const subK = TOUCH && VIEW.mode === 'orbit' ? gl.domElement.clientHeight / 2 / Math.tan(camera.fov * Math.PI / 360) : 0 /* radius in css px = r * pxK / dist */
     for (const o of list.current) {
       _p.setFromMatrixPosition(o.matrixWorld); const r = _p.distanceTo(_o); if (r < R * 0.6) continue // skip big/central stuff (planet, sky)
-      const hide = _p.sub(_o).divideScalar(r).dot(_tc) < lim
+      let sub = false
+      if (subK) { const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); sub = g.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis() * subK < camera.position.distanceTo(_p) } /* touch orbit: skip props under ~2 px across */
+      const hide = sub || _p.sub(_o).divideScalar(r).dot(_tc) < lim
       if (hide) o.layers.disable(0); else o.layers.enable(0)
     }
     // clustered instance batches: hide only when the whole cluster (centre + angular radius) is past the same horizon
