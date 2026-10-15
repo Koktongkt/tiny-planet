@@ -9,7 +9,7 @@ const P = (d, fill, extra = {}) => <path d={d} fill={fill} {...st} {...extra} />
 const H = (d) => <path d={d} {...hl} />
 const Ci = (cx, cy, r, fill, extra = {}) => <circle cx={cx} cy={cy} r={r} fill={fill} {...st} {...extra} />
 const El = (cx, cy, rx, ry, fill, rot = 0) => <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={fill} transform={rot ? `rotate(${rot} ${cx} ${cy})` : undefined} {...st} />
-const L = (d, w = 2.6, c = I) => <path d={d} fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+const L = (d, w = 2.6, c = I, key) => <path key={key} d={d} fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
 // [wash colour, drawing]
 const D = {
   wood: ['#e8c9a0', <>{P('M10 40 L46 22 Q53 20 54 27 Q55 33 49 35 L14 50 Q8 51 7 46 Q7 42 10 40Z', '#a8744c')}{El(51, 28, 4.5, 6.5, '#e2c08e', -26)}{L('M48 27 q2 1 2 3', 1.6)}{L('M20 42 L38 33 M18 46 L30 40', 1.8, '#7a5236')}{P('M30 36 q-2 -9 4 -13', 'none')}{El(35, 22, 4, 2.4, '#9cc46a', -30)}</>],
@@ -53,7 +53,7 @@ const D = {
   // UI glyphs
   bag: ['#ecd8b8', <>{P('M14 26 Q12 54 32 54 Q52 54 50 26Z', '#c98a5a')}{P('M14 26 L50 26 L46 20 L18 20Z', '#a8744c')}{P('M24 20 Q24 8 32 8 Q40 8 40 20', 'none')}<rect x={27} y={30} width={10} height={8} rx={2} fill="#e8b84a" {...st} strokeWidth={1.8} />{H('M19 32 Q19 44 24 48')}</>],
   book: ['#dce6d0', <>{P('M10 14 Q22 10 32 16 L32 54 Q22 48 10 52Z', '#d9655b')}{P('M54 14 Q42 10 32 16 L32 54 Q42 48 54 52Z', '#e8735f')}{L('M16 24 q6 -2 12 1 M16 32 q6 -2 12 1 M38 24 q6 -2 10 -1', 1.8, '#fbf3e4')}</>],
-  sun: ['#fbe6b0', <>{[...Array(8)].map((_, i) => { const a = i / 8 * Math.PI * 2; return L(`M${32 + Math.cos(a) * 18} ${32 + Math.sin(a) * 18} L${32 + Math.cos(a) * 25} ${32 + Math.sin(a) * 25}`, 2.6, '#e8a24a') })}{Ci(32, 32, 13, '#ffd36e')}{H('M25 28 q2 -4 6 -5')}</>],
+  sun: ['#fbe6b0', <>{[...Array(8)].map((_, i) => { const a = i / 8 * Math.PI * 2; return L(`M${32 + Math.cos(a) * 18} ${32 + Math.sin(a) * 18} L${32 + Math.cos(a) * 25} ${32 + Math.sin(a) * 25}`, 2.6, '#e8a24a', i) })}{Ci(32, 32, 13, '#ffd36e')}{H('M25 28 q2 -4 6 -5')}</>],
   moon: ['#d8dcf0', <>{P('M40 10 Q22 14 22 32 Q22 50 42 54 Q28 58 18 48 Q8 36 14 22 Q22 10 40 10Z', '#f3e6c8')}{Ci(44, 22, 1.6, '#fff8e0', { stroke: 'none' })}{Ci(50, 34, 1.2, '#fff8e0', { stroke: 'none' })}</>],
   dusk: ['#f8d0b8', <>{P('M10 40 Q10 22 32 22 Q54 22 54 40Z', '#ffb38a')}{L('M6 40 H58 M12 48 H52', 2.6)}{H('M18 34 q4 -6 10 -7')}</>],
   leaf: ['#d4e8c0', <>{P('M12 52 Q10 20 50 12 Q54 44 12 52Z', '#8fbf6a')}{L('M14 50 Q30 34 46 16', 2)}</>],

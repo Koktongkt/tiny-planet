@@ -41,6 +41,7 @@ export function Cat() {
     go('petted', 3.8); c.mood = Math.min(1, c.mood + 0.25); burst(hearts.current, 6); toast(`${c.name} purrs happily ♥`, 'hand')
   }
   useFrame((_, dt) => {
+    st.frozen = !HOME.inside; if (st.frozen) return // he lives indoors: nothing to simulate while she's out
     dt = Math.min(dt, 0.05); c.t += dt; c.ignoreCD -= dt; c.approachCD -= dt
     const g = st.goal, hp = HOME.hp, dHer = Math.hypot(hp.x - c.x, hp.z - c.z), onFloor = c.y < 0.01
     Object.assign(g, POSE0); g.tailUp = 0.45; g.tailWag = 0.12; g.tailSpeed = 2.2
@@ -89,7 +90,7 @@ export function Cat() {
       if (c.forced && c.t % 1.2 < dt) burst(hearts.current, 3); if (c.t > c.dur) go('sitnear', 3) }
     else if (S === 'ignore') { g.sit = 1; face = Math.atan2(c.x - hp.x, c.z - hp.z); g.tailWag = 0.7; g.tailSpeed = 7; g.tailUp = -0.1; g.earBack = 0.6; g.eyes = 0.5; if (c.t > c.dur && !c.forced) next() }
     // she's close: sometimes come and say hello
-    if (['wander', 'groom', 'sitnear'].includes(S) && dHer < 0.9 && c.approachCD < 0 && !c.forced) { c.approachCD = 9 + Math.random() * 8; if (Math.random() < 0.5 * (0.5 + c.mood)) go('approach', 8); else if (Math.random() < 0.3) go('ignore', 3) }
+    if ((S === 'wander' || S === 'groom' || S === 'sitnear') && dHer < 0.9 && c.approachCD < 0 && !c.forced) { c.approachCD = 9 + Math.random() * 8; if (Math.random() < 0.5 * (0.5 + c.mood)) go('approach', 8); else if (Math.random() < 0.3) go('ignore', 3) }
     function next() { const day = T.day > 0.5
       const k = pick({ nap: day ? 1.4 : 0.6, napBed: 1.6, groom: 1.6, stretch: 0.8, chase: 1.6, sill: day ? 1.6 : 0.8, knead: 0.9, wander: 2 })
       if (k === 'nap') go('nap', 12 + Math.random() * 10, { where: 'beam' }); else if (k === 'napBed') go('nap', 12 + Math.random() * 10, { where: 'bed' }); else if (k === 'groom') go('groom', 4 + Math.random() * 3); else if (k === 'stretch') go('stretch', 2.6); else if (k === 'chase') go('chase', 12); else if (k === 'sill') go('sill', 10 + Math.random() * 8); else if (k === 'knead') go('knead', 4); else go('wander', 3 + Math.random() * 3) }

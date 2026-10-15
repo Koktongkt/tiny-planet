@@ -3,8 +3,8 @@
 // and little birds, barking at sheep, rolling in the grass, splashing in the lake, digging (sometimes something
 // turns up to gather), fetch (E), tail wag by mood, sitting when she stops, and waiting by the door while she's in.
 import * as THREE from 'three'
-import React, { useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import React, { useEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
 import { HOME } from '../home/state.js'
 import { GEO, cel, OUT } from '../home/kit.jsx'
@@ -18,6 +18,12 @@ export const DOG_CFG = { s: 1.3, body: [0.058, 0.052, 0.098], legH: 0.078, legR:
   tail: { n: 5, seg: 0.022, r: 0.017, curl: 0.95, tip: 1 }, col: { main: '#e39a52', belly: '#fff1dc', dark: '#c97f3f', inner: '#f08f8f', nose: '#3a2e2a', eye: '#2e2420', shine: '#ffffff', collar: '#e0614f', tag: '#ffd36e' } }
 const _t = new THREE.Vector3(), _a = new THREE.Vector3(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3()
 const tan = (n, v, out) => out.copy(v).addScaledVector(n, -n.dot(v)).normalize()
+// nearby colliders: the planet has hundreds (every tree), so the dog keeps a short list around itself, refreshed at
+// ~5 Hz or when it has moved, instead of scanning them all twice per frame
+const NEAR = [], _nc = new THREE.Vector3(); let nearT = 0
+function nearColliders(n, dt) { nearT -= dt; if (nearT > 0 && n.dot(_nc) > Math.cos(0.08)) return NEAR
+  nearT = 0.2; _nc.copy(n); NEAR.length = 0; for (const c of HOME.colliders) if (angTo(n, c.n) < c.r + 0.25) NEAR.push(c); return NEAR }
+const FETCHING = new Set(['fetchRun', 'fetchBack'])
 const angTo = (a, b) => Math.acos(Math.min(1, Math.max(-1, a.dot(b) / (a.length() * b.length()))))
 const surf = (n, out) => out.copy(n).multiplyScalar(R + Math.max(height(n), LAKE_W - 0.07))
 const DIG = ['acorn', 'stone', 'coin', 'shell', 'pinecone', 'clay', 'shard']
@@ -39,7 +45,7 @@ export function Dog() {
       if (HOME.inside || HOME.busy) return
       const P = HOME.P; if (!P) return
       const d = angTo(D.n, P.n) * R
-      if (['fetchRun', 'fetchBack'].includes(D.state) || D.stick.mode === 'fly') return
+      if (FETCHING.has(D.state) || D.stick.mode === 'fly') return
       consider({ kind: 'ext', id: 'dog', icon: 'wood', verb: D.stick.mode === 'ground' ? 'Throw the stick for' : 'Throw a stick for', name: D.name, act: throwStick }, d, 0.95)
       for (const it of D.dug) if (!it.taken) consider({ kind: 'ext', id: 'dug' + it.id, icon: it.item, verb: 'Pick up', name: ITEMS[it.item].name, act: () => { it.taken = true; add(it.item) } }, pp.distanceTo(surf(it.n, _a)), 0.45)
     })
@@ -58,6 +64,11 @@ export function Dog() {
     if (FORCE) { const P = HOME.P; D.n.copy(P.n).addScaledVector(P.fwd, 0.55 / R).addScaledVector(_s.crossVectors(P.n, P.fwd), 0.2 / R).normalize(); tan(D.n, P.n.clone().sub(D.n), D.f)
       if (FORCE === 'fetch') { throwStick(); D.n.copy(P.n).addScaledVector(P.fwd, 0.25 / R).normalize() } else if (FORCE !== 'follow') go(FORCE, 999, { forced: true }); if (FORCE === 'wait') { D.n.copy(HOME.outN); tan(D.n, HOME.homeN.clone().sub(D.n), D.f) } }
   }
+  // lazy chunk: warm his shaders as soon as he mounts (async where the GPU allows), so stepping outside never hitches
+  const gl = useThree(x => x.gl), scene = useThree(x => x.scene), camera = useThree(x => x.camera)
+  useEffect(() => { const gs = [root.current, stickW.current, crit.current].filter(Boolean); if (!gs.length) return; const lights = []; scene.traverse(o => { if (o.isLight) lights.push(o) })
+    const proxy = { traverse: f => { gs.forEach(g => g.traverse(f)); lights.forEach(f) }, traverseVisible: f => proxy.traverse(f) }
+    try { (gl.compileAsync ? gl.compileAsync(proxy, camera, scene) : Promise.resolve(gl.compile(proxy, camera, scene))).catch(() => {}) } catch {} }, [])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const P = HOME.P; if (!P || !D.init) { if (!D.init && HOME.outN && HOME.P) { D.init = false } return }
     D.t += dt; D.barkCD -= dt; D.splashCD -= dt; D.mood = Math.max(0.25, D.mood - dt * 0.004)
@@ -73,7 +84,8 @@ export function Dog() {
     // ---------- brain ----------
     const S = D.state
     const nearPick = (lim) => dHer < lim && !herMoving
-    if (HOME.inside && !['wait'].includes(S)) go('toDoor', 999)
+    if (HOME.inside && S !== 'wait' && S !== 'toDoor') go('toDoor', 999)
+    st.frozen = HOME.inside && S === 'wait' && D.t > 1.5 // sat by the door while she's inside, out of sight: pause the rig
     if (S === 'toDoor') { target = HOME.outN; spd = 1.4; if (angTo(D.n, HOME.outN) * R < 0.1) go('wait', 999) }
     else if (S === 'wait') { if (!HOME.inside && !D.forced) go('greet', 1.4); face = _t.copy(HOME.homeN); const long = D.t > 8; g.sit = long ? 0 : 1; g.lie = long ? 1 : 0; g.headPitch = long ? 0.25 : -0.15; g.tailWag = 0.12; g.tailUp = 0.2; g.tongue = 0; g.mouth = 0; g.earBack = long ? 0.35 : 0; if (Math.sin(D.t * 0.7) > 0.95) { g.headTilt = 0.4; g.earBack = -0.2 } }
     else if (S === 'greet') { face = P.n; g.hop = Math.abs(Math.sin(D.t * 9)) * 0.06; g.tailWag = 1.4; g.tailSpeed = 20; g.tongue = 1; g.mouth = 0.5; g.headPitch = -0.3; if (D.t > D.dur) go('follow', 0) }
@@ -122,10 +134,10 @@ export function Dog() {
       const cr = crit.current; cr.visible = true; cr.position.copy(surf(c.n, _a)).addScaledVector(c.n, k ? 0.22 + Math.sin(c.t * 5) * 0.06 + c.t * 0.03 : c.up * c.up * 0.5 + c.up * 0.2); cr.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(c.n, c.d), c.n, c.d))
       const fl = Math.sin(c.t * (k ? 18 : c.up > 0 ? 26 : 0)) * 0.9; cr.children[0].visible = k; cr.children[1].visible = !k; const wg = cr.children[k ? 0 : 1]; wg.children[0].rotation.z = 0.25 + fl; wg.children[1].rotation.z = -0.25 - fl; if (!k && c.up === 0) wg.position.y = Math.abs(Math.sin(c.t * 6)) * 0.01 } else crit.current.visible = false
     // ---------- steering on the sphere (seek + collider avoidance) ----------
-    let moveSpd = 0
+    let moveSpd = 0; const CL = nearColliders(D.n, dt)
     if (target) { const d = angTo(D.n, target) * R
       if (d > arrive) { const want = tan(D.n, _a.copy(target).sub(D.n), _a)
-        for (const cl of HOME.colliders) { const ca = angTo(D.n, cl.n); if (ca > cl.r + 0.09) continue
+        for (const cl of CL) { const ca = angTo(D.n, cl.n); if (ca > cl.r + 0.09) continue
           const away = tan(D.n, _y.copy(D.n).sub(cl.n), _y), toward = -want.dot(away); if (toward <= 0 && ca > cl.r + 0.02) continue
           const w = 1.6 * (1 - Math.max(0, ca - cl.r) / 0.09); const lat = _x.copy(want).addScaledVector(away, toward); if (lat.lengthSq() < 1e-6) lat.crossVectors(D.n, away); lat.normalize(); want.addScaledVector(lat, w).addScaledVector(away, w * 0.5).normalize() }
         moveSpd = Math.min(spd, 0.6 + d * 2.5); const turn = Math.atan2(_x.crossVectors(D.f, want).dot(D.n), D.f.dot(want)), mr = (moveSpd > 2 ? 5 : 4) * dt
@@ -133,15 +145,14 @@ export function Dog() {
     if (face) { const want = tan(D.n, _a.copy(face).sub(D.n), _a); const turn = Math.atan2(_x.crossVectors(D.f, want).dot(D.n), D.f.dot(want)); D.f.applyAxisAngle(D.n, turn * Math.min(1, dt * 3)); if (Math.abs(turn) > 0.6 && !g.sit && !g.lie) { moveSpd = 0.25; g.sit = 0 } }
     D.speed += (moveSpd - D.speed) * Math.min(1, dt * (moveSpd > D.speed ? 3 : 5))
     D.n.addScaledVector(D.f, D.speed / R * dt).normalize()
-    for (const cl of HOME.colliders) { const a = angTo(D.n, cl.n); if (a < cl.r) { const dd = tan(cl.n, D.n, _y); D.n.copy(cl.n).multiplyScalar(Math.cos(cl.r)).addScaledVector(dd, Math.sin(cl.r)).normalize() } }
+    for (const cl of CL) { const a = angTo(D.n, cl.n); if (a < cl.r) { const dd = tan(cl.n, D.n, _y); D.n.copy(cl.n).multiplyScalar(Math.cos(cl.r)).addScaledVector(dd, Math.sin(cl.r)).normalize() } }
     if (dHer < 0.22 && !HOME.inside) D.n.addScaledVector(tan(D.n, _a.copy(D.n).sub(P.n), _a), 0.4 / R * dt).normalize()
-    if (dHer > 7 && !HOME.inside && D.state !== 'wait') { D.n.copy(P.n).addScaledVector(P.fwd, -1.2 / R).normalize(); tan(D.n, P.n.clone().sub(D.n), D.f) } // lost? catch up off-screen
+    if (dHer > 7 && !HOME.inside && D.state !== 'wait') { D.n.copy(P.n).addScaledVector(P.fwd, -1.2 / R).normalize(); tan(D.n, _a.copy(P.n).sub(D.n), D.f) } // lost? catch up off-screen
     tan(D.n, D.f, D.f)
     if (D.speed > 0.05 && Math.random() < dt * 0.3 && !wet) puff.current?.emit(1, 0.12, 0.15, [0, 0.005, -0.08])
     // ---------- gait + placement ----------
     st.speed = D.speed / DOG_CFG.s; st.run = D.speed > 2.2 ? 1 : 0; st.phase += dt * D.speed / (DOG_CFG.stride * DOG_CFG.s) * (st.run ? 1.1 : 1.5)
     root.current.position.copy(surf(D.n, _a)); root.current.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(D.n, D.f), D.n, D.f))
-    D.dug.forEach((it, i) => { const r = dugRefs.current[i % 3]; void r })
   })
   return <>
     <group ref={root}>

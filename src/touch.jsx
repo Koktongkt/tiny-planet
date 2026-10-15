@@ -20,13 +20,15 @@ function Stick() {
     const r = c.current.r, d = Math.hypot(dx, dy), m = Math.min(1, d / r), k = d > r ? r / d : 1
     PAD.x = (dx * k) / r; PAD.y = (-dy * k) / r; PAD.mag = m
     const run = m > 0.85; if (run && !PAD.run) buzz(6); PAD.run = run
+    if (!knob.current || !base.current) return
     knob.current.style.transform = `translate(${dx * k}px, ${dy * k}px)`
     base.current.classList.toggle('run', run)
   }
   const down = (e) => { if (id.current != null) return; e.preventDefault(); id.current = e.pointerId; base.current.setPointerCapture(e.pointerId)
     const b = base.current.getBoundingClientRect(); c.current = { x: b.left + b.width / 2, y: b.top + b.height / 2, r: b.width * 0.42 }; PAD.active = true; base.current.classList.add('on'); set(e.clientX - c.current.x, e.clientY - c.current.y); buzz(5) }
   const move = (e) => { if (e.pointerId !== id.current) return; e.preventDefault(); set(e.clientX - c.current.x, e.clientY - c.current.y) }
-  const up = (e) => { if (e.pointerId !== id.current) return; id.current = null; PAD.x = PAD.y = PAD.mag = 0; PAD.run = false; PAD.active = false; knob.current.style.transform = ''; base.current.classList.remove('on', 'run') }
+  const up = (e) => { if (e.pointerId !== id.current) return; id.current = null; PAD.x = PAD.y = PAD.mag = 0; PAD.run = false; PAD.active = false; if (knob.current) knob.current.style.transform = ''; base.current?.classList.remove('on', 'run') }
+  useEffect(() => () => { if (id.current != null) { id.current = null; PAD.x = PAD.y = PAD.mag = 0; PAD.run = false; PAD.active = false } }, []) // unmounted mid-drag (view toggle / door): release the stick
   return <div className="tp-stick" ref={base} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up} aria-label="Move: drag the stick, push to the edge to run" role="application">
     <svg className="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" /><path d="M50 14l-5 7h10zM50 86l-5-7h10zM14 50l7-5v10zM86 50l-7-5v10z" /></svg>
     <div className="knob" ref={knob} />

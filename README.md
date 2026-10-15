@@ -45,6 +45,11 @@ Explore the planet, gather resources in each biome, and craft tools, food and de
 | Fishing | E / Space / Enter | Tap the bar |
 | Placing decor | R rotates, E/Enter places, Esc cancels | Placement bar buttons |
 | Planet view | V | |
+| Go in / out of the house | E at the door | ✋ Action, or tap the prompt |
+| Walk indoors | WASD / arrows | Stick (screen-relative), or tap the floor |
+| Pet Mochi (cat, indoors) | E near him | ✋ Action |
+| Throw a stick for Pip (dog, outdoors) | E near him | ✋ Action |
+| Pick up what Pip dug up | E near it | ✋ Action |
 
 ### Touch (phones and tablets)
 
@@ -70,6 +75,14 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
 - **Day cycle and saves:** items respawn each in-game sunrise (3 minutes per day); progress saves to localStorage. Reset from the Bag or with `?reset`.
+
+## Home & pets
+
+- **You start inside your house:** one cozy room with a bed, kitchen, wood stove and kettle, a table with a teapot, a bookshelf, plants and warm window light. Use the door (E) to step outside; a warm iris covers the crossing. `?out` starts outdoors.
+- **Indoor decor:** placing decor from the Bag while inside puts it on the floor in front of you. Press E to pick it up again.
+- **Mochi the cat** stays indoors. He naps in the sunbeam or on the bed, grooms, stretches and yawns, chases the yarn ball, sits on the windowsill and kneads the quilt. Sometimes he comes over to rub against your ankles. Press E to pet him: he purrs and shows hearts, or now and then ignores you.
+- **Pip the dog** stays outdoors. He follows you at a loose distance, steering around trees, rocks and houses. When you stop he sits or lies down, and he sniffs, digs (sometimes turning up something you can pick up), rolls, chases butterflies, barks at sheep and splashes in the lake. Press E near him to play fetch. While you're inside he waits by the front door and greets you when you come out.
+- **Performance:** the room and Mochi are part of the startup chunk, since they're the first view. Pip is a separate chunk (about 6 KB gzipped) that loads after the first frame and compiles his shaders on mount. Each pet's simulation and rig pause while it's out of sight. Pip checks a short list of nearby colliders, refreshed about 5 times a second, instead of scanning every tree on the planet each frame. The room's light and layer tagging runs only while you're inside.
 
 ## Loading
 

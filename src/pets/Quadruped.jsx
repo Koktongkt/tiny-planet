@@ -18,6 +18,7 @@ export function Quadruped({ cfg, st }) {
   const legs = useMemo(() => [['FL', 1, 1, 0], ['FR', -1, 1, Math.PI], ['RL', 1, -1, Math.PI], ['RR', -1, -1, 0]], [])
   const baseY = c.legH + bh * 0.55
   useFrame((_, dt) => {
+    if (st.frozen) return // off-screen (cat while she's outdoors, dog waiting by the door while she's in)
     dt = Math.min(dt, 0.05); st.t += dt; const p = st.p, g = st.goal, R_ = r.current, t = st.t
     for (const k in g) { const kk = K[k] ?? 7; p[k] += (g[k] - p[k]) * Math.min(1, dt * kk) }
     // blink + ear twitches

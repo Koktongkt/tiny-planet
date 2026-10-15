@@ -30,7 +30,7 @@ HOME.enter = async () => {
   await fadeTo(0, 520); HOME.busy = false
 }
 HOME.exit = async () => {
-  if (HOME.busy || !HOME.inside) return; HOME.busy = true; HOME.doorOpen = 1
+  if (HOME.busy || !HOME.inside) return; HOME.needDog && HOME.needDog(); HOME.busy = true; HOME.doorOpen = 1
   await fadeTo(1, 380)
   const P = HOME.P; HOME.inside = false
   if (P && HOME.outN) { P.n.copy(HOME.outN); const f = HOME.outN.clone().sub(HOME.homeN); P.fwd.copy(f.addScaledVector(P.n, -f.dot(P.n)).normalize()).applyAxisAngle(P.n, 1.25); /* step out along the porch so the follow camera clears the house */ P.target = null; P.h = 0; P.vy = 0 }
@@ -310,7 +310,8 @@ export function Room() {
   useEffect(() => { HOME.roomObj = ref.current }, [])
   useFrame(() => {
     const g = ref.current; g.visible = HOME.inside
-    if (n.current++ % 60 === 0) { // layer 5 = what the interior camera renders: the room, her, and the lights
+    if (!HOME.inside) { n.current = 0; return } // outdoors: nothing to tag (this used to walk the whole scene graph every second)
+    if (n.current++ % 90 === 0) { // layer 5 = what the interior camera renders: the room, her, and the lights
       g.traverse(o => o.layers.enable(LAYER)); scene.traverse(o => { if (o.isLight) o.layers.enable(LAYER) })
       if (HOME.playerObj) HOME.playerObj.traverse(o => o.layers.enable(LAYER))
     }
