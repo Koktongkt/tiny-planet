@@ -525,7 +525,7 @@ function Walker({ w, i }) {
     if (planetRef.current) { // cull by distance (close views) and by horizon (anything on the planet's far side)
       _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); _c0.setFromMatrixPosition(planetRef.current.matrixWorld)
       const up = _wy.copy(_f).sub(_c0).normalize(), toCam = _wz.copy(camera.position).sub(_f).normalize()
-      g.visible = up.dot(toCam) > -0.05 && (VIEW.mode === 'orbit' || camera.position.distanceTo(_f) < (TOUCH ? 9 : 12)) } else g.visible = true
+      g.visible = up.dot(toCam) > (TOUCH && VIEW.mode === 'orbit' ? 0.5 : -0.05) && (VIEW.mode === 'orbit' || /* mobile orbit: skip the few-px villagers along the limb */ camera.position.distanceTo(_f) < (TOUCH ? 9 : 12)) } else g.visible = true
   })
   return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }

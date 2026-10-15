@@ -1,5 +1,5 @@
 // Talk + villager-life shared state (no React). Walkers register here; the Talk component picks who is near her.
-export const NPCS = [] // { key, w, obj (THREE.Group in planet space), st }
+export const NPCS = [] ; if (typeof window !== 'undefined') window.__npcs = NPCS // { key, w, obj (THREE.Group in planet space), st }
 export const TALK = { near: null, open: null, page: 0, lines: null, onOpen: null, recent: [], lastInside: false }
 // simple weather: one kind per in-game day (deterministic), only light touches (dialogue + cloud tint); there was none before
 const KINDS = ['clear', 'breezy', 'clear', 'cloudy', 'breezy', 'drizzle', 'clear']
