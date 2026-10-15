@@ -12,3 +12,5 @@ Tiny Planet uses **no third-party 3D models, textures or images**. Every mesh (t
 - 3D props, sheep, the bench, the rope bridge and decor (`src/game/World.jsx`): built from three.js primitives in code.
 - The Home sign texture is drawn at runtime on a canvas with the bundled Fredoka font (OFL).
 - No third-party art, icons, sounds or fonts were added this round.
+
+- Loader font: Cormorant Garamond 500 italic, latin subset (`public/fonts/cormorant-500i.woff2`, from @fontsource, SIL OFL; licence in `public/fonts/OFL-cormorant.txt`). All loader art is inline SVG made in code.

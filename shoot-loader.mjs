@@ -9,5 +9,5 @@ const t0=Date.now();const mp=await ctx.newPage();mp.goto(url+'&bootpause=shaders
 p.goto(url).catch(()=>{})
 await p.waitForSelector('#ld',{timeout:60000});await p.waitForTimeout(1200);await p.screenshot({path:`${out}/${pfx}-early.png`});console.log('early',Date.now()-t0)
 await p.waitForSelector('#go.on',{timeout:180000});await p.waitForTimeout(900);await p.screenshot({path:`${out}/${pfx}-ready.png`});console.log('ready',Date.now()-t0,await p.evaluate(()=>JSON.stringify(window.__loadMarks)))
-await p.keyboard.press('Enter');await p.waitForTimeout(2500);await p.screenshot({path:`${out}/${pfx}-entered.png`});console.log('entered, loader gone:',await p.evaluate(()=>!document.getElementById('ld')))
+await p.keyboard.press("Enter");await p.waitForTimeout(450);await p.screenshot({path:`${out}/${pfx}-enter.png`});await p.waitForTimeout(2000);await p.screenshot({path:`${out}/${pfx}-entered.png`});console.log('entered, loader gone:',await p.evaluate(()=>!document.getElementById('ld')))
 await b.close()

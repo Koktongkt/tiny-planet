@@ -56,7 +56,7 @@ Explore the planet, gather resources in each biome, and craft tools, food and de
 ## Loading
 
 - **Inline HTML loader** in `index.html` paints before any JS runs. Its progress is real and staged: fetching code, then building the world, then compiling shaders, then the first frame (`src/boot.js`).
-- **Leafy progress bar:** the loader shows a vine-and-leaf progress bar that fills with real progress, while the little traveller walks along it.
+- **"Golden hour" title card:** clouds part as real progress grows, revealing a sepia ink planet that draws itself stroke by stroke as watercolour washes bleed in. The stage line is set in Cormorant Garamond italic, and there is no bar or percentage. When it is ready, "Enter the world" (any key, click or tap) opens an iris from the planet into the 3D world. With reduced motion it is a short crossfade.
 - **Chunk split:** `vendor-three`, `vendor-r3f` (React, r3f, drei) and `vendor-post` (postprocessing). The game `World` and `UI` are lazy-loaded, and so are the optional character and sprite modes.
 - **Terrain fix:** the curve distance checks behind terrain colouring used to block the main thread for about 35 s. They now run in a fraction of a second.
 - **Before → after** (live site, headless Chromium with software WebGL, time to the first rendered frame): unthrottled **36.4 s → 1.8–3.0 s**; Fast 3G + 4x CPU **147 s → 9.4 s**. Total transfer is about 374 KB gzipped either way.
@@ -67,7 +67,7 @@ See [ASSETS.md](ASSETS.md).
 
 - **No third-party 3D models, textures, images or icons.** Terrain, houses, people, trees, train, boats, ruins and water are generated in code (primitives, lathe shapes, SDF soft bodies and shaders).
 - **Gather & Craft assets are first-party, generated in code:** the traveller sprite sheet (`src/assets/`, made by `tools/sprites.mjs`), the item and UI icons (`src/game/icons.jsx`, SVG written in code), and the props, sheep, bench, rope bridge and decor (`src/game/World.jsx`, three.js primitives).
-- **Font:** Fredoka, bundled via `@fontsource/fredoka` (SIL Open Font License 1.1).
+- **Fonts:** Fredoka, bundled via `@fontsource/fredoka`, and Cormorant Garamond 500 italic (loader title card, `public/fonts/cormorant-500i.woff2`, licence in `public/fonts/OFL-cormorant.txt`), both SIL Open Font License 1.1.
 - **Libraries:** three.js, React, @react-three/fiber, drei and postprocessing, all MIT.
 
 ## Run locally

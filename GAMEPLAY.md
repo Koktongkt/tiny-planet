@@ -70,8 +70,8 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 | `?pick=0.45`, `?fish=1`, `?craft=jam` | Freeze the animation for screenshots |
 
 ## Loading screen
-- The loader is inline in `index.html` (about 4.9 KB gzipped, plain HTML, CSS and SVG). It paints before any JS or WebGL runs.
-- Progress shows as a leafy loading bar with the traveller walking along its top.
+- The loader is inline in `index.html` (15.4 KB, or 6.2 KB gzipped) and paints before any JS or WebGL runs. Its only extra file is the 24 KB Cormorant italic woff2, which is preloaded.
+- Progress drives the clouds parting, the ink planet drawing itself and the watercolour washes. A small-caps stage line names the current stage.
 - It reports real stages, weighted by their measured share of a Fast 3G + 4× CPU load:
 
   | Stage | Weight | What it covers |
@@ -83,7 +83,7 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
   | Shaders | 4% | Shaders precompiled in 16 batches with `renderer.compileAsync` |
   | First frame | 37% | The first rendered frame |
 
-- When it reaches 100% it shows **Press to enter**. Enter, Space, a click or a tap all work; the key that enters doesn't reach the game. The loader then fades out.
+- When it reaches 100% it shows **Enter the world**. Enter, Space, a click or a tap all work; the key that enters doesn't reach the game. An iris then opens from the planet into the world.
 - After the first frame, Gather & Craft (World + UI chunks), the far zones and the villagers load in idle time. Villagers bake one per idle slot.
 - Debug params:
   - `?enter`: enter automatically when ready (screenshot tooling uses this).
