@@ -5,7 +5,7 @@ import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, LAKE_W, HARB_W, CLIFF_H, zoneAng, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
-import { INK, T, C, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
+import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 
 const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
 const angTo = (n, k) => zoneAng(n, ZONES[k])
@@ -36,9 +36,9 @@ export function zoneColour(n, col) {
   let a = angTo(n, 'forest'); if (a < ZONES.forest.r + 0.05) col.lerp(cForest, 0.55 * Math.min(1, (ZONES.forest.r + 0.05 - a) / 0.08))
   a = angTo(n, 'meadow'); if (a < ZONES.meadow.r) col.lerp(cMeadow, 0.35 * (1 - a / ZONES.meadow.r))
   for (const k of ['lake', 'harbour']) { a = angTo(n, k); const r = ZONES[k].r; if (a < r * 1.3) col.lerp(a < r * 1.02 ? cBed : cSand, a < r * 1.02 ? 0.8 : Math.min(1, (r * 1.3 - a) / (r * 0.2)) * 0.85) }
-  a = angTo(n, 'terraces'); if (a < ZONES.terraces.r) { const f = (1.05 * Math.max(0, 1 - a / ZONES.terraces.r)) / 0.15; col.copy((f - Math.floor(f)) > 0.8 ? cRiser : cPaddy).lerp(C('#c8e8a0'), 0.25 * Math.sin(n.x * 90) ** 2) }
+  a = angTo(n, 'terraces'); if (a < ZONES.terraces.r) { const f = (1.05 * Math.max(0, 1 - a / ZONES.terraces.r)) / 0.15; col.copy((f - Math.floor(f)) > 0.8 ? cRiser : cPaddy).lerp(CC('#c8e8a0'), 0.25 * Math.sin(n.x * 90) ** 2) }
   a = angTo(n, 'ruins'); if (a < ZONES.ruins.r) col.lerp(cRuin, 0.4)
-  if (Math.abs(latOf(n) - TRAIN_LAT) < 0.16 / R) col.lerp(C('#b9a58a'), 0.8)
+  if (Math.abs(latOf(n) - TRAIN_LAT) < 0.16 / R) col.lerp(CC('#b9a58a'), 0.8)
 }
 export const rockify = (n, nrm, col) => { if (angTo(n, 'cliff') < ZONES.cliff.r + 0.05) { const d = nrm.dot(n); if (d < 0.86) col.copy(cRock).multiplyScalar(0.85 + 0.25 * Math.sin(n.y * 300)) } }
 
@@ -156,7 +156,7 @@ function Waterfall() {
 
 function Terraces() {
   const c = Zc.terraces, z = ZONES.terraces
-  const items = useMemo(() => { const a = []; for (let i = 0; i < 1400; i++) { const n = around(c, Math.sqrt(rnd()) * z.r * 0.95, rnd() * 6.283); const f = (1.05 * Math.max(0, 1 - zoneAng(n, z) / z.r)) / 0.15; if (f - Math.floor(f) > 0.7) continue; a.push({ ...place(n, -0.005, rnd() * 6), s: 0.7 + rnd() * 0.5, c: C('#9ccc5a').lerp(C('#c8dc6a'), rnd()) }) } return a }, [])
+  const items = useMemo(() => { const a = []; for (let i = 0; i < 1400; i++) { const n = around(c, Math.sqrt(rnd()) * z.r * 0.95, rnd() * 6.283); const f = (1.05 * Math.max(0, 1 - zoneAng(n, z) / z.r)) / 0.15; if (f - Math.floor(f) > 0.7) continue; a.push({ ...place(n, -0.005, rnd() * 6), s: 0.7 + rnd() * 0.5, c: C('#9ccc5a').lerp(CC('#c8dc6a'), rnd()) }) } return a }, [])
   const geo = useMemo(() => { const g = new THREE.ConeGeometry(0.03, 0.11, 5); g.translate(0, 0.055, 0); return g }, [])
   const mat = useMemo(() => windify(toon('#ffffff'), 5), [])
   return <>
@@ -178,6 +178,7 @@ function Terraces() {
 
 const TRAIN_SPEED = 0.05, TRAIN_LIFT = 0.055
 const trainAt = new URLSearchParams(location.search).get('trainAt')
+const _tn = new THREE.Vector3(), _ts = new THREE.Vector3(), _tu = new THREE.Vector3(), _tm = new THREE.Matrix4()
 const ringPos = (lon, lift = TRAIN_LIFT) => { const n = dir(TRAIN_LAT, lon); return n.multiplyScalar(R + height(n) + lift) }
 function Train() {
   const rails = useMemo(() => { const mk = (off) => { const pos = [], idx = []; const N = 900; for (let i = 0; i <= N; i++) { const lon = (i / N) * Math.PI * 2; for (const s of [-1, 1]) { const n = dir(TRAIN_LAT + (off + s * 0.008) / R, lon); pos.push(...n.multiplyScalar(R + height(dir(TRAIN_LAT, lon)) + 0.05).toArray()) } if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2) } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g }; return [mk(-0.07), mk(0.07)] }, [])
@@ -186,8 +187,8 @@ function Train() {
   const o = useMemo(() => new THREE.Object3D(), [])
   useFrame(() => {
     const t = wind.time.value, lon0 = trainAt != null ? +trainAt : t * TRAIN_SPEED
-    cars.current.forEach((g, k) => { if (!g) return; const lon = lon0 - k * 0.44 / (R * Math.cos(TRAIN_LAT)); const p = ringPos(lon), p2 = ringPos(lon + 0.01); const n = p.clone().normalize(), f = p2.sub(p).normalize(); g.position.copy(p); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(n, f), n, f)); g.position.addScaledVector(n, Math.abs(Math.sin(t * 12 + k)) * 0.004) })
-    const eng = cars.current[0]; if (eng) { const up = eng.position.clone().normalize(); for (let k = 0; k < 8; k++) { const u = (t * 0.6 + k / 8) % 1; o.position.set(0, 0.26 + u * 0.5, 0.12 - u * 0.5).applyQuaternion(eng.quaternion).add(eng.position); o.scale.setScalar((0.03 + u * 0.09) * Math.min(1, u * 6) * (1 - u) ** 0.5); o.updateMatrix(); puffs.current.setMatrixAt(k, o.matrix) } puffs.current.instanceMatrix.needsUpdate = true }
+    cars.current.forEach((g, k) => { if (!g) return; const lon = lon0 - k * 0.44 / (R * Math.cos(TRAIN_LAT)); const p = ringPos(lon), p2 = ringPos(lon + 0.01); const n = _tn.copy(p).normalize(), f = p2.sub(p).normalize(); g.position.copy(p); g.quaternion.setFromRotationMatrix(_tm.makeBasis(_ts.crossVectors(n, f), n, f)); g.position.addScaledVector(n, Math.abs(Math.sin(t * 12 + k)) * 0.004) })
+    const eng = cars.current[0]; if (eng) { const up = _tu.copy(eng.position).normalize(); for (let k = 0; k < 8; k++) { const u = (t * 0.6 + k / 8) % 1; o.position.set(0, 0.26 + u * 0.5, 0.12 - u * 0.5).applyQuaternion(eng.quaternion).add(eng.position); o.scale.setScalar((0.03 + u * 0.09) * Math.min(1, u * 6) * (1 - u) ** 0.5); o.updateMatrix(); puffs.current.setMatrixAt(k, o.matrix) } puffs.current.instanceMatrix.needsUpdate = true }
   })
   return <>
     {rails.map((g, i) => <mesh key={i} geometry={g} material={ZM.rail} />)}
@@ -234,7 +235,7 @@ function Harbour() {
 function Ruins() {
   const c = Zc.ruins
   const slabs = useMemo(() => { const a = []; for (let i = 0; i < 40; i++) { const n = around(c, Math.sqrt(rnd()) * 0.75 / R, rnd() * 6.283); a.push({ ...place(n, 0.005, rnd() * 6), s: 0.7 + rnd() * 0.6 }) } return a }, [])
-  const ivy = useMemo(() => { const a = []; RUIN_COLS.forEach(col => { for (let k = 0; k < 6; k++) { const p = place(col.n, 0, 0); const local = new THREE.Vector3(Math.cos(k * 2.1) * 0.095, rnd() * col.h, Math.sin(k * 2.1) * 0.095); a.push({ pos: p.pos.clone().add(local.applyQuaternion(p.q)), q: p.q, s: 0.6 + rnd() * 0.7, c: C('#5f9a52').lerp(C('#8fbf5a'), rnd()) }) } }); return a }, [])
+  const ivy = useMemo(() => { const a = []; RUIN_COLS.forEach(col => { for (let k = 0; k < 6; k++) { const p = place(col.n, 0, 0); const local = new THREE.Vector3(Math.cos(k * 2.1) * 0.095, rnd() * col.h, Math.sin(k * 2.1) * 0.095); a.push({ pos: p.pos.clone().add(local.applyQuaternion(p.q)), q: p.q, s: 0.6 + rnd() * 0.7, c: C('#5f9a52').lerp(CC('#8fbf5a'), rnd()) }) } }); return a }, [])
   const arch = around(c, 0.15 / R, 2.4), archF = toward(arch, c)
   return <>
     <Instanced items={slabs} geo={useMemo(() => new THREE.BoxGeometry(0.16, 0.03, 0.12), [])} mat={ZM.mossy} />
@@ -261,7 +262,7 @@ function Camphors() {
       for (let k = 0; k < 7; k++) { const a = k * 0.9 + i, rr = k === 6 ? 0 : 0.42 + rnd() * 0.12; const local = new THREE.Vector3(Math.cos(a) * rr, 1.3 + (k === 6 ? 0.42 : rnd() * 0.25), Math.sin(a) * rr).multiplyScalar(t.s); crowns.push({ pos: p.pos.clone().add(local.applyQuaternion(p.q)), q: p.q, s: t.s * (0.85 + rnd() * 0.35) * (k === 6 ? 1.1 : 1), c: cols[(i + k) % 4].clone().multiplyScalar(0.92 + rnd() * 0.16) }) } })
     return { trunks, crowns }
   }, [])
-  const ferns = useMemo(() => { const a = []; for (let i = 0; i < 260; i++) { const n = around(Zc.forest, Math.sqrt(rnd()) * ZONES.forest.r, rnd() * 6.283); if (zoneWet(n)) continue; a.push({ ...place(n, -0.01, rnd() * 6), s: 1.6 + rnd() * 1.4, c: C('#3f7f45').lerp(C('#6aa85a'), rnd()) }) } return a }, [])
+  const ferns = useMemo(() => { const a = []; for (let i = 0; i < 260; i++) { const n = around(Zc.forest, Math.sqrt(rnd()) * ZONES.forest.r, rnd() * 6.283); if (zoneWet(n)) continue; a.push({ ...place(n, -0.01, rnd() * 6), s: 1.6 + rnd() * 1.4, c: C('#3f7f45').lerp(CC('#6aa85a'), rnd()) }) } return a }, [])
   const geos = useMemo(() => { const tr = new THREE.CylinderGeometry(0.075, 0.13, 1.45, 8); tr.translate(0, 0.72, 0); const cr = new THREE.IcosahedronGeometry(0.42, 1); cr.scale(1.15, 0.8, 1.15); const fe = new THREE.SphereGeometry(0.07, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2); fe.scale(1.4, 0.7, 1.4); return { tr, cr, fe } }, [])
   const mats = useMemo(() => ({ cr: windify(toon('#ffffff'), 0.04, -0.3), fe: windify(toon('#ffffff'), 3) }), [])
   return <><Instanced items={trunks} geo={geos.tr} mat={ZM.trunk} /><Instanced items={crowns} geo={geos.cr} mat={mats.cr} isOcc /><Instanced items={ferns} geo={geos.fe} mat={mats.fe} /></>

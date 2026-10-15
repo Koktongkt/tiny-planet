@@ -8,6 +8,8 @@ export const INK = '#4a3a35'
 export const T = { phase: 0.3, night: 0, dusk: 0, day: 1, sun: new THREE.Vector3() }
 export const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 export const C = (h) => new THREE.Color(h)
+// cached read-only colours for per-frame lerp targets (C() allocates; these must never be mutated)
+const _cc = new Map(); export const CC = (h) => { let c = _cc.get(h); if (!c) _cc.set(h, c = new THREE.Color(h)); return c }
 export const toon = (c, o = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: toonRamp, ...o })
 export const glowMats = []
 export const glow = (c) => { const m = new THREE.MeshBasicMaterial({ color: c, toneMapped: false }); m.userData.base = C(c); glowMats.push(m); return m }
@@ -52,7 +54,7 @@ export const PU = { uDay: { value: 1 } }
 export const NOISE_GLSL = `float ph(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
 float pn3(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(ph(i),ph(i+vec3(1,0,0)),f.x),mix(ph(i+vec3(0,1,0)),ph(i+vec3(1,1,0)),f.x),f.y),mix(mix(ph(i+vec3(0,0,1)),ph(i+vec3(1,0,1)),f.x),mix(ph(i+vec3(0,1,1)),ph(i+vec3(1,1,1)),f.x),f.y),f.z); }
 float pfbm(vec3 p){ float s=0., a=.5; for(int i=0;i<4;i++){ s+=a*pn3(p); p*=2.07; a*=.5; } return s; }`
-export function paint(mat, amt = 0.12, shadow = true, scale = 2.2) {
+export function paint(mat, amt = 0.12, shadow = true, scale = 2.2) { mat.userData.painted = true
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = wind.time; sh.uniforms.uDay = PU.uDay
     sh.vertexShader = 'varying vec3 vPW; varying vec3 vPO;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vPO = transformed; vPW = (modelMatrix*vec4(transformed,1.)).xyz;')

@@ -12,12 +12,11 @@ const isModal = () => !!(G.ui.panel || G.ui.fish)
 export const gameBlocksKeys = () => isModal() || !!G.ui.place
 
 function Clock() {
-  const [t, setT] = useState(0)
-  useEffect(() => { const i = setInterval(() => setT(x => x + 1), 500); return () => clearInterval(i) }, [])
+  const [, setT] = useState('') // re-render only when the shown minute / icon / day changes (it used to re-render twice a second)
+  useEffect(() => { const k = () => { const a = ((window.__rot?.a ?? 0) % 6.283 + 6.283) % 6.283, h = (12 + a / 6.283 * 24) % 24; return Math.floor(h * 6) + ':' + G.s.day }; const i = setInterval(() => setT(k()), 500); return () => clearInterval(i) }, [])
   const a = ((window.__rot?.a ?? 0) % 6.283 + 6.283) % 6.283, hour = (12 + a / 6.283 * 24) % 24
   const ic = hour >= 6.5 && hour < 17.5 ? 'sun' : hour >= 17.5 && hour < 19.5 || hour >= 5 && hour < 6.5 ? 'dusk' : 'moon'
   const hh = Math.floor(hour), mm = Math.floor((hour - hh) * 6) * 10
-  void t
   return <div className="tp-clock paper"><Icon id={ic} size={34} /><div><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b><small>Day {G.s.day + 1}</small></div></div>
 }
 function Prompt() {

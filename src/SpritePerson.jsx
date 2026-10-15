@@ -2,7 +2,7 @@
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { T, C } from './common.jsx'
+import { T, C, CC } from './common.jsx'
 import sheetUrl from './assets/traveller-sheet.png'
 
 const COLS = 5, ROWS = 3, HGT = 0.5, WID = HGT * 256 / 384
@@ -42,7 +42,7 @@ export function SpritePerson({ st }) {
     bill.current.position.y = (1 - Math.abs(Math.cos(st.phase))) * 0.012 * st.move
     sh.current.scale.setScalar(1 - 0.15 * (1 - Math.abs(Math.cos(st.phase))) * st.move)
     // time-of-day tint
-    tint.setRGB(1, 1, 1).lerp(C('#ffc39a'), T.dusk * 0.6).lerp(C('#7d8cc8'), T.night * 0.7)
+    tint.setRGB(1, 1, 1).lerp(CC('#ffc39a'), T.dusk * 0.6).lerp(CC('#7d8cc8'), T.night * 0.7)
     mat.color.copy(tint)
   })
   return <group ref={g}>

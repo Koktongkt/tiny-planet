@@ -4,7 +4,7 @@
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { T, C, q as q0 } from './common.jsx'
+import { T, C, CC, q as q0 } from './common.jsx'
 
 // ---------- shading ----------
 const CEL_U = { uSun: { value: new THREE.Vector3(0.4, 0.8, 0.5).normalize() }, uLight: { value: new THREE.Color(1, 0.97, 0.92) }, uAmb: { value: new THREE.Color(0.1, 0.1, 0.14) }, uRim: { value: new THREE.Color(1, 0.93, 0.8) }, uShadeTint: { value: new THREE.Color(0.78, 0.6, 0.66) } }
@@ -100,8 +100,8 @@ export function GhibliPersonV1({ st }) {
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const R_ = r.current; if (!R_.root) return
     // shading follows the world sun / time of day
-    CEL_U.uSun.value.copy(T.sun); CEL_U.uLight.value.setRGB(1, 0.97, 0.92).lerp(C('#ffb48a'), T.dusk * 0.5).lerp(C('#6f7fb8'), T.night * 0.75)
-    CEL_U.uAmb.value.setRGB(0.12, 0.11, 0.15).lerp(C('#1c2240'), T.night)
+    CEL_U.uSun.value.copy(T.sun); CEL_U.uLight.value.setRGB(1, 0.97, 0.92).lerp(CC('#ffb48a'), T.dusk * 0.5).lerp(CC('#6f7fb8'), T.night * 0.75)
+    CEL_U.uAmb.value.setRGB(0.12, 0.11, 0.15).lerp(CC('#1c2240'), T.night)
     const m = st.move, p = st.phase, s = Math.sin(p), t = st.t ?? 0
     const bob = (1 - Math.abs(s)) * 0.022 * m, land = Math.pow(Math.abs(s), 4) * m
     const bobVel = (bob - prev.current.bob) / Math.max(dt, 1e-3); prev.current.bob = bob
