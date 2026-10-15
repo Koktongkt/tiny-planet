@@ -114,3 +114,15 @@ Villagers differ by body (tall / short / round / slim, toddler → hunched elder
 - Static rigid pieces under each bone (hat, glasses, buttons, props, scarf ring, straps) are **merged** into one cel mesh + one basic mesh + one outline mesh at mount time.
 - Villagers fade through three LOD levels by camera distance (props and sleeves drop first, face detail next). Whole walkers are culled past the planet horizon and, in close views, past ~12 units.
 - A planet-wide **horizon cull** also hides world meshes on the far side (houses, trees, flowers) so the orbit overview stays under ~1,000 draw calls.
+
+## Gather & Craft UI
+- Panels use warm watercolour paper (a radial cream gradient) with a 2.6px ink border (#4a3a35), wobbly uneven corner radii and an inner dashed stitch line.
+- All text is set in Fredoka.
+- Icons are SVG drawings with a soft wash blob behind the ink linework, wobble and wash filters, and a highlight stroke.
+- Gatherables are small toon props with back-face ink hulls. They are about 1.4× scale so they read against the ground cover.
+- The current interact target gets a pulsing chalk-white ring, drawn through the grass.
+- Pickup: the prop pops, sparkles burst, it shrinks into the player, and its icon arcs to the Bag button.
+- Colour accents:
+  - Ready recipes are green (#6f9e4f).
+  - Missing ingredients are red-brown (#c0503f).
+  - Locked recipes are a dashed "???" card.

@@ -1,0 +1,81 @@
+// Hand-drawn style item icons, all made in code (SVG). One consistent recipe: a soft watercolour wash behind,
+// flat fills, warm-ink outlines (#4a3a35, round joins), one white highlight stroke, and a shared "wobble" filter
+// (feTurbulence + displacement) so lines feel inked by hand.
+import React from 'react'
+const I = '#4a3a35'
+const st = { stroke: I, strokeWidth: 2.6, strokeLinejoin: 'round', strokeLinecap: 'round' }
+const hl = { stroke: '#fff', strokeWidth: 2.2, strokeLinecap: 'round', fill: 'none', opacity: 0.7 }
+const P = (d, fill, extra = {}) => <path d={d} fill={fill} {...st} {...extra} />
+const H = (d) => <path d={d} {...hl} />
+const Ci = (cx, cy, r, fill, extra = {}) => <circle cx={cx} cy={cy} r={r} fill={fill} {...st} {...extra} />
+const El = (cx, cy, rx, ry, fill, rot = 0) => <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={fill} transform={rot ? `rotate(${rot} ${cx} ${cy})` : undefined} {...st} />
+const L = (d, w = 2.6, c = I) => <path d={d} fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+// [wash colour, drawing]
+const D = {
+  wood: ['#e8c9a0', <>{P('M10 40 L46 22 Q53 20 54 27 Q55 33 49 35 L14 50 Q8 51 7 46 Q7 42 10 40Z', '#a8744c')}{El(51, 28, 4.5, 6.5, '#e2c08e', -26)}{L('M48 27 q2 1 2 3', 1.6)}{L('M20 42 L38 33 M18 46 L30 40', 1.8, '#7a5236')}{P('M30 36 q-2 -9 4 -13', 'none')}{El(35, 22, 4, 2.4, '#9cc46a', -30)}</>],
+  pinecone: ['#e6d0a8', <>{P('M32 10 Q46 22 44 40 Q40 54 32 56 Q24 54 20 40 Q18 22 32 10Z', '#a8744c')}{L('M24 26 q8 5 16 0 M21 35 q11 6 22 0 M22 44 q10 5 20 0', 2.2, '#6e4a32')}{L('M32 12 V54', 1.6, '#6e4a32')}{P('M32 10 q-3 -5 2 -7', 'none')}{H('M26 20 q2 -4 5 -6')}</>],
+  mushroom: ['#f3c6b8', <>{P('M26 34 Q24 50 28 54 L36 54 Q40 50 38 34Z', '#fbf3e4')}{P('M10 34 Q12 12 32 12 Q52 12 54 34 Q32 40 10 34Z', '#d9564a')}{Ci(22, 24, 3.4, '#fffaf0', { strokeWidth: 1.6 })}{Ci(36, 19, 2.8, '#fffaf0', { strokeWidth: 1.6 })}{Ci(44, 28, 2.6, '#fffaf0', { strokeWidth: 1.6 })}{H('M16 26 q4 -9 12 -11')}</>],
+  acorn: ['#ead2a6', <>{P('M20 30 Q20 52 32 56 Q44 52 44 30Z', '#c98a4a')}{P('M16 30 Q16 18 32 18 Q48 18 48 30 Q32 34 16 30Z', '#7a5236')}{L('M22 24 l3 3 M30 21 l3 3 M38 22 l3 3', 1.6, '#a8744c')}{P('M32 18 q1 -6 5 -8', 'none')}{H('M24 38 q0 8 5 12')}</>],
+  moss: ['#cfe3a8', <>{P('M8 46 Q8 34 18 32 Q20 22 30 24 Q38 16 46 24 Q56 26 56 38 Q58 48 50 50 L14 50 Q8 50 8 46Z', '#7fae5f')}{L('M18 40 q3 -3 6 0 M30 34 q3 -3 6 0 M40 42 q3 -3 6 0', 2, '#5a8a44')}{H('M20 30 q4 -4 9 -3')}</>],
+  flower: ['#f6cfe0', <>{L('M32 58 Q30 44 32 32', 3, '#5a8a44')}{El(24, 46, 6, 3, '#9cc46a', -30)}{[0, 72, 144, 216, 288].map(a => <ellipse key={a} cx={32} cy={14} rx={6} ry={9} fill="#f59ab0" transform={`rotate(${a} 32 24)`} {...st} strokeWidth={2.2} />)}{Ci(32, 24, 5, '#ffd36e')}</>],
+  herbs: ['#d6e8b8', <>{L('M32 58 V20', 2.6, '#5a8a44')}{El(24, 26, 8, 4.5, '#8fbf6a', 30)}{El(40, 22, 8, 4.5, '#8fbf6a', -30)}{El(24, 40, 8, 4.5, '#7fae5f', 30)}{El(40, 36, 8, 4.5, '#7fae5f', -30)}{El(32, 14, 4, 7, '#9cc46a')}{H('M20 25 q3 -2 6 0')}</>],
+  berries: ['#e8c6dc', <>{L('M30 10 Q34 18 32 24 M30 10 Q20 14 18 22 M30 10 Q42 14 44 22', 2.2, '#5a8a44')}{El(36, 10, 7, 3.5, '#8fbf6a', -20)}{Ci(20, 32, 8, '#c94a6a')}{Ci(36, 30, 8, '#b33a5c')}{Ci(28, 44, 8, '#d0567a')}{Ci(44, 44, 7, '#c94a6a')}{H('M16 30 q1 -3 4 -4')}{H('M24 42 q1 -3 4 -4')}</>],
+  fluff: ['#e4ecf2', <>{L('M32 58 Q34 46 32 34', 2.6, '#7fae5f')}{[...Array(12)].map((_, i) => { const a = i / 12 * Math.PI * 2; return <g key={i}>{L(`M32 24 L${32 + Math.cos(a) * 14} ${24 + Math.sin(a) * 14}`, 1.6, '#9a8a80')}<circle cx={32 + Math.cos(a) * 15} cy={24 + Math.sin(a) * 15} r={2.6} fill="#fffaf0" stroke={I} strokeWidth={1.4} /></g> })}{Ci(32, 24, 4, '#e8dcc8')}</>],
+  wool: ['#ece4d8', <>{P('M12 40 Q8 30 16 26 Q16 16 26 18 Q32 10 40 16 Q50 14 50 24 Q58 28 54 38 Q56 48 46 48 Q40 54 32 50 Q24 54 18 48 Q10 48 12 40Z', '#fffaf0')}{L('M22 32 q4 -4 8 0 q4 4 8 0 M24 40 q4 -4 8 0 q4 4 8 0', 2, '#c8bca8')}{H('M18 26 q4 -4 8 -3')}</>],
+  fish: ['#c6e4ec', <>{P('M8 32 Q20 16 38 20 Q48 22 52 32 Q48 42 38 44 Q20 48 8 32Z', '#8fb4c8')}{P('M50 32 L60 22 Q58 32 60 42Z', '#7aa2b8')}{P('M24 22 q6 -8 14 -4', '#7aa2b8')}{Ci(18, 30, 2.6, I, { strokeWidth: 1 })}{L('M28 26 q3 6 0 12 M34 26 q3 6 0 12', 1.6, '#5f8aa0')}{H('M16 26 q8 -6 18 -5')}</>],
+  shell: ['#f6dcc8', <>{P('M12 46 Q10 22 32 12 Q54 22 52 46 Q32 54 12 46Z', '#f6c8b0')}{L('M32 14 L22 48 M32 14 L32 50 M32 14 L42 48 M32 14 L14 40 M32 14 L50 40', 1.8, '#d08a74')}{P('M26 50 Q32 56 38 50', '#f0b8a0')}{H('M18 30 q4 -10 12 -14')}</>],
+  reed: ['#d8e4b0', <>{L('M22 58 Q20 34 26 10 M32 58 Q32 30 34 14 M42 58 Q44 36 40 18', 2.6, '#7fae5f')}{El(26, 12, 3.6, 8, '#a8744c', 10)}{El(40, 18, 3.4, 7, '#a8744c', -10)}{El(34, 30, 2.6, 9, '#9cc46a', 20)}</>],
+  clay: ['#dcd4cc', <>{P('M10 44 Q8 30 22 28 Q28 18 40 22 Q54 24 54 38 Q56 50 42 50 L20 50 Q10 50 10 44Z', '#b8aca0')}{L('M20 38 q8 -4 16 0 M28 46 q6 -3 12 0', 2, '#968a80')}{H('M18 32 q4 -4 9 -3')}</>],
+  driftwood: ['#e2dcd0', <>{P('M8 38 Q18 28 34 32 Q46 24 56 30 Q58 36 50 38 Q38 44 26 42 Q14 46 8 38Z', '#c8bca8')}{L('M18 36 Q30 34 44 33', 1.8, '#a09484')}{L('M40 30 q4 -6 10 -6', 2.4)}{H('M14 36 q6 -4 12 -4')}</>],
+  rice: ['#f2e2a8', <>{L('M32 58 V30 M28 58 Q26 40 22 30 M36 58 Q38 40 42 30', 2.6, '#a8944a')}{[[22, 22], [28, 16], [32, 12], [36, 16], [42, 22], [26, 28], [38, 28]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx={3.4} ry={5} fill="#f2d27a" {...st} strokeWidth={1.8} />)}{P('M24 44 Q32 48 40 44 L40 50 Q32 54 24 50Z', '#d9655b')}</>],
+  bamboo: ['#d0e6b8', <>{P('M26 6 L38 6 L38 58 L26 58Z', '#8fbf6a')}{L('M26 22 H38 M26 40 H38', 2.6)}{P('M38 20 q10 -6 16 -2 q-8 6 -16 2Z', '#7fae5f')}{H('M30 10 V18 M30 26 V36')}</>],
+  tea: ['#d4e8c0', <>{El(24, 36, 9, 16, '#6a9a4e', -25)}{El(40, 30, 9, 16, '#7fae5f', 20)}{L('M24 22 Q26 36 22 50 M40 16 Q38 30 42 44', 1.8, '#4f7a3a')}{L('M32 58 V44', 2.4, '#7a5236')}{H('M20 28 q2 -4 5 -6')}</>],
+  stone: ['#ddd8d0', <>{P('M10 42 Q8 28 22 22 Q36 14 48 24 Q58 32 52 44 Q44 52 28 50 Q12 50 10 42Z', '#b8b0a4')}{L('M22 36 q6 -4 12 -2', 2, '#9a9084')}{H('M18 30 q6 -8 14 -8')}</>],
+  crystal: ['#d8d0f0', <>{P('M32 6 L44 22 L40 52 L24 52 L20 22Z', '#a8c8f0')}{P('M20 22 L32 28 L44 22', 'none')}{L('M32 28 V52', 2)}{P('M44 30 L54 38 L50 52 L40 52', '#c9b3ff')}{H('M26 20 L30 12')}</>],
+  water: ['#c8e6f0', <>{P('M32 8 Q48 30 48 40 Q48 54 32 54 Q16 54 16 40 Q16 30 32 8Z', '#7fd0dc')}{H('M24 38 q0 8 7 10')}{Ci(38, 30, 3, '#bff0f0', { strokeWidth: 1.4 })}</>],
+  coin: ['#f0dca0', <>{Ci(32, 32, 20, '#e8b84a')}{Ci(32, 32, 14, 'none', { strokeWidth: 2 })}<rect x={28} y={28} width={8} height={8} fill="#c9963a" {...st} strokeWidth={2} />{H('M18 26 q4 -8 12 -10')}</>],
+  glowmoss: ['#c8f0c0', <><circle cx={32} cy={38} r={22} fill="#e8ff9a" opacity={0.5} />{P('M10 46 Q10 34 20 34 Q22 24 32 26 Q40 18 48 26 Q56 28 54 40 Q56 50 48 50 L16 50 Q10 50 10 46Z', '#9ce86a')}{[[22, 40], [34, 34], [44, 42], [30, 46]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={2.6} fill="#f6ffc8" />)}</>],
+  shard: ['#ead8c8', <>{P('M12 22 L44 14 L52 36 L30 52 L16 42Z', '#e8dcc8')}{L('M16 30 Q30 24 46 22', 4, '#5f8fc4')}{L('M20 38 q6 -4 12 -2 q6 2 12 -2', 2.4, '#d9655b')}{H('M18 24 L30 21')}</>],
+  firefly: ['#f0f6c0', <><circle cx={32} cy={36} r={18} fill="#e8ff9a" opacity={0.6} />{P('M22 18 L42 18 L44 52 Q32 58 20 52Z', '#fbf3e4', { opacity: 0.85 })}{P('M20 14 L44 14 L42 20 L22 20Z', '#a8744c')}{Ci(32, 36, 6, '#e8ff6a')}{El(28, 30, 4, 2.4, '#fff', -30)}{El(36, 30, 4, 2.4, '#fff', 30)}{H('M25 26 V46')}</>],
+  rod: ['#e6d8c0', <>{L('M12 56 L48 10', 3.4, '#8a5a3c')}{L('M48 10 Q56 24 52 44', 1.4, '#9a8a80')}{Ci(52, 46, 3, '#d9564a', { strokeWidth: 1.6 })}{Ci(20, 46, 5, '#c8bca8')}{L('M12 56 L18 48', 5, '#5a3a24')}</>],
+  can: ['#cfe0ec', <>{P('M16 26 L42 26 L40 52 L18 52Z', '#7aa2c8')}{P('M42 30 L56 18 L58 22 L44 38', '#7aa2c8')}{P('M16 26 Q28 14 42 26', 'none', { strokeWidth: 3 })}{Ci(57, 18, 3, '#5f8fc4', { strokeWidth: 1.6 })}{H('M21 31 V46')}</>],
+  lantern: ['#f6e6b8', <><circle cx={32} cy={36} r={20} fill="#ffcf6e" opacity={0.45} />{P('M22 22 Q20 38 22 50 L42 50 Q44 38 42 22Z', '#ffd27a')}{L('M22 30 H42 M22 42 H42', 1.8, '#c98a4a')}{P('M20 18 L44 18 L42 22 L22 22Z', '#5a8a44')}{P('M22 50 L42 50 L40 54 L24 54Z', '#5a8a44')}{L('M32 18 V10 M26 10 H38', 2.4)}</>],
+  onigiri: ['#f0ece0', <>{P('M32 10 Q50 34 50 44 Q50 54 32 54 Q14 54 14 44 Q14 34 32 10Z', '#fffaf0')}{P('M22 38 L42 38 L44 54 L20 54Z', '#2f4a3a')}{Ci(30, 28, 3, '#e86f5a', { strokeWidth: 1.4 })}{H('M24 26 q2 -6 6 -10')}</>],
+  soup: ['#f2dcc0', <>{P('M10 30 L54 30 Q52 52 32 54 Q12 52 10 30Z', '#e8dccb')}{El(32, 30, 22, 5, '#c98a4a')}{Ci(26, 30, 2.6, '#d9564a', { strokeWidth: 1.2 })}{Ci(38, 29, 2.2, '#9cc46a', { strokeWidth: 1.2 })}{L('M24 22 q-3 -5 0 -10 M32 20 q-3 -5 0 -10 M40 22 q-3 -5 0 -10', 2, '#b8aca0')}</>],
+  jam: ['#f0c8d4', <>{P('M18 24 L46 24 L46 50 Q46 54 42 54 L22 54 Q18 54 18 50Z', '#c94a6a', { opacity: 0.95 })}{P('M16 16 L48 16 L48 24 L16 24Z', '#f6ead2')}{L('M16 20 l4 -2 4 2 4 -2 4 2 4 -2 4 2 4 -2 4 2', 1.6, '#d9655b')}<rect x={24} y={32} width={16} height={12} rx={2} fill="#fffaf0" {...st} strokeWidth={1.8} />{H('M22 30 V46')}</>],
+  teacup: ['#d8e8c8', <>{P('M12 30 L46 30 Q46 50 30 52 Q14 50 12 30Z', '#f4ecd8')}{P('M46 34 Q56 34 54 42 Q52 48 44 46', 'none')}{El(29, 30, 17, 4, '#a8c86a')}{L('M22 22 q-3 -5 0 -10 M32 22 q-3 -5 0 -10', 2, '#b8aca0')}{L('M18 38 q10 4 22 0', 1.8, '#5f8fc4')}{El(29, 56, 18, 3, '#e8dccb')}</>],
+  wreath: ['#f6d8e0', <>{Ci(32, 32, 18, 'none', { stroke: '#7fae5f', strokeWidth: 8 })}{Ci(32, 32, 18, 'none', { strokeWidth: 1.4 })}{[...Array(8)].map((_, i) => { const a = i / 8 * Math.PI * 2; return <circle key={i} cx={32 + Math.cos(a) * 18} cy={32 + Math.sin(a) * 18} r={4} fill={['#f59ab0', '#ffd36e', '#c9b3ff', '#fffaf0'][i % 4]} {...st} strokeWidth={1.8} /> })}{P('M26 52 L32 46 L38 52 L34 58 M30 58 L26 52', '#d9564a', { strokeWidth: 2 })}</>],
+  mosslamp: ['#d0f0c8', <><circle cx={32} cy={34} r={20} fill="#c8ff9a" opacity={0.5} />{P('M18 22 Q14 40 20 52 L44 52 Q50 40 46 22Z', '#e8f6f0', { opacity: 0.9 })}{P('M20 44 Q32 36 44 44 L44 52 L20 52Z', '#9ce86a')}{P('M18 14 L46 14 L46 22 L18 22Z', '#b8aca0')}{[[26, 40], [36, 38], [32, 46]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={2.2} fill="#f6ffc8" />)}{H('M23 26 V38')}</>],
+  basket: ['#ecd8b8', <>{P('M10 30 L54 30 L48 54 L16 54Z', '#d4a868')}{L('M14 38 H50 M16 46 H48', 2, '#a8744c')}{L('M22 30 L24 54 M32 30 V54 M42 30 L40 54', 1.6, '#a8744c')}{P('M16 30 Q32 4 48 30', 'none', { strokeWidth: 3 })}{H('M18 34 H28')}</>],
+  chime: ['#e0e4ec', <>{L('M12 12 H52', 4, '#8a5a3c')}{[[18, 30], [28, 38], [38, 32], [48, 40]].map(([x, y], i) => <g key={i}>{L(`M${x} 12 V${y - 6}`, 1.4)}<path d={`M${x - 5} ${y} Q${x} ${y - 9} ${x + 5} ${y} Q${x} ${y + 5} ${x - 5} ${y}Z`} fill="#f6c8b0" {...st} strokeWidth={1.8} /></g>)}{L('M32 12 V8', 2)}</>],
+  bridgekit: ['#e6d8c0', <>{L('M6 26 Q32 40 58 26', 2.4)}{L('M6 38 Q32 52 58 38', 3)}{[12, 20, 28, 36, 44, 52].map((x, i) => <rect key={i} x={x - 3} y={36 + Math.sin(i / 5 * Math.PI) * 7} width={6} height={9} fill="#c98a5a" {...st} strokeWidth={1.6} />)}{L('M6 20 V44 M58 20 V44', 3.4, '#8a5a3c')}</>],
+  skyseed: ['#dce8f6', <><circle cx={32} cy={32} r={20} fill="#fff4c0" opacity={0.6} />{P('M32 10 Q46 26 32 54 Q18 26 32 10Z', '#a8d8ff')}{L('M32 16 V48', 1.6, '#5f8fc4')}{H('M27 22 q1 -4 4 -7')}</>],
+  // UI glyphs
+  bag: ['#ecd8b8', <>{P('M14 26 Q12 54 32 54 Q52 54 50 26Z', '#c98a5a')}{P('M14 26 L50 26 L46 20 L18 20Z', '#a8744c')}{P('M24 20 Q24 8 32 8 Q40 8 40 20', 'none')}<rect x={27} y={30} width={10} height={8} rx={2} fill="#e8b84a" {...st} strokeWidth={1.8} />{H('M19 32 Q19 44 24 48')}</>],
+  book: ['#dce6d0', <>{P('M10 14 Q22 10 32 16 L32 54 Q22 48 10 52Z', '#d9655b')}{P('M54 14 Q42 10 32 16 L32 54 Q42 48 54 52Z', '#e8735f')}{L('M16 24 q6 -2 12 1 M16 32 q6 -2 12 1 M38 24 q6 -2 10 -1', 1.8, '#fbf3e4')}</>],
+  sun: ['#fbe6b0', <>{[...Array(8)].map((_, i) => { const a = i / 8 * Math.PI * 2; return L(`M${32 + Math.cos(a) * 18} ${32 + Math.sin(a) * 18} L${32 + Math.cos(a) * 25} ${32 + Math.sin(a) * 25}`, 2.6, '#e8a24a') })}{Ci(32, 32, 13, '#ffd36e')}{H('M25 28 q2 -4 6 -5')}</>],
+  moon: ['#d8dcf0', <>{P('M40 10 Q22 14 22 32 Q22 50 42 54 Q28 58 18 48 Q8 36 14 22 Q22 10 40 10Z', '#f3e6c8')}{Ci(44, 22, 1.6, '#fff8e0', { stroke: 'none' })}{Ci(50, 34, 1.2, '#fff8e0', { stroke: 'none' })}</>],
+  dusk: ['#f8d0b8', <>{P('M10 40 Q10 22 32 22 Q54 22 54 40Z', '#ffb38a')}{L('M6 40 H58 M12 48 H52', 2.6)}{H('M18 34 q4 -6 10 -7')}</>],
+  leaf: ['#d4e8c0', <>{P('M12 52 Q10 20 50 12 Q54 44 12 52Z', '#8fbf6a')}{L('M14 50 Q30 34 46 16', 2)}</>],
+  rotate: ['#e6e0d8', <>{L('M48 30 A16 16 0 1 0 44 44', 3)}{P('M48 18 L50 32 L38 30Z', I)}</>],
+  check: ['#d4e8c0', <>{L('M14 34 L26 46 L50 18', 5, '#5a8a44')}</>],
+  close: ['#f0d8d0', <>{L('M18 18 L46 46 M46 18 L18 46', 4.4, '#b5473f')}</>],
+  hand: ['#f6e0cc', <>{P('M20 34 Q18 22 24 22 Q28 22 28 30 L28 14 Q28 9 32 9 Q36 9 36 14 L36 28 Q36 22 40 22 Q44 22 44 28 L44 30 Q44 25 48 26 Q52 27 51 34 Q50 50 38 54 Q26 56 22 44Z', '#f7d3b8')}{H('M31 14 V24')}</>],
+  unknown: ['#e8e4dc', <><text x={32} y={44} textAnchor="middle" fontSize={34} fontFamily="Fredoka, sans-serif" fill="#b8aca0">?</text></>],
+}
+export function IconDefs() {
+  return <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
+    <defs>
+      <filter id="tp-wobble" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="3" /><feDisplacementMap in="SourceGraphic" scale="1.6" /></filter>
+      <filter id="tp-wash" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="3" seed="8" /><feDisplacementMap in="SourceGraphic" scale="6" /><feGaussianBlur stdDeviation="0.8" /></filter>
+    </defs>
+  </svg>
+}
+export function Icon({ id, size = 44, wash = true, dim = false, style }) {
+  const d = D[id] || D.unknown
+  return <svg viewBox="0 0 64 64" width={size} height={size} style={{ display: 'block', opacity: dim ? 0.45 : 1, filter: dim ? 'grayscale(0.9)' : undefined, ...style }} aria-hidden>
+    {wash && <circle cx={32} cy={33} r={27} fill={d[0]} opacity={0.75} filter="url(#tp-wash)" />}
+    <g filter="url(#tp-wobble)">{d[1]}</g>
+  </svg>
+}
+export const ICON_IDS = Object.keys(D)

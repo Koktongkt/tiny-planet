@@ -27,13 +27,38 @@ URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?v
 
 ## Tech stack
 
-Vite + React 18, React Three Fiber / three.js, drei (toon outlines), @react-three/postprocessing (bloom, vignette, grain), Fredoka font. Source: `src/App.jsx` (world, traveller, camera), `src/GhibliPerson.jsx` / `src/villagers.js` (soft-body people), `src/zones.jsx` (biomes), `src/people.jsx` (legacy stick figures), `src/SpritePerson.jsx` (optional billboard traveller), `src/common.jsx`, and `src/world.js` (layout and zones). Design notes: `ART_DIRECTION.md`; sample renders in `screenshots/`. Design notes: `ART_DIRECTION.md`; sample renders in `screenshots/`.
+Vite + React 18, React Three Fiber / three.js, drei (toon outlines), @react-three/postprocessing (bloom, vignette, grain), Fredoka font. Source: `src/App.jsx` (world, traveller, camera), `src/GhibliPerson.jsx` / `src/villagers.js` (soft-body people), `src/zones.jsx` (biomes), `src/people.jsx` (legacy stick figures), `src/SpritePerson.jsx` (optional billboard traveller), `src/common.jsx`, `src/world.js` (layout and zones), and `src/game/*` (Gather & Craft: `store.js` state and saves, `items.js` items and recipes, `World.jsx` props, sheep, bench and bridge, `UI.jsx` / `ui.css` / `icons.jsx` interface). Design notes: `ART_DIRECTION.md`; sample renders in `screenshots/`.
+
+## Gather & Craft
+
+Explore the planet, gather resources in each biome, and craft tools, food and decor at the bench beside **Home**. Full details: [GAMEPLAY.md](GAMEPLAY.md).
+
+### Controls
+
+| Action | Keyboard | Touch |
+|---|---|---|
+| Walk | WASD / arrow keys | Tap the ground |
+| Jump | Space | |
+| Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
+| Bag | B / I / Tab | Bag button |
+| Recipes | C | Recipes button |
+| Fishing | E / Space / Enter | Tap the bar |
+| Placing decor | R rotates, E/Enter places, Esc cancels | Placement bar buttons |
+| Planet view | V | |
+
+### Features
+- **Gathering** in every zone: forest wood and mushrooms, meadow flowers and sheep wool, lake fish and shells, terrace rice and tea, cliff stone and crystal, and night-only glowing moss and fireflies.
+- **Fishing minigame:** stop the marker in the green zone (3 tries).
+- **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
+- **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
+- **Day cycle and saves:** items respawn each in-game sunrise (3 minutes per day); progress saves to localStorage. Reset from the Bag or with `?reset`.
 
 ## Licences
 
 See [ASSETS.md](ASSETS.md).
 
-- **No third-party 3D models, textures or images.** Terrain, houses, people, trees, train, boats, ruins and water are generated in code (primitives, lathe shapes, SDF soft bodies and shaders). The optional traveller sprite sheet in `src/assets/` is first-party. No CC0 model packs are included.
+- **No third-party 3D models, textures, images or icons.** Terrain, houses, people, trees, train, boats, ruins and water are generated in code (primitives, lathe shapes, SDF soft bodies and shaders).
+- **Gather & Craft assets are first-party, generated in code:** the traveller sprite sheet (`src/assets/`, made by `tools/sprites.mjs`), the item and UI icons (`src/game/icons.jsx`, SVG written in code), and the props, sheep, bench, rope bridge and decor (`src/game/World.jsx`, three.js primitives).
 - **Font:** Fredoka, bundled via `@fontsource/fredoka` (SIL Open Font License 1.1).
 - **Libraries:** three.js, React, @react-three/fiber, drei and postprocessing, all MIT.
 

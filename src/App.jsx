@@ -12,16 +12,21 @@ import { GhibliPersonV1 } from './GhibliPersonV1.jsx'
 import { SpritePerson } from './SpritePerson.jsx'
 const SPRITE = q.get('char') === 'sprite'
 const NEWCHAR = !q.has('oldchar')
+import { GameWorld, PlayerLantern, layout, ropeLift, ropePass, teleport, GAME } from './game/World.jsx'
+import { GameUI, gameBlocksKeys } from './game/UI.jsx'
+import { newDay, G } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { INK, T, ss, C, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
 const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
 const fixed = q.has('t') || q.has('phase')
 const rot = { a: q.has('phase') ? +q.get('phase') : PRESET[q.get('t')] ?? 0.4, v: 0 }
+window.__rot = rot
 window.__setPhase = (p) => { rot.a = typeof p === 'string' ? PRESET[p] : p; rot.v = 0 }
 
 const spin = { a: -0.8 * rot.a + 0.25, v: 0 }
 const _v = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _s = new THREE.Vector3()
+const DAY0 = 0
 function Clock() {
   const camera = useThree(s => s.camera)
   useFrame((_, dt) => {
@@ -29,6 +34,7 @@ function Clock() {
     wind.time.value += dt
     if (!fixed) rot.a += dt * Math.PI * 2 / 180 // full day every 3 minutes
     const p = rot.a, e = Math.cos(p)
+    if (!fixed) newDay(Math.max(0, Math.floor((rot.a + Math.PI / 2) / (Math.PI * 2)) + DAY0))
     if (VIEW.mode === 'follow' && P.wUp.lengthSq() > 0) { // sun relative to the traveller's sky
       _s.setFromMatrixColumn(camera.matrixWorld, 0)
       T.sun.copy(P.wUp).multiplyScalar(e).addScaledVector(_s, Math.sin(p) * 0.9).addScaledVector(P.wFwd, -0.35).normalize()
@@ -129,6 +135,7 @@ BRIDGES.sort((a, b) => a.c.distanceTo(VILLAGE) - b.c.distanceTo(VILLAGE))
 const B0 = BRIDGES[0]
 const BL = 0.62 // bridge length (world units)
 const bl = (b, along, side) => b.c.clone().addScaledVector(b.tan, along / R).addScaledVector(b.side, side / R).normalize()
+const floorLift = (n) => bridgeLift(n) + ropeLift(n)
 function bridgeLift(n) { for (const b of BRIDGES) { const d = n.clone().sub(b.c); const a = d.dot(b.tan) * R, s = d.dot(b.side) * R; if (Math.abs(a) < BL / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / BL) * Math.PI) } return 0 }
 const onBridge = (n) => BRIDGES.some(b => b.c.angleTo(n) < 0.062 * K)
 const HB = (i) => place(HOUSES[i], 0, i * 1.3)
@@ -475,7 +482,7 @@ if (VIEW.mode === 'detail') { P.n.copy(bl(B0, 0.08, 0)); P.fwd.copy(B0.tan) }
 window.__player = P
 function Keys() {
   useEffect(() => {
-    const d = e => { const k = e.key.toLowerCase(); KEYS[k] = true; if (k === ' ' && Math.abs(P.h - bridgeLift(P.n)) < 0.003) P.vy = 1.9; if (k === 'v') VIEW.mode = VIEW.mode === 'follow' ? 'orbit' : 'follow'; if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault() }
+    const d = e => { const k = e.key.toLowerCase(); if (gameBlocksKeys()) { if (k === ' ') e.preventDefault(); return } KEYS[k] = true; if (k === ' ' && Math.abs(P.h - floorLift(P.n)) < 0.003) P.vy = 1.9; if (k === 'v') VIEW.mode = VIEW.mode === 'follow' ? 'orbit' : 'follow'; if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault() }
     const u = e => { KEYS[e.key.toLowerCase()] = false }
     addEventListener('keydown', d); addEventListener('keyup', u); return () => { removeEventListener('keydown', d); removeEventListener('keyup', u) }
   }, [])
@@ -484,6 +491,7 @@ function Keys() {
 function stepPlayer(dt) {
   const f = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0), turn = (KEYS.a || KEYS.arrowleft ? 1 : 0) - (KEYS.d || KEYS.arrowright ? 1 : 0)
   let go = f
+  if (gameBlocksKeys() && G.ui.panel) go = 0
   if (f || turn) P.target = null
   if (turn) P.fwd.applyAxisAngle(P.n, turn * 2.4 * dt)
   if (P.target) {
@@ -493,9 +501,10 @@ function stepPlayer(dt) {
   }
   P.move += ((Math.abs(go) > 0 ? 1 : 0) - P.move) * Math.min(1, dt * 8)
   P.n.addScaledVector(P.fwd, go * (KEYS.shift ? 2.6 : 1.5) / R * dt).normalize()
-  for (const c of COLLIDERS) { const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
+  const pass = ropePass(P.n)
+  for (const c of COLLIDERS) { if (pass && c.n === Zc.cliff) continue; const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
   P.fwd.addScaledVector(P.n, -P.fwd.dot(P.n)).normalize()
-  const fl = bridgeLift(P.n); P.vy -= 7 * dt; P.h += P.vy * dt; if (P.h < fl) { if (fl - P.h < 0.12 || P.vy < 0) { P.h = fl; P.vy = 0 } } // gravity toward planet centre
+  const fl = floorLift(P.n); P.vy -= 7 * dt; P.h += P.vy * dt; if (P.h < fl) { if (fl - P.h < 0.12 || P.vy < 0) { P.h = fl; P.vy = 0 } } // gravity toward planet centre
   P.phase += dt * (KEYS.shift ? 13 : 9.5) * P.move
 }
 const PM = { tunic: toon('#5f8fc4'), skin: toon('#f8d9bf'), hat: toon('#e9c46a'), band: toon('#d9655b'), cape: toon('#d9655b', { side: THREE.DoubleSide }), boot: toon('#6b4a3a'), eye: toon('#2e2420'), cheek: toon('#f4a3a0'), bag: toon('#b98a5a') }
@@ -513,7 +522,7 @@ function Traveller() {
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_pf.clone().cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
   })
-  return <group ref={ref}>{SPRITE ? <SpritePerson st={PST} /> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}</group>
+  return <group ref={ref}>{SPRITE ? <SpritePerson st={PST} /> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}<PlayerLantern /></group>
 }
 const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
 const ZVIEWS = {
@@ -525,6 +534,7 @@ const ZVIEWS = {
   'forest-giant': { cam: around(Zc.giant, 0.78, 4.6), ch: 3.6, look: Zc.giant, lh: 2.0 },
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
 }
+const CAMD = q.has('camd') ? +q.get('camd') : 1
 function Rig() {
   const camera = useThree(s => s.camera)
   const goal = useMemo(() => new THREE.Vector3(), []), look = useMemo(() => new THREE.Vector3(), [])
@@ -537,7 +547,7 @@ function Rig() {
     P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld)
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 4))
     if (VIEW.mode === 'follow') {
-      goal.copy(P.wPos).addScaledVector(P.wUp, 1.05).addScaledVector(P.wFwd, -2.1)
+      goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * CAMD).addScaledVector(P.wFwd, -2.1 * CAMD)
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
       const hit = RC.intersectObjects(OCC, false)[0]; if (hit) goal.copy(_v).addScaledVector(_u, Math.max(0.35, hit.distance - 0.12)).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist))
@@ -563,9 +573,16 @@ function Rig() {
 function Hint() {
   const [m, setM] = React.useState(VIEW.mode)
   useEffect(() => { const id = setInterval(() => setM(VIEW.mode), 300); return () => clearInterval(id) }, [])
-  return <div style={{ fontSize: 15, opacity: 0.85, lineHeight: 1.5 }}>{m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap or click to walk there<br />V for planet view</> : <>drag to spin the planet · V to walk</>}</div>
+  return <div style={{ fontSize: 15, opacity: 0.85, lineHeight: 1.5 }}>{m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
 }
 
+const GAMEON = VIEW.mode === 'follow' && !q.has('nogame')
+if (GAMEON) {
+  GAME.P = P
+  layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || distToCurve(n, streamDir, 140) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
+  if (q.has('at')) teleport(P, q.get('at'))
+}
+window.__player = P
 function Planet() {
   const onDown = (e) => { if (VIEW.mode !== 'follow') return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); P.target = l }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
@@ -580,6 +597,7 @@ function Planet() {
     {MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
     <Traveller /><Details />
     <Fireflies />
+    {GAMEON && <GameWorld />}
   </group></group>
 }
 
@@ -665,5 +683,6 @@ export default function App() {
     <div style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
       <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
     </div>
+    {GAMEON && <GameUI />}
   </>
 }
