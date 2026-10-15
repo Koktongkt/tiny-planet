@@ -19,7 +19,7 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
-import { INK, T, ss, C, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
+import { INK, T, ss, C, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
 const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
 const fixed = q.has('t') || q.has('phase')
@@ -68,13 +68,14 @@ function Sky() {
   return <mesh material={mat} renderOrder={-1}><sphereGeometry args={[80, 48, 32]} /></mesh>
 }
 
+const MOON_OFF = new THREE.Vector3(6, 0, 8), _wx = new THREE.Vector3(), _wy = new THREE.Vector3(), _wz = new THREE.Vector3(), _wm = new THREE.Matrix4(), _wn = new THREE.Vector3(), _wf = new THREE.Vector3()
 function Lights() {
   const sun = useRef(), hemi = useRef(), moon = useRef()
   const cDay = C('#fff3dc'), cDusk = C('#ffa070'), tmp = new THREE.Color()
   useFrame(() => {
     sun.current.position.copy(T.sun).multiplyScalar(20)
     sun.current.color.copy(cDay).lerp(cDusk, T.dusk); sun.current.intensity = 2.6 * ss(-0.2, 0.2, T.sun.y)
-    moon.current.position.copy(T.sun).multiplyScalar(-20).add(new THREE.Vector3(6, 0, 8)); moon.current.intensity = 1.1 * T.night
+    moon.current.position.copy(T.sun).multiplyScalar(-20).add(MOON_OFF); moon.current.intensity = 1.1 * T.night
     hemi.current.color.copy(tmp.set('#cfe6ff').lerp(C('#ffb59a'), T.dusk).lerp(C('#4a5fa0'), T.night))
     hemi.current.groundColor.set('#b9d48c').lerp(C('#2a2f55'), T.night); hemi.current.intensity = 0.9 + 0.25 * T.dusk - 0.3 * T.night
   })
@@ -272,7 +273,7 @@ function Smoke() {
 function Butterflies() {
   const bs = useMemo(() => Array.from({ length: 16 }, (_, i) => ({ base: (i < 10 ? VILLAGE.clone().add(randDir().multiplyScalar(0.35)) : randDir()).normalize(), ph: rnd() * 6, ax: randDir(), m: DM.wing[i % 4] })), [])
   const refs = useRef([])
-  useFrame(() => { const t = wind.time.value; bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = t * 0.35 + b.ph; const n = b.base.clone().applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = b.base.clone().applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl; g.visible = T.night < 0.6 }) })
+  useFrame(() => { const t = wind.time.value; bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = t * 0.35 + b.ph; const n = _wn.copy(b.base).applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = _wf.copy(b.base).applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl; g.visible = T.night < 0.6 }) })
   return bs.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.8}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.022, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={b.m}><circleGeometry args={[0.024, 8]} /></mesh></group>)}</group>)
 }
 
@@ -433,16 +434,16 @@ function Walker({ w, i }) {
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t
     let n, fwd, mv = 1
-    if (w.mode === 'path') { const a = w.t0 + t * w.sp; n = pathDir(a).normalize(); const n2 = pathDir(a + 0.01 * Math.sign(w.sp)).normalize(); fwd = n2.sub(n).normalize(); n.addScaledVector(new THREE.Vector3().crossVectors(n, fwd), w.off / R).normalize() }
-    else if (w.mode === 'pace') { const ph = t * w.w + i, s = Math.sin(ph), c = Math.cos(ph); n = w.n.clone().addScaledVector(w.tan, s * w.range / R).normalize(); fwd = w.tan.clone().multiplyScalar(c >= 0 ? 1 : -1); mv = ss(0.12, 0.35, Math.abs(c)) }
-    else { n = w.n.clone().normalize(); fwd = w.fwd.clone(); mv = 0 }
+    if (w.mode === 'path') { const a = w.t0 + t * w.sp; n = pathDir(a).normalize(); const n2 = pathDir(a + 0.01 * Math.sign(w.sp)).normalize(); fwd = n2.sub(n).normalize(); n.addScaledVector(_wx.crossVectors(n, fwd), w.off / R).normalize() }
+    else if (w.mode === 'pace') { const ph = t * w.w + i, s = Math.sin(ph), c = Math.cos(ph); n = _wn.copy(w.n).addScaledVector(w.tan, s * w.range / R).normalize(); fwd = _wf.copy(w.tan).multiplyScalar(c >= 0 ? 1 : -1); mv = ss(0.12, 0.35, Math.abs(c)) }
+    else { n = _wn.copy(w.n).normalize(); fwd = _wf.copy(w.fwd); mv = 0 }
     fwd.addScaledVector(n, -fwd.dot(n)).normalize()
     st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (NEWCHAR ? (w.cfg.walk?.rate ?? RATE[w.cfg.age] ?? 8) : w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move
-    const g = ref.current; g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(n, fwd), n, fwd))
+    const g = ref.current; g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, fwd), n, fwd))
     g.position.copy(n).multiplyScalar(w.dock ? R + LAKE_W + 0.135 : R + height(n) + 0.005 + bridgeLift(n))
     if (planetRef.current) { // cull by distance (close views) and by horizon (anything on the planet's far side)
       _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); _c0.setFromMatrixPosition(planetRef.current.matrixWorld)
-      const up = _f.clone().sub(_c0).normalize(), toCam = camera.position.clone().sub(_f).normalize()
+      const up = _wy.copy(_f).sub(_c0).normalize(), toCam = _wz.copy(camera.position).sub(_f).normalize()
       g.visible = up.dot(toCam) > -0.05 && (VIEW.mode === 'orbit' || camera.position.distanceTo(_f) < 12) } else g.visible = true
   })
   return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
@@ -522,12 +523,12 @@ function Traveller() {
   const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); stepPlayer(dt)
-    const side = new THREE.Vector3().crossVectors(P.n, P.fwd)
-    ref.current.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, P.n, P.fwd))
+    const side = _wx.crossVectors(P.n, P.fwd)
+    ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.fwd))
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h)
     PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
-    if (_pf.lengthSq() > 0) { const a = Math.atan2(_pf.clone().cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
+    if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
   })
   return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{GM.W && <GM.W.PlayerLantern />}</group>
 }
@@ -598,21 +599,30 @@ function GameSlot({ ui }) { const [, f] = useState(0); useEffect(() => onBoot('g
 window.__player = P
 // far zones (lake, harbour, cliff, terraces, ruins…) mount in the first idle slot after the first frame
 function DeferredZones() { return useIdleSlot(-1) ? <Zones /> : null }
+// The world mounts in a few slices (one per task) so the loader keeps animating while React builds ~3k objects.
+// Same tree, same order: later slices just appear a few frames later, all before shaders compile and the first frame.
+const SLICES = 4
+function useSlices() {
+  const [k, setK] = useState(1)
+  useEffect(() => { if (k >= SLICES) { bootStage('mounted', 1); return } let dead = false; nextPaint().then(() => { if (!dead) { bootStage('world', k / SLICES * 0.9); setK(k + 1) } }); return () => { dead = true } }, [k])
+  return k
+}
 function Planet() {
+  const k = useSlices()
   const onDown = (e) => { if (VIEW.mode !== 'follow') return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); P.target = l }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
-    <Ground /><Path /><Stream /><Vegetation />
-    {HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
-    {MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
-    {[dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
-    {!q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
+    <Ground /><Path /><Stream />{k >= 2 && <Vegetation />}
+    {k >= 2 && HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
+    {k >= 2 && MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
+    {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
+    {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {VIEW.mode === 'lineup' && <Lineup />}
     <DeferredZones />
-    {HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
-    {MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
-    <Traveller /><Details />
-    <Fireflies />
-    {GAMEON && <GameSlot />}
+    {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
+    {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
+    <Traveller />{k >= 4 && <Details />}
+    {k >= 4 && <Fireflies />}
+    {k >= 4 && GAMEON && <GameSlot />}
   </group></group>
 }
 
@@ -625,17 +635,25 @@ function Stats() {
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
 function HorizonCull() {
-  const camera = useThree(s => s.camera), n = useRef(0), list = useRef(null), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), [])
+  const camera = useThree(s => s.camera), n = useRef(0), list = useRef(null), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
   useFrame(() => {
     const pl = planetRef.current; if (!pl || n.current++ % 4) return
     if (!list.current || n.current % 240 === 1) { list.current = []; pl.traverse(o => { if ((o.isMesh || o.isPoints) && !o.isInstancedMesh && !o.isSkinnedMesh && o.geometry && o !== pl) list.current.push(o) }) }
     _o.setFromMatrixPosition(pl.matrixWorld); const camD = camera.position.distanceTo(_o)
     const lim = -Math.min(0.42, 4.5 / camD) // looser when close
+    _tc.copy(camera.position).sub(_o).normalize()
     for (const o of list.current) {
       _p.setFromMatrixPosition(o.matrixWorld); const r = _p.distanceTo(_o); if (r < R * 0.6) continue // skip big/central stuff (planet, sky)
-      const up = _p.sub(_o).divideScalar(r), toCam = camera.position.clone().sub(_o).normalize()
-      const hide = up.dot(toCam) < lim
+      const hide = _p.sub(_o).divideScalar(r).dot(_tc) < lim
       if (hide) o.layers.disable(0); else o.layers.enable(0)
+    }
+    // clustered instance batches: hide only when the whole cluster (centre + angular radius) is past the same horizon
+    const limA = Math.acos(lim)
+    for (const h of HCL) {
+      const par = h.mesh.parent; if (!par) continue
+      _p.copy(h.c).applyMatrix3(_m.setFromMatrix4(par.matrixWorld)).normalize()
+      const hide = Math.acos(Math.max(-1, Math.min(1, _p.dot(_tc)))) - h.rad > limA
+      if (hide) h.mesh.layers.disable(0); else h.mesh.layers.enable(0)
     }
   })
   return null
@@ -683,19 +701,47 @@ function Studio() {
 function Boot({ onLive, player = true }) {
   const gl = useThree(s => s.gl), scene = useThree(s => s.scene), camera = useThree(s => s.camera), live = useRef(false)
   useEffect(() => { let dead = false; (async () => {
+    if (player) { await new Promise(r => onBoot('mounted', r)); if (dead) return }
     bootStage('world', 1); await nextPaint()
     if (player) { bootStage('bakePlayer', 1); await new Promise(r => onBoot('baked', r)) }
     bootStage('bake', 1); await nextPaint()
     // one representative object per distinct program (material + skinning/instancing/vertex colours)
     const seen = new Set(), reps = []
     scene.traverse(o => { if (!(o.isMesh || o.isPoints || o.isLine) || !o.material) return; for (const m of [].concat(o.material)) { const k = m.uuid + (o.isSkinnedMesh ? 's' : '') + (o.isInstancedMesh ? 'i' : '') + (o.geometry?.attributes.color ? 'c' : ''); if (!seen.has(k)) { seen.add(k); reps.push(o) } } })
-    const N = Math.min(16, reps.length), per = Math.ceil(reps.length / Math.max(1, N))
-    for (let i = 0; i < N && !dead; i++) {
-      const batch = reps.slice(i * per, (i + 1) * per), proxy = { traverse: f => batch.forEach(f), traverseVisible: () => {} }
-      try { await gl.compileAsync(proxy, camera, scene) } catch (err) { console.warn('compile batch', err) }
-      bootStage('shaders', (i + 1) / N); await nextPaint()
+    // Compile against the composer's input buffer (the target RenderPass really draws into) so the program
+    // variants match the first frame, then "first-use" every object with sliced warm renders on a private layer (31):
+    // the blocking link/uniform queries + buffer uploads happen in small tasks instead of one long first frame.
+    const comp = COMPOSER.current, rt = comp ? comp.inputBuffer : null
+    const lights = []; scene.traverse(o => { if (o.isLight) lights.push(o) })
+    const warmCam = camera.clone(); warmCam.layers.set(31)
+    // 1) with KHR_parallel_shader_compile, queue every program at once (compiles in parallel, never blocks here);
+    //    without it, programs compile inside the sliced warm-up renders below, so the cost is spread over many tasks
+    const parallel = gl.extensions.has('KHR_parallel_shader_compile')
+    const compileOn = (list, async) => { const prev = gl.getRenderTarget(); gl.setRenderTarget(rt); try { const proxy = { traverse: f => list.forEach(f), traverseVisible: () => {} }; return async ? gl.compileAsync(proxy, camera, scene) : gl.compile(proxy, camera, scene) } finally { gl.setRenderTarget(prev) } }
+    if (parallel) { try { await compileOn(reps, true) } catch (err) { console.warn('compile', err) } }
+    // 2) first-use them in time-boxed slices (~40 ms each), yielding a paint between slices
+    const warm = (batch) => {
+      const prev = gl.getRenderTarget(), saved = batch.map(o => [o, o.frustumCulled, o.isInstancedMesh ? o.count : -1])
+      try {
+        lights.forEach(l => l.layers.enable(31)); saved.forEach(([o]) => { o.layers.enable(31); o.frustumCulled = false; if (o.isInstancedMesh) o.count = Math.min(o.count, 1) }) // real (tiny-target) draw: program link, uniforms, buffer upload and the driver's first-draw work
+        gl.setRenderTarget(rt); gl.render(scene, warmCam)
+      } catch (err) { console.warn('warm batch', err) } finally {
+        gl.setRenderTarget(prev); lights.forEach(l => l.layers.disable(31)); saved.forEach(([o, fc, c]) => { o.layers.disable(31); o.frustumCulled = fc; if (c >= 0) o.count = c })
+      }
+    }
+    // 2) first-use EVERY renderable (not just one per program) into the composer target, in ~30 ms slices with a
+    //    paint between them: program link + uniform lookup + buffer/VAO upload + the driver's first draw all happen
+    //    here instead of in one multi-second first frame
+    const all = []; scene.traverse(o => { if ((o.isMesh || o.isPoints || o.isLine) && o.material) all.push(o) })
+    for (let i = 0; i < all.length && !dead;) {
+      const t0 = performance.now(), batch = []
+      do { batch.push(all[i++]); if (batch.length >= 8) { warm(batch.splice(0)) } } while (i < all.length && performance.now() - t0 < 30)
+      if (batch.length) warm(batch)
+      bootStage('shaders', i / all.length); await nextPaint()
     }
     window.__programs = reps.length
+    // effect passes (bloom/noise/vignette) compile on their first composer render: do that off-screen-behind-the-loader now
+    if (COMPOSER.current && !dead) { try { COMPOSER.current.render(0) } catch (err) { console.warn('warm composer', err) } await nextPaint() }
     bootStage('shaders', 1)
     if (q.get('bootpause') === 'shaders') return // screenshot aid: hold the real loader state before the first frame
     live.current = true; onLive()
@@ -703,19 +749,20 @@ function Boot({ onLive, player = true }) {
   useFrame(() => { if (live.current && !BOOT.done.frame) requestAnimationFrame(() => bootStage('frame', 1)) }, 100)
   return null
 }
+const COMPOSER = { current: null }
 export default function App() {
   const [live, setLive] = useState(false)
   if (VIEW.mode === 'charstudio') return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 2]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
       <Boot player={false} onLive={() => setLive(true)} /><Studio />
       <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
     </Canvas>
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 2]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
       <Boot onLive={() => setLive(true)} /><Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><Sky /><Lights /><Planet /><Clouds /><Birds />
-      <EffectComposer multisampling={4}>
+      <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
         <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
         <Vignette offset={0.3} darkness={0.55} />

@@ -7,12 +7,14 @@
 #ld:after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.5;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .3 0 0 0 .26 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E")}
 #ld.out{-webkit-mask:radial-gradient(circle at 50% 56%,transparent var(--r),#000 calc(var(--r) + 14%));mask:radial-gradient(circle at 50% 56%,transparent var(--r),#000 calc(var(--r) + 14%));animation:iris 2.2s cubic-bezier(.6,0,.3,1) forwards;pointer-events:none}
 @keyframes iris{to{--r:140%}}
-#ld svg{position:absolute;inset:0;width:100%;height:100%}
+#ld svg{position:absolute;inset:0;width:100%;height:100%}#ld svg.defs{width:0;height:0;position:absolute}
+/* every animated piece is its own composited layer: filtered SVG is rasterised once, then only transform/opacity change */
+.lay{position:absolute;inset:0;will-change:transform}.wa{will-change:opacity}.pl,.glow{transform-origin:var(--ox) var(--oy)}.glow{transform-origin:calc(var(--ox) + 800px*var(--s)) calc(var(--oy) + 560px*var(--s))}
 .bk,.pl{transition:transform 2.6s cubic-bezier(.3,0,.2,1)}.ink{transition:stroke-dashoffset 1.4s ease}.wa{opacity:0;transition:opacity 2s ease}
-.out .pl{transform:translate(0,-60px) scale(1.18)!important;transition-duration:2.2s}
-.dr{animation:dr 19s ease-in-out infinite alternate}.dr.s{animation-duration:27s}@keyframes dr{to{transform:translateX(28px)}}
+.out .pl{transform:translate(0,calc(-60px*var(--s))) scale(1.18)!important;transition-duration:2.2s}
+.dr{animation:dr 19s ease-in-out infinite alternate}.dr.s{animation-duration:27s}@keyframes dr{to{transform:translateX(calc(28px*var(--s)))}}
 .sd{animation:sd 22s linear infinite;opacity:0}@keyframes sd{0%{transform:translate(0,0) rotate(0);opacity:0}8%{opacity:.85}90%{opacity:.7}100%{transform:translate(520px,-380px) rotate(40deg);opacity:0}}
-.glow{animation:gl 6s ease-in-out infinite alternate;transform-origin:800px 560px}@keyframes gl{to{transform:scale(1.06);opacity:.85}}
+.glow{animation:gl 6s ease-in-out infinite alternate}@keyframes gl{to{transform:scale(1.06);opacity:.85}}
 #tt{position:absolute;left:0;right:0;top:8.5%;text-align:center;transition:opacity 1.2s,transform 2s}
 #tt h1{margin:0;font-weight:500;font-size:clamp(48px,6.8vw,92px);line-height:1;letter-spacing:.005em;text-shadow:0 1px 22px #fff2d090}
 #tt div{margin-top:12px;font-size:15px;letter-spacing:.36em;text-transform:uppercase;opacity:.62}
@@ -28,7 +30,7 @@
 @media (prefers-reduced-motion:reduce){.dr,.sd,.glow,#go.on{animation:none!important}.sd{display:none}.bk,.pl,.ink,.wa,#tt,#go{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
 </style></head><body style="margin:0;overflow:hidden;background:#e9c3a0">
 <div id="ld" role="progressbar" aria-label="Loading Tiny Planet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-<svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
 <filter id="wc" x="-20%" y="-40%" width="140%" height="180%"><feTurbulence type="fractalNoise" baseFrequency=".012 .03" numOctaves="4" seed="11"/><feDisplacementMap in="SourceGraphic" scale="60"/><feGaussianBlur stdDeviation="2.5"/></filter>
 <filter id="bl" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency=".02" numOctaves="3" seed="7"/><feDisplacementMap in="SourceGraphic" scale="30"/><feGaussianBlur stdDeviation="4"/></filter>
 <filter id="sf" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter><filter id="ed"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="2"/><feDisplacementMap in="SourceGraphic" scale="2"/></filter>
@@ -38,25 +40,25 @@
 <linearGradient id="c3" x2="0" y2="1"><stop offset="0" stop-color="#ecbcb5"/><stop offset="1" stop-color="#a97f9d"/></linearGradient>
 <radialGradient id="sea" cx=".38" cy=".3"><stop offset="0" stop-color="#cfe6c8"/><stop offset="1" stop-color="#7fae9e"/></radialGradient>
 <clipPath id="dc"><circle cx="300" cy="330" r="171"/></clipPath>
-</defs>
-<circle class="glow" cx="800" cy="560" r="440" fill="url(#sun)"/>
-<g id="seeds"></g>
-<g class="pl" id="pl"><g transform="translate(500 228)">
-<g class="wa" data-a=".12" filter="url(#sf)"><circle cx="300" cy="330" r="250" fill="#fff3d2" opacity=".28"/></g>
-<g clip-path="url(#dc)"><g class="wa" data-a=".2" filter="url(#bl)"><circle cx="300" cy="330" r="172" fill="url(#sea)"/></g>
-<g class="wa" data-a=".42" filter="url(#bl)"><ellipse cx="240" cy="250" rx="150" ry="80" fill="#c8dd98" opacity=".7"/><ellipse cx="380" cy="300" rx="100" ry="55" fill="#e8d79a" opacity=".45"/><ellipse cx="300" cy="460" rx="170" ry="55" fill="#93b08e" opacity=".45"/></g>
-<g class="wa" data-a=".6" filter="url(#bl)"><path d="M140 362C210 330 250 392 310 378S400 326 470 356V384C400 354 360 402 310 402S210 358 140 388Z" fill="#7ec3dc" opacity=".85"/></g>
-<g class="wa" data-a=".8" filter="url(#bl)"><circle cx="230" cy="230" r="150" fill="#ffe2a6" opacity=".35"/><circle cx="420" cy="470" r="160" fill="#8a6f94" opacity=".2"/></g></g>
-<g class="wa" data-a=".72" filter="url(#bl)"><circle cx="300" cy="150" r="30" fill="#e88a7a" opacity=".5"/><circle cx="452" cy="205" r="24" fill="#f2b7c4" opacity=".5"/><circle cx="152" cy="212" r="26" fill="#8fbf7a" opacity=".55"/><circle cx="128" cy="300" r="22" fill="#b0a094" opacity=".5"/></g>
-<circle class="wa" data-a=".9" cx="300" cy="330" r="174" fill="none" stroke="#fff1c4" stroke-width="3.5" stroke-dasharray="420 1200" transform="rotate(-150 300 330)"/>
-<g id="art" filter="url(#ed)"></g></g></g>
-<g class="bk" id="L3"><g class="dr s"><path filter="url(#wc)" fill="url(#c3)" opacity=".86" d="M-200 640C40 560 220 600 380 560C520 520 640 580 760 620C820 700 700 760 640 820L-200 1000Z"/></g></g>
-<g class="bk" id="R3"><g class="dr s"><path filter="url(#wc)" fill="url(#c3)" opacity=".86" d="M1800 600C1560 540 1380 590 1220 560C1080 540 960 600 860 650C800 720 920 780 980 840L1800 1000Z"/></g></g>
-<g class="bk" id="L2"><g class="dr"><path filter="url(#wc)" fill="url(#c2)" d="M-200 470C-40 400 160 430 300 400C450 370 560 430 690 470C760 560 700 640 600 700C400 760 100 740-200 800Z"/></g></g>
-<g class="bk" id="R2"><g class="dr"><path filter="url(#wc)" fill="url(#c2)" d="M1800 450C1640 390 1460 420 1300 400C1150 380 1040 440 930 490C860 570 920 650 1020 700C1200 760 1500 740 1800 800Z"/></g></g>
-<g class="bk" id="L1"><g class="dr s"><path filter="url(#wc)" fill="url(#c1)" d="M-200 760C0 700 200 720 380 690C540 660 690 700 820 760C880 840 760 900 600 950L-200 1100Z"/></g></g>
-<g class="bk" id="R1"><g class="dr s"><path filter="url(#wc)" fill="url(#c1)" d="M1800 740C1600 690 1420 710 1240 690C1080 670 930 720 800 780C760 860 860 920 1000 960L1800 1100Z"/></g></g>
-</svg>
+</defs></svg>
+<div class="lay glow"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><circle cx="800" cy="560" r="440" fill="url(#sun)"/></svg></div>
+<div class="lay"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g id="seeds"></g></svg></div>
+<div class="lay pl" id="pl">
+<div class="lay wa" data-a=".12"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g filter="url(#sf)"><circle cx="300" cy="330" r="250" fill="#fff3d2" opacity=".28"/></g></g></svg></div>
+<div class="lay wa" data-a=".2"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><circle cx="300" cy="330" r="172" fill="url(#sea)"/></g></g></g></svg></div>
+<div class="lay wa" data-a=".42"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><ellipse cx="240" cy="250" rx="150" ry="80" fill="#c8dd98" opacity=".7"/><ellipse cx="380" cy="300" rx="100" ry="55" fill="#e8d79a" opacity=".45"/><ellipse cx="300" cy="460" rx="170" ry="55" fill="#93b08e" opacity=".45"/></g></g></g></svg></div>
+<div class="lay wa" data-a=".6"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><path d="M140 362C210 330 250 392 310 378S400 326 470 356V384C400 354 360 402 310 402S210 358 140 388Z" fill="#7ec3dc" opacity=".85"/></g></g></g></svg></div>
+<div class="lay wa" data-a=".8"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><circle cx="230" cy="230" r="150" fill="#ffe2a6" opacity=".35"/><circle cx="420" cy="470" r="160" fill="#8a6f94" opacity=".2"/></g></g></g></svg></div>
+<div class="lay wa" data-a=".72"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g filter="url(#bl)"><circle cx="300" cy="150" r="30" fill="#e88a7a" opacity=".5"/><circle cx="452" cy="205" r="24" fill="#f2b7c4" opacity=".5"/><circle cx="152" cy="212" r="26" fill="#8fbf7a" opacity=".55"/><circle cx="128" cy="300" r="22" fill="#b0a094" opacity=".5"/></g></g></svg></div>
+<div class="lay wa" data-a=".9"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><circle cx="300" cy="330" r="174" fill="none" stroke="#fff1c4" stroke-width="3.5" stroke-dasharray="420 1200" transform="rotate(-150 300 330)"/></g></svg></div>
+<div class="lay"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g id="art" filter="url(#ed)"></g></g></svg></div>
+</div>
+<div class="lay bk" id="L3"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c3)" opacity=".86" d="M-200 640C40 560 220 600 380 560C520 520 640 580 760 620C820 700 700 760 640 820L-200 1000Z"/></svg></div></div>
+<div class="lay bk" id="R3"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c3)" opacity=".86" d="M1800 600C1560 540 1380 590 1220 560C1080 540 960 600 860 650C800 720 920 780 980 840L1800 1000Z"/></svg></div></div>
+<div class="lay bk" id="L2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c2)" d="M-200 470C-40 400 160 430 300 400C450 370 560 430 690 470C760 560 700 640 600 700C400 760 100 740-200 800Z"/></svg></div></div>
+<div class="lay bk" id="R2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c2)" d="M1800 450C1640 390 1460 420 1300 400C1150 380 1040 440 930 490C860 570 920 650 1020 700C1200 760 1500 740 1800 800Z"/></svg></div></div>
+<div class="lay bk" id="L1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c1)" d="M-200 760C0 700 200 720 380 690C540 660 690 700 820 760C880 840 760 900 600 950L-200 1100Z"/></svg></div></div>
+<div class="lay bk" id="R1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c1)" d="M1800 740C1600 690 1420 710 1240 690C1080 670 930 720 800 780C760 860 860 920 1000 960L1800 1100Z"/></svg></div></div>
 <div id="tt"><h1>Tiny Planet</h1><div>a little world at golden hour</div></div>
 <button id="go">Enter the world<small>press any key</small></button>
 <div id="ft"><span id="st"><i></i><b id="sn">i</b><span id="sl">Gathering the scripts</span><i></i></span><span id="tip"></span></div>
@@ -74,12 +76,13 @@ $("art").innerHTML=A.join("");var inks=[].slice.call(d.querySelectorAll(".ink"))
 // dandelion seeds drifting up through the light
 var sd=$("seeds");for(var i=0;i<9;i++){var g=d.createElementNS(NS,"g");g.setAttribute("class","sd");g.style.animationDelay=(-i*2.6)+"s";g.style.animationDuration=(18+i%4*3)+"s";var x=180+i*140,y=900-i%3*90,s='<g transform="translate('+x+' '+y+') scale('+(.7+i%3*.25)+')"><path d="M0 0v16" stroke="#fff8e8" stroke-width="1.2"/>';for(var k=0;k<9;k++){var a=k/9*6.28;s+='<path d="M0 0L'+(Math.cos(a)*9).toFixed(1)+' '+(Math.sin(a)*9-3).toFixed(1)+'" stroke="#fffaf0" stroke-width=".9" opacity=".9"/>'}g.innerHTML=s+'<circle r="1.6" fill="#fff6e0"/></g>';sd.appendChild(g)}
 var W={js:20,fonts:1,world:31,bake:7,shaders:4,frame:37},L={js:"Gathering the scripts",fonts:"Setting the type",world:"Shaping the planet",bake:"Waking the traveller",shaders:"Mixing the paints",frame:"Painting the first light"},O=["js","fonts","world","bake","shaders","frame"],RN=["i","ii","iii","iv","v","vi"],S={};
-function bank(id,x,y){$(id).style.transform="translate("+x+"px,"+y+"px)"}
+var SC=1,BK={};function fit(){var W=innerWidth,H=innerHeight;SC=Math.max(W/1600,H/1000);ld.style.setProperty("--s",SC);ld.style.setProperty("--ox",(W-1600*SC)/2+"px");ld.style.setProperty("--oy",(H-1000*SC)/2+"px");for(var k in BK)bank(k,BK[k][0],BK[k][1])}
+function bank(id,x,y){BK[id]=[x,y];$(id).style.transform="translate("+(x*SC).toFixed(2)+"px,"+(y*SC).toFixed(2)+"px)"}
 function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p);
  inks.forEach(function(el,i){var s=.02+i/inks.length*.78,t=Math.min(1,Math.max(0,(p-s)/.16));el.style.strokeDashoffset=1-t});
  was.forEach(function(w){w.style.opacity=Math.min(1,Math.max(0,(p-+w.getAttribute("data-a"))/.16))});
  bank("L1",90-630*e,150*e);bank("R1",-90+630*e,150*e);bank("L2",-430*e,-30*e);bank("R2",430*e,-30*e);bank("L3",-90-270*e,60+40*e);bank("R3",90+270*e,60+40*e);
- $("pl").style.transform="translate(0,"+(70-70*e)+"px)";ld.setAttribute("aria-valuenow",Math.round(p*100));
+ PLY=70-70*e;$("pl").style.transform="translate(0,"+(PLY*SC).toFixed(2)+"px)";ld.setAttribute("aria-valuenow",Math.round(p*100));
  var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done){$("sl").textContent=L[c];$("sn").textContent=RN[O.indexOf(c)]}window.__loader.p=p}
 var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(en){var n=en.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((S.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(x){}}
 function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="frame"&&v>=1)ready()}
@@ -91,6 +94,7 @@ addEventListener("keydown",key,true);$("go").onclick=enter;ld.addEventListener("
 var TIPS=["Press E near anything that shimmers to gather it.","A fishing rod is two wood and three reeds.","The crafting bench waits beside the house marked Home.","Fireflies and glowing moss come out only at night.","Everything grows back by morning; gather freely.","The meadow sheep will share their wool.","A rope bridge opens a path up the waterfall cliff.","Decor can be placed anywhere around Home."],ti=Math.floor(Math.random()*TIPS.length),tp=$("tip");
 tp.textContent=TIPS[ti++%TIPS.length];var tt=setInterval(function(){if(!d.body.contains(ld))return clearInterval(tt);tp.classList.add("h");setTimeout(function(){tp.textContent=TIPS[ti++%TIPS.length];tp.classList.remove("h")},rm?0:800)},6500);
 addEventListener("error",function(e){if(!done){$("sl").textContent="Something went wrong, please reload";$("sn").textContent="!"}});
+var PLY=70;fit();addEventListener("resize",function(){fit();if(!ld.classList.contains("out"))$("pl").style.transform="translate(0,"+(PLY*SC).toFixed(2)+"px)"});
 window.__loader={stage:stage,p:0,P:S};draw();
 })()</script>
 <div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>

@@ -17,10 +17,36 @@ export const OCC = [], occ = (el) => { if (el && !OCC.includes(el)) OCC.push(el)
 export const RC = new THREE.Raycaster()
 window.__setView = (m) => { VIEW.mode = m }
 export const planetRef = { current: null }
-export function Instanced({ items, geo, mat, outline, isOcc }) {
+// Large instance sets are split into spatial clusters (by nearest of 42 icosphere directions) so each
+// cluster gets a tight bounding sphere (frustum culling) and can be dropped when past the planet's horizon.
+// Same instances, same per-instance transforms/colours: only which batches are submitted changes.
+export const HCL = [] // { mesh, c: local centre direction, rad: angular radius }
+const DIRS = (() => { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, a = []; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(p, i).normalize(); if (!a.some(u => u.distanceToSquared(v) < 1e-6)) a.push(v) } g.dispose(); return a })()
+const CLUSTER_MIN = 160
+function InstancedBatch({ items, geo, mat, outline, isOcc, hc }) {
   const ref = useRef()
-  useEffect(() => { const o = new THREE.Object3D(); items.forEach((it, i) => { o.position.copy(it.pos); o.quaternion.copy(it.q); o.scale.setScalar(it.s); o.updateMatrix(); ref.current.setMatrixAt(i, o.matrix); if (it.c) ref.current.setColorAt(i, it.c) }); ref.current.instanceMatrix.needsUpdate = true; if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true }, [])
+  useEffect(() => { const m = ref.current, o = new THREE.Object3D(); items.forEach((it, i) => { o.position.copy(it.pos); o.quaternion.copy(it.q); o.scale.setScalar(it.s); o.updateMatrix(); m.setMatrixAt(i, o.matrix); if (it.c) m.setColorAt(i, it.c) }); m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true
+    // bounds are computed here, after the instance matrices exist (a lazy compute can catch identity matrices)
+    m.computeBoundingSphere(); m.boundingSphere.radius += 0.35
+    if (hc) { const e = { mesh: m, ...hc }; HCL.push(e); return () => { const k = HCL.indexOf(e); if (k >= 0) HCL.splice(k, 1) } } }, [])
   return <instancedMesh ref={el => { ref.current = el; if (isOcc) occ(el) }} args={[geo, mat, items.length]}>{outline && <Outlines thickness={outline} color={INK} />}</instancedMesh>
+}
+export function Instanced(props) {
+  const { items } = props
+  const groups = useMemo(() => {
+    if (items.length < CLUSTER_MIN) return null
+    const b = DIRS.map(() => []), _n = new THREE.Vector3()
+    for (const it of items) { _n.copy(it.pos).normalize(); let k = 0, best = -2; for (let j = 0; j < DIRS.length; j++) { const d = DIRS[j].dot(_n); if (d > best) { best = d; k = j } } b[k].push(it) }
+    if (!props.geo.boundingSphere) props.geo.computeBoundingSphere()
+    const ext = props.geo.boundingSphere.center.length() + props.geo.boundingSphere.radius // furthest point from the instance origin
+    return b.map((list, j) => { if (!list.length) return null; const c = new THREE.Vector3(); list.forEach(it => c.add(_n.copy(it.pos).normalize())); c.normalize(); let rad = 0, top = 0
+      list.forEach(it => { rad = Math.max(rad, c.angleTo(_n.copy(it.pos).normalize())); top = Math.max(top, it.pos.length() + ext * it.s) })
+      // tall instances stay visible past the ground horizon: widen by the extra angle their tops can be seen over it
+      const lift = Math.acos(Math.min(1, R / Math.max(R, top)))
+      return { list, hc: { c, rad: rad + lift + 0.03 } } }).filter(Boolean)
+  }, [items])
+  if (!groups) return <InstancedBatch {...props} />
+  return <>{groups.map((g, i) => <InstancedBatch key={i} {...props} items={g.list} hc={g.hc} />)}</>
 }
 export const PU = { uDay: { value: 1 } }
 export const NOISE_GLSL = `float ph(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }

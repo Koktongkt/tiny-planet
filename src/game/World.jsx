@@ -74,6 +74,7 @@ export function ropeLift(n) {
 export const ropePass = (n) => { const r = ropeT(n); return !!r && r.t > -0.05 && r.t < 1.2 && r.side < 0.16 }
 
 // ---------- prop meshes ----------
+const _sx = new THREE.Vector3(), _sm = new THREE.Matrix4()
 const hullMat = new THREE.MeshBasicMaterial({ color: '#4a3a35', side: THREE.BackSide })
 const M = {}; const m = (k, c) => (M[k] = M[k] || toon(c))
 function Mx({ geo, mat, hull = 1.12, ...p }) { return <group {...p}><mesh geometry={geo} material={mat} />{hull && <mesh geometry={geo} material={hullMat} scale={hull} />}</group> }
@@ -188,8 +189,8 @@ function Sheep({ i, sheep }) {
     const s = sheep[i], meadow = GAME.Zc.meadow; dt = Math.min(dt, 0.05); s.t += dt
     if (Math.sin(s.t * 0.4 + i * 2) > 0.1 && !s.held) { s.n.addScaledVector(s.f, 0.12 / R * dt).normalize(); s.f.applyAxisAngle(s.n, Math.sin(s.t * 0.7 + i) * dt * 0.8); if (s.n.angleTo(meadow) > ZONES.meadow.r * 0.8) s.f.lerp(meadow.clone().sub(s.n), dt * 2) ; s.walk = 1 } else s.walk = 0
     s.f.addScaledVector(s.n, -s.f.dot(s.n)).normalize()
-    const side = new THREE.Vector3().crossVectors(s.n, s.f)
-    g.current.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, s.n, s.f)); g.current.position.copy(posOf(s.n)); s.pos = g.current.position
+    const side = _sx.crossVectors(s.n, s.f)
+    g.current.quaternion.setFromRotationMatrix(_sm.makeBasis(side, s.n, s.f)); g.current.position.copy(posOf(s.n)); s.pos = g.current.position
     const shorn = !available(s.id); wool.current.scale.setScalar(shorn ? 0.72 : 1)
     legs.current.children.forEach((l, k) => { l.rotation.x = Math.sin(s.t * 9 + k * Math.PI) * 0.4 * s.walk })
     g.current.visible = !G.hideFar || true
