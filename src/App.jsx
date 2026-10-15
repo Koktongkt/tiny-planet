@@ -319,7 +319,7 @@ function Seeds() {
 function Wildflowers() {
   const { heads, stems } = useMemo(() => {
     const heads = [], stems = [], fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff', '#ff9a7a', '#a8d8ff'].map(C)
-    for (let i = 0; i < 2000 * DENS * (TOUCH ? 0.6 : 0.85); i++) { const n = randDir(); if (busy(n) || onBridge(n) || zoneWet(n)) continue; const s = 0.7 + rnd() * 0.6, p = place(n, 0, rnd() * 6); stems.push({ ...p, s }); heads.push({ ...place(n, 0.075 * s), s, c: fc[Math.floor(rnd() * 6)] }) }
+    for (let i = 0; i < 2000 * DENS * (TOUCH ? 0.55 : 0.7); i++) { const n = randDir(); if (busy(n) || onBridge(n) || zoneWet(n)) continue; const s = 0.7 + rnd() * 0.6, p = place(n, 0, rnd() * 6); stems.push({ ...p, s }); heads.push({ ...place(n, 0.075 * s), s, c: fc[Math.floor(rnd() * 6)] }) }
     return { heads, stems }
   }, [])
   const geos = useMemo(() => { const st = new THREE.CylinderGeometry(0.004, 0.005, 0.075, 3); st.translate(0, 0.0375, 0); const hd = new THREE.IcosahedronGeometry(0.022, 0); hd.scale(1, 0.6, 1); return { st, hd } }, [])
@@ -347,7 +347,7 @@ function Vegetation() {
   const { grass, flowers } = useMemo(() => {
     const grass = [], flowers = [], g1 = C('#86c46c'), g2 = C('#b9de86'), fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff'].map(C)
     const _t = new THREE.Vector3()
-    for (let i = 0; i < 750 * DENS * (TOUCH ? 0.62 : 0.72); i++) { // lawn (patches a bit bigger + sparser than DENS: grass is the biggest triangle cost) patches: soft dome tufts with flower clumps
+    for (let i = 0; i < 750 * DENS * (TOUCH ? 0.52 : 0.62); i++) { // lawn (patches a bit bigger + sparser than DENS: grass is the biggest triangle cost) patches: soft dome tufts with flower clumps
       const c = randDir(); if (busy(c)) continue
       const k = 6 + Math.floor(rnd() * 14), sp = (0.03 + rnd() * 0.05) * K, col = g1.clone().lerp(g2, rnd())
       for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (distToCurve(n, streamDir, 90) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
@@ -489,7 +489,7 @@ function Walker({ w, i }) {
   const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0, act: null, actW: 0, talkSeed: i * 1.3 }), [])
   const camera = useThree(s => s.camera)
   const L = useMemo(() => ({ clk: 0, pc: 0, cur: null, curF: new THREE.Vector3(), face: new THREE.Vector3() }), [])
-  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.95 * 0.8 * (w.cfg.body?.H ?? 1) }; NPCS.push(c); return c }, [])
+  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.4 * (w.cfg.body?.H ?? 1) }; NPCS.push(c); return c }, [])
   useEffect(() => () => { const k = NPCS.indexOf(npc); if (k >= 0) NPCS.splice(k, 1) }, [])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t; npc.obj = ref.current; npc.ready = ready
@@ -746,7 +746,7 @@ function Stats() {
 }
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
-const LOD_D = +(q.get('lodd') || (TOUCH ? 9 : 16)) // tufts are ~10px here: facets don't read
+const LOD_D = +(q.get('lodd') || (TOUCH ? 7.5 : 16)) // tufts are ~10px here: facets don't read
 const LOD_D2 = +(q.get('lodd2') || (TOUCH ? 20 : 34)) // third tier: a few px, only the silhouette lump matters
 function HorizonCull() {
   const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
