@@ -17,7 +17,7 @@ const modal = () => !!(G.ui.panel || G.ui.place || G.ui.fish || G.ui.crafting)
 function close() { if (!TALK.open) return; TALK.open.w.talking = false; TALK.open = null; TALK.lines = null; PADUI.hideStick = false; bump() }
 function open(npc) {
   const rot = window.__rot || { a: 0.4 }
-  const L = buildLines(npc.key, { period: periodAt(rot.a), weather: weatherFor(G.s.day || 0), recent: recentActivity() })
+  const L = buildLines(npc.key, { period: periodAt(rot.a), weather: weatherFor(G.s.day || 0), recent: recentActivity(), stage: npc.stage })
   TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; PADUI.hideStick = true; TALK.onOpen && TALK.onOpen(); bump()
 }
 function advance() { if (!TALK.open) return; if (TALK.page < TALK.lines.pages.length - 1) { TALK.page++; bump() } else close() }
@@ -42,7 +42,7 @@ export function Talk({ P }) {
     let seen = 0
     const un = subscribe(() => { for (const t of G.ui.toasts) { if (t.id <= seen) continue; seen = t.id; const x = t.text
       let m
-      if ((m = /^Crafted (.+)!$/.exec(x))) noteActivity('craft', m[1].toLowerCase())
+      if ((m = /^(?:✦ )?Crafted (.+)!$/.exec(x))) noteActivity('craft', m[1].toLowerCase())
       else if ((m = /^(?:New: |\+\d+ )(.+?)!?$/.exec(x))) noteActivity(/fish/i.test(m[1]) ? 'fish' : 'gather', m[1].toLowerCase())
       else if (/purrs|Mochi|opens one eye/.test(x)) noteActivity('cat')
       else if (/Pip|fetch|stick/i.test(x)) noteActivity('dog') } })
@@ -58,7 +58,7 @@ export function Talk({ P }) {
     place()
   })
   const place = () => { const el = BUBBLE.el, who = TALK.open || TALK.near; if (!el) return
-    if (!who) { el.style.opacity = 0; return }
+    if (!who || !who.obj) { el.style.opacity = 0; return }
     who.obj.getWorldPosition(_h); _up.set(0, 1, 0).applyQuaternion(who.obj.getWorldQuaternion(new THREE.Quaternion())); _h.addScaledVector(_up, who.h || 0.92).project(camera)
     if (_h.z > 1) { el.style.opacity = 0; return }
     el.style.opacity = TALK.open ? 0 : 1; el.style.transform = `translate(${((_h.x + 1) / 2 * size.width).toFixed(1)}px, ${((1 - _h.y) / 2 * size.height).toFixed(1)}px) translate(-50%, -100%)` }

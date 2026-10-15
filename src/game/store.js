@@ -1,5 +1,6 @@
 // Game state + persistence (localStorage) + tiny pub/sub. No React here; UI subscribes via useGame().
 import { ITEMS, RECIPES, TOOLS, DECOR } from './items.js'
+import { startAct, blip, ACT } from '../act.js'
 const KEY = 'tinyplanet.save.v1'
 const q = new URLSearchParams(location.search)
 const fresh = () => ({ inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0 })
@@ -32,14 +33,15 @@ export const owned = (r) => (r.cat === 'Tools' && G.s.tools[r.makes]) || (r.cat 
 export const canCraft = (r) => !owned(r) && haveFor(r).every(h => h.ok)
 export function craft(r, done) {
   if (!canCraft(r) || G.ui.crafting) return
-  G.ui.crafting = { id: r.id, t0: performance.now() }; emit()
+  G.ui.crafting = { id: r.id, t0: performance.now() }; emit(); startAct('craft', { dur: 1.25 }); const P_ = G.P; if (P_ && P_.n) setTimeout(() => { blip('spark') }, 1050)
   const hold = q.get('craft') === r.id
   setTimeout(() => {
     if (hold) return
     for (const [k, n] of r.needs) { if (typeof k === 'string') take(k, n); else { let left = n; for (const x of k.any) { const u = Math.min(left, count(x)); take(x, u); left -= u } } }
     G.ui.crafting = null; G.s.crafted++
     if (r.cat === 'Unlock') { G.s.unlocked.bridge = true; toast('The rope bridge is up! A new path climbs the cliff.', 'bridgekit', 4200) }
-    else { add(r.makes, 1, true); toast(`Crafted ${ITEMS[r.makes].name}!`, r.makes) }
+    else { add(r.makes, 1, true); toast(`✦ Crafted ${ITEMS[r.makes].name}!`, r.makes) }
+    if (G.benchPos) ACT.spark = { t0: performance.now(), pos: G.benchPos.clone(), n: 14, col: 'gold' }
     emit(); done && done()
   }, 1100)
 }

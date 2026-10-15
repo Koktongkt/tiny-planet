@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { ACT, tickAct, actLocked } from './act.js'
 import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
@@ -457,34 +458,41 @@ const A = (n, at, act, extra) => ({ n, at, act, ...extra })
 const NEW_WALKERS = (() => {
   const W = [], by = z => VILLAGERS.filter(v => v.zone === z)
   const SPEEDS = { morning: 1.15, day: 1, evening: 0.72, night: 0.5 }
-  by('path').forEach((cfg, i, a) => W.push({ cfg, key: cfg.name, mode: 'path', t0: (i / a.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (cfg.age === 'elder' ? 0.55 : cfg.age === 'kid' ? 1.25 : 1), off: (rnd() - 0.5) * 0.1,
+  const STALL2 = sqSpot(0.62, 1.1), SWEEP2 = sqSpot(0.7, 1.4)
+  const cook = VILLAGERS.find(v => v.name === 'cook')
+  if (cook) W.push({ cfg: { ...cook, hold: { R: 'broom' } }, key: cook.name, mode: 'anchor', plan: { morning: [A(SWEEP2, SQ, 'sweep', { drift: 0.16, dur: 22, stage: 'sweep' }), A(STALL2, SQ, 'sell', { dur: 18, stage: 'sell' })], day: [A(STALL2, SQ, 'sell', { dur: 26, stage: 'sell' }), A(STALL2, SQ, 'eat', { dur: 10, stage: 'eat' })], evening: [A(SWEEP2, SQ, 'sweep', { drift: 0.16, dur: 18, stage: 'sweep' }), A(STALL2, SQ, 'sell', { dur: 14, stage: 'sell' })], night: A(STALL2, SQ, 'sit', { stage: 'rest' }) } })
+  by('path').filter(c => c.name !== 'cook').forEach((cfg, i, a) => W.push({ cfg, key: cfg.name, mode: 'path', t0: (i / a.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (cfg.age === 'elder' ? 0.55 : cfg.age === 'kid' ? 1.25 : 1), off: (rnd() - 0.5) * 0.1,
     speeds: SPEEDS, pause: { every: 22 + i * 4.3, len: 4.5 + (i % 3), act: i % 3 === 1 ? 'stretch' : 'look' } }))
   const [gma, gpa, bak] = by('square')
   const front = BENCH.n.clone().addScaledVector(BENCH.fwd, 1).normalize() // a point in front of the bench
   const seat = (x, extra) => A(benchSeat(x), front, 'sit', extra)
-  W.push({ cfg: gma, key: gma.name, mode: 'anchor', plan: { morning: seat(-0.09), day: seat(-0.09), evening: seat(-0.09, { sitTalk: 0.45 }), night: seat(-0.09) } })
+  W.push({ cfg: gma, key: gma.name, mode: 'anchor', plan: { morning: seat(-0.09, { stage: 'rest' }), day: [seat(-0.09, { dur: 20, stage: 'rest' }), A(benchSeat(-0.09), front, 'eat', { dur: 14, stage: 'eat' })], evening: seat(-0.09, { sitTalk: 0.45, stage: 'chat' }), night: seat(-0.09, { stage: 'rest' }) } })
   W.push({ cfg: gpa, key: gpa.name, mode: 'anchor', plan: { morning: A(sqSpot(0.3, 1.6), SQ, 'stretch'), day: A(CHAT_B, CHAT_A, 'chat', { seed: 1.7 }), evening: seat(0.09, { sitTalk: -0.45 }), night: seat(0.09) } })
-  W.push({ cfg: { ...bak, hold: { R: 'broom' } }, key: bak.name, mode: 'anchor', plan: { morning: A(SWEEP, SQ, 'sweep', { drift: 0.18 }), day: A(CHAT_A, CHAT_B, 'chat', { seed: 0 }), evening: A(SWEEP, SQ, 'sweep', { drift: 0.18 }), night: A(sqSpot(0.25, 3.3), SQ, 'look') } })
+  const OVEN = sqSpot(0.5, 3.3), STALL = sqSpot(0.3, 2.9)
+  W.push({ cfg: bak, key: bak.name, mode: 'anchor', plan: { morning: [A(OVEN, SQ, 'knead', { dur: 26, stage: 'knead' }), A(STALL, SQ, 'sell', { dur: 18, stage: 'sell' })], day: [A(STALL, SQ, 'sell', { dur: 24, stage: 'sell' }), A(CHAT_A, CHAT_B, 'chat', { seed: 0, dur: 12, stage: 'chat' })], evening: [A(STALL, SQ, 'sell', { dur: 12, stage: 'sell' }), A(benchSeat(0.0).clone().addScaledVector(tangentAt(SQ, 1.2), 0.2 / R).normalize(), SQ, 'eat', { dur: 18, stage: 'eat' })], night: A(sqSpot(0.25, 3.3), SQ, 'look', { stage: 'rest' }) } })
   const [fm, fw, sg, db] = by('harbour'), pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
-  W.push({ cfg: fm, key: fm.name, mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.22, work: { act: 'fish', on: 9, off: 7, periods: ['morning', 'day'] } })
+  const pierEnd = pier.clone().addScaledVector(tangentAt(pier, 0.4), 0.7 / R).normalize(), pierSeat = pier.clone().addScaledVector(tangentAt(pier, 0.4), -0.5 / R).normalize(), sea = pier.clone().addScaledVector(tangentAt(pier, 0.4 + 1.57), 1 / R).normalize()
+  W.push({ cfg: { ...fm, hold: { R: 'rod' } }, key: fm.name, mode: 'anchor', plan: { morning: A(pierEnd, sea, 'fish', { stage: 'fish' }), day: [A(pierEnd, sea, 'fish', { dur: 26, stage: 'fish' }), A(pierSeat, sea, 'eat', { dur: 14, stage: 'eat' })], evening: [A(pierSeat, sea, 'look', { dur: 18, stage: 'mend' }), A(pierEnd, sea, 'fish', { dur: 14, stage: 'fish' })], night: A(pierSeat, sea, 'sit', { stage: 'rest' }) } })
   W.push({ cfg: fw, key: fw.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.2, 2.3), tan: tangentAt(Zc.harbour, 2.3), range: 0.5, w: 0.16, carry: true, work: { act: 'chat', on: 6, off: 9, periods: ['day', 'evening'] } })
   W.push({ cfg: sg, key: sg.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2, work: { act: 'look', on: 6, off: 10, periods: ['evening', 'night'] } })
-  W.push({ cfg: db, key: db.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45, speeds: { morning: 1.3, day: 1.15, evening: 0.9, night: 0.5 }, work: { act: 'stretch', on: 4, off: 14, periods: ['morning', 'day'] } })
+  W.push({ cfg: db, key: db.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45, speeds: { morning: 1.3, day: 1.15, evening: 0.9, night: 0.5 }, carry: true, work: { act: 'play', on: 5, off: 11, periods: ['morning', 'day', 'evening'] } })
   const ang = by('lake')[0], dockN = (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })()
   W.push({ cfg: ang, key: ang.name, mode: 'anchor', dock: true, plan: { morning: A(dockN, Zc.lake, 'fish'), day: A(dockN, Zc.lake, 'fish'), evening: A(dockN, Zc.lake, 'fish'), night: A(dockN, Zc.lake, 'look') } })
   const [fa, fwf] = by('terraces')
-  W.push({ cfg: { ...fa, hold: { R: 'hoe' } }, key: fa.name, mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18, work: { act: 'hoe', on: 9, off: 6, periods: ['morning', 'day', 'evening'] } })
+  const rowA = around(Zc.terraces, 0.07, 0.5), rowB = around(Zc.terraces, 0.1, 1.4), hut = around(Zc.terraces, 0.13, 3.3)
+  W.push({ cfg: { ...fa, hold: { R: 'hoe' } }, key: fa.name, mode: 'anchor', plan: { morning: [A(rowA, Zc.terraces, 'hoe', { dur: 22, stage: 'tend' }), A(rowB, Zc.terraces, 'hoe', { dur: 22, stage: 'tend' })], day: [A(rowB, Zc.terraces, 'hoe', { dur: 20, stage: 'tend' }), A(hut, Zc.terraces, 'eat', { dur: 16, stage: 'eat' })], evening: [A(rowA, Zc.terraces, 'look', { dur: 18, stage: 'survey' }), A(hut, Zc.terraces, 'sit', { dur: 14, stage: 'rest' })], night: A(hut, Zc.terraces, 'sit', { stage: 'rest' }) } })
   W.push({ cfg: fwf, key: fwf.name, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12, work: { act: 'hoe', on: 7, off: 5, periods: ['morning', 'day'] } })
   const sch = by('ruins')[0], rs = around(Zc.ruins, 0.25 / R, 4.0); W.push({ cfg: sch, key: sch.name, mode: 'anchor', plan: { morning: A(rs, Zc.ruins, 'stretch'), day: A(around(Zc.ruins, 0.32 / R, 3.2), Zc.ruins, 'look'), evening: A(rs, Zc.ruins, 'look'), night: A(rs, Zc.ruins, 'look') } })
   const mg = by('mills')[0]; W.push({ cfg: mg, key: mg.name, mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35, speeds: { morning: 1.2, day: 1, evening: 0.8, night: 0.4 }, carry: true, work: { act: 'stretch', on: 4, off: 12, periods: ['evening'] } })
   const [bs, td] = by('giant')
   W.push({ cfg: bs, key: bs.name, mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3, work: { act: 'look', on: 5, off: 8, periods: ['morning', 'day', 'evening', 'night'] } })
-  W.push({ cfg: td, key: td.name, mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.42 })
+  const play1 = around(Zc.giant, 1.75 / R, 0.8), play2 = around(Zc.giant, 1.95 / R, 1.3), napN = around(Zc.giant, 1.45 / R, 0.4)
+  W.push({ cfg: td, key: td.name, mode: 'anchor', plan: { morning: [A(play1, Zc.giant, 'play', { dur: 14, stage: 'play' }), A(play2, Zc.giant, 'play', { dur: 12, stage: 'play' })], day: [A(play2, Zc.giant, 'play', { dur: 14, stage: 'play' }), A(napN, Zc.giant, 'nap', { dur: 24, stage: 'nap' })], evening: [A(play1, Zc.giant, 'play', { dur: 12, stage: 'play' }), A(napN, Zc.giant, 'eat', { dur: 12, stage: 'eat' })], night: A(napN, Zc.giant, 'nap', { stage: 'nap' }) } })
   return W
 })()
 const _c0 = new THREE.Vector3(), _tw = new THREE.Vector3()
 const RATE = { toddler: 12, kid: 10.5, teen: 9, adult: 8, elder: 6 }
-const STATIC_ACTS = new Set(['sit', 'stretch', 'hoe', 'sweep', 'fish', 'chat', 'look'])
+const STATIC_ACTS = new Set(['sit', 'stretch', 'hoe', 'sweep', 'fish', 'chat', 'look', 'knead', 'sell', 'eat', 'nap', 'play', 'wave'])
 function Walker({ w, i }) {
   const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0, act: null, actW: 0, talkSeed: i * 1.3 }), [])
   const camera = useThree(s => s.camera)
@@ -507,7 +515,10 @@ function Walker({ w, i }) {
       n = _wn.copy(w.n).addScaledVector(w.tan, s_ * w.range / R).normalize(); fwd = _wf.copy(w.tan).multiplyScalar(c >= 0 ? 1 : -1); mv = spd > 0 ? ss(0.12, 0.35, Math.abs(c)) : 0
       if (working) act = wk.act; else if (w.carry && mv > 0.2) act = 'carry'
     } else if (w.mode === 'anchor') { // walk to this period's spot, then do the activity there
-      const pl = w.plan[per]; if (!L.cur) { L.cur = pl.n.clone().normalize(); L.curF.copy(pl.at).sub(L.cur) }
+      const pe = w.plan[per]; let pl = pe
+      if (Array.isArray(pe)) { const tot = pe.reduce((s, x) => s + (x.dur || 20), 0); let u = (t + i * 5.3) % tot; for (const x of pe) { u -= (x.dur || 20); if (u < 0) { pl = x; break } } }
+      if (!L.cur) { L.cur = pl.n.clone().normalize(); L.curF.copy(pl.at).sub(L.cur) }
+      npc.stage = pl.stage || pl.act
       let goal = pl.n; if (pl.drift) goal = _tw.copy(pl.n).addScaledVector(tangentAt(pl.n, 0), Math.sin(t * 0.25 + i) * pl.drift / R).normalize()
       const d = L.cur.angleTo(goal) * R, sweeping = pl.drift && d < 0.25
       if (d > 0.012 && !talking) { const step = Math.min(d, (sweeping ? 0.1 : 0.28) * dt) / R; const dv = _tw.copy(goal).addScaledVector(L.cur, -L.cur.dot(goal)).normalize(); L.cur.addScaledVector(dv, step).normalize(); if (!sweeping) L.curF.lerp(dv, Math.min(1, dt * 6)); mv = sweeping ? 0.4 : d > 0.12 ? 1 : 0.5; if (sweeping) act = pl.act }
@@ -515,6 +526,12 @@ function Walker({ w, i }) {
       if (mv === 0 || sweeping) { L.face.copy(pl.at).sub(L.cur); L.curF.lerp(L.face.addScaledVector(L.cur, -L.face.dot(L.cur)).normalize(), Math.min(1, dt * 3)) }
       n = _wn.copy(L.cur); fwd = _wf.copy(L.curF); st.sitTalk = pl.sitTalk; st.look = pl.sitTalk || 0; if (pl.seed !== undefined) st.talkSeed = pl.seed
     } else { n = _wn.copy(w.n).normalize(); fwd = _wf.copy(w.fwd); mv = 0 }
+    // greet each other in passing: two villagers walking within ~0.4 units wave once (cooldown), cheap O(22) scan at ~2 Hz
+    if (!talking && ready) { L.gT = (L.gT || 0) - dt; L.gCD = (L.gCD || 0) - dt
+      if (L.gT <= 0 && L.gCD <= 0 && st.move > 0.3 && (L.scan = (L.scan || 0) - dt) <= 0) { L.scan = 0.5; for (const o of NPCS) { if (o === npc || !o.ready || !o.n) continue; if (o.n.angleTo(n) * R < 0.42 && (o.st.move > 0.3 || o.stage)) { L.gT = 1.6; L.gCD = 22 + (i % 5) * 3; o.greetAt = t; break } } }
+      if (npc.greetAt && t - npc.greetAt < 1.4 && !act) { act = 'wave'; mv = 0 }
+      if (L.gT > 0) { act = 'wave'; mv = 0 } }
+    npc.n = (npc.n || new THREE.Vector3()).copy(n); if (w.mode !== 'anchor') npc.stage = act || (mv > 0.2 ? 'walk' : 'idle')
     if (talking && P.n) { mv = 0; if (act !== 'sit') act = 'chat'; L.face.copy(P.n).sub(n); L.face.addScaledVector(n, -L.face.dot(n)); if (L.face.lengthSq() > 1e-12) { L.face.normalize(); L.curF.lerp(L.face, Math.min(1, dt * 5)); fwd.copy(L.curF) } }
     fwd.addScaledVector(n, -fwd.dot(n)).normalize()
     if (act && STATIC_ACTS.has(act) && !(w.mode === 'anchor' && act === 'sweep')) mv = 0
@@ -601,15 +618,16 @@ function stepPlayer(dt) {
   const run = KEYS.shift || (PAD.active && PAD.run)
   let go = f
   if (gameBlocksKeys() && G.ui.panel) go = 0
+  if (actLocked()) { go = 0; turn = 0; P.target = null } // polish: she stands still during an action
   if (f || turn) P.target = null
-  if (turn) P.fwd.applyAxisAngle(P.n, turn * 2.4 * dt)
+  if (turn) P.fwd.applyAxisAngle(P.n, turn * 1.9 * dt) // polish: less snap on turn
   if (P.target) {
     const tg = P.target.clone().addScaledVector(P.n, -P.n.dot(P.target))
     if (P.n.angleTo(P.target) < 0.015 || tg.lengthSq() < 1e-8) P.target = null
     else { P.fwd.lerp(tg.normalize(), Math.min(1, dt * 8)); go = 1 }
   }
   P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
-  P.n.addScaledVector(P.fwd, go * (run ? 2.15 : 1.25) / R * dt).normalize()
+  P.n.addScaledVector(P.fwd, go * (run ? 1.68 : 0.975) / R * dt).normalize() // polish: another ~22% slower stroll
   const pass = ropePass(P.n)
   for (const c of COLLIDERS) { if (pass && c.n === Zc.cliff) continue; const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
   P.fwd.addScaledVector(P.n, -P.fwd.dot(P.n)).normalize()
@@ -629,7 +647,7 @@ function Traveller() {
     const side = _wx.crossVectors(P.n, P.fwd)
     ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.fwd))
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
-    PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
+    tickAct(PST); PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
   })
@@ -657,14 +675,14 @@ function Rig() {
     P.wPos.copy(P.n).multiplyScalar(R + height(P.n) + P.h).applyMatrix4(g.matrixWorld)
     P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld)
     if (HOME.camera(camera, g, dt)) return // interior camera while she's inside
-    const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 4))
+    const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 2.2)) // polish: softer follow lag
     if (VIEW.mode === 'follow') {
       const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
       const hit = RC.intersectObjects(OCC, false)[0]; if (hit) goal.copy(_v).addScaledVector(_u, Math.max(0.35, hit.distance - 0.12)).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist))
       camera.position.lerp(goal, k); camera.up.lerp(P.wUp, k).normalize()
-      look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.35).addScaledVector(P.wFwd, 0.6), k); camera.lookAt(look)
+      look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.32).addScaledVector(P.wFwd, 0.35), k); camera.lookAt(look) // polish: gentler look-ahead
     } else if (VIEW.mode === 'hero') {
       _s.crossVectors(P.wUp, P.wFwd)
       goal.copy(P.wPos).addScaledVector(P.wFwd, 0.95).addScaledVector(_s, 0.45).addScaledVector(P.wUp, 0.42)

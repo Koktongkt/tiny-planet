@@ -3,6 +3,7 @@
 // The room is built in planet-local space at the planet's centre. While she is inside, the camera only renders
 // layer 5 (room + her + lights), so the outside world costs nothing and can never show through.
 import * as THREE from 'three'
+import { actLocked, startAct } from '../act.js'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { HOME, ROOM, DOOR, BLOCKS, resolve, freeAt, roomToWorld } from './state.js'
@@ -23,7 +24,7 @@ const W = { wall: '#f6e7cc', wain: '#b98a5a', wood: '#a8744c', dark: '#7a5236', 
 let snapFrames = 0
 function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); const f = () => { const k = Math.min(1, (performance.now() - t0) / ms); HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); if (k < 1) requestAnimationFrame(f); else res() }; f() }) }
 HOME.enter = async () => {
-  if (HOME.busy || HOME.inside) return; HOME.busy = true; HOME.doorOpen = 1
+  if (HOME.busy || HOME.inside) return; HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
   await fadeTo(1, 380)
   HOME.inside = true; Object.assign(HOME.hp, { x: DOOR.x, z: DOOR.z + 0.28, yaw: Math.PI * 0.92, target: null }); snapFrames = 3
   HOME.onEnter && HOME.onEnter()
@@ -31,7 +32,7 @@ HOME.enter = async () => {
   await fadeTo(0, 520); HOME.busy = false
 }
 HOME.exit = async () => {
-  if (HOME.busy || !HOME.inside) return; HOME.needDog && HOME.needDog(); HOME.busy = true; HOME.doorOpen = 1
+  if (HOME.busy || !HOME.inside) return; HOME.needDog && HOME.needDog(); HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
   await fadeTo(1, 380)
   const P = HOME.P; HOME.inside = false
   if (P && HOME.outN) { P.n.copy(HOME.outN); const f = HOME.outN.clone().sub(HOME.homeN); P.fwd.copy(f.addScaledVector(P.n, -f.dot(P.n)).normalize()).applyAxisAngle(P.n, 1.25); /* step out along the porch so the follow camera clears the house */ P.target = null; P.h = 0; P.vy = 0 }
@@ -48,10 +49,10 @@ HOME.stepInside = (dt, KEYS, P, obj) => {
   if (PAD.active && PAD.mag > 0.12 && !f && !turn) { const want = HOME.camYaw - Math.atan2(PAD.x, PAD.y); /* camera-relative: up = away from the camera, right = screen right (the old +PI mirrored both axes) */ let d = want - hp.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); hp.yaw += d * Math.min(1, dt * 9); f = Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(d) < 1.6 ? 1 : 0.3) }
   if (f || turn) hp.target = null
   if (hp.target) { const dx = hp.target.x - hp.x, dz = hp.target.z - hp.z, d = Math.hypot(dx, dz); if (d < 0.05) hp.target = null; else { let dd = Math.atan2(dx, dz) - hp.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); hp.yaw += dd * Math.min(1, dt * 10); f = Math.abs(dd) < 1.2 ? 1 : 0.2 } }
-  if (HOME.busy || (G.ui.panel)) f = turn = 0
+  if (HOME.busy || (G.ui.panel) || actLocked()) f = turn = 0
   const run = KEYS.shift || (PAD.active && PAD.run)
-  hp.yaw += turn * 2.6 * dt
-  const sp = f * (run ? 1.04 : 0.67) / ROOM.S * 1.15 * dt; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09)
+  hp.yaw += turn * 2.0 * dt // polish: softer indoor turn
+  const sp = f * (run ? 0.81 : 0.52) / ROOM.S * 1.15 * dt; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09) // polish: ~22% slower indoors
   P.move += ((f ? Math.max(0.35, Math.abs(f)) : 0) - P.move) * Math.min(1, dt * 8); P.phase += dt * (run ? 11 : 8.2) * P.move; P.h = 0; P.vy = 0
   obj.position.set(hp.x * ROOM.S, ROOM.y, hp.z * ROOM.S); obj.quaternion.setFromAxisAngle(UP, hp.yaw)
 }
@@ -68,8 +69,8 @@ HOME.camera = (camera, g, dt) => {
   const dc = Math.hypot(CAT.x - hp.x, CAT.z - hp.z), w = dc < 0.9 ? 0.45 * (1 - dc / 0.9) : 0, fx = hp.x + (CAT.x - hp.x) * w, fz = hp.z + (CAT.z - hp.z) * w
   _goal.set(Math.max(-0.8, Math.min(0.8, fx * 0.5)), 0.68 + 0.36 * z + 0.12 * CAM.pitch, ROOM.z1 - 0.08)
   _look.set(fx * 0.85, 0.22 + CAT.y * w, Math.min(fz - 0.12, 0.5))
-  if (PETCAM) { const a = +PETCAM || 0.5; _goal.set(CAT.x + Math.sin(a) * 0.55, CAT.y + 0.32, CAT.z + Math.cos(a) * 0.55); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
-  const k = snapFrames > 0 ? 1 : 1 - Math.exp(-dt * 3.5); snapFrames--
+  if (PETCAM) { const a = window.__camA ?? (+PETCAM || 0.5), dd = window.__camD ?? 0.55; _goal.set(CAT.x + Math.sin(a) * dd, CAT.y + 0.32 * dd / 0.55 * 0.8 + 0.06, CAT.z + Math.cos(a) * dd); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
+  const k = snapFrames > 0 ? 1 : 1 - Math.exp(-dt * 2.0); snapFrames-- // polish: softer interior cam
   camL.lerp(_goal, k); lookL.lerp(_look, k); HOME.camYaw = Math.atan2(lookL.x - camL.x, lookL.z - camL.z); /* yaw the interior camera faces (≈π) */ if (k === 1) { camL.copy(_goal); lookL.copy(_look) }
   camera.position.copy(roomToWorld(camL.x, camL.y, camL.z, _a)); camera.up.copy(_b.copy(UP).transformDirection(HOME.roomObj.matrixWorld)); camera.lookAt(roomToWorld(lookL.x, lookL.y, lookL.z, _c))
   return true

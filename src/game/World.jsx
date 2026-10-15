@@ -1,6 +1,7 @@
 // 3D side of Gather & Craft: gatherable props, sheep, fireflies, the Home bench + sign, placed decor + ghost preview,
 // the rope bridge + cliff-top reward, the player's lantern, and the proximity/interaction loop.
 import { onTap } from '../touch.jsx'
+import { startAct, ACT, FREEZE } from '../act.js'
 import * as THREE from 'three'
 import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -54,7 +55,7 @@ export function layout(Zc, village, homeN, blocked) {
   const dirAway = cc.clone().sub(toward(cc, Zc.lake, 0.05)).normalize()
   const A = toward(cc, cc.clone().add(dirAway), cr + 0.24), B = toward(cc, cc.clone().add(dirAway), cr - 0.03)
   const top = toward(cc, cc.clone().add(dirAway), cr * 0.35)
-  LAYOUT = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
+  G.benchPos = posOf(benchN); LAYOUT = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
   void out
   if (q.get('decor') === 'demo') { const hpos = posOf(homeN); G.s.placed = [['wreath', 0.3, 0.55, 0], ['basket', 0.62, 0.2, 0.6], ['mosslamp', 0.18, 0.72, 0], ['chime', 0.75, -0.15, 0.3]].map(([item, x, z, rot], i) => ({ uid: 'demo' + i, item, rot, n: hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize().toArray() })) }
   if (q.has('place')) G.ui.place = { item: q.get('place'), rot: 0.6 }
@@ -204,6 +205,29 @@ function Sheep({ i, sheep }) {
   </group>
 }
 
+
+// polish: sparkle burst for her actions (gather pop, catch, craft, place). One instanced mesh of 16 little stars,
+// only visible for ~0.9 s after an action, so it costs one draw call while it shows and nothing otherwise.
+const SPARK_COL = { gold: ['#fff3b0', '#ffd36e', '#ffffff'], water: ['#dff6ff', '#9fe0f0', '#ffffff'] }
+const SPARK_GEO = (() => { const g = new THREE.OctahedronGeometry(1, 0); g.scale(1, 1.6, 1); return g })()
+const SPARK_MAT = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, toneMapped: false })
+function Sparkles() {
+  const P = GAME.P
+  const ref = useRef(), o = useMemo(() => new THREE.Object3D(), []), seeds = useMemo(() => [...Array(16)].map((_, i) => ({ a: i * 2.399, u: 0.5 + ((i * 37) % 11) / 11, s: 0.6 + ((i * 53) % 7) / 10 })), []), col = useMemo(() => new THREE.Color(), [])
+  useFrame(() => { const m = ref.current; if (!m) return; if (FREEZE && !ACT.spark && GAME.P && ['pick', 'water', 'craft', 'place', 'reel'].includes(FREEZE.kind)) { const P = GAME.P; const n = P.n.clone().addScaledVector(P.fwd, 0.13 / R).normalize(); ACT.spark = { pos: n.multiplyScalar(R + height(n) + 0.02), n: 12, col: FREEZE.kind === 'water' || FREEZE.kind === 'reel' ? 'water' : 'gold', freeze: 0.42 } } const sp = ACT.spark
+    if (!sp) { m.visible = false; return } const k = sp.freeze ?? (performance.now() - sp.t0) / 900
+    if (k < 0) { m.visible = false; return } if (k > 1) { if (!sp.freeze) ACT.spark = null; m.visible = false; return }
+    m.visible = true; const up = _sp.copy(sp.pos).normalize(), a = _sa.set(0, 1, 0).cross(up); if (a.lengthSq() < 1e-6) a.set(1, 0, 0); a.normalize(); const b = _sb.crossVectors(up, a)
+    const pal = SPARK_COL[sp.col] || SPARK_COL.gold
+    for (let i = 0; i < 16; i++) { const sd = seeds[i]; if (i >= sp.n) { o.scale.setScalar(0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); continue }
+      const r = 0.04 + k * 0.2 * sd.u, h = 0.04 + k * (0.22 + 0.1 * sd.u) - k * k * 0.08
+      o.position.copy(sp.pos).addScaledVector(a, Math.cos(sd.a + k * 2) * r).addScaledVector(b, Math.sin(sd.a + k * 2) * r).addScaledVector(up, h)
+      o.quaternion.setFromUnitVectors(_sa.set(0, 1, 0), up); o.rotateY(k * 6 + i); o.scale.setScalar(0.016 * sd.s * Math.sin(Math.min(1, k * 1.15) * Math.PI)); o.updateMatrix(); m.setMatrixAt(i, o.matrix)
+      m.setColorAt(i, col.set(pal[i % 3])) }
+    m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true })
+  return <instancedMesh ref={ref} args={[SPARK_GEO, SPARK_MAT, 16]} frustumCulled={false} visible={false} renderOrder={6} />
+}
+const _sp = new THREE.Vector3(), _sa = new THREE.Vector3(), _sb = new THREE.Vector3()
 // ---------- the world + interaction loop ----------
 export function GameWorld() {
   const L = LAYOUT, camera = useThree(s => s.camera)
@@ -222,18 +246,19 @@ export function GameWorld() {
       if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
       const sp = nr.spot, need = NEEDS_TOOL[sp.item]
       if (need && !G.s.tools[need]) { toast(`You need a ${ITEMS[need].name} for that.`, need); return }
-      if (sp.item === 'fish') { G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit(); return }
+      if (sp.item === 'fish') { startAct('cast', { dur: 1.0 }); setTimeout(() => { G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit() }, 650); return }
       pickup(sp)
     }
-    GAME.actions.fishResult = (ok) => { const sp = L.spots.find(s => s.id === G.ui.fish?.spot); G.ui.fish = null; if (ok && sp) { markTaken(sp.id); add('fish'); } else toast('It got away… try again!', 'fish'); emit() }
+    GAME.actions.fishResult = (ok) => { const sp = L.spots.find(s => s.id === G.ui.fish?.spot); G.ui.fish = null; startAct('reel', { dur: ok ? 0.9 : 0.6, spark: ok && sp ? sp.pos : null, sparkCol: 'water' }); if (ok && sp) { markTaken(sp.id); setTimeout(() => add('fish'), 450) } else toast('It got away… try again!', 'fish'); emit() }
     GAME.actions.tapSpot = (sp) => { GAME.P.target = sp.stand.clone(); G.autoAct = sp.id }
   }, [])
   const pickup = (sp) => {
     if (anim.current[sp.id]) return
     camera.updateMatrixWorld(); _w.copy(sp.pos).applyMatrix4(planetRef.current.matrixWorld).project(camera)
     G.ui.fly = [...G.ui.fly, { id: sp.id + performance.now(), item: sp.item, x: (_w.x * 0.5 + 0.5) * innerWidth, y: (-_w.y * 0.5 + 0.5) * innerHeight }]; emit()
-    anim.current[sp.id] = { t0: performance.now() }
-    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); delete anim.current[sp.id]; force() }, 700)
+    const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { dur: isWater ? 1.0 : 0.85, spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
+    anim.current[sp.id] = { t0: performance.now() + 280 }
+    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); delete anim.current[sp.id]; force() }, 980)
   }
   useFrame(() => {
     const P = GAME.P; if (!P || !L) return
@@ -248,7 +273,7 @@ export function GameWorld() {
       const dc = camera.position.distanceTo(_w.copy(sp.pos).applyMatrix4(planetRef.current.matrixWorld))
       const a = anim.current[sp.id]
       if (a) { // pop -> fly to the player's bag
-        let k = (performance.now() - a.t0) / 700; if (freezePick != null) k = freezePick
+        let k = Math.max(0, (performance.now() - a.t0) / 700); if (freezePick != null) k = freezePick
         const up = sp.n.clone(), target = _pp.clone().addScaledVector(P.n, 0.22)
         const pop = Math.sin(Math.min(1, k / 0.4) * Math.PI / 2) * 0.16
         g.position.copy(sp.pos).addScaledVector(up, pop).lerp(target, Math.max(0, (k - 0.35) / 0.65) ** 2)
@@ -275,7 +300,7 @@ export function GameWorld() {
     if (hl) { const sp = best && best.kind === 'spot' && !best.spot.water ? best.spot : null; hl.visible = !!sp && !G.ui.panel
       if (sp) { const p = place(sp.stand, 0.006, now * 0.6); hl.position.copy(sp.water ? sp.standPos : p.pos); hl.quaternion.copy(p.q); hl.scale.setScalar(1 + Math.sin(now * 4) * 0.08) } }
     if (bu) { const ids = Object.keys(anim.current); bu.visible = ids.length > 0
-      if (ids.length) { const g = refs.current[ids[0]], a = anim.current[ids[0]]; let k = (performance.now() - a.t0) / 700; if (freezePick != null) k = freezePick
+      if (ids.length) { const g = refs.current[ids[0]], a = anim.current[ids[0]]; let k = Math.max(0, (performance.now() - a.t0) / 700); if (freezePick != null) k = freezePick
         bu.position.copy(g.position); bu.quaternion.copy(g.quaternion); bu.children.forEach((c, i) => { const ang = i / bu.children.length * 6.283 + k * 2, r = 0.05 + k * 0.16; c.position.set(Math.cos(ang) * r, 0.06 + Math.sin(i * 2.1) * 0.04 + k * 0.05, Math.sin(ang) * r); c.scale.setScalar(0.022 * (1 - k * 0.5)) }) } }
     // placement ghost
     const gh = refs.current.__ghost
@@ -290,7 +315,7 @@ export function GameWorld() {
     <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
-    <Bench b={L.bench} /><HomeSign n={L.sign.n} />
+    <Bench b={L.bench} /><HomeSign n={L.sign.n} /><Sparkles />
     {G.s.placed.filter(p => !p.in).map(p => <SurfaceGroup key={p.uid} n={new THREE.Vector3(...p.n)} spin={p.rot}><Decor item={p.item} /></SurfaceGroup>)}
     <group ref={el => { if (el) refs.current.__ghost = el }} visible={false}><GhostDecor /></group>
     {G.s.unlocked.bridge && <><RopeBridge br={L.bridge} /><Reward br={L.bridge} /></>}
@@ -310,7 +335,7 @@ export function PlayerLantern() {
 }
 // place a decor item from the bag
 export function startPlace(item) { if (!count(item)) return; G.ui.place = { item, rot: 0 }; G.ui.panel = null; emit() }
-export function confirmPlace() { const pl = G.ui.place; if (!pl || !pl.n) return; if (!pl.ok) { toast('Decor goes in or around your Home.', 'leaf'); return } take(pl.item); G.s.placed.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), item: pl.item, n: pl.n, rot: pl.rot, ...(pl.in ? { in: pl.in } : {}) }); toast(`Placed ${ITEMS[pl.item].name}`, pl.item); G.ui.place = count(pl.item) ? { ...pl } : null; emit(); (window.__gameSub || []).forEach(f => f()) }
+export function confirmPlace() { const pl = G.ui.place; if (!pl || !pl.n) return; if (!pl.ok) { toast('Decor goes in or around your Home.', 'leaf'); return } startAct('place', { spark: pl.in ? null : new THREE.Vector3(...pl.n).multiplyScalar(R + height(new THREE.Vector3(...pl.n))), sparkN: 8 }); take(pl.item); G.s.placed.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), item: pl.item, n: pl.n, rot: pl.rot, ...(pl.in ? { in: pl.in } : {}) }); toast(`Placed ${ITEMS[pl.item].name}`, pl.item); G.ui.place = count(pl.item) ? { ...pl } : null; emit(); (window.__gameSub || []).forEach(f => f()) }
 export function teleport(P, where) {
   const L = LAYOUT; if (!L) return
   const Zc = GAME.Zc; let n, look

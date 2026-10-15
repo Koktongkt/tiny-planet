@@ -462,6 +462,33 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       else if (a === 'fish') { const bob = Math.sin(t * 0.9) * 0.04 + (Math.sin(t * 0.23) > 0.93 ? Math.sin(t * 9) * 0.12 : 0); mix(B.upR, 'x', -0.85 + bob); mix(B.foR, 'x', -0.5); mix(B.upL, 'x', -0.6); mix(B.upL, 'z', 0.25); mix(B.foL, 'x', -0.9); mix(B.head, 'x', 0.12); mix(B.chest, 'x', 0.05) }
       else if (a === 'chat') { const g = Math.max(0, Math.sin(t * 1.3 + (st.talkSeed || 0))), nod = Math.sin(t * 2.6) * 0.06; mix(B.upR, 'x', -0.35 - 0.5 * g); mix(B.foR, 'x', -0.9 - 0.5 * g); mix(B.upR, 'z', 0.1 * g); mix(B.head, 'x', 0.05 + nod); mix(B.head, 'z', 0.08 * Math.sin(t * 0.7)); mix(B.chest, 'y', 0.06 * Math.sin(t * 1.1)) }
       else if (a === 'look') { const l = Math.sin(t * 0.55) * 0.9; mix(B.head, 'y', l); mix(B.chest, 'y', l * 0.25); mix(B.head, 'x', -0.08 + 0.06 * Math.sin(t * 0.3)); mix(B.upL, 'z', -0.1); mix(B.upR, 'z', 0.1) }
+      // ---- villager routine poses (polish): knead / sell / eat / nap / play / wave ----
+      else if (a === 'knead') { const kn = Math.max(0, Math.sin(t * 3.4)); mix(B.root, 'x', 0.12); mix(B.chest, 'x', 0.3 + 0.12 * kn); mix(B.head, 'x', 0.3); for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'x', -0.95 + 0.25 * kn); mix(B['up' + k], 'z', sd * 0.3); mix(B['fo' + k], 'x', -0.7 + 0.25 * kn) } }
+      else if (a === 'sell') { const off = 0.5 + 0.5 * Math.sin(t * 0.8); mix(B.upR, 'x', -0.9 - 0.25 * off); mix(B.foR, 'x', -0.5); mix(B.upR, 'z', 0.1); mix(B.upL, 'x', -0.3); mix(B.foL, 'x', -1.2); mix(B.head, 'x', 0.02); mix(B.head, 'y', 0.25 * Math.sin(t * 0.45)); mix(B.chest, 'x', 0.06) }
+      else if (a === 'eat' || a === 'nap') { B.root.position.y -= (st.seatDrop ?? 0.06) * w; for (const k of ['L', 'R']) { mix(B['th' + k], 'x', -1.5); mix(B['th' + k], 'z', 0); mix(B['sh' + k + 'n'], 'x', 1.45); mix(B['ft' + k], 'x', 0.05) }
+        if (a === 'eat') { const bite = Math.max(0, Math.sin(t * 1.4)); mix(B.upR, 'x', -1.1 - 0.6 * bite); mix(B.foR, 'x', -1.5 - 0.5 * bite); mix(B.upR, 'z', 0.25); mix(B.upL, 'x', -0.5); mix(B.foL, 'x', -1.0); mix(B.head, 'x', 0.15 - 0.1 * bite) }
+        else { mix(B.chest, 'x', 0.3); mix(B.head, 'x', 0.55 + 0.03 * Math.sin(t * 1.2)); mix(B.head, 'z', 0.25); for (const k of ['L', 'R']) { mix(B['up' + k], 'x', -0.5); mix(B['fo' + k], 'x', -0.9) } } }
+      else if (a === 'play') { const hop = Math.abs(Math.sin(t * 5)); B.root.position.y += 0.02 * hop * w; for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'z', sd * (-0.5 - 1.6 * hop)); mix(B['fo' + k], 'x', -0.3) } mix(B.head, 'x', -0.15 * hop); for (const k of ['L', 'R']) mix(B['sh' + k + 'n'], 'x', 0.4 * (1 - hop)) }
+      else if (a === 'wave') { mix(B.upR, 'z', 2.3); mix(B.upR, 'x', -0.2); mix(B.foR, 'x', -0.5 - Math.sin(t * 9) * 0.4); mix(B.head, 'x', -0.05); mix(B.head, 'z', 0.1) }
+      // ---- her action poses (polish): pick / cast / reel / craft / water / pet / door / place ----
+      else if (a === 'pick' || a === 'place' || a === 'pet') { const at = st.actT || 0, reach = Math.min(1, at / 0.35), crouch = a === 'pet' ? 0.95 : 1
+        B.root.position.y -= 0.075 * w * crouch; mix(B.root, 'x', 0.32 * crouch); mix(B.chest, 'x', 0.38 + (a === 'place' ? 0.1 : 0))
+        for (const k of ['L', 'R']) { mix(B['th' + k], 'x', k === 'L' ? -1.25 : -0.55); mix(B['sh' + k + 'n'], 'x', k === 'L' ? 1.55 : 1.05); mix(B['ft' + k], 'x', -0.25) }
+        const stroke = a === 'pet' ? Math.sin(at * 7) * 0.22 : 0
+        mix(B.upR, 'x', -1.0 - 0.35 * reach + stroke); mix(B.upR, 'z', 0.1); mix(B.foR, 'x', -0.35 + stroke * 0.5)
+        mix(B.upL, 'x', a === 'place' ? -1.0 - 0.3 * reach : -0.25); mix(B.upL, 'z', a === 'place' ? -0.1 : -0.2); mix(B.foL, 'x', a === 'place' ? -0.35 : -0.6); mix(B.head, 'x', 0.38) }
+      else if (a === 'cast') { const at = st.actT || 0, k = Math.min(1, at / 0.55), back = k < 0.45 ? k / 0.45 : 1 - (k - 0.45) / 0.55
+        mix(B.upR, 'x', -2.4 * back - 0.9 * (1 - back)); mix(B.foR, 'x', -0.8 * back - 0.3); mix(B.upL, 'x', -0.6); mix(B.foL, 'x', -0.9); mix(B.chest, 'y', -0.25 * back + 0.15 * (1 - back)); mix(B.chest, 'x', -0.08 * back + 0.12 * (1 - back)); mix(B.head, 'x', -0.1 * back + 0.1) }
+      else if (a === 'reel') { const at = st.actT || 0, cr = Math.sin(at * 14) * 0.25
+        mix(B.upR, 'x', -0.9); mix(B.foR, 'x', -0.9 + cr); mix(B.upL, 'x', -0.7 + cr * 0.6); mix(B.foL, 'x', -1.1); mix(B.chest, 'x', -0.12); mix(B.head, 'x', 0.05); mix(B.root, 'x', -0.08) }
+      else if (a === 'craft') { const at = st.actT || 0, ham = Math.sin(at * 11), alt = Math.sin(at * 11 + Math.PI)
+        mix(B.chest, 'x', 0.28); mix(B.root, 'x', 0.1); mix(B.head, 'x', 0.32)
+        mix(B.upR, 'x', -1.05 + ham * 0.28); mix(B.foR, 'x', -0.85 + ham * 0.2); mix(B.upR, 'z', 0.15)
+        mix(B.upL, 'x', -1.0 + alt * 0.18); mix(B.foL, 'x', -0.95 + alt * 0.15); mix(B.upL, 'z', -0.15) }
+      else if (a === 'water') { const at = st.actT || 0, tilt = Math.min(1, at / 0.3), sway = Math.sin(at * 4) * 0.1
+        mix(B.upR, 'x', -1.1 - 0.15 * tilt + sway); mix(B.foR, 'x', -0.45); mix(B.upR, 'z', 0.25 * tilt); mix(B.upL, 'x', -0.3); mix(B.chest, 'x', 0.22); mix(B.chest, 'y', 0.12 * tilt); mix(B.head, 'x', 0.3); mix(B.root, 'x', 0.08) }
+      else if (a === 'door') { const at = st.actT || 0, push = Math.min(1, at / 0.3)
+        mix(B.upR, 'x', -1.35 * push); mix(B.foR, 'x', -0.25); mix(B.upR, 'z', 0.08); mix(B.chest, 'x', 0.12 * push); mix(B.head, 'x', 0.05) }
       else if (a === 'carry') { for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'x', -0.55); mix(B['up' + k], 'z', sd * -0.12); mix(B['fo' + k], 'x', -1.2) } mix(B.chest, 'x', -0.06) }
     }
     const hairX = spring(sp.hairX, -0.12 * m - bobVel * 2.2 - sp.headX.v * 0.06, 28, 4.5, dt), hairZ = spring(sp.hairZ, -sp.headY.v * 0.05 + (st.turn || 0) * 0.1, 26, 4, dt)

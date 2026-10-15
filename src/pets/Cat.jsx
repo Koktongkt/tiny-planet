@@ -2,6 +2,7 @@
 // the bed, groom, stretch + yawn, chase the yarn ball, sit on the windowsill, knead the quilt, wander), comes over
 // to rub against her ankles when she's near, purrs with hearts when petted (E), and sometimes just ignores her.
 import * as THREE from 'three'
+import { startAct } from '../act.js'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
@@ -11,8 +12,8 @@ import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
 import { Hearts, burst } from './fx.jsx'
 
-export const CAT_CFG = { s: 1, body: [0.05, 0.045, 0.085], legH: 0.055, legR: 0.014, stride: 0.06, head: 0.052, headY: 0.06, snout: 0.02, eye: 0.17, ear: 0.62, earSplay: 0.28, whiskers: true, socks: true, stripes: true,
-  tail: { n: 6, seg: 0.024, r: 0.012, curl: 0.15, tip: 1 }, col: { main: '#f2a65a', belly: '#fff4e6', dark: '#d9843f', inner: '#f4a3a0', nose: '#e8857e', eye: '#2e2420', shine: '#ffffff' } }
+export const CAT_CFG = { s: 1.05, species: 'cat', body: [0.055, 0.055, 0.072], legH: 0.042, legR: 0.014, stride: 0.05, head: 0.058, headY: 0.05, snout: 0.008, eye: 0.2, ear: 0.78, earSplay: 0.36, whiskers: true, socks: true, stripes: true, tufts: true, pupils: 'vert',
+  tail: { n: 8, seg: 0.028, r: 0.01, curl: 0.08, tip: 2 }, col: { main: '#f6b46e', belly: '#fffaf2', dark: '#c46a2e', inner: '#f4a3a0', nose: '#e8857e', eye: '#1a1410', iris: '#d4b028', pupil: '#0e0a08', eyeWhite: '#fffaf2', shine: '#ffffff', whisker: '#4a3a32' } }
 const SPOT = { beam: { x: -0.62, z: 0.25, y: 0 }, bed: { x: -0.92, z: -0.5, y: 0.29, from: { x: -0.5, z: -0.48 } }, sill: { x: -1.2, z: 0.15, y: 0.44, from: { x: -0.98, z: 0.15 } }, bedK: { x: -1.0, z: -0.3, y: 0.29, from: { x: -0.5, z: -0.3 } } }
 const pick = (w) => { let s = 0; for (const k in w) s += w[k]; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return Object.keys(w)[0] }
 const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a))
@@ -26,7 +27,7 @@ export function Cat() {
   const go = (state, dur, extra = {}) => { c.state = state; c.t = 0; c.dur = dur; c.target = null; Object.assign(c, { sub: 0 }, extra) }
   if (!c.init) { c.init = true
     if (FORCE) { const s = FORCE; if (s === 'nap') Object.assign(c, { x: SPOT.beam.x, z: SPOT.beam.z, y: 0 }); if (s === 'bed' || s === 'knead') Object.assign(c, { x: SPOT.bed.x, z: SPOT.bed.z, y: 0.29 }); if (s === 'sill') Object.assign(c, { x: SPOT.sill.x, z: SPOT.sill.z, y: SPOT.sill.y, yaw: -Math.PI / 2 })
-      if (s === 'rub' || s === 'pet' || s === 'ignore') Object.assign(HOME.hp, { x: -0.3, z: 0.05, yaw: -1.9 }), Object.assign(c, { x: -0.58, z: -0.02, yaw: 1.3 }); if (s === 'chase') Object.assign(c, { x: -0.2, z: 0.6 })
+      if (s === 'rub' || s === 'pet' || s === 'ignore') Object.assign(HOME.hp, { x: -0.3, z: 0.05, yaw: -1.9 }), Object.assign(c, { x: -0.58, z: -0.02, yaw: 1.3 }); if (s === 'chase') Object.assign(c, { x: -0.2, z: 0.6 }); if (q.get('petcam')) Object.assign(HOME.hp, { x: 0.6, z: 0.8, yaw: -2.2 })
       go(s === 'bed' ? 'nap' : s === 'pet' ? 'petted' : s, 999, { where: s === 'bed' ? 'bed' : 'beam', forced: true }); if (s === 'pet') c.dur = 999 }
   }
   // petting / proximity
@@ -35,7 +36,7 @@ export function Cat() {
     const d = Math.hypot(HOME.hp.x - c.x, HOME.hp.z - c.z) + Math.max(0, c.y - 0.3)
     consider({ kind: 'ext', inside: true, id: 'cat', icon: 'hand', verb: 'Pet', name: c.name, act: () => petCat() }, d, 0.42)
   }) }, [])
-  function petCat() {
+  function petCat() { startAct('pet', { dur: 1.2 })
     if (c.state === 'nap') { go('stretch', 2.6, { after: Math.random() < 0.6 ? 'petted' : 'ignore' }); toast(`${c.name} opens one eye… then stretches.`, 'leaf'); return }
     if (c.state === 'ignore' || c.ignoreCD > 0 || Math.random() < 0.22) { go('ignore', 3.5); c.ignoreCD = 4; toast(`${c.name} flicks his tail and looks the other way.`, 'leaf'); return }
     go('petted', 3.8); c.mood = Math.min(1, c.mood + 0.25); burst(hearts.current, 6); toast(`${c.name} purrs happily ♥`, 'hand')

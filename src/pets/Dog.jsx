@@ -3,7 +3,8 @@
 // and little birds, barking at sheep, rolling in the grass, splashing in the lake, digging (sometimes something
 // turns up to gather), fetch (E), tail wag by mood, sitting when she stops, and waiting by the door while she's in.
 import * as THREE from 'three'
-import React, { useEffect, useMemo, useRef } from 'react'
+import { startAct } from '../act.js'
+import React, { useEffect, useMemo, useRef, Suspense, lazy } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
 import { HOME } from '../home/state.js'
@@ -14,8 +15,8 @@ import { G, add, toast } from '../game/store.js'
 import { ITEMS } from '../game/items.js'
 import { Bubble, Puffs, Hearts, burst } from './fx.jsx'
 
-export const DOG_CFG = { s: 1.3, body: [0.058, 0.052, 0.098], legH: 0.078, legR: 0.018, stride: 0.07, head: 0.062, headY: 0.07, snout: 0.045, eye: 0.15, ear: 0.6, earSplay: 0.18, collar: true, tongue: true, socks: true,
-  tail: { n: 5, seg: 0.022, r: 0.017, curl: 0.95, tip: 1 }, col: { main: '#e39a52', belly: '#fff1dc', dark: '#c97f3f', inner: '#f08f8f', nose: '#3a2e2a', eye: '#2e2420', shine: '#ffffff', collar: '#e0614f', tag: '#ffd36e' } }
+export const DOG_CFG = { s: 1.45, species: 'dog', floppy: true, body: [0.052, 0.062, 0.125], legH: 0.105, legR: 0.015, stride: 0.08, head: 0.055, headY: 0.06, snout: 0.1, eye: 0.13, ear: 0.55, earSplay: 0.12, collar: true, tongue: true, socks: true, tufts: true, pupils: 'round',
+  tail: { n: 7, seg: 0.032, r: 0.026, curl: 0.7, tip: 1, bushy: true }, col: { main: '#c9955a', belly: '#fff6e4', dark: '#8a5a30', inner: '#f08f8f', nose: '#1a1410', eye: '#1a1410', iris: '#5a3820', pupil: '#0e0a08', eyeWhite: '#fffaf0', shine: '#ffffff', collar: '#2f6f8a', tag: '#ffd36e' } }
 const _t = new THREE.Vector3(), _a = new THREE.Vector3(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3()
 const tan = (n, v, out) => out.copy(v).addScaledVector(n, -n.dot(v)).normalize()
 // nearby colliders: the planet has hundreds (every tree), so the dog keeps a short list around itself, refreshed at
@@ -28,12 +29,14 @@ const angTo = (a, b) => Math.acos(Math.min(1, Math.max(-1, a.dot(b) / (a.length(
 const surf = (n, out) => out.copy(n).multiplyScalar(R + Math.max(height(n), LAKE_W - 0.07))
 const DIG = ['acorn', 'stone', 'coin', 'shell', 'pinecone', 'clay', 'shard']
 export const DOG = { n: new THREE.Vector3(0, 1, 0), f: new THREE.Vector3(1, 0, 0), speed: 0, state: 'follow', t: 0, dur: 0, mood: 0.6, side: 1, idleT: 0, barkCD: 4, splashCD: 0, name: 'Pip',
-  stick: { mode: 'none', n: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector3(), t: 0 }, critter: { on: false, kind: 'fly', n: new THREE.Vector3(), d: new THREE.Vector3(), t: 0, up: 0 }, dug: [] }
+  petCD: 0, stick: { mode: 'none', n: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector3(), t: 0 }, critter: { on: false, kind: 'fly', n: new THREE.Vector3(), d: new THREE.Vector3(), t: 0, up: 0 }, dug: [] }
 if (typeof window !== 'undefined') window.__dog = DOG
 const FORCE = q.get('dog')
+// debug: ?petsdemo puts a sitting Mochi rig beside Pip for the side-by-side shot (Mochi really lives indoors)
+const PetsDemo = q.has('petsdemo') ? lazy(() => import('./Cat.jsx').then(m => ({ default: function CatDemo() { const st = useMemo(() => { const s = newPet(); s.goal.sit = 1; s.goal.tailUp = 0.6; return s }, []); return <group position={[0.24, 0, 0.06]} rotation={[0, -0.5, 0]}><Quadruped cfg={m.CAT_CFG} st={st} /></group> } }))) : null
 
 const DOGCAM = q.get('dogcam') // debug: close camera on the dog (?dogcam=angle)
-if (DOGCAM) HOME.camOverride = (camera, g) => { const D = DOG, a = +DOGCAM || 0.6, side = _s.crossVectors(D.n, D.f); const p = surf(D.n, new THREE.Vector3()); const c = p.clone().addScaledVector(D.f, Math.cos(a) * 0.75).addScaledVector(side, Math.sin(a) * 0.75).addScaledVector(D.n, 0.38)
+if (DOGCAM) HOME.camOverride = (camera, g) => { const D = DOG, a = window.__camA ?? (+DOGCAM || 0.6), dd = window.__camD ?? 0.75, side = _s.crossVectors(D.n, D.f); const p = surf(D.n, new THREE.Vector3()); const c = p.clone().addScaledVector(D.f, Math.cos(a) * dd).addScaledVector(side, Math.sin(a) * dd).addScaledVector(D.n, 0.38 * dd / 0.75)
   camera.position.copy(c.applyMatrix4(g.matrixWorld)); camera.up.copy(D.n).transformDirection(g.matrixWorld); camera.lookAt(p.addScaledVector(D.n, 0.1).applyMatrix4(g.matrixWorld)); return true }
 export function Dog() {
   const st = useMemo(() => newPet(), []), root = useRef(), stickW = useRef(), stickM = useRef(), crit = useRef(), bub = useRef(), puff = useRef(), drops = useRef(), hearts = useRef(), dugRefs = useRef([])
@@ -46,11 +49,14 @@ export function Dog() {
       const P = HOME.P; if (!P) return
       const d = angTo(D.n, P.n) * R
       if (FETCHING.has(D.state) || D.stick.mode === 'fly') return
-      consider({ kind: 'ext', id: 'dog', icon: 'wood', verb: D.stick.mode === 'ground' ? 'Throw the stick for' : 'Throw a stick for', name: D.name, act: throwStick }, d, 0.95)
+      const settled = (D.state === 'sit' || D.state === 'lie' || D.state === 'sitWait') && d < 0.5 && D.petCD <= 0
+      if (settled) consider({ kind: 'ext', id: 'dog-pet', icon: 'hand', verb: 'Pet', name: D.name, act: petDog }, d, 0.5)
+      else consider({ kind: 'ext', id: 'dog', icon: 'wood', verb: D.stick.mode === 'ground' ? 'Throw the stick for' : 'Throw a stick for', name: D.name, act: throwStick }, d, 0.95)
       for (const it of D.dug) if (!it.taken) consider({ kind: 'ext', id: 'dug' + it.id, icon: it.item, verb: 'Pick up', name: ITEMS[it.item].name, act: () => { it.taken = true; add(it.item) } }, pp.distanceTo(surf(it.n, _a)), 0.45)
     })
   }, [])
-  function throwStick() {
+  function petDog() { const P = HOME.P; startAct('pet', { dur: 1.2 }); D.petCD = 6; D.mood = Math.min(1, D.mood + 0.25); go('petted', 2.6); burst(hearts.current, 5); toast(`${D.name} leans into your hand, tail going ♥`, 'hand'); window.__lastAct = { kind: 'dog', t: performance.now() } }
+  function throwStick() { startAct('cast', { dur: 0.7, sound: 'cast' })
     const P = HOME.P, s = D.stick
     s.a.copy(P.n); let dist = 1.6 + Math.random() * 0.6
     for (let i = 0; i < 6; i++) { s.b.copy(P.n).addScaledVector(P.fwd, dist / R).normalize(); if (!HOME.colliders.some(c => angTo(s.b, c.n) < c.r + 0.01)) break; dist *= 0.75 }
@@ -62,6 +68,7 @@ export function Dog() {
     tan(D.n, HOME.homeN.clone().sub(D.n), D.f)
     if (FORCE === 'splash') { const P = HOME.P, L = ZONES.lake, lc = new THREE.Vector3(L.x, L.y, L.z); P.n.copy(around(lc, L.r * 1.18, 2.2)); tan(P.n, lc.clone().sub(P.n), P.fwd) }
     if (FORCE) { const P = HOME.P; D.n.copy(P.n).addScaledVector(P.fwd, 0.55 / R).addScaledVector(_s.crossVectors(P.n, P.fwd), 0.2 / R).normalize(); tan(D.n, P.n.clone().sub(D.n), D.f)
+      if (DOGCAM) { P.n.copy(D.n).addScaledVector(D.f, -0.9 / R).normalize(); tan(P.n, D.n.clone().sub(P.n), P.fwd) }
       if (FORCE === 'fetch') { throwStick(); D.n.copy(P.n).addScaledVector(P.fwd, 0.25 / R).normalize() } else if (FORCE !== 'follow') go(FORCE, 999, { forced: true }); if (FORCE === 'wait') { D.n.copy(HOME.outN); tan(D.n, HOME.homeN.clone().sub(D.n), D.f) } }
   }
   // lazy chunk: warm his shaders as soon as he mounts (async where the GPU allows), so stepping outside never hitches
@@ -71,7 +78,7 @@ export function Dog() {
     try { (gl.compileAsync ? gl.compileAsync(proxy, camera, scene) : Promise.resolve(gl.compile(proxy, camera, scene))).catch(() => {}) } catch {} }, [])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const P = HOME.P; if (!P || !D.init) { if (!D.init && HOME.outN && HOME.P) { D.init = false } return }
-    D.t += dt; D.barkCD -= dt; D.splashCD -= dt; D.mood = Math.max(0.25, D.mood - dt * 0.004)
+    D.t += dt; D.barkCD -= dt; D.splashCD -= dt; D.petCD -= dt; D.mood = Math.max(0.25, D.mood - dt * 0.004)
     const g = st.goal; Object.assign(g, POSE0); bub.current.visible = false
     const dHer = angTo(D.n, P.n) * R, herMoving = P.move > 0.2, wet = height(D.n) < LAKE_W - 0.03
     g.tailUp = 0.6 + 0.6 * D.mood; g.tailWag = 0.25 + 0.75 * D.mood; g.tailSpeed = 8 + 8 * D.mood; g.tongue = D.speed > 1 ? 1 : 0.4 * D.mood; g.mouth = g.tongue * 0.25
@@ -107,6 +114,7 @@ export function Dog() {
       if (D.t > D.dur && !D.forced) { D.wasWet = true; go('shake', 1.1) } }
     else if (S === 'chase') { const c = D.critter; target = c.n; spd = c.up > 0 ? 2.2 : 2.7; g.earBack = 0.3; g.tailWag = 1.2; g.tailSpeed = 16; g.tongue = 1; g.mouth = 0.4; if (c.kind === 'fly' || c.up > 0) g.headPitch = -0.5
       if (!c.on || D.t > D.dur) { c.on = false; go('follow', 0) } }
+    else if (S === 'petted') { face = P.n; g.sit = 1; g.eyes = 0.15; g.headPitch = -0.4; g.headTilt = Math.sin(D.t * 2) * 0.35; g.tailWag = 1.5; g.tailSpeed = 20; g.tongue = 1; g.mouth = 0.6; g.earBack = 0.5; if (D.t > D.dur) go('sit', 999) }
     else if (S === 'sit' || S === 'lie') { face = P.n; g.sit = S === 'sit' ? 1 : 0; g.lie = S === 'lie' ? 1 : 0; g.headTilt = Math.sin(D.t * 0.8) > 0.9 ? 0.35 : 0; g.tailWag = 0.35 + 0.6 * D.mood; if (herMoving && dHer > 0.45 && !D.forced) go('follow', 0); if (D.t > 7 && S === 'sit' && !D.forced) go('lie', 999) ; D.idleT += dt }
     if (D.state === 'follow') { // ---------- the default: keep a loose distance, choose little side-quests ----------
       const side = _s.crossVectors(P.n, P.fwd); if (Math.random() < dt * 0.05) D.side *= -1
@@ -157,6 +165,7 @@ export function Dog() {
   return <>
     <group ref={root}>
       <group scale={DOG_CFG.s}><Quadruped cfg={DOG_CFG} st={st} /></group>
+      {PetsDemo && <Suspense fallback={null}><PetsDemo /></Suspense>}
       <group ref={stickM} position={[0, 0.17, 0.2]} rotation={[0, Math.PI / 2, 0]} visible={false}><Stick /></group>
       <group position={[0.06, 0.32, 0.08]}><Bubble bref={bub} /></group>
       <Puffs pref={puff} color="#b08a5e" n={14} /><Puffs pref={drops} color="#bfe8f5" n={16} />
