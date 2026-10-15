@@ -25,13 +25,16 @@ export const planetRef = { current: null }
 export const HCL = [] // { mesh, c: local centre direction, rad: angular radius }
 const DIRS = (() => { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, a = []; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(p, i).normalize(); if (!a.some(u => u.distanceToSquared(v) < 1e-6)) a.push(v) } g.dispose(); return a })()
 const CLUSTER_MIN = 160
-function InstancedBatch({ items, geo, mat, outline, isOcc, hc }) {
-  const ref = useRef()
+function InstancedBatch({ items, geo, mat, outline, isOcc, hc, lo }) {
+  const ref = useRef(), lref = useRef()
   useEffect(() => { const m = ref.current, o = new THREE.Object3D(); items.forEach((it, i) => { o.position.copy(it.pos); o.quaternion.copy(it.q); o.scale.setScalar(it.s); o.updateMatrix(); m.setMatrixAt(i, o.matrix); if (it.c) m.setColorAt(i, it.c) }); m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true
     // bounds are computed here, after the instance matrices exist (a lazy compute can catch identity matrices)
     m.computeBoundingSphere(); m.boundingSphere.radius += 0.35
-    if (hc) { const e = { mesh: m, ...hc }; HCL.push(e); return () => { const k = HCL.indexOf(e); if (k >= 0) HCL.splice(k, 1) } } }, [])
-  return <instancedMesh ref={el => { ref.current = el; if (isOcc) occ(el) }} args={[geo, mat, items.length]}>{outline && <Outlines thickness={outline} color={INK} />}</instancedMesh>
+    const l = lref.current; if (l) { l.instanceMatrix = m.instanceMatrix; l.instanceColor = m.instanceColor; l.boundingSphere = m.boundingSphere.clone(); l.layers.disable(0) }
+    if (hc) { const e = { mesh: m, lo: l, ...hc }; HCL.push(e); return () => { const k = HCL.indexOf(e); if (k >= 0) HCL.splice(k, 1) } } }, [])
+  const hi = <instancedMesh ref={el => { ref.current = el; if (isOcc) occ(el) }} args={[geo, mat, items.length]}>{outline && <Outlines thickness={outline} color={INK} />}</instancedMesh>
+  // low-poly twin sharing the same instance buffers; only clustered sets (hc) get swapped
+  return lo && hc ? <>{hi}<instancedMesh ref={lref} args={[lo, mat, items.length]} /></> : hi
 }
 export function Instanced(props) {
   const { items } = props
@@ -66,6 +69,19 @@ export function paint(mat, amt = 0.12, shadow = true, scale = 2.2) { mat.userDat
       diffuseColor.rgb *= mix(1., .74, cs*uDay); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*vec3(.86,.9,1.05), cs*uDay*.6);` : ''}`)
   }
   mat.customProgramCacheKey = () => 'paint' + amt + shadow + scale
+  return mat
+}
+// Terrain ink: darkens a constant-pixel-width band where the surface turns away from the eye (planet rim,
+// hill ridges against farther ground), so the silhouette reads as an ink line without a hull copy.
+// ndv / fwidth(ndv) = pixels to the silhouette, so the line stays ~W px wide at any distance.
+export const INK_W = { value: 2.6 }
+export function inkRim(mat) { const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey
+  mat.onBeforeCompile = (sh, r) => { prev && prev(sh, r); sh.uniforms.uInkW = INK_W
+    sh.fragmentShader = 'uniform float uInkW;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+      { vec3 Vd = normalize(vViewPosition); float ndv = abs(dot(normalize(vNormal), Vd));
+        float px = ndv / max(fwidth(ndv), 1e-4); float ink = 1. - smoothstep(uInkW * .55, uInkW, px);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(${[0x4a, 0x3a, 0x35].map(v => (v / 255).toFixed(3)).join(',')}), ink * .92); }`) }
+  mat.customProgramCacheKey = () => (key ? key() : '') + 'ink'
   return mat
 }
 paint(MAT.wall, 0.1, true, 6); paint(MAT.wall2, 0.1, true, 6); MAT.roofs.forEach(m => paint(m, 0.14, true, 5)); paint(MAT.wood, 0.15, false, 9)

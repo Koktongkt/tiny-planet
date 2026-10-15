@@ -21,7 +21,7 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
-import { INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
+import { inkRim, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
 const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
 const fixed = q.has('t') || q.has('phase')
@@ -103,7 +103,8 @@ function Ground() {
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals(); { const nr = g.attributes.normal, cl = g.attributes.color, nv = new THREE.Vector3(), pv = new THREE.Vector3(), cc = new THREE.Color(); for (let i = 0; i < p.count; i++) { pv.fromBufferAttribute(p, i).normalize(); nv.fromBufferAttribute(nr, i); cc.fromBufferAttribute(cl, i); rockify(pv, nv, cc); cl.setXYZ(i, cc.r, cc.g, cc.b) } } return g
   }, [])
-  return <mesh geometry={geo} material={useMemo(() => paint(toon('#ffffff', { vertexColors: true }), 0.09, true, 1.6), [])}><Outlines thickness={0.06} color={INK} /></mesh>
+  // no inverted hull on the terrain (it doubled ~82k tris): ink is drawn in its own shader instead (inkRim)
+  return <mesh geometry={geo} material={useMemo(() => inkRim(paint(toon('#ffffff', { vertexColors: true }), 0.09, true, 1.6)), [])} />
 }
 
 function ribbon(f, width, lift, N = 500, skip) {
@@ -339,13 +340,16 @@ function Vegetation() {
     const trunk = new THREE.CylinderGeometry(0.06, 0.09, 0.6, 6); trunk.translate(0, 0.3, 0)
     const fir = new THREE.ConeGeometry(0.32, 1.25, 7); fir.translate(0, 0.9, 0)
     const fl = new THREE.IcosahedronGeometry(0.035, 1)
-    return { tuft, crown, trunk, fir, fl }
+    // far LOD (whole clusters swap, see HorizonCull): same silhouette, fewer facets
+    const tuftLo = new THREE.SphereGeometry(0.07, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo.scale(1.04, 0.75, 1.04)
+    const flLo = new THREE.IcosahedronGeometry(0.037, 0), crownLo = new THREE.IcosahedronGeometry(0.43, 0); crownLo.scale(1, 1.15, 1); crownLo.translate(0, 0.85, 0)
+    return { tuft, crown, trunk, fir, fl, tuftLo, flLo, crownLo }
   }, [])
   const mats = useMemo(() => ({ grass: windify(toon('#ffffff'), 6), crown: windify(toon('#ffffff'), 0.08, 0.4), fir: windify(toon('#ffffff'), 0.06, 0.3), trunk: MAT.wood, fl: toon('#ffffff') }), [])
   const trunkItems = [...TREES, ...FIRS].map(t => ({ ...t, c: null }))
   return <>
-    <Instanced items={grass} geo={geos.tuft} mat={mats.grass} />
-    <Instanced items={flowers} geo={geos.fl} mat={mats.fl} />
+    <Instanced items={grass} geo={geos.tuft} lo={geos.tuftLo} mat={mats.grass} />
+    <Instanced items={flowers} geo={geos.fl} lo={geos.flLo} mat={mats.fl} />
     <Instanced items={trunkItems} geo={geos.trunk} mat={mats.trunk} />
     <Instanced items={TREES} geo={geos.crown} mat={mats.crown} isOcc />
     <Instanced items={FIRS} geo={geos.fir} mat={mats.fir} isOcc />
@@ -648,8 +652,9 @@ function Stats() {
 }
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
+const LOD_D = +(q.get('lodd') || 7)
 function HorizonCull() {
-  const camera = useThree(s => s.camera), n = useRef(0), list = useRef(null), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
+  const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
   useFrame(() => {
     const pl = planetRef.current; if (!pl || n.current++ % 4) return
     if (!list.current || n.current % 240 === 1) { list.current = []; pl.traverse(o => { if ((o.isMesh || o.isPoints) && !o.isInstancedMesh && !o.isSkinnedMesh && o.geometry && o !== pl) list.current.push(o) }) }
@@ -667,8 +672,19 @@ function HorizonCull() {
       const par = h.mesh.parent; if (!par) continue
       _p.copy(h.c).applyMatrix3(_m.setFromMatrix4(par.matrixWorld)).normalize()
       const hide = Math.acos(Math.max(-1, Math.min(1, _p.dot(_tc)))) - h.rad > limA
-      if (hide) h.mesh.layers.disable(0); else h.mesh.layers.enable(0)
+      // LOD: cluster whose nearest edge is farther than LOD_D from the camera draws its low-poly twin
+      const far = !!h.lo && (VIEW.mode === 'orbit' || _w.copy(_p).multiplyScalar(R).add(_o).distanceTo(camera.position) - h.rad * R > LOD_D)
+      if (hide || far) h.mesh.layers.disable(0); else h.mesh.layers.enable(0)
+      if (h.lo) { if (hide || !far) h.lo.layers.disable(0); else h.lo.layers.enable(0) }
     }
+    // ink hulls: thin out by projected line width (material.visible, so object.visible/layers owned by other code are untouched) and drop once under ~0.5px (fade, not pop)
+    if (!hulls.current || n.current % 240 === 1) { hulls.current = []; pl.parent.parent.traverse(o => { const u = o.material && o.material.uniforms; if (o.isMesh && u && u.thickness && o.material.side === THREE.BackSide && o.parent && o.parent.parent && o.parent.parent.isMesh && !o.parent.parent.isInstancedMesh) hulls.current.push({ o, base: u.thickness.value, p: o.parent.parent }); else if (o.isMesh && u && u.uT && o.material.side === THREE.BackSide) hulls.current.push({ o, base: u.uT.value, p: o, shared: true }) }) }
+    const pxK = gl.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2))
+    for (const h of hulls.current) { if (h.shared) { if (h.base * pxK / Math.max(0.01, _w.setFromMatrixPosition(h.p.matrixWorld).distanceTo(camera.position)) < 0.6) h.o.layers.disable(0); continue } // character ink (shared material): off below ~0.6px (runs after the horizon pass, so only ever removes)
+      const u = h.o.material.uniforms.thickness
+      if (u.value > 1e-6 && Math.abs(u.value - h.base) > 1e-6 && u.value !== h.cur) h.base = u.value // React re-applied the prop
+      const px = h.base * pxK / Math.max(0.01, _w.setFromMatrixPosition(h.p.matrixWorld).distanceTo(camera.position))
+      const f = ss(0.45, 1.1, px); h.o.material.visible = f > 0; u.value = h.cur = h.base * (0.35 + 0.65 * f) }
   })
   return null
 }
