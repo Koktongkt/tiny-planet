@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Outlines } from '@react-three/drei'
+import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import { R, K, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W } from './world.js'
@@ -21,7 +21,7 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
-import { INK, T, ss, C, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
+import { INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
 const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
 const fixed = q.has('t') || q.has('phase')
@@ -79,8 +79,8 @@ function Lights() {
     sun.current.position.copy(T.sun).multiplyScalar(20)
     sun.current.color.copy(cDay).lerp(cDusk, T.dusk); sun.current.intensity = 2.6 * ss(-0.2, 0.2, T.sun.y)
     moon.current.position.copy(T.sun).multiplyScalar(-20).add(MOON_OFF); moon.current.intensity = 1.1 * T.night
-    hemi.current.color.copy(tmp.set('#cfe6ff').lerp(C('#ffb59a'), T.dusk).lerp(C('#4a5fa0'), T.night))
-    hemi.current.groundColor.set('#b9d48c').lerp(C('#2a2f55'), T.night); hemi.current.intensity = 0.9 + 0.25 * T.dusk - 0.3 * T.night
+    hemi.current.color.copy(tmp.set('#cfe6ff').lerp(CC('#ffb59a'), T.dusk).lerp(CC('#4a5fa0'), T.night))
+    hemi.current.groundColor.set('#b9d48c').lerp(CC('#2a2f55'), T.night); hemi.current.intensity = 0.9 + 0.25 * T.dusk - 0.3 * T.night
   })
   return <><directionalLight ref={sun} castShadow={false} /><directionalLight ref={moon} color="#9db4ff" /><hemisphereLight ref={hemi} /></>
 }
@@ -257,7 +257,7 @@ function BusStop() {
 }
 
 function Moss() {
-  const items = useMemo(() => { const a = []; HOUSES.forEach((hn, i) => { const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, p = place(hn, -0.05, i * 1.3); [[-0.22, 0.1, 0.17], [0.18, 0.06, 0.2], [0.05, 0.15, -0.1], [-0.15, 0.04, -0.2]].forEach(([x, y, z], k) => { if ((i + k) % 3 === 2) return; const pos = p.pos.clone().add(new THREE.Vector3(x * w, tall + y, z).applyQuaternion(p.q)); a.push({ pos, q: p.q.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(z > 0 ? 0.6 : -0.6, rnd(), 0))), s: 0.7 + rnd() * 0.6, c: C('#7fae5f').lerp(C('#a8c86a'), rnd()) }) }) }); return a }, [])
+  const items = useMemo(() => { const a = []; HOUSES.forEach((hn, i) => { const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, p = place(hn, -0.05, i * 1.3); [[-0.22, 0.1, 0.17], [0.18, 0.06, 0.2], [0.05, 0.15, -0.1], [-0.15, 0.04, -0.2]].forEach(([x, y, z], k) => { if ((i + k) % 3 === 2) return; const pos = p.pos.clone().add(new THREE.Vector3(x * w, tall + y, z).applyQuaternion(p.q)); a.push({ pos, q: p.q.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(z > 0 ? 0.6 : -0.6, rnd(), 0))), s: 0.7 + rnd() * 0.6, c: C('#7fae5f').lerp(CC('#a8c86a'), rnd()) }) }) }); return a }, [])
   const geo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.06, 1); g.scale(1, 0.35, 0.8); return g }, [])
   return <Instanced items={items} geo={geo} mat={useMemo(() => toon('#ffffff'), [])} />
 }
@@ -268,7 +268,7 @@ function Smoke() {
   useFrame(() => {
     const t = wind.time.value; let j = 0
     CHIMNEYS.forEach((c, i) => { for (let k = 0; k < K; k++) { const u = (t * 0.22 + k / K + i * 0.13) % 1; o.position.copy(c.top).addScaledVector(c.up, u * 0.75).addScaledVector(side, u * u * 0.35 + Math.sin(t * 1.3 + k + i) * 0.03); o.scale.setScalar((0.035 + u * 0.11) * Math.min(1, u * 8) * (1 - u) ** 0.6); o.updateMatrix(); ref.current.setMatrixAt(j++, o.matrix) } })
-    ref.current.instanceMatrix.needsUpdate = true; DM.smoke.color.set('#f4f1ee').lerp(C('#9aa0c4'), T.night * 0.7); DM.smoke.opacity = 0.85 - 0.25 * T.night
+    ref.current.instanceMatrix.needsUpdate = true; DM.smoke.color.set('#f4f1ee').lerp(CC('#9aa0c4'), T.night * 0.7); DM.smoke.opacity = 0.85 - 0.25 * T.night
   })
   return <instancedMesh ref={ref} args={[useMemo(() => new THREE.IcosahedronGeometry(1, 2), []), DM.smoke, CHIMNEYS.length * K]} />
 }
@@ -465,7 +465,7 @@ function Lineup() {
 function Clouds() {
   const cl = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ axis: new THREE.Vector3(rnd() - 0.5, 1, rnd() - 0.5).normalize(), off: rnd() * 6, r: 11.5 + rnd() * 2.5, y: (i % 2 ? -1 : 1) * (4.2 + rnd() * 3.5), puffs: Array.from({ length: 4 + (i % 3) }, (_, k) => [k * 0.65 - 1.1, rnd() * 0.35, rnd() * 0.4, 0.5 + rnd() * 0.45]) })), [])
   const refs = useRef([]); const mat = useMemo(() => toon('#ffffff'), [])
-  useFrame(() => { const t = wind.time.value; mat.emissive.set('#000000').lerp(C('#ff9f80'), T.dusk * 0.35).lerp(C('#2a3170'), T.night * 0.5); mat.color.set('#ffffff').lerp(C('#ffd2c0'), T.dusk * 0.7).lerp(C('#8a94c4'), T.night * 0.7); cl.forEach((c, i) => { const a = c.off + t * 0.03; const g = refs.current[i]; g.position.set(Math.cos(a) * c.r, c.y, Math.sin(a) * c.r); g.lookAt(0, c.y, 0) }) })
+  useFrame(() => { const t = wind.time.value; mat.emissive.set('#000000').lerp(CC('#ff9f80'), T.dusk * 0.35).lerp(CC('#2a3170'), T.night * 0.5); mat.color.set('#ffffff').lerp(CC('#ffd2c0'), T.dusk * 0.7).lerp(CC('#8a94c4'), T.night * 0.7); cl.forEach((c, i) => { const a = c.off + t * 0.03; const g = refs.current[i]; g.position.set(Math.cos(a) * c.r, c.y, Math.sin(a) * c.r); g.lookAt(0, c.y, 0) }) })
   return cl.map((c, i) => <group key={i} ref={el => refs.current[i] = el}>{c.puffs.map((p, k) => <mesh key={k} position={[p[0], p[1], p[2]]} scale={p[3]} material={mat}><icosahedronGeometry args={[1, 2]} /><Outlines thickness={0.025} color="#8a8fb0" /></mesh>)}</group>)
 }
 function Birds() {
@@ -765,8 +765,13 @@ function Boot({ onLive, player = true }) {
   return null
 }
 const COMPOSER = { current: null }
+// battery / thermal: stop the render loop while the tab is hidden; adaptive resolution when frames struggle
+// (between 1x and the usual cap; ?q=fixed keeps the cap for screenshot comparisons)
+const DPR_MAX = TOUCH ? 1.25 : 1.5, ADAPT = q.get('q') !== 'fixed'
+function useHidden() { const [h, setH] = useState(typeof document !== 'undefined' && document.hidden); useEffect(() => { const f = () => setH(document.hidden); document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f) }, []); return h }
 export default function App() {
-  const [live, setLive] = useState(false)
+  const [live, setLive] = useState(false), hidden = useHidden()
+  const [dpr, setDpr] = useState(Math.min(DPR_MAX, typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1))
   if (VIEW.mode === 'charstudio') return <>
     <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
       <Boot player={false} onLive={() => setLive(true)} /><Studio />
@@ -775,7 +780,8 @@ export default function App() {
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+      {ADAPT && live && <PerformanceMonitor factor={1} flipflops={3} onChange={({ factor }) => setDpr(Math.min(devicePixelRatio || 1, Math.round((1 + (DPR_MAX - 1) * factor) * 20) / 20))} />}
       <Boot onLive={() => setLive(true)} /><Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={TOUCH ? 2 : 4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
