@@ -130,7 +130,9 @@ Villagers differ by body (tall / short / round / slim, toddler → hunched elder
 ## Loading screen
 - **Sky:** a pastel wash sky (cream sun glow and pink haze over a blue-to-sage-to-cream gradient), multiplied with an SVG `feTurbulence` paper grain.
 - **Hills:** three hill layers and the clouds go through a turbulence displacement filter, which gives torn watercolour edges.
-- **Vine:** the progress vine is an ink-green stroke that grows with real progress. Ink-outlined leaves and pink blossoms pop in with a springy scale as it passes them.
-- **Traveller:** the SVG traveller (bun, red scarf, blue overalls, satchel) bobs along at the tip of the vine.
+- **Leafy loading bar:** a paper groove with an ink outline. It fills left to right with real progress: a green wash crossed by a wavy brown branch. Ink-outlined leaves and cream or pink blossoms pop out above and below it as the fill passes them.
+- **Traveller:** the SVG traveller (bun, red scarf, blue overalls, satchel) stands on top of the bar at the current progress point.
+  - It walks while progress advances and breathes idly while a stage is working.
+  - At 100% it hops three times and waves.
 - **Panels:** the tip card and the "Press to enter" button reuse the game's paper-and-ink panel language and Fredoka, with a rounded system font as fallback.
-- **Reduced motion:** with `prefers-reduced-motion`, cloud drift, the walk cycle and the fades are switched off. The vine still shows progress.
+- **Reduced motion:** with `prefers-reduced-motion`, cloud drift, the walk, hop and wave, and the fades are switched off. The bar still shows progress.

@@ -71,6 +71,7 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 
 ## Loading screen
 - The loader is inline in `index.html` (about 4.9 KB gzipped, plain HTML, CSS and SVG). It paints before any JS or WebGL runs.
+- Progress shows as a leafy loading bar with the traveller walking along its top.
 - It reports real stages, weighted by their measured share of a Fast 3G + 4× CPU load:
 
   | Stage | Weight | What it covers |

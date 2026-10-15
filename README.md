@@ -56,6 +56,7 @@ Explore the planet, gather resources in each biome, and craft tools, food and de
 ## Loading
 
 - **Inline HTML loader** in `index.html` paints before any JS runs. Its progress is real and staged: fetching code, then building the world, then compiling shaders, then the first frame (`src/boot.js`).
+- **Leafy progress bar:** the loader shows a vine-and-leaf progress bar that fills with real progress, while the little traveller walks along it.
 - **Chunk split:** `vendor-three`, `vendor-r3f` (React, r3f, drei) and `vendor-post` (postprocessing). The game `World` and `UI` are lazy-loaded, and so are the optional character and sprite modes.
 - **Terrain fix:** the curve distance checks behind terrain colouring used to block the main thread for about 35 s. They now run in a fraction of a second.
 - **Before → after** (live site, headless Chromium with software WebGL, time to the first rendered frame): unthrottled **36.4 s → 1.8–3.0 s**; Fast 3G + 4x CPU **147 s → 9.4 s**. Total transfer is about 374 KB gzipped either way.
