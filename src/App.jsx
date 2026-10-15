@@ -6,7 +6,9 @@ import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W } from './world.js'
-import { Person, PEOPLE } from './people.jsx'
+import { PEOPLE } from './peopleData.js'
+const PersonLazy = lazy(() => import('./people.jsx').then(m => ({ default: m.Person })))
+const Person = (p) => <Suspense fallback={null}><PersonLazy {...p} /></Suspense>
 import { GhibliPerson, Character } from './GhibliPerson.jsx'
 import { VILLAGERS } from './villagers.js'
 import { houseGeos, crownGeos, firGeos, foliage } from './scenery.js'
