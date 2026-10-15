@@ -23,7 +23,8 @@ function Clock() {
 function Prompt() {
   const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place) return null
   let icon = 'hand', verb, name
-  if (n.kind === 'bench') { icon = 'book'; verb = 'Craft at'; name = 'the bench' }
+  if (n.kind === 'ext') { icon = n.icon; verb = n.verb; name = n.name }
+  else if (n.kind === 'bench') { icon = 'book'; verb = 'Craft at'; name = 'the bench' }
   else if (n.kind === 'chest') { icon = 'skyseed'; verb = 'Open'; name = 'the picnic chest' }
   else if (n.kind === 'decor') { icon = n.item; verb = 'Pick up'; name = ITEMS[n.item].name }
   else { const it = n.spot.item; icon = it; name = ITEMS[it].name; verb = it === 'fish' ? 'Fish for' : it === 'wool' ? 'Shear' : it === 'firefly' ? 'Catch' : it === 'water' ? 'Fill can with' : 'Gather'; if (it === 'wool') name = 'the sheep' }

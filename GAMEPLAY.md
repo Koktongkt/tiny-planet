@@ -11,6 +11,10 @@
 | Fishing | E / Space / Enter | Tap the bar |
 | Placing decor | R rotates, E/Enter places, Esc cancels | Placement bar buttons |
 | Planet view | V | |
+| Door (go in / out) | E at the door | ✋ Action, or tap the prompt |
+| Pet Mochi (cat) | E near him, indoors | ✋ Action |
+| Throw a stick for Pip (dog) | E near him, outdoors | ✋ Action |
+| Walk indoors | WASD / arrows (same as outside) | Stick (screen-relative), or tap the floor |
 
 ## Gatherables
 | Zone | Items |
@@ -91,3 +95,36 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 - Scripts:
   - `node shoot-loader.mjs [url] [dir] [prefix]` takes the loader shots on a throttled profile.
   - `node measure.mjs [port]` reports the local time to first frame.
+
+## Home and pets
+- **She starts inside her house.** It's one cozy room: a bed with a quilt, a kitchen counter, a wood stove with a steaming kettle, a table with a teapot, a bookshelf, plants, and warm light falling through the window onto the floor.
+- **The interior** is a real room at the planet's centre (`src/home/Room.jsx`). While she is inside:
+  - The camera renders only layer 5, which holds the room, her and the lights. The outside world costs nothing and can't show through.
+  - The interior camera stays inside the walls. It eases after her and leans toward Mochi when he's close.
+- **The door:** press E at the blue door (inside) or at the Home house's front door (outside). A warm iris closes, she crosses over, and the follow camera lands behind her.
+- **Decor:** placing a decor item from the Bag while indoors puts it on the floor in front of her. The ghost preview is green on free floor. The item is saved in `placed` with an `in: [x, z]` room position. Press E next to it to pick it up again.
+- **Mochi, the cat** (`src/pets/Cat.jsx`):
+  - He stays indoors and runs a small state machine: nap (curled in the sunbeam, or on the bed), groom, stretch then yawn, chase the yarn ball (stalk, butt-wiggle, pounce), sit on the windowsill, knead the quilt, and wander.
+  - He hops up onto and down from the bed and the sill.
+  - Ear twitches, blinks, breathing and tail flicks are always layered on top.
+  - When she's near, he sometimes comes over and weaves around her ankles. Other times he ignores her.
+  - Press E to pet him. He purrs and shows hearts, or now and then flicks his tail and looks away. Petting a napping Mochi wakes him with a stretch first.
+- **Pip, the dog** (`src/pets/Dog.jsx`):
+  - He follows her outside at a loose distance, switching sides now and then. He walks, trots or runs (a bounding gait) to catch up.
+  - He steers on the sphere around the world's own colliders: trees, rocks and houses.
+  - When she stops he sits, and after a while lies down. While idle he sniffs, digs, rolls in the grass, or chases a butterfly or a little ground bird.
+  - He barks at sheep ("Woof!") and splashes in the lake, then shakes himself dry.
+  - Digging sometimes turns something up (acorn, stone, coin, shell…). Press E to gather it into the Bag.
+  - Fetch: press E near him to throw a stick. He races after it, brings it back and drops it at her feet. Press E again to throw it again.
+  - Tail wag follows his mood: fetch and greetings raise it, waiting lowers it.
+  - While she's inside, he waits by the front door and greets her with bouncing and wagging when she comes out.
+- **Both pets** share a procedural quadruped rig (`src/pets/Quadruped.jsx`). It uses the same cel shader and ink hull as the characters. Poses blend through springs, and gaits are diagonal for walking and bounding for running.
+
+| Param | Effect |
+|---|---|
+| `?out` | Start outside, by the front door |
+| `?cat=nap\|bed\|groom\|stretch\|chase\|sill\|knead\|rub\|pet\|ignore` | Hold the cat in a state |
+| `?dog=sit\|sniff\|dig\|roll\|bark\|splash\|chase\|fetch\|wait` | Hold the dog in a state |
+| `?petcam=a`, `?dogcam=a` | Close debug camera on the cat or dog, from angle `a` |
+
+Screenshots: `node shoot-pets.mjs [names]`. It needs the dev server on `PORT` (5195 by default) and writes to `/workspace/tiny-planet-perf/home-pets/`.

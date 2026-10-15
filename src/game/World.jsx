@@ -208,7 +208,7 @@ function Sheep({ i, sheep }) {
 export function GameWorld() {
   const L = LAYOUT, camera = useThree(s => s.camera)
   const refs = useRef({}), anim = useRef({}), [, force] = React.useReducer(x => x + 1, 0)
-  const sheep = useMemo(() => [0, 1, 2, 3].map(i => { const n = around(GAME.Zc.meadow, 0.06 + i * 0.04, i * 1.6); const t0 = new THREE.Vector3(0, 1, 0); return { id: `wool-sheep-${i}`, item: 'wool', n, f: t0.clone().addScaledVector(n, -n.dot(t0)).normalize().applyAxisAngle(n, i), t: i * 3, walk: 0, pos: new THREE.Vector3() } }), [])
+  const sheep = GAME.sheep = useMemo(() => [0, 1, 2, 3].map(i => { const n = around(GAME.Zc.meadow, 0.06 + i * 0.04, i * 1.6); const t0 = new THREE.Vector3(0, 1, 0); return { id: `wool-sheep-${i}`, item: 'wool', n, f: t0.clone().addScaledVector(n, -n.dot(t0)).normalize().applyAxisAngle(n, i), t: i * 3, walk: 0, pos: new THREE.Vector3() } }), [])
   useEffect(() => { const u = () => force(); const unsub = (window.__gameSub = window.__gameSub || []); unsub.push(u); return () => { const k = unsub.indexOf(u); if (k >= 0) unsub.splice(k, 1) } }, [])
   const _pp = useMemo(() => new THREE.Vector3(), []), _w = useMemo(() => new THREE.Vector3(), [])
   const freezePick = q.has('pick') ? +q.get('pick') : null
@@ -216,6 +216,7 @@ export function GameWorld() {
   useEffect(() => {
     GAME.actions.act = () => {
       const nr = G.near; if (!nr) return
+      if (nr.kind === 'ext') { nr.act(); return }
       if (nr.kind === 'bench') { G.ui.panel = 'recipes'; G.ui.atBench = true; emit(); return }
       if (nr.kind === 'chest') { G.s.chest = true; add('skyseed', 1, true); add('crystal', 3, true); toast('You found the cliff-top picnic! +1 Sky Seed, +3 Crystal', 'skyseed', 4200); emit(); force(); return }
       if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
@@ -239,7 +240,8 @@ export function GameWorld() {
     _pp.copy(P.n).multiplyScalar(R + height(P.n) + P.h)
     const night = T.night > 0.5; G.night = night
     let best = null, bd = 1e9
-    const consider = (o, d, lim) => { if (d < lim && d < bd) { bd = d; best = o } }
+    const H = GAME.H, inside = !!(H && H.inside)
+    const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
     for (const sp of L.spots) {
       const g = refs.current[sp.id]; if (!g) continue
       const live = available(sp.id) && (!sp.night || night)
@@ -264,7 +266,8 @@ export function GameWorld() {
     for (const s of sheep) if (available(s.id)) consider({ kind: 'spot', spot: { ...s, pos: s.pos.clone(), standPos: s.pos.clone(), stand: s.n.clone() }, id: s.id }, _pp.distanceTo(s.pos), 0.45)
     consider({ kind: 'bench', id: 'bench' }, _pp.distanceTo(L.bench.pos), 0.5)
     if (G.s.unlocked.bridge && !G.s.chest) consider({ kind: 'chest', id: 'chest' }, _pp.distanceTo(posOf(L.bridge.chest)), 0.45)
-    for (const p of G.s.placed) if (!G.ui.place) consider({ kind: 'decor', id: 'decor' + p.uid, uid: p.uid, item: p.item }, _pp.distanceTo(posOf(new THREE.Vector3(...p.n))), 0.35)
+    for (const p of G.s.placed) if (!G.ui.place && !p.in) consider({ kind: 'decor', id: 'decor' + p.uid, uid: p.uid, item: p.item }, _pp.distanceTo(posOf(new THREE.Vector3(...p.n))), 0.35)
+    if (H) for (const f of H.near) f(consider, _pp) // door, pets, dug-up finds, indoor decor
     const id = best ? best.id : null
     if (id !== (G.near && G.near.id)) { G.near = best; emit() }
     if (G.autoAct && best && best.id === G.autoAct) { G.autoAct = null; GAME.actions.act() }
@@ -277,7 +280,8 @@ export function GameWorld() {
     // placement ghost
     const gh = refs.current.__ghost
     if (gh) { const pl = G.ui.place; gh.visible = !!pl
-      if (pl) { const n = P.n.clone().addScaledVector(P.fwd, 0.32 / R).normalize(), p = place(n, 0, pl.rot); gh.position.copy(p.pos); gh.quaternion.copy(p.q); pl.n = n.toArray(); pl.ok = n.angleTo(L.homeN) < 2.2 / R; GHOST.color.set(pl.ok ? '#bff0c8' : '#ffb8a8') } }
+      if (pl && inside) H.ghost(gh, pl, GHOST)
+      else if (pl) { pl.in = null; gh.scale.setScalar(1); const n = P.n.clone().addScaledVector(P.fwd, 0.32 / R).normalize(), p = place(n, 0, pl.rot); gh.position.copy(p.pos); gh.quaternion.copy(p.q); pl.n = n.toArray(); pl.ok = n.angleTo(L.homeN) < 2.2 / R; GHOST.color.set(pl.ok ? '#bff0c8' : '#ffb8a8') } }
   })
   if (!L) return null
   return <group>
@@ -287,7 +291,7 @@ export function GameWorld() {
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
     <Bench b={L.bench} /><HomeSign n={L.sign.n} />
-    {G.s.placed.map(p => <SurfaceGroup key={p.uid} n={new THREE.Vector3(...p.n)} spin={p.rot}><Decor item={p.item} /></SurfaceGroup>)}
+    {G.s.placed.filter(p => !p.in).map(p => <SurfaceGroup key={p.uid} n={new THREE.Vector3(...p.n)} spin={p.rot}><Decor item={p.item} /></SurfaceGroup>)}
     <group ref={el => { if (el) refs.current.__ghost = el }} visible={false}><GhostDecor /></group>
     {G.s.unlocked.bridge && <><RopeBridge br={L.bridge} /><Reward br={L.bridge} /></>}
   </group>
@@ -306,7 +310,7 @@ export function PlayerLantern() {
 }
 // place a decor item from the bag
 export function startPlace(item) { if (!count(item)) return; G.ui.place = { item, rot: 0 }; G.ui.panel = null; emit() }
-export function confirmPlace() { const pl = G.ui.place; if (!pl || !pl.n) return; if (!pl.ok) { toast('Decor goes in or around your Home.', 'leaf'); return } take(pl.item); G.s.placed.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), item: pl.item, n: pl.n, rot: pl.rot }); toast(`Placed ${ITEMS[pl.item].name}`, pl.item); G.ui.place = count(pl.item) ? { ...pl } : null; emit(); (window.__gameSub || []).forEach(f => f()) }
+export function confirmPlace() { const pl = G.ui.place; if (!pl || !pl.n) return; if (!pl.ok) { toast('Decor goes in or around your Home.', 'leaf'); return } take(pl.item); G.s.placed.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), item: pl.item, n: pl.n, rot: pl.rot, ...(pl.in ? { in: pl.in } : {}) }); toast(`Placed ${ITEMS[pl.item].name}`, pl.item); G.ui.place = count(pl.item) ? { ...pl } : null; emit(); (window.__gameSub || []).forEach(f => f()) }
 export function teleport(P, where) {
   const L = LAYOUT; if (!L) return
   const Zc = GAME.Zc; let n, look

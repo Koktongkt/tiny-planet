@@ -15,6 +15,7 @@ const SPRITE = q.get('char') === 'sprite'
 const NEWCHAR = !q.has('oldchar')
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
+import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
@@ -43,6 +44,7 @@ function Clock() {
       _s.setFromMatrixColumn(camera.matrixWorld, 0)
       T.sun.copy(P.wUp).multiplyScalar(e).addScaledVector(_s, Math.sin(p) * 0.9).addScaledVector(P.wFwd, -0.35).normalize()
     } else T.sun.set(Math.sin(p) * 0.9, e, 0.55).normalize()
+    if (HOME.inside) HOME.sun() // indoors: light comes in through her window
     T.day = ss(-0.15, 0.45, e); T.night = 1 - ss(-0.35, 0.05, e); T.dusk = Math.max(0, 1 - Math.abs(e - 0.05) / 0.4); PU.uDay.value = T.day
     document.documentElement.style.setProperty('--ink', T.night > 0.5 ? '#f3e6c8' : '#5a4636'); for (const m of glowMats) m.color.copy(m.userData.base).multiplyScalar(0.25 + T.night * 5 + T.dusk * 1.6)
   })
@@ -317,6 +319,7 @@ const tc = ['#5fae63', '#7cc26a', '#4f9a5e', '#9ccf6a'].map(C)
 const TREES = [], FIRS = []
 for (let i = 0; i < 700; i++) { const n = randDir(); const cl = Math.sin(n.x * 4 + 1) * Math.sin(n.z * 3 - n.y * 2); if (cl < 0.1 || busy(n)) continue; const fir = rnd() < 0.4; (fir ? FIRS : TREES).push({ ...place(n, -0.02, rnd() * 6), s: 0.45 + rnd() * 0.35, c: tc[i % 4].clone().multiplyScalar(0.9 + rnd() * 0.2) }) }
 const COLLIDERS = [...HOUSES.map(n => ({ n, r: 0.085 * K })), ...MILLS.map(n => ({ n, r: 0.065 * K })), ...[...TREES, ...FIRS].map(t => ({ n: t.n, r: (0.03 + 0.02 * t.s) * K })), ...ZONE_COLLIDERS]
+const _setupHome = () => setupHome({ colliders: COLLIDERS, P, homeN: HOUSES[0], doorN: onHouse(0, 0, 0.3), outN: onHouse(0, 0, 0.78) })
 function Vegetation() {
   const { grass, flowers } = useMemo(() => {
     const grass = [], flowers = [], g1 = C('#86c46c'), g2 = C('#b9de86'), fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff'].map(C)
@@ -489,6 +492,7 @@ const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 
 const KEYS = {}
 if (VIEW.mode === 'detail') { P.n.copy(bl(B0, 0.08, 0)); P.fwd.copy(B0.tan) }
 window.__player = P
+_setupHome()
 function Keys() {
   useEffect(() => {
     const d = e => { const k = e.key.toLowerCase(); if (gameBlocksKeys()) { if (k === ' ') e.preventDefault(); return } KEYS[k] = true; if (k === ' ' && Math.abs(P.h - floorLift(P.n)) < 0.003) P.vy = 1.9; if (k === 'v') VIEW.mode = VIEW.mode === 'follow' ? 'orbit' : 'follow'; if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault() }
@@ -529,10 +533,12 @@ const _pf = new THREE.Vector3()
 function Traveller() {
   const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake])
   useFrame((_, dt) => {
-    dt = Math.min(dt, 0.05); stepPlayer(dt)
+    dt = Math.min(dt, 0.05); HOME.playerObj = ref.current
+    if (HOME.inside) HOME.stepInside(dt, KEYS, P, ref.current) // inside her house
+    else { stepPlayer(dt)
     const side = _wx.crossVectors(P.n, P.fwd)
     ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.fwd))
-    ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h)
+    ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
     PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
@@ -560,6 +566,7 @@ function Rig() {
     g.rotation.y = spin.a; g.updateMatrixWorld()
     P.wPos.copy(P.n).multiplyScalar(R + height(P.n) + P.h).applyMatrix4(g.matrixWorld)
     P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld)
+    if (HOME.camera(camera, g, dt)) return // interior camera while she's inside
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 4))
     if (VIEW.mode === 'follow') {
       const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))
@@ -595,7 +602,7 @@ const GAMEON = VIEW.mode === 'follow' && !q.has('nogame')
 function loadGame() {
   return Promise.all([import('./game/World.jsx'), import('./game/UI.jsx')]).then(([W, U]) => {
     ropeLift = W.ropeLift; ropePass = W.ropePass; gameBlocksKeys = U.gameBlocksKeys
-    W.GAME.P = P
+    W.GAME.P = P; W.GAME.H = HOME; HOME.GAME = W.GAME
     W.layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || distToCurve(n, streamDir, 140) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
     if (q.has('at')) W.teleport(P, q.get('at'))
     GM.W = W; GM.U = U; bootStage('game', 1)
@@ -627,7 +634,7 @@ function Planet() {
     <DeferredZones />
     {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
     {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
-    <Traveller />{k >= 4 && <Details />}
+    <Traveller /><HomeLayer />{k >= 4 && <Details />}
     {k >= 4 && <Fireflies />}
     {k >= 4 && GAMEON && <GameSlot />}
   </group></group>
@@ -781,5 +788,6 @@ export default function App() {
     </div>
     {GAMEON && <GameSlot ui />}
     <TouchPad />
+    <HomeOverlay />
   </>
 }
