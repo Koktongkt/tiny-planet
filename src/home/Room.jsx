@@ -50,8 +50,8 @@ HOME.stepInside = (dt, KEYS, P, obj) => {
   if (HOME.busy || (G.ui.panel)) f = turn = 0
   const run = KEYS.shift || (PAD.active && PAD.run)
   hp.yaw += turn * 2.6 * dt
-  const sp = f * (run ? 1.25 : 0.8) / ROOM.S * 1.15 * dt; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09)
-  P.move += ((f ? Math.max(0.35, Math.abs(f)) : 0) - P.move) * Math.min(1, dt * 8); P.phase += dt * (run ? 13 : 9.5) * P.move; P.h = 0; P.vy = 0
+  const sp = f * (run ? 1.04 : 0.67) / ROOM.S * 1.15 * dt; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09)
+  P.move += ((f ? Math.max(0.35, Math.abs(f)) : 0) - P.move) * Math.min(1, dt * 8); P.phase += dt * (run ? 11 : 8.2) * P.move; P.h = 0; P.vy = 0
   obj.position.set(hp.x * ROOM.S, ROOM.y, hp.z * ROOM.S); obj.quaternion.setFromAxisAngle(UP, hp.yaw)
 }
 // interior camera: stays inside the walls (never clips), eases after her, slightly wider lens

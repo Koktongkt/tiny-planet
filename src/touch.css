@@ -89,3 +89,37 @@ html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-plac
 .tp-pad .tp-btn.down,.tp-pad .tp-btn.down:hover{transform:scale(.94) rotate(-1.5deg);filter:none;
   background:radial-gradient(45% 40% at 68% 72%,#4f744040,transparent 70%),radial-gradient(70% 60% at 34% 28%,#f6fbe9 0,#d3e6bd 50%,#9cbf86 100%)!important;
   box-shadow:inset 0 0 0 2px #3b2f22,inset .7px -.9px 0 2.5px #3b2f2240,inset 0 2px 8px #3f5f3240,0 1px 0 #3b2f2230,0 3px 6px #3a2a1a26}
+/* ---- refine: sleek Ghibli pad (translucent washi paper, single brush-ink ring, icon-only round buttons, idle fade) ---- */
+.tp-pad .tp-stick,.tp-pad .tp-acts{transition:opacity .7s ease,transform .15s}
+.tp-pad.tp-idle .tp-stick,.tp-pad.tp-idle .tp-acts{opacity:0;transition:opacity 1.2s ease .1s} /* still hit-testable: first touch works */
+.tp-stick{
+  background:radial-gradient(62% 58% at 38% 34%,#fffaf05c 0,#f4ead238 55%,#e9d9b324 100%);
+  -webkit-backdrop-filter:blur(3px) saturate(1.1);backdrop-filter:blur(3px) saturate(1.1);
+  box-shadow:0 6px 18px #2a1e1426,inset 0 0 22px #fffaf03a}
+.tp-stick::before{inset:-10px;background:radial-gradient(closest-side,#9cc46a22,#7fa36b10 70%,transparent);filter:blur(2px)}
+.tp-stick .ring{overflow:visible}
+.tp-stick .ring .wob{fill:none;stroke:#3b2f22b8;stroke-width:2.1;stroke-dasharray:none;stroke-linecap:round}
+.tp-stick .ring .wob2{fill:none;stroke:#3b2f2255;stroke-width:1.2;stroke-dasharray:none;stroke-linecap:round}
+.tp-stick .ring .nib{fill:none;stroke:#3b2f2280;stroke-width:1.8;stroke-dasharray:none;stroke-linecap:round}
+.tp-stick .knob{width:42%;height:42%;margin:-21% 0 0 -21%;border:1.8px solid #3b2f22cc;
+  background:radial-gradient(38% 34% at 66% 70%,#5f8a4d38,transparent 70%),radial-gradient(70% 62% at 34% 28%,#fffaf0f2 0,#e4efd2e0 40%,#b4cf98d0 76%,#88ad73c8 100%);
+  box-shadow:inset 0 -3px 7px #4f74402a,inset 0 2px 3px #fffaf0aa,0 4px 10px #2a1e1433}
+.tp-stick.on{transform:scale(1.02)}
+.tp-stick.on .knob{background:radial-gradient(38% 34% at 66% 70%,#4f744048,transparent 70%),radial-gradient(70% 62% at 34% 28%,#f6fbe9 0,#cfe4b4 40%,#97bd80 76%,#6f985d 100%)}
+.tp-stick.run .knob{background:radial-gradient(70% 62% at 34% 28%,#fffaf0 0,#f8e2bc 42%,#e3b06a 100%)}
+.tp-pad .tp-btn{
+  background:radial-gradient(64% 58% at 36% 30%,#fffaf0c8 0,#f4ead29e 60%,#e6d3aa86 100%);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  box-shadow:inset 0 0 0 1.6px #3b2f22b0,inset .8px -1px 0 2.4px #3b2f221c,inset 0 2px 4px #fffaf0b0,0 5px 14px #2a1e142e}
+.tp-pad .tp-btn .ic{display:flex;align-items:center;justify-content:center}
+.tp-pad .tp-btn svg{fill:none;stroke:#3b2f22;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.tp-pad .tp-btn svg .soft{stroke-width:1.5;opacity:.6}
+.tp-act{background:radial-gradient(40% 36% at 70% 74%,#e2b46a2e,transparent 70%),radial-gradient(64% 58% at 36% 30%,#fffaf0d6 0,#f7e8c4b0 60%,#ecd19a96 100%)!important}
+.tp-jump{background:radial-gradient(40% 36% at 70% 74%,#7aa3bd2a,transparent 70%),radial-gradient(64% 58% at 36% 30%,#fffaf0d6 0,#e8efe8b0 60%,#c3d8db96 100%)!important}
+.tp-act svg{width:40px!important;height:40px!important}
+.tp-jump svg{width:32px!important;height:32px!important}
+.tp-view{opacity:.85}
+.tp-pad .tp-btn.down,.tp-pad .tp-btn.down:hover{transform:scale(.93);
+  background:radial-gradient(64% 58% at 36% 30%,#f6fbe9e0 0,#d3e6bdc0 55%,#9cbf86a8 100%)!important;
+  box-shadow:inset 0 0 0 1.8px #3b2f22,inset 0 2px 8px #3f5f3240,0 2px 6px #2a1e1426}
+@media (prefers-reduced-motion:reduce){.tp-pad .tp-stick,.tp-pad .tp-acts{transition:none}}

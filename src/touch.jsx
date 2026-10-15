@@ -30,7 +30,7 @@ function Stick() {
   const up = (e) => { if (e.pointerId !== id.current) return; id.current = null; PAD.x = PAD.y = PAD.mag = 0; PAD.run = false; PAD.active = false; if (knob.current) knob.current.style.transform = ''; base.current?.classList.remove('on', 'run') }
   useEffect(() => () => { if (id.current != null) { id.current = null; PAD.x = PAD.y = PAD.mag = 0; PAD.run = false; PAD.active = false } }, []) // unmounted mid-drag (view toggle / door): release the stick
   return <div className="tp-stick" ref={base} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up} aria-label="Move: drag the stick, push to the edge to run" role="application">
-    <svg className="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" /><path d="M50 14l-5 7h10zM50 86l-5-7h10zM14 50l7-5v10zM86 50l-7-5v10z" /></svg>
+    <svg className="ring" viewBox="0 0 100 100" aria-hidden="true"><path className="wob" d="M50 6.5c13 .2 25.6 6.4 33.2 17.6 6.9 10.2 8.6 23.7 4.4 35.4-4.4 12.6-15.4 22.6-28.5 25.7C45.6 88.4 30.4 85 20.1 75.6 10.6 67 5.6 53.4 7.5 40.7 9.5 27.1 19 15 31.7 9.7c5.8-2.4 12-3.3 18.3-3.2z" /><path className="wob2" d="M51.5 9.6c11.4.9 22.4 7.4 28.4 17.3" /><path className="nib" d="M50 17.5l-3.6 5.2M50 17.5l3.6 5.2M50 82.5l-3.6-5.2M50 82.5l3.6-5.2M17.5 50l5.2-3.6M17.5 50l5.2 3.6M82.5 50l-5.2-3.6M82.5 50l-5.2 3.6" /></svg>
     <div className="knob" ref={knob} />
   </div>
 }
@@ -38,7 +38,7 @@ function Btn({ cls, label, icon, onPress, aria }) {
   const press = (e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add('down'); buzz(10); onPress() }
   const rel = (e) => e.currentTarget.classList.remove('down')
   return <button className={'tp-btn paper ' + cls} aria-label={aria || label} onPointerDown={press} onPointerUp={rel} onPointerCancel={rel} onPointerLeave={rel} onContextMenu={e => e.preventDefault()}>
-    <span className="ic" aria-hidden="true">{icon}</span><span className="lb">{label}</span></button>
+    <span className="ic" aria-hidden="true">{icon}</span></button>
 }
 function RotateHint() {
   const [show, setShow] = useState(false)
@@ -46,17 +46,40 @@ function RotateHint() {
   if (!show) return null
   return <button className="tp-rotate paper" onPointerDown={e => { e.preventDefault(); sessionStorage.setItem('tp.rot', '1'); setShow(false) }}><span aria-hidden="true">⟲</span> Turn your phone sideways for a wider view <small>tap to hide</small></button>
 }
+// hand-drawn line icons (single ink stroke, slightly uneven like a brush pen); no text on the pad
+const ICON = {
+  hand: <svg viewBox="0 0 40 40"><path d="M14.2 21.8V11.6c0-1.5 1-2.6 2.4-2.6s2.3 1.1 2.3 2.5l.1 8.3M18.9 19.6V8.9c0-1.5 1-2.5 2.4-2.5 1.3 0 2.3 1 2.3 2.4v10.6M23.6 19.5v-8.2c0-1.4 1-2.4 2.3-2.4 1.4 0 2.3 1.1 2.3 2.5l-.1 12.4c-.1 6.4-4.3 10.2-9.6 10.2-4.2 0-6.6-2-8.7-5.3l-3.7-5.9c-.8-1.2-.4-2.6.8-3.2 1.1-.6 2.3-.3 3.1.7l2.2 2.8" /><path className="soft" d="M17.2 30.1c1.4 1 3.1 1.3 4.7 1" /></svg>,
+  foot: <svg viewBox="0 0 40 40"><path d="M16.4 6.8c-.3 4.6-.1 9.7.7 14.4.5 3-.2 5.2-1.8 7.2-1.3 1.7-1.6 3.6-.5 5 1.2 1.6 3.6 1.9 7.1 1.6l6.7-.6c2.1-.2 3.2-1.5 2.8-3.1-.4-1.5-2-2.3-4.4-2.8-2.9-.6-4.6-2-5.1-4.7-.6-3.6-.7-9.2-.6-14.2" /><path className="soft" d="M22.8 31.3l1-2.4M26.4 31.6l.6-2.2" /><path className="soft" d="M9.4 15.2c1.6-1.6 3-2.3 4.5-2.6M8.6 20.6c1.6-.9 3.1-1.2 4.8-1.1" /></svg>,
+  globe: <svg viewBox="0 0 40 40"><path d="M20.3 8.6c6.5.1 11.4 5.3 11.2 11.8-.2 6.4-5.4 11.2-11.8 11-6.2-.2-11-5.3-10.8-11.6.2-6.2 5.2-11.3 11.4-11.2z" /><path className="soft" d="M9.4 18.6c3.6 1.4 8.4 1.9 13.2 1.4 3.3-.3 6.4-1 8.6-2M19.8 8.9c-3.2 3.6-4.6 8.2-4.1 13 .4 3.6 1.9 6.9 4.3 9.4" /></svg>,
+}
+// auto-hide: the pad fades to nothing after a few idle seconds and comes back on any touch.
+// Faded controls stay hit-testable, so the first touch both reveals them and works (stick / buttons respond at once).
+const IDLE_MS = 3500
+function useIdleFade() {
+  const [idle, setIdle] = useState(false)
+  useEffect(() => {
+    if (!TOUCH) return
+    let t
+    const arm = () => { clearTimeout(t); t = setTimeout(function tick() { if (PAD.active) { t = setTimeout(tick, 600); return } setIdle(true) }, IDLE_MS) }
+    const wake = () => { setIdle(false); arm() }
+    arm(); addEventListener('pointerdown', wake, true); addEventListener('touchstart', wake, { capture: true, passive: true })
+    return () => { clearTimeout(t); removeEventListener('pointerdown', wake, true); removeEventListener('touchstart', wake, { capture: true }) }
+  }, [])
+  return idle
+}
+export const PADUI = { hideStick: false } // set by the dialogue box: stick unmounts (releasing PAD) while she is talking
 export function TouchPad() {
+  const idle = useIdleFade()
   const [mode, setMode] = useState(VIEW.mode)
-  useEffect(() => { const t = setInterval(() => setMode(VIEW.mode), 300); return () => clearInterval(t) }, [])
+  useEffect(() => { const t = setInterval(() => setMode(VIEW.mode + (PADUI.hideStick ? ':talk' : '')), 150); return () => clearInterval(t) }, [])
   if (!TOUCH) return null
-  const walk = mode === 'follow'
-  return <div className="tp-pad">
-    {walk && <Stick />}
+  const walk = mode.startsWith('follow'), talk = mode.endsWith(':talk')
+  return <div className={'tp-pad' + (idle ? ' tp-idle' : '')}>
+    {walk && !talk && <Stick />}
     <div className="tp-acts">
-      {walk && <Btn cls="tp-jump" label="Jump" icon={<svg viewBox="0 0 40 40"><path d="M20 30V12M11 20l9-9 9 9" /></svg>} onPress={() => tapKey(' ', 'Space')} />}
-      {walk && <Btn cls="tp-act" label="Action" aria="Gather or use" icon={<svg viewBox="0 0 40 40"><path d="M13 22V12a2.5 2.5 0 015 0v8M18 19v-9a2.5 2.5 0 015 0v9M23 19v-7a2.5 2.5 0 015 0v12c0 6-4 9-9 9-4 0-6-2-8-5l-4-6a2.4 2.4 0 014-2.6l2 2.6" /></svg>} onPress={() => tapKey('e', 'KeyE')} />}
-      <Btn cls="tp-view" label={walk ? 'Planet' : 'Walk'} aria="Toggle planet view" icon={<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="11" /><path d="M9 20h22M20 9c5 6 5 16 0 22M20 9c-5 6-5 16 0 22" /></svg>} onPress={() => { tapKey('v', 'KeyV'); setTimeout(() => setMode(VIEW.mode), 80) }} />
+      {walk && <Btn cls="tp-jump" label="Jump" icon={ICON.foot} onPress={() => tapKey(' ', 'Space')} />}
+      {walk && <Btn cls="tp-act" label="Action" aria="Gather, talk or use" icon={ICON.hand} onPress={() => tapKey('e', 'KeyE')} />}
+      <Btn cls="tp-view" label={walk ? 'Planet' : 'Walk'} aria={walk ? 'Planet view' : 'Back to walking'} icon={ICON.globe} onPress={() => { tapKey('v', 'KeyV'); setTimeout(() => setMode(VIEW.mode), 80) }} />
     </div>
     <RotateHint />
   </div>

@@ -1,5 +1,7 @@
 import * as THREE from 'three'
-export const R = 8
+export const R = 10.4 // 1.3x the old 8-unit planet (refine round)
+export const WS = R / 8 // world scale vs the R=8 layout (sky props, orbit camera)
+export const DENS = 1.5 // scatter density factor so the bigger surface isn't sparser (~WS^2, trimmed for the draw budget)
 export const K = 5 / R // converts old angular sizes (tuned at R=5) to the bigger world
 const _dir = (lat, lon) => [Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)]
 const Z = (lat, lon, r) => { const [x, y, z] = _dir(lat, lon); return { x, y, z, r, lat, lon } }

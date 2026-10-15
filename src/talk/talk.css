@@ -1,0 +1,26 @@
+/* '…' bubble + storybook dialogue box (parchment, brush-ink border, Cormorant italic like the loader) */
+.tk-bubble{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s;will-change:transform}
+.tk-bubble span{display:block;font:italic 500 26px/1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#3b2f22;padding:2px 12px 9px;
+  background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#f4ead2 70%,#ead9b3 100%);border-radius:48% 52% 46% 54%/56% 50% 50% 44%;
+  box-shadow:inset 0 0 0 1.8px #3b2f22d0,0 3px 8px #2a1e1430;animation:tk-bob 1.6s ease-in-out infinite}
+.tk-bubble span::after{content:'';position:absolute;left:50%;bottom:-6px;width:10px;height:10px;margin-left:-6px;background:#f1e5c9;transform:rotate(45deg);box-shadow:1.6px 1.6px 0 #3b2f22c0;border-radius:0 0 3px 0}
+@keyframes tk-bob{50%{transform:translateY(-3px)}}
+.tk-box{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);z-index:6;width:min(640px,calc(100vw - 28px));box-sizing:border-box;
+  padding:26px 30px 16px;color:#3b2f22;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;animation:tk-in .32s cubic-bezier(.2,.9,.3,1.2);
+  background:radial-gradient(40% 50% at 85% 85%,#d9c49a40,transparent 70%),radial-gradient(60% 70% at 15% 10%,#fffaf0,transparent 70%),linear-gradient(#f6eddb,#efe2c4);
+  border-radius:16px 22px 18px 24px/22px 16px 24px 18px;
+  box-shadow:inset 0 0 0 2.2px #3b2f22,inset 1px -1.2px 0 3.4px #3b2f2233,inset 0 0 26px #a88a5a30,0 10px 30px #2a1e1440}
+.tk-plate{position:absolute;left:22px;top:-17px;display:flex;align-items:baseline;gap:9px;padding:5px 15px 6px;border-radius:10px 14px 12px 9px;
+  background:linear-gradient(#e7f0d8,#cfe0b6);box-shadow:inset 0 0 0 2px #3b2f22,0 3px 6px #2a1e1430;font-family:TPSerif,"Cormorant Garamond",Georgia,serif}
+.tk-plate b{font:italic 600 20px/1 TPSerif,"Cormorant Garamond",Georgia,serif}
+.tk-plate i{font-size:14px;opacity:.7}
+.tk-box p{margin:4px 0 6px;font:italic 500 23px/1.38 TPSerif,"Cormorant Garamond",Georgia,serif;animation:tk-ink .45s ease-out}
+.tk-more{text-align:right;font:italic 500 18px/1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#5f8a4d}
+.tk-more small{font-size:14px;color:#3b2f22;opacity:.6;letter-spacing:.04em}
+.tk-x{position:absolute;right:10px;top:8px;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:#3b2f22;font-size:16px;cursor:pointer;opacity:.6}
+.tk-x:hover{opacity:1}
+@keyframes tk-in{from{opacity:0;transform:translate(-50%,14px) scale(.97)}}
+@keyframes tk-ink{from{opacity:0;filter:blur(1.5px)}}
+html.tp-touch .tk-box{bottom:calc(env(safe-area-inset-bottom,0px) + 14px);padding:24px 20px 12px}
+html.tp-touch .tk-box p{font-size:20px}
+@media (prefers-reduced-motion:reduce){.tk-bubble span,.tk-box,.tk-box p{animation:none}}

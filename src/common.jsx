@@ -25,16 +25,18 @@ export const planetRef = { current: null }
 export const HCL = [] // { mesh, c: local centre direction, rad: angular radius }
 const DIRS = (() => { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, a = []; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(p, i).normalize(); if (!a.some(u => u.distanceToSquared(v) < 1e-6)) a.push(v) } g.dispose(); return a })()
 const CLUSTER_MIN = 160
-function InstancedBatch({ items, geo, mat, outline, isOcc, hc, lo }) {
-  const ref = useRef(), lref = useRef()
+function InstancedBatch({ items, geo, mat, outline, isOcc, hc, lo, lo2 }) {
+  const ref = useRef(), lref = useRef(), l2ref = useRef()
   useEffect(() => { const m = ref.current, o = new THREE.Object3D(); items.forEach((it, i) => { o.position.copy(it.pos); o.quaternion.copy(it.q); o.scale.setScalar(it.s); o.updateMatrix(); m.setMatrixAt(i, o.matrix); if (it.c) m.setColorAt(i, it.c) }); m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true
     // bounds are computed here, after the instance matrices exist (a lazy compute can catch identity matrices)
     m.computeBoundingSphere(); m.boundingSphere.radius += 0.35
     const l = lref.current; if (l) { l.instanceMatrix = m.instanceMatrix; l.instanceColor = m.instanceColor; l.boundingSphere = m.boundingSphere.clone(); l.layers.disable(0) }
-    if (hc) { const e = { mesh: m, lo: l, ...hc }; HCL.push(e); return () => { const k = HCL.indexOf(e); if (k >= 0) HCL.splice(k, 1) } } }, [])
+    const l2 = l2ref.current; if (l2) { l2.instanceMatrix = m.instanceMatrix; l2.instanceColor = m.instanceColor; l2.boundingSphere = m.boundingSphere.clone(); l2.layers.disable(0) }
+    if (hc) { const e = { mesh: m, lo: l, lo2: l2, ...hc }; HCL.push(e); return () => { const k = HCL.indexOf(e); if (k >= 0) HCL.splice(k, 1) } } }, [])
   const hi = <instancedMesh ref={el => { ref.current = el; if (isOcc) occ(el) }} args={[geo, mat, items.length]}>{outline && <Outlines thickness={outline} color={INK} />}</instancedMesh>
   // low-poly twin sharing the same instance buffers; only clustered sets (hc) get swapped
-  return lo && hc ? <>{hi}<instancedMesh ref={lref} args={[lo, mat, items.length]} /></> : hi
+  // optional third tier (lo2) for the orbit view / very far clusters
+  return lo && hc ? <>{hi}<instancedMesh ref={lref} args={[lo, mat, items.length]} />{lo2 && <instancedMesh ref={l2ref} args={[lo2, mat, items.length]} />}</> : hi
 }
 export function Instanced(props) {
   const { items } = props

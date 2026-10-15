@@ -389,6 +389,8 @@ function Prop({ prop, sd }) {
   if (prop === 'basket') return <group position={[0, -0.025, 0.004]}><M geo={G.basket} mat={cel('#c99a5a')} position={[0, -0.02, 0]} /><M geo={G.handle} mat={cel('#a87a44')} position={[0, -0.006, 0]} /><M geo={G.lump} mat={cel('#e86f5a')} position={[0.006, -0.002, 0.004]} scale={0.38} /><M geo={G.lump} mat={cel('#9cc46a')} position={[-0.008, -0.002, -0.004]} scale={0.34} /></group>
   if (prop === 'cane') return <group position={[0, 0.0, 0.008]}><mesh geometry={G.stick} material={wood} position={[0, 0.006, 0]} scale={[1.3, -0.3, 1.3]} /><M geo={G.hook} mat={wood} position={[0, 0.012, 0.01]} rotation={[0, Math.PI / 2, 0]} outline={false} /></group>
   if (prop === 'rod') return <group rotation={[1.0, 0, 0]}><mesh geometry={G.stick} material={wood} scale={[0.9, 0.42, 0.9]} /><mesh geometry={G.stick} material={cel('#e8e1d4')} position={[0, 0.42, 0]} rotation={[2.6, 0, 0]} scale={[0.25, 0.3, 0.25]} /></group>
+  if (prop === 'hoe') return <group rotation={[2.5, 0, 0]} position={[0, 0, 0.004]}><mesh geometry={G.stick} material={wood} position={[0, -0.12, 0]} scale={[1.1, 0.46, 1.1]} /><mesh material={cel('#8f8a84')} position={[0, 0.33, 0.012]} rotation={[0.3, 0, 0]}><boxGeometry args={[0.034, 0.008, 0.03]} /></mesh></group>
+  if (prop === 'broom') return <group rotation={[2.75, 0, 0]} position={[0, 0, 0.004]}><mesh geometry={G.stick} material={wood} position={[0, -0.1, 0]} scale={[1.1, 0.42, 1.1]} /><M geo={G.lump} mat={cel('#d8b56a')} position={[0, 0.33, 0]} scale={[0.75, 1.5, 0.5]} /></group>
   if (prop === 'umbrella') return <group rotation={[-0.1, 0, sd * 0.15]}><mesh geometry={G.stick} material={wood} scale={[1, 0.26, 1]} /><M geo={G.canopy} mat={cel('#e9a0b4')} position={[0, 0.26, 0]} /></group>
   return null
 }
@@ -444,6 +446,23 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       if (idle === 'wave' && k === 'R') { uz = side * -2.3 * i + uz * m; fx = -0.5 - Math.sin(t * 8) * 0.35 * i; ux *= m }
       up.rotation.set(ux, 0, uz)
       fo.rotation.set(spring(sp['fo' + k], fx, 40, 7, dt), 0, 0)
+    }
+    // ---- activities (st.act, eased by st.actW 0..1): sit / stretch / hoe / sweep / fish / chat / look / carry ----
+    const aw = st.actW || 0
+    if (aw > 0.001 && st.act) {
+      const a = st.act, w = aw, cyc = t * (a === 'hoe' ? 2.2 : a === 'sweep' ? 3.2 : 1)
+      const mix = (o, k, v) => { o.rotation[k] += (v - o.rotation[k]) * w }
+      if (a === 'sit') { B.root.position.y -= (st.seatDrop ?? 0.06) * w; for (const k of ['L', 'R']) { mix(B['th' + k], 'x', -1.5); mix(B['th' + k], 'z', 0); mix(B['sh' + k + 'n'], 'x', 1.45); mix(B['ft' + k], 'x', 0.05) }
+        mix(B.chest, 'x', 0.06); mix(B.root, 'x', -0.04); for (const k of ['L', 'R']) { mix(B['up' + k], 'x', -0.45); mix(B['fo' + k], 'x', -0.6) }
+        if (st.sitTalk) { mix(B.head, 'y', st.look || 0) } }
+      else if (a === 'stretch') { const e = 0.5 - 0.5 * Math.cos(Math.min(1, ((t * 0.35) % 1) * 1.6) * Math.PI * 2); for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'z', sd * (-0.15 - 2.65 * e)); mix(B['up' + k], 'x', -0.2 * e); mix(B['fo' + k], 'x', -0.25 - 0.3 * e) } mix(B.chest, 'x', -0.18 * e); mix(B.head, 'x', -0.35 * e); B.root.position.y += 0.006 * e * w }
+      else if (a === 'hoe' || a === 'sweep') { const sw = Math.sin(cyc), hoe = a === 'hoe'; mix(B.root, 'x', (hoe ? 0.2 : 0.1) + (hoe ? 0.08 : 0.03) * sw); mix(B.chest, 'x', (hoe ? 0.32 : 0.18) + (hoe ? 0.12 : 0.04) * sw); mix(B.chest, 'y', hoe ? 0 : 0.35 * sw); mix(B.head, 'x', 0.2)
+        for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'x', -1.05 - (hoe ? 0.45 : 0.15) * sw + (k === 'L' ? 0.15 : 0)); mix(B['up' + k], 'z', sd * 0.22); mix(B['fo' + k], 'x', -0.55 - (hoe ? 0.2 : 0.05) * sw) }
+        for (const k of ['L', 'R']) { mix(B['th' + k], 'x', k === 'L' ? -0.25 : 0.12); mix(B['sh' + k + 'n'], 'x', 0.22) } }
+      else if (a === 'fish') { const bob = Math.sin(t * 0.9) * 0.04 + (Math.sin(t * 0.23) > 0.93 ? Math.sin(t * 9) * 0.12 : 0); mix(B.upR, 'x', -0.85 + bob); mix(B.foR, 'x', -0.5); mix(B.upL, 'x', -0.6); mix(B.upL, 'z', 0.25); mix(B.foL, 'x', -0.9); mix(B.head, 'x', 0.12); mix(B.chest, 'x', 0.05) }
+      else if (a === 'chat') { const g = Math.max(0, Math.sin(t * 1.3 + (st.talkSeed || 0))), nod = Math.sin(t * 2.6) * 0.06; mix(B.upR, 'x', -0.35 - 0.5 * g); mix(B.foR, 'x', -0.9 - 0.5 * g); mix(B.upR, 'z', 0.1 * g); mix(B.head, 'x', 0.05 + nod); mix(B.head, 'z', 0.08 * Math.sin(t * 0.7)); mix(B.chest, 'y', 0.06 * Math.sin(t * 1.1)) }
+      else if (a === 'look') { const l = Math.sin(t * 0.55) * 0.9; mix(B.head, 'y', l); mix(B.chest, 'y', l * 0.25); mix(B.head, 'x', -0.08 + 0.06 * Math.sin(t * 0.3)); mix(B.upL, 'z', -0.1); mix(B.upR, 'z', 0.1) }
+      else if (a === 'carry') { for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'x', -0.55); mix(B['up' + k], 'z', sd * -0.12); mix(B['fo' + k], 'x', -1.2) } mix(B.chest, 'x', -0.06) }
     }
     const hairX = spring(sp.hairX, -0.12 * m - bobVel * 2.2 - sp.headX.v * 0.06, 28, 4.5, dt), hairZ = spring(sp.hairZ, -sp.headY.v * 0.05 + (st.turn || 0) * 0.1, 26, 4, dt)
     if (R_.hair) { R_.hair.rotation.x = hairX * 0.35; R_.hair.rotation.z = hairZ * 0.3 }

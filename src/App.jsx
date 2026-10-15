@@ -4,10 +4,14 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
-import { R, K, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W } from './world.js'
+import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W } from './world.js'
 import { Person, PEOPLE } from './people.jsx'
 import { GhibliPerson, Character } from './GhibliPerson.jsx'
 import { VILLAGERS } from './villagers.js'
+import { houseGeos, crownGeos, firGeos, foliage, fernGeo, tallGrassGeo, shrubGeo, shrubLo, rockGeo } from './scenery.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { NPCS, TALK, periodAt } from './talk/state.js'
+import { Talk, TalkOverlay } from './talk/Talk.jsx'
 // prototype-only characters load on demand (keeps them, and the 214 KB sprite sheet, out of the startup bundle)
 const GhibliPersonV1 = lazy(() => import('./GhibliPersonV1.jsx').then(m => ({ default: m.GhibliPersonV1 })))
 const SpritePerson = lazy(() => import('./SpritePerson.jsx').then(m => ({ default: m.SpritePerson })))
@@ -68,7 +72,7 @@ function Sky() {
       float st = step(.9965, h(floor(vP*220.)))*(.6+.4*sin(uTime*3.+h(floor(vP*220.))*40.)); c += st*uNight*vec3(1.,.97,.85);
       gl_FragColor = vec4(c,1.); }` }), [])
   useFrame(() => { mat.uniforms.uDay.value = T.day; mat.uniforms.uDusk.value = T.dusk; mat.uniforms.uNight.value = T.night })
-  return <mesh material={mat} renderOrder={-1}><sphereGeometry args={[80, 48, 32]} /></mesh>
+  return <mesh material={mat} renderOrder={-1}><sphereGeometry args={[80 * WS, 48, 32]} /></mesh>
 }
 
 const MOON_OFF = new THREE.Vector3(6, 0, 8), _wx = new THREE.Vector3(), _wy = new THREE.Vector3(), _wz = new THREE.Vector3(), _wm = new THREE.Matrix4(), _wn = new THREE.Vector3(), _wf = new THREE.Vector3()
@@ -85,10 +89,22 @@ function Lights() {
   return <><directionalLight ref={sun} castShadow={false} /><directionalLight ref={moon} color="#9db4ff" /><hemisphereLight ref={hemi} /></>
 }
 
+// worn footpaths: each village door to the nearest point of the main path, plus the tamped earth of the square.
+// Baked into the terrain's vertex colours (no extra geometry); noisy edges so they read as trodden, not drawn.
+let WORN = null
+function wornAt(v) {
+  if (!WORN) { WORN = []; const pts = []; for (let i = 0; i < 600; i++) pts.push(pathDir(i / 600 * Math.PI * 2).normalize())
+    HOUSES.forEach((h, i) => { const a = onHouse(i, 0, 0.42); let best = pts[0]; for (const p of pts) if (p.distanceTo(a) < best.distanceTo(a)) best = p; if (best.angleTo(a) * R < 2.2) WORN.push([a, best]) }) }
+  let w = 0; const nz = 0.75 + 0.25 * Math.sin(v.x * 140 + v.y * 60) * Math.sin(v.z * 120)
+  for (const [a, b] of WORN) { const ab = _wv.copy(b).sub(a), t = Math.max(0, Math.min(1, _wv2.copy(v).sub(a).dot(ab) / ab.lengthSq())), d = _wv2.copy(a).addScaledVector(ab, t).distanceTo(v) * R; const hw = 0.075 * (1 - 0.3 * Math.sin(t * 9)); if (d < hw * 1.8) w = Math.max(w, (1 - d / (hw * 1.8)) * 1.2 * nz) }
+  const sd = v.distanceTo(VILLAGE) * R; if (sd < 0.75) w = Math.max(w, Math.min(1, (0.75 - sd) / 0.3) * 0.62 * nz)
+  return w
+}
+const _wv = new THREE.Vector3(), _wv2 = new THREE.Vector3()
 function Ground() {
   const geo = useMemo(() => {
     const g = new THREE.IcosahedronGeometry(R, 64); const p = g.attributes.position, v = new THREE.Vector3(), cols = []
-    const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#ecd9a8'), bank = C('#6fa86a'), tmp = new THREE.Color()
+    const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#ecd9a8'), bank = C('#6fa86a'), worn = C('#cfd690'), tmp = new THREE.Color()
     // the icosphere is non-indexed (~6 copies of each point): shade each unique point once
     const seen = new Map()
     for (let i = 0; i < p.count; i++) {
@@ -99,6 +115,8 @@ function Ground() {
       tmp.copy(a).lerp(b, w * 0.5 + 0.5).lerp(c, Math.max(0, Math.sin(v.x * 11 + v.z * 9) * Math.sin(v.y * 13)) )
       const ds = distToCurve(v, streamDir, 420); if (ds < 0.07 * K) tmp.lerp(bank, 1 - ds / (0.07 * K))
       const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.6 * (1 - dp / (0.05 * K)))
+      if (dp < 0.1 * K && dp >= 0.05 * K) tmp.lerp(worn, 0.35 * (1 - (dp - 0.05 * K) / (0.05 * K)) * (0.6 + 0.4 * Math.sin(v.x * 90 + v.z * 70))) // trampled verge
+      { const wd = wornAt(v); if (wd > 0) tmp.lerp(wd > 0.55 ? sand : worn, Math.min(0.75, wd)) }
       zoneColour(v, tmp); cols.push(tmp.r, tmp.g, tmp.b); v.multiplyScalar(R + hh - (ds < 0.05 * K ? 0.08 * (1 - ds / (0.05 * K)) : 0)); p.setXYZ(i, v.x, v.y, v.z); seen.set(key, [tmp.r, tmp.g, tmp.b, v.x, v.y, v.z])
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals(); { const nr = g.attributes.normal, cl = g.attributes.color, nv = new THREE.Vector3(), pv = new THREE.Vector3(), cc = new THREE.Color(); for (let i = 0; i < p.count; i++) { pv.fromBufferAttribute(p, i).normalize(); nv.fromBufferAttribute(nr, i); cc.fromBufferAttribute(cl, i); rockify(pv, nv, cc); cl.setXYZ(i, cc.r, cc.g, cc.b) } } return g
@@ -257,13 +275,17 @@ function BusStop() {
   </Surface>
 }
 
-function Moss() {
-  const items = useMemo(() => { const a = []; HOUSES.forEach((hn, i) => { const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, p = place(hn, -0.05, i * 1.3); [[-0.22, 0.1, 0.17], [0.18, 0.06, 0.2], [0.05, 0.15, -0.1], [-0.15, 0.04, -0.2]].forEach(([x, y, z], k) => { if ((i + k) % 3 === 2) return; const pos = p.pos.clone().add(new THREE.Vector3(x * w, tall + y, z).applyQuaternion(p.q)); a.push({ pos, q: p.q.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(z > 0 ? 0.6 : -0.6, rnd(), 0))), s: 0.7 + rnd() * 0.6, c: C('#7fae5f').lerp(CC('#a8c86a'), rnd()) }) }) }); return a }, [])
-  const geo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.06, 1); g.scale(1, 0.35, 0.8); return g }, [])
+const HGEO = new Map()
+const houseVariant = (i) => { const k = `${i % 3}|${i % 2}|${i % 4}`; let g = HGEO.get(k); if (!g) HGEO.set(k, g = houseGeos({ w: 0.55 + (i % 3) * 0.1, tall: i % 2 ? 0.55 : 0.45, roof: ['#d9655b', '#5f8fc4', '#e8a24a', '#c97b9a'][i % 4], wall: i % 2 ? '#fbf3e4' : '#f2e2c4', curtain: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'][i % 4], seed: i % 4 })); return g }
+const HM = { shell: paint(toon('#ffffff', { vertexColors: true }), 0.1, true, 6), detail: paint(toon('#ffffff', { vertexColors: true }), 0.12, false, 9) }
+const HOUSE_LIFT = -0.02
+function Moss() { // moss cushions on the tile rows (follow the roof slope) and at the wall foot
+  const items = useMemo(() => { const a = []; HOUSES.forEach((hn, i) => { const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, half = 0.335, ridge = tall + 0.31, eave = tall - 0.015, ang = Math.atan2(ridge - eave, half), p = place(hn, HOUSE_LIFT, i * 1.3)
+    ;[[-0.3, 0.72, 1], [0.22, 0.86, 1], [0.05, 0.62, -1], [-0.18, 0.9, -1]].forEach(([x, u, sd], k) => { if ((i + k) % 3 === 2) return; const pos = p.pos.clone().add(new THREE.Vector3(x * w, ridge - (ridge - eave) * u + 0.03 + k * 0.002, sd * half * u).applyQuaternion(p.q)); a.push({ pos, q: p.q.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(sd * ang, 0, 0))).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rnd() * 6, 0))), s: 0.6 + rnd() * 0.5, c: C('#7fae5f').lerp(CC('#a8c86a'), rnd()) }) }) }); return a }, [])
+  const geo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.06, 1); g.scale(1, 0.3, 0.8); return g }, [])
   return <Instanced items={items} geo={geo} mat={useMemo(() => toon('#ffffff'), [])} />
 }
-
-const CHIMNEYS = HOUSES.map((hn, i) => { const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, p = place(hn, -0.05, i * 1.3); return { top: p.pos.clone().add(new THREE.Vector3(w * 0.28, tall + 0.47, 0.05).applyQuaternion(p.q)), up: p.n } })
+const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3), c = houseVariant(i).chimney; return { top: p.pos.clone().add(c.clone().applyQuaternion(p.q)), up: p.n } })
 function Smoke() {
   const ref = useRef(), K = 6, o = useMemo(() => new THREE.Object3D(), []), side = useMemo(() => new THREE.Vector3(1, 0, 0), [])
   useFrame(() => {
@@ -297,7 +319,7 @@ function Seeds() {
 function Wildflowers() {
   const { heads, stems } = useMemo(() => {
     const heads = [], stems = [], fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff', '#ff9a7a', '#a8d8ff'].map(C)
-    for (let i = 0; i < 2000; i++) { const n = randDir(); if (busy(n) || onBridge(n) || zoneWet(n)) continue; const s = 0.7 + rnd() * 0.6, p = place(n, 0, rnd() * 6); stems.push({ ...p, s }); heads.push({ ...place(n, 0.075 * s), s, c: fc[Math.floor(rnd() * 6)] }) }
+    for (let i = 0; i < 2000 * DENS; i++) { const n = randDir(); if (busy(n) || onBridge(n) || zoneWet(n)) continue; const s = 0.7 + rnd() * 0.6, p = place(n, 0, rnd() * 6); stems.push({ ...p, s }); heads.push({ ...place(n, 0.075 * s), s, c: fc[Math.floor(rnd() * 6)] }) }
     return { heads, stems }
   }, [])
   const geos = useMemo(() => { const st = new THREE.CylinderGeometry(0.004, 0.005, 0.075, 3); st.translate(0, 0.0375, 0); const hd = new THREE.IcosahedronGeometry(0.022, 0); hd.scale(1, 0.6, 1); return { st, hd } }, [])
@@ -318,14 +340,14 @@ const busy = (n) => EXTRA_BUSY.some(e => e.distanceTo(n) < 0.1 * K) || SPOTS.vie
 
 const tc = ['#5fae63', '#7cc26a', '#4f9a5e', '#9ccf6a'].map(C)
 const TREES = [], FIRS = []
-for (let i = 0; i < 700; i++) { const n = randDir(); const cl = Math.sin(n.x * 4 + 1) * Math.sin(n.z * 3 - n.y * 2); if (cl < 0.1 || busy(n)) continue; const fir = rnd() < 0.4; (fir ? FIRS : TREES).push({ ...place(n, -0.02, rnd() * 6), s: 0.45 + rnd() * 0.35, c: tc[i % 4].clone().multiplyScalar(0.9 + rnd() * 0.2) }) }
+for (let i = 0; i < 700 * DENS; i++) { const n = randDir(); const cl = Math.sin(n.x * 4 + 1) * Math.sin(n.z * 3 - n.y * 2); if (cl < 0.1 || busy(n)) continue; const fir = rnd() < 0.4; (fir ? FIRS : TREES).push({ ...place(n, -0.02, rnd() * 6), s: 0.45 + rnd() * 0.35, c: tc[i % 4].clone().multiplyScalar(0.9 + rnd() * 0.2) }) }
 const COLLIDERS = [...HOUSES.map(n => ({ n, r: 0.085 * K })), ...MILLS.map(n => ({ n, r: 0.065 * K })), ...[...TREES, ...FIRS].map(t => ({ n: t.n, r: (0.03 + 0.02 * t.s) * K })), ...ZONE_COLLIDERS]
 const _setupHome = () => setupHome({ colliders: COLLIDERS, P, homeN: HOUSES[0], doorN: onHouse(0, 0, 0.3), outN: onHouse(0, 0, 0.78) })
 function Vegetation() {
   const { grass, flowers } = useMemo(() => {
     const grass = [], flowers = [], g1 = C('#86c46c'), g2 = C('#b9de86'), fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff'].map(C)
     const _t = new THREE.Vector3()
-    for (let i = 0; i < 750; i++) { // lawn patches: soft dome tufts with flower clumps
+    for (let i = 0; i < 750 * DENS; i++) { // lawn patches: soft dome tufts with flower clumps
       const c = randDir(); if (busy(c)) continue
       const k = 6 + Math.floor(rnd() * 14), sp = (0.03 + rnd() * 0.05) * K, col = g1.clone().lerp(g2, rnd())
       for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (distToCurve(n, streamDir, 90) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: 0.7 + rnd() * 0.8, c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
@@ -336,39 +358,62 @@ function Vegetation() {
   const geos = useMemo(() => {
     const tuft = new THREE.SphereGeometry(0.07, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2); tuft.scale(1, 0.75, 1)
     const p = tuft.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), a = Math.atan2(z, x); const w = 1 + 0.18 * Math.sin(a * 5); p.setX(i, x * w); p.setZ(i, z * w); p.setY(i, p.getY(i) * (1 + 0.25 * Math.sin(a * 5))) } tuft.computeVertexNormals()
-    const crown = new THREE.IcosahedronGeometry(0.42, 1); crown.scale(1, 1.15, 1); crown.translate(0, 0.85, 0)
-    const trunk = new THREE.CylinderGeometry(0.06, 0.09, 0.6, 6); trunk.translate(0, 0.3, 0)
-    const fir = new THREE.ConeGeometry(0.32, 1.25, 7); fir.translate(0, 0.9, 0)
+    const cg = crownGeos(), fg = firGeos(), crown = cg.hi, crownLo = cg.lo, crownLo2 = cg.lo2, fir = fg.hi, firLo = fg.lo
+    const trunk = new THREE.CylinderGeometry(0.05, 0.1, 0.62, 7); trunk.translate(0, 0.3, 0); { const p = trunk.attributes.position; for (let i = 0; i < p.count; i++) if (p.getY(i) < 0.05) { p.setX(i, p.getX(i) * 1.25); p.setZ(i, p.getZ(i) * 1.25) } trunk.computeVertexNormals() } // root flare
     const fl = new THREE.IcosahedronGeometry(0.035, 1)
     // far LOD (whole clusters swap, see HorizonCull): same silhouette, fewer facets
     const tuftLo = new THREE.SphereGeometry(0.07, 10, 3, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo.scale(1.08, 0.9, 1.08) // same lobes, smooth normals, a touch fuller so ridges stay full
     { const q2 = tuftLo.attributes.position; for (let i = 0; i < q2.count; i++) { const x = q2.getX(i), z = q2.getZ(i), a = Math.atan2(z, x); const w = 1 + 0.18 * Math.sin(a * 5); q2.setX(i, x * w); q2.setZ(i, z * w); q2.setY(i, q2.getY(i) * (1 + 0.25 * Math.sin(a * 5))) } tuftLo.computeVertexNormals() }
-    const flLo = new THREE.IcosahedronGeometry(0.039, 0), crownLo = new THREE.IcosahedronGeometry(0.43, 0); crownLo.scale(1, 1.15, 1); crownLo.translate(0, 0.85, 0)
-    return { tuft, crown, trunk, fir, fl, tuftLo, flLo, crownLo }
+    const flLo = new THREE.IcosahedronGeometry(0.039, 0)
+    const tuftLo2 = new THREE.SphereGeometry(0.075, 6, 2, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo2.scale(1.1, 0.95, 1.1) // orbit / very far: a soft dome
+    return { tuft, crown, trunk, fir, fl, tuftLo, tuftLo2, flLo, crownLo, crownLo2, firLo }
   }, [])
-  const mats = useMemo(() => ({ grass: windify(toon('#ffffff'), 6), crown: windify(toon('#ffffff'), 0.08, 0.4), fir: windify(toon('#ffffff'), 0.06, 0.3), trunk: MAT.wood, fl: toon('#ffffff') }), [])
+  const mats = useMemo(() => ({ grass: windify(toon('#ffffff'), 6), crown: foliage(toon('#ffffff', { vertexColors: true }), 0.08, 0.4), fir: foliage(toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }), 0.06, 0.3), trunk: MAT.wood, fl: toon('#ffffff') }), [])
   const trunkItems = [...TREES, ...FIRS].map(t => ({ ...t, c: null }))
   return <>
-    <Instanced items={grass} geo={geos.tuft} lo={geos.tuftLo} mat={mats.grass} />
+    <Instanced items={grass} geo={geos.tuft} lo={geos.tuftLo} lo2={geos.tuftLo2} mat={mats.grass} />
     <Instanced items={flowers} geo={geos.fl} lo={geos.flLo} mat={mats.fl} />
     <Instanced items={trunkItems} geo={geos.trunk} mat={mats.trunk} />
-    <Instanced items={TREES} geo={geos.crown} mat={mats.crown} isOcc />
-    <Instanced items={FIRS} geo={geos.fir} mat={mats.fir} isOcc />
+    <Instanced items={TREES} geo={geos.crown} lo={geos.crownLo} lo2={geos.crownLo2} mat={mats.crown} isOcc />
+    <Instanced items={FIRS} geo={geos.fir} lo={geos.firLo} mat={mats.fir} isOcc />
+    <EdgeVeg />
   </>
 }
 
 
+// timber-and-plaster houses: one outlined shell (walls, gables, tile rows, chimney, porch roof), one detail mesh
+// (timber frame, gutters, shutters, flower boxes, door, porch posts, step) and one glass mesh — 3 meshes + 1 hull
+// per house instead of ~20. Geometry is shared between houses with the same size/colour variant.
+// layered vegetation at the edges (instanced, clustered + LOD): ferns at tree feet, shrubs hugging house walls and
+// path verges, tall grass along the path and stream banks, mossy rocks scattered and on the banks
+const _ev = new THREE.Vector3()
+const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && distToCurve(n, streamDir, 140) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
+function EdgeVeg() {
+  const S = useMemo(() => {
+    const ferns = [], shrubs = [], tall = [], rocks = [], fc = C('#7fb86a'), sc = ['#6fa860', '#86b86a', '#5f9a5a'].map(C), gc = C('#9ccf72'), rc = C('#ffffff')
+    const put = (arr, n, s, c, lift = -0.005) => { if (vergeOK(n)) arr.push({ ...place(n, lift, rnd() * 6.28), s, c }) }
+    for (const t of [...TREES, ...FIRS]) { if (rnd() < 0.35) continue; const k = 1 + Math.floor(rnd() * 3); for (let j = 0; j < k; j++) put(ferns, around(t.n, (0.12 + rnd() * 0.2) / R, rnd() * 6.28), 0.75 + rnd() * 0.6, fc.clone().multiplyScalar(0.85 + rnd() * 0.3)) }
+    HOUSES.forEach((h, i) => { const w = 0.55 + (i % 3) * 0.1; for (const [x, z] of [[-w / 2 - 0.07, -0.18], [w / 2 + 0.07, 0.12], [-w / 2 - 0.06, 0.15], [w / 2 + 0.08, -0.2], [-0.24, -0.33], [0.2, -0.32], [w / 2 - 0.05, 0.36]]) { if (rnd() < 0.25) continue; const n = onHouse(i, x, z); shrubs.push({ ...place(n, -0.01, rnd() * 6.28), s: 0.7 + rnd() * 0.5, c: sc[Math.floor(rnd() * 3)].clone() }) } })
+    for (let i = 0; i < 1300 * DENS; i++) { const t = rnd() * Math.PI * 2, c = (rnd() < 0.62 ? pathDir : streamDir)(t).normalize(), t2 = (c === null ? 0 : 1); const f = pathDir(t + 0.01).normalize().sub(c), side = _ev.crossVectors(c, f).normalize(), off = (rnd() < 0.5 ? -1 : 1) * (0.2 + rnd() * 0.22) / R
+      const n = c.clone().addScaledVector(side, off).normalize(); const r = rnd(); if (r < 0.62) put(tall, n, 0.7 + rnd() * 0.7, gc.clone().multiplyScalar(0.85 + rnd() * 0.25)); else if (r < 0.8) put(shrubs, n, 0.6 + rnd() * 0.5, sc[Math.floor(rnd() * 3)].clone()); else if (r < 0.88) put(rocks, n, 0.5 + rnd() * 0.6, rc.clone().multiplyScalar(0.9 + rnd() * 0.15), -0.015) }
+    for (let i = 0; i < 260 * DENS; i++) { const n = randDir(); if (busy(n)) continue; put(rocks, n, 0.6 + rnd() * 1.1, rc.clone().multiplyScalar(0.88 + rnd() * 0.15), -0.02); if (rnd() < 0.5) put(ferns, around(n, 0.12 / R, rnd() * 6), 0.7 + rnd() * 0.4, fc.clone()) }
+    return { ferns, shrubs, tall, rocks }
+  }, [])
+  const G_ = useMemo(() => ({ fern: fernGeo(6), fernLo: fernGeo(4), tall: tallGrassGeo(7), tallLo: tallGrassGeo(3), shrub: shrubGeo(), shrubLo: shrubLo(), rock: rockGeo(1, 2), rockLo: rockGeo(0, 2) }), [])
+  const M_ = useMemo(() => ({ leaf: windify(toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }), 4, 0), shrub: foliage(toon('#ffffff', { vertexColors: true }), 1.5, 0.02), rock: paint(toon('#ffffff', { vertexColors: true }), 0.14, true, 14) }), [])
+  return <>
+    <Instanced items={S.ferns} geo={G_.fern} lo={G_.fernLo} mat={M_.leaf} />
+    <Instanced items={S.tall} geo={G_.tall} lo={G_.tallLo} mat={M_.leaf} />
+    <Instanced items={S.shrubs} geo={G_.shrub} lo={G_.shrubLo} mat={M_.shrub} />
+    <Instanced items={S.rocks} geo={G_.rock} lo={G_.rockLo} mat={M_.rock} />
+  </>
+}
 function House({ n, i }) {
-  const roof = MAT.roofs[i % 4], w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45
-  return <Surface n={n} lift={-0.05} spin={i * 1.3}>
-    <mesh position={[0, tall / 2, 0]} material={i % 2 ? MAT.wall : MAT.wall2} ref={occ}><boxGeometry args={[w, tall, 0.5]} /><Outlines thickness={0.025} color={INK} /></mesh>
-    <mesh position={[0, tall + 0.2, 0]} rotation={[0, Math.PI / 4, 0]} scale={[w * 1.05, 1, 0.75]} material={roof} ref={occ}><coneGeometry args={[0.6, 0.42, 4]} /><Outlines thickness={0.025} color={INK} /></mesh>
-    <mesh position={[w * 0.28, tall + 0.3, 0.05]} material={MAT.stone}><boxGeometry args={[0.09, 0.3, 0.09]} /><Outlines thickness={0.015} color={INK} /></mesh>
-    {[-1, 1].map(s => <group key={s} position={[s * w * 0.27, tall * 0.55, 0.252]}><mesh material={MAT.win}><planeGeometry args={[0.11, 0.13]} /></mesh>
-      {[-1, 1].map(c => <mesh key={c} position={[c * 0.04, 0.005, 0.002]} material={DM.curtains[i % 4]}><planeGeometry args={[0.032, 0.125]} /></mesh>)}
-      <mesh position={[0, 0.07, 0.003]} material={MAT.wood}><boxGeometry args={[0.13, 0.015, 0.01]} /></mesh><mesh position={[0, -0.072, 0.012]} material={MAT.wood}><boxGeometry args={[0.13, 0.014, 0.03]} /></mesh></group>)}
-    <mesh position={[0, 0.12, 0.252]} material={MAT.wood}><planeGeometry args={[0.12, 0.22]} /></mesh>
-    {[-1, 1].map(s => <mesh key={'b' + s} position={[w / 2 + 0.002, tall * 0.55, s * 0.12]} rotation={[0, Math.PI / 2, 0]} material={MAT.win}><planeGeometry args={[0.1, 0.12]} /></mesh>)}
+  const hg = houseVariant(i)
+  return <Surface n={n} lift={HOUSE_LIFT} spin={i * 1.3}>
+    <mesh geometry={hg.shell} material={HM.shell} ref={occ}><Outlines thickness={0.02} color={INK} /></mesh>
+    <mesh geometry={hg.detail} material={HM.detail} />
+    <mesh geometry={hg.glass} material={MAT.win} />
   </Surface>
 }
 function Lamp({ n, i = 0 }) {
@@ -414,40 +459,84 @@ const WALKERS = (() => {
   W.push({ cfg: P_[11], mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.3 })
   return W
 })()
+// Villager life: each walker has a schedule by time of day (morning / day / evening / night). A plan entry picks
+// how they move (route speed, pacing, or going to an anchor spot) and what they do there (st.act: sit, stretch,
+// hoe, sweep, fish, chat, look, carry). Path walkers stroll at different speeds by period and stop now and then
+// to look around or stretch. While she talks to one, they stop and turn to her.
+const SQ = around(VILLAGE, 0.0, 0)
+const sqSpot = (d, b) => around(SQ, d / R, b)
+const BENCH = { n: sqSpot(0.42, 0.55), fwd: null }; BENCH.fwd = SQ.clone().sub(BENCH.n)
+const benchSeat = (x) => { const nn = BENCH.n.clone().normalize(), f = BENCH.fwd.clone().addScaledVector(nn, -BENCH.fwd.dot(nn)).normalize(), side = new THREE.Vector3().crossVectors(nn, f); return nn.addScaledVector(side, x / R).addScaledVector(f, 0.005 / R).normalize() }
+const CHAT_A = sqSpot(0.2, 2.6), CHAT_B = CHAT_A.clone().addScaledVector(tangentAt(CHAT_A, 0.3), 0.34 / R).normalize()
+const SWEEP = sqSpot(0.55, 3.9)
+// fwd: a unit tangent direction, or {at: point} to face a point
+const A = (n, at, act, extra) => ({ n, at, act, ...extra })
 const NEW_WALKERS = (() => {
   const W = [], by = z => VILLAGERS.filter(v => v.zone === z)
-  by('path').forEach((cfg, i, a) => W.push({ cfg, mode: 'path', t0: (i / a.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (cfg.age === 'elder' ? 0.55 : 1), off: (rnd() - 0.5) * 0.1 }))
-  const sq = around(VILLAGE, 0.0, 0)
-  by('square').forEach((cfg, j) => { const n = around(sq, 0.22 / R, j * 2.1); W.push({ cfg, mode: 'idle', n, fwd: sq.clone().sub(n) }) })
+  const SPEEDS = { morning: 1.15, day: 1, evening: 0.72, night: 0.5 }
+  by('path').forEach((cfg, i, a) => W.push({ cfg, key: cfg.name, mode: 'path', t0: (i / a.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (cfg.age === 'elder' ? 0.55 : cfg.age === 'kid' ? 1.25 : 1), off: (rnd() - 0.5) * 0.1,
+    speeds: SPEEDS, pause: { every: 22 + i * 4.3, len: 4.5 + (i % 3), act: i % 3 === 1 ? 'stretch' : 'look' } }))
+  const [gma, gpa, bak] = by('square')
+  const front = BENCH.n.clone().addScaledVector(BENCH.fwd, 1).normalize() // a point in front of the bench
+  const seat = (x, extra) => A(benchSeat(x), front, 'sit', extra)
+  W.push({ cfg: gma, key: gma.name, mode: 'anchor', plan: { morning: seat(-0.09), day: seat(-0.09), evening: seat(-0.09, { sitTalk: 0.45 }), night: seat(-0.09) } })
+  W.push({ cfg: gpa, key: gpa.name, mode: 'anchor', plan: { morning: A(sqSpot(0.3, 1.6), SQ, 'stretch'), day: A(CHAT_B, CHAT_A, 'chat', { seed: 1.7 }), evening: seat(0.09, { sitTalk: -0.45 }), night: seat(0.09) } })
+  W.push({ cfg: { ...bak, hold: { R: 'broom' } }, key: bak.name, mode: 'anchor', plan: { morning: A(SWEEP, SQ, 'sweep', { drift: 0.18 }), day: A(CHAT_A, CHAT_B, 'chat', { seed: 0 }), evening: A(SWEEP, SQ, 'sweep', { drift: 0.18 }), night: A(sqSpot(0.25, 3.3), SQ, 'look') } })
   const [fm, fw, sg, db] = by('harbour'), pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
-  W.push({ cfg: fm, mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.22 })
-  W.push({ cfg: fw, mode: 'idle', n: around(Zc.harbour, 0.22 * 1.2, 2.3), fwd: Zc.harbour.clone() })
-  W.push({ cfg: sg, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2 })
-  W.push({ cfg: db, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45 })
-  W.push({ cfg: by('lake')[0], mode: 'idle', n: (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })(), fwd: Zc.lake.clone(), dock: true })
+  W.push({ cfg: fm, key: fm.name, mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.22, work: { act: 'fish', on: 9, off: 7, periods: ['morning', 'day'] } })
+  W.push({ cfg: fw, key: fw.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.2, 2.3), tan: tangentAt(Zc.harbour, 2.3), range: 0.5, w: 0.16, carry: true, work: { act: 'chat', on: 6, off: 9, periods: ['day', 'evening'] } })
+  W.push({ cfg: sg, key: sg.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2, work: { act: 'look', on: 6, off: 10, periods: ['evening', 'night'] } })
+  W.push({ cfg: db, key: db.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45, speeds: { morning: 1.3, day: 1.15, evening: 0.9, night: 0.5 }, work: { act: 'stretch', on: 4, off: 14, periods: ['morning', 'day'] } })
+  const ang = by('lake')[0], dockN = (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })()
+  W.push({ cfg: ang, key: ang.name, mode: 'anchor', dock: true, plan: { morning: A(dockN, Zc.lake, 'fish'), day: A(dockN, Zc.lake, 'fish'), evening: A(dockN, Zc.lake, 'fish'), night: A(dockN, Zc.lake, 'look') } })
   const [fa, fwf] = by('terraces')
-  W.push({ cfg: fa, mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18 })
-  W.push({ cfg: fwf, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12 })
-  W.push({ cfg: by('ruins')[0], mode: 'idle', n: around(Zc.ruins, 0.25 / R, 4.0), fwd: Zc.ruins.clone(), look: -0.35 })
-  W.push({ cfg: by('mills')[0], mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35 })
+  W.push({ cfg: { ...fa, hold: { R: 'hoe' } }, key: fa.name, mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18, work: { act: 'hoe', on: 9, off: 6, periods: ['morning', 'day', 'evening'] } })
+  W.push({ cfg: fwf, key: fwf.name, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12, work: { act: 'hoe', on: 7, off: 5, periods: ['morning', 'day'] } })
+  const sch = by('ruins')[0], rs = around(Zc.ruins, 0.25 / R, 4.0); W.push({ cfg: sch, key: sch.name, mode: 'anchor', plan: { morning: A(rs, Zc.ruins, 'stretch'), day: A(around(Zc.ruins, 0.32 / R, 3.2), Zc.ruins, 'look'), evening: A(rs, Zc.ruins, 'look'), night: A(rs, Zc.ruins, 'look') } })
+  const mg = by('mills')[0]; W.push({ cfg: mg, key: mg.name, mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35, speeds: { morning: 1.2, day: 1, evening: 0.8, night: 0.4 }, carry: true, work: { act: 'stretch', on: 4, off: 12, periods: ['evening'] } })
   const [bs, td] = by('giant')
-  W.push({ cfg: bs, mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3 })
-  W.push({ cfg: td, mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.3 })
+  W.push({ cfg: bs, key: bs.name, mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3, work: { act: 'look', on: 5, off: 8, periods: ['morning', 'day', 'evening', 'night'] } })
+  W.push({ cfg: td, key: td.name, mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.42 })
   return W
 })()
-const _c0 = new THREE.Vector3()
+const _c0 = new THREE.Vector3(), _tw = new THREE.Vector3()
 const RATE = { toddler: 12, kid: 10.5, teen: 9, adult: 8, elder: 6 }
+const STATIC_ACTS = new Set(['sit', 'stretch', 'hoe', 'sweep', 'fish', 'chat', 'look'])
 function Walker({ w, i }) {
-  const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0 }), [])
+  const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0, act: null, actW: 0, talkSeed: i * 1.3 }), [])
   const camera = useThree(s => s.camera)
+  const L = useMemo(() => ({ clk: 0, pc: 0, cur: null, curF: new THREE.Vector3(), face: new THREE.Vector3() }), [])
+  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.95 * 0.8 * (w.cfg.body?.H ?? 1) }; NPCS.push(c); return c }, [])
+  useEffect(() => () => { const k = NPCS.indexOf(npc); if (k >= 0) NPCS.splice(k, 1) }, [])
   useFrame((_, dt) => {
-    dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t
-    let n, fwd, mv = 1
-    if (w.mode === 'path') { const a = w.t0 + t * w.sp; n = pathDir(a).normalize(); const n2 = pathDir(a + 0.01 * Math.sign(w.sp)).normalize(); fwd = n2.sub(n).normalize(); n.addScaledVector(_wx.crossVectors(n, fwd), w.off / R).normalize() }
-    else if (w.mode === 'pace') { const ph = t * w.w + i, s = Math.sin(ph), c = Math.cos(ph); n = _wn.copy(w.n).addScaledVector(w.tan, s * w.range / R).normalize(); fwd = _wf.copy(w.tan).multiplyScalar(c >= 0 ? 1 : -1); mv = ss(0.12, 0.35, Math.abs(c)) }
-    else { n = _wn.copy(w.n).normalize(); fwd = _wf.copy(w.fwd); mv = 0 }
+    dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t; npc.obj = ref.current; npc.ready = ready
+    const per = periodAt(rot.a), talking = !!w.talking
+    let n, fwd, mv = 1, act = null
+    if (w.mode === 'path') {
+      const pz = w.pause, inPause = pz && ((t + i * 7.1) % pz.every) < pz.len
+      const spd = talking || inPause ? 0 : (w.speeds?.[per] ?? 1); L.clk += dt * spd; if (inPause) act = pz.act
+      const a = w.t0 + L.clk * w.sp; n = pathDir(a).normalize(); const n2 = pathDir(a + 0.01 * Math.sign(w.sp)).normalize(); fwd = n2.sub(n).normalize(); n.addScaledVector(_wx.crossVectors(n, fwd), w.off / R).normalize()
+      mv = spd > 0 ? Math.min(1, 0.55 + 0.45 * spd) : 0; st.rate = spd
+    } else if (w.mode === 'pace') {
+      const wk = w.work, working = !!wk && wk.periods.includes(per) && ((t + i * 3.3) % (wk.on + wk.off)) < wk.on
+      const spd = talking || working ? 0 : (w.speeds?.[per] ?? (per === 'night' ? 0.55 : per === 'evening' ? 0.8 : 1))
+      L.pc += dt * w.w * spd; const ph = L.pc + i, s_ = Math.sin(ph), c = Math.cos(ph)
+      n = _wn.copy(w.n).addScaledVector(w.tan, s_ * w.range / R).normalize(); fwd = _wf.copy(w.tan).multiplyScalar(c >= 0 ? 1 : -1); mv = spd > 0 ? ss(0.12, 0.35, Math.abs(c)) : 0
+      if (working) act = wk.act; else if (w.carry && mv > 0.2) act = 'carry'
+    } else if (w.mode === 'anchor') { // walk to this period's spot, then do the activity there
+      const pl = w.plan[per]; if (!L.cur) { L.cur = pl.n.clone().normalize(); L.curF.copy(pl.at).sub(L.cur) }
+      let goal = pl.n; if (pl.drift) goal = _tw.copy(pl.n).addScaledVector(tangentAt(pl.n, 0), Math.sin(t * 0.25 + i) * pl.drift / R).normalize()
+      const d = L.cur.angleTo(goal) * R, sweeping = pl.drift && d < 0.25
+      if (d > 0.012 && !talking) { const step = Math.min(d, (sweeping ? 0.1 : 0.28) * dt) / R; const dv = _tw.copy(goal).addScaledVector(L.cur, -L.cur.dot(goal)).normalize(); L.cur.addScaledVector(dv, step).normalize(); if (!sweeping) L.curF.lerp(dv, Math.min(1, dt * 6)); mv = sweeping ? 0.4 : d > 0.12 ? 1 : 0.5; if (sweeping) act = pl.act }
+      else { mv = 0; act = pl.act }
+      if (mv === 0 || sweeping) { L.face.copy(pl.at).sub(L.cur); L.curF.lerp(L.face.addScaledVector(L.cur, -L.face.dot(L.cur)).normalize(), Math.min(1, dt * 3)) }
+      n = _wn.copy(L.cur); fwd = _wf.copy(L.curF); st.sitTalk = pl.sitTalk; st.look = pl.sitTalk || 0; if (pl.seed !== undefined) st.talkSeed = pl.seed
+    } else { n = _wn.copy(w.n).normalize(); fwd = _wf.copy(w.fwd); mv = 0 }
+    if (talking && P.n) { mv = 0; if (act !== 'sit') act = 'chat'; L.face.copy(P.n).sub(n); L.face.addScaledVector(n, -L.face.dot(n)); if (L.face.lengthSq() > 1e-12) { L.face.normalize(); L.curF.lerp(L.face, Math.min(1, dt * 5)); fwd.copy(L.curF) } }
     fwd.addScaledVector(n, -fwd.dot(n)).normalize()
-    st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (NEWCHAR ? (w.cfg.walk?.rate ?? RATE[w.cfg.age] ?? 8) : w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move
+    if (act && STATIC_ACTS.has(act) && !(w.mode === 'anchor' && act === 'sweep')) mv = 0
+    if (act) st.act = act; st.actW += ((act ? 1 : 0) - st.actW) * Math.min(1, dt * 3.5); if (!act && st.actW < 0.02) st.act = null
+    st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (NEWCHAR ? (w.cfg.walk?.rate ?? RATE[w.cfg.age] ?? 8) : w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move * (w.mode === 'path' ? Math.max(0.7, Math.min(1.15, st.rate ?? 1)) : 1)
     const g = ref.current; g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, fwd), n, fwd))
     g.position.copy(n).multiplyScalar(w.dock ? R + LAKE_W + 0.135 : R + height(n) + 0.005 + bridgeLift(n))
     if (planetRef.current) { // cull by distance (close views) and by horizon (anything on the planet's far side)
@@ -457,6 +546,16 @@ function Walker({ w, i }) {
   })
   return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
+// the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
+function Bench() {
+  const geo = useMemo(() => { const parts = [], add = (w, h, d, x, y, z, c, rx = 0) => { const g = new THREE.BoxGeometry(w, h, d); if (rx) g.rotateX(rx); g.translate(x, y, z); const col = C(c), a = []; for (let k = 0; k < g.attributes.position.count; k++) a.push(col.r, col.g, col.b); g.setAttribute('color', new THREE.Float32BufferAttribute(a, 3)); parts.push(g) }
+    for (const x of [-0.17, 0.17]) { add(0.03, 0.1, 0.1, x, 0.05, -0.03, '#6e4a33'); add(0.026, 0.2, 0.026, x, 0.15, -0.085, '#6e4a33', -0.12) }
+    for (const z of [-0.07, -0.03, 0.01]) add(0.42, 0.016, 0.036, 0, BENCH_Y, z, '#a8744c')
+    for (const y of [0.17, 0.215]) add(0.42, 0.034, 0.014, 0, y, -0.095 - (y - 0.17) * 0.12, '#9a6a44')
+    return mergeGeometries(parts) }, [])
+  return <Basis n={BENCH.n} fwd={BENCH.fwd}><mesh geometry={geo} material={useMemo(() => paint(toon('#ffffff', { vertexColors: true }), 0.15, false, 9), [])}><Outlines thickness={0.006} color={INK} /></mesh></Basis>
+}
+const BENCH_Y = 0.104
 const LINEUP = around(Zc.meadow, 0.1, 2.4)
 function Lineup() {
   const LIST = NEWCHAR ? VILLAGERS : PEOPLE
@@ -468,14 +567,14 @@ function Lineup() {
 }
 
 function Clouds() {
-  const cl = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ axis: new THREE.Vector3(rnd() - 0.5, 1, rnd() - 0.5).normalize(), off: rnd() * 6, r: 11.5 + rnd() * 2.5, y: (i % 2 ? -1 : 1) * (4.2 + rnd() * 3.5), puffs: Array.from({ length: 4 + (i % 3) }, (_, k) => [k * 0.65 - 1.1, rnd() * 0.35, rnd() * 0.4, 0.5 + rnd() * 0.45]) })), [])
+  const cl = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ axis: new THREE.Vector3(rnd() - 0.5, 1, rnd() - 0.5).normalize(), off: rnd() * 6, r: (11.5 + rnd() * 2.5) * WS, y: (i % 2 ? -1 : 1) * (4.2 + rnd() * 3.5) * WS, puffs: Array.from({ length: 4 + (i % 3) }, (_, k) => [k * 0.65 - 1.1, rnd() * 0.35, rnd() * 0.4, 0.5 + rnd() * 0.45]) })), [])
   const refs = useRef([]); const mat = useMemo(() => toon('#ffffff'), [])
   useFrame(() => { const t = wind.time.value; mat.emissive.set('#000000').lerp(CC('#ff9f80'), T.dusk * 0.35).lerp(CC('#2a3170'), T.night * 0.5); mat.color.set('#ffffff').lerp(CC('#ffd2c0'), T.dusk * 0.7).lerp(CC('#8a94c4'), T.night * 0.7); cl.forEach((c, i) => { const a = c.off + t * 0.03; const g = refs.current[i]; g.position.set(Math.cos(a) * c.r, c.y, Math.sin(a) * c.r); g.lookAt(0, c.y, 0) }) })
   return cl.map((c, i) => <group key={i} ref={el => refs.current[i] = el}>{c.puffs.map((p, k) => <mesh key={k} position={[p[0], p[1], p[2]]} scale={p[3]} material={mat}><icosahedronGeometry args={[1, 2]} /><Outlines thickness={0.025} color="#8a8fb0" /></mesh>)}</group>)
 }
 function Birds() {
   const birds = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ f: Math.floor(i / 4), k: i % 4 })), []); const refs = useRef([]); const mat = useMemo(() => toon('#3f3a4a', { side: THREE.DoubleSide }), [])
-  useFrame(() => { const t = wind.time.value; birds.forEach((b, i) => { const g = refs.current[i]; const a = t * 0.25 + b.f * 2.1 - b.k * 0.05, r = 10.5 + b.f * 0.6, y = 3.4 + b.f * 1.6 - Math.abs(b.k - 1.5) * 0.15 + Math.sin(t + b.f) * 0.3; g.position.set(Math.cos(a) * r + (b.k % 2) * 0.2, y, Math.sin(a) * r); g.lookAt(Math.cos(a + 0.1) * r, y, Math.sin(a + 0.1) * r); const fl = Math.sin(t * 10 + i) * 0.6; g.children[0].rotation.z = fl; g.children[1].rotation.z = -fl }) })
+  useFrame(() => { const t = wind.time.value; birds.forEach((b, i) => { const g = refs.current[i]; const a = t * 0.25 + b.f * 2.1 - b.k * 0.05, r = (10.5 + b.f * 0.6) * WS, y = (3.4 + b.f * 1.6) * WS - Math.abs(b.k - 1.5) * 0.15 + Math.sin(t + b.f) * 0.3; g.position.set(Math.cos(a) * r + (b.k % 2) * 0.2, y, Math.sin(a) * r); g.lookAt(Math.cos(a + 0.1) * r, y, Math.sin(a + 0.1) * r); const fl = Math.sin(t * 10 + i) * 0.6; g.children[0].rotation.z = fl; g.children[1].rotation.z = -fl }) })
   return birds.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.6}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.12, 0, 0]} material={mat}><boxGeometry args={[0.24, 0.01, 0.07]} /></mesh></group>)}</group>)
 }
 function Fireflies() {
@@ -498,6 +597,7 @@ const KEYS = {}
 if (VIEW.mode === 'detail') { P.n.copy(bl(B0, 0.08, 0)); P.fwd.copy(B0.tan) }
 window.__player = P
 _setupHome()
+TALK.onOpen = () => { for (const k in KEYS) KEYS[k] = false; P.target = null } // she stops while talking
 function Keys() {
   useEffect(() => {
     const d = e => { const k = e.key.toLowerCase(); if (gameBlocksKeys()) { if (k === ' ') e.preventDefault(); return } KEYS[k] = true; if (k === ' ' && Math.abs(P.h - floorLift(P.n)) < 0.003) P.vy = 1.9; if (k === 'v') VIEW.mode = VIEW.mode === 'follow' ? 'orbit' : 'follow'; if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault() }
@@ -524,12 +624,12 @@ function stepPlayer(dt) {
     else { P.fwd.lerp(tg.normalize(), Math.min(1, dt * 8)); go = 1 }
   }
   P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
-  P.n.addScaledVector(P.fwd, go * (run ? 2.6 : 1.5) / R * dt).normalize()
+  P.n.addScaledVector(P.fwd, go * (run ? 2.15 : 1.25) / R * dt).normalize()
   const pass = ropePass(P.n)
   for (const c of COLLIDERS) { if (pass && c.n === Zc.cliff) continue; const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
   P.fwd.addScaledVector(P.n, -P.fwd.dot(P.n)).normalize()
   const fl = floorLift(P.n); P.vy -= 7 * dt; P.h += P.vy * dt; if (P.h < fl) { if (fl - P.h < 0.12 || P.vy < 0) { P.h = fl; P.vy = 0 } } // gravity toward planet centre
-  P.phase += dt * (run ? 13 : 9.5) * P.move
+  P.phase += dt * (run ? 11 : 8.2) * P.move
 }
 const PM = { tunic: toon('#5f8fc4'), skin: toon('#f8d9bf'), hat: toon('#e9c46a'), band: toon('#d9655b'), cape: toon('#d9655b', { side: THREE.DoubleSide }), boot: toon('#6b4a3a'), eye: toon('#2e2420'), cheek: toon('#f4a3a0'), bag: toon('#b98a5a') }
 const PST = { phase: 0, move: 0, t: 0, turn: 0, dist: 0 }
@@ -592,7 +692,7 @@ function Rig() {
       const c = B0.c.clone(); const lookL = bl(B0, -0.3, 0.45).multiplyScalar(R + 0.15), camL = bl(B0, -2.3, 1.7).multiplyScalar(R + 1.25)
       goal.copy(camL).applyMatrix4(g.matrixWorld); camera.position.lerp(goal, k); camera.up.lerp(_u.copy(c).transformDirection(g.matrixWorld), k).normalize(); look.lerp(lookL.applyMatrix4(g.matrixWorld), k); camera.lookAt(look)
     } else {
-      camera.position.lerp(goal.set(0, 5.8, 30).multiplyScalar(CAM.zoom), k); camera.up.lerp(_u.set(0, 1, 0), k).normalize(); look.lerp(_v.set(0, 1, 0), k); camera.lookAt(look)
+      camera.position.lerp(goal.set(0, 5.8 * WS, 30 * WS).multiplyScalar(CAM.zoom), k); camera.up.lerp(_u.set(0, 1, 0), k).normalize(); look.lerp(_v.set(0, 1, 0), k); camera.lookAt(look)
     }
   })
   return null
@@ -610,6 +710,9 @@ function loadGame() {
     W.GAME.P = P; W.GAME.H = HOME; HOME.GAME = W.GAME
     W.layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || distToCurve(n, streamDir, 140) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
     if (q.has('at')) W.teleport(P, q.get('at'))
+    const at = q.get('at'); if (at === 'village' || at === 'talk') { // debug spots for the villager round
+      const n = at === 'village' ? around(SQ, 0.62 / R, 2.75) : CHAT_A.clone().addScaledVector(tangentAt(CHAT_A, 1.9), 0.38 / R).normalize(), look = at === 'village' ? SQ : CHAT_A
+      P.n.copy(n); const f = look.clone().sub(n); P.fwd.copy(f.addScaledVector(n, -f.dot(n)).normalize()) }
     GM.W = W; GM.U = U; bootStage('game', 1)
   })
 }
@@ -628,13 +731,14 @@ function useSlices() {
 }
 function Planet() {
   const k = useSlices()
-  const onDown = (e) => { if (VIEW.mode !== 'follow') return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); onTap(e.nativeEvent || e, () => { P.target = l }) }
+  const onDown = (e) => { if (VIEW.mode !== 'follow' || TALK.open) return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); onTap(e.nativeEvent || e, () => { P.target = l }) }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
     <Ground /><Path /><Stream />{k >= 2 && <Vegetation />}
     {k >= 2 && HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
     {k >= 2 && MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
     {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
     {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
+    {k >= 3 && NEWCHAR && <Bench />}
     {VIEW.mode === 'lineup' && <Lineup />}
     <DeferredZones />
     {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
@@ -654,6 +758,7 @@ function Stats() {
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
 const LOD_D = +(q.get('lodd') || 16) // tufts are ~10px here: facets don't read
+const LOD_D2 = +(q.get('lodd2') || 34) // third tier: a few px, only the silhouette lump matters
 function HorizonCull() {
   const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
   useFrame(() => {
@@ -674,9 +779,11 @@ function HorizonCull() {
       _p.copy(h.c).applyMatrix3(_m.setFromMatrix4(par.matrixWorld)).normalize()
       const hide = Math.acos(Math.max(-1, Math.min(1, _p.dot(_tc)))) - h.rad > limA
       // LOD: cluster whose nearest edge is farther than LOD_D from the camera draws its low-poly twin
-      const far = !!h.lo && (VIEW.mode === 'orbit' || _w.copy(_p).multiplyScalar(R).add(_o).distanceTo(camera.position) - h.rad * R > LOD_D)
+      const dd = h.lo ? _w.copy(_p).multiplyScalar(R).add(_o).distanceTo(camera.position) - h.rad * R : 0
+      const far = !!h.lo && (VIEW.mode === 'orbit' || dd > LOD_D), far2 = far && !!h.lo2 && (VIEW.mode === 'orbit' || dd > LOD_D2)
       if (hide || far) h.mesh.layers.disable(0); else h.mesh.layers.enable(0)
-      if (h.lo) { if (hide || !far) h.lo.layers.disable(0); else h.lo.layers.enable(0) }
+      if (h.lo) { if (hide || !far || far2) h.lo.layers.disable(0); else h.lo.layers.enable(0) }
+      if (h.lo2) { if (hide || !far2) h.lo2.layers.disable(0); else h.lo2.layers.enable(0) }
     }
     // ink hulls: thin out by projected line width (material.visible, so object.visible/layers owned by other code are untouched) and drop once under ~0.5px (fade, not pop)
     if (!hulls.current || n.current % 240 === 1) { hulls.current = []; pl.parent.parent.traverse(o => { const u = o.material && o.material.uniforms; if (o.isMesh && u && u.thickness && o.material.side === THREE.BackSide && o.parent && o.parent.parent && o.parent.parent.isMesh && !o.parent.parent.isInstancedMesh) hulls.current.push({ o, base: u.thickness.value, p: o.parent.parent }); else if (o.isMesh && u && u.uT && o.material.side === THREE.BackSide) hulls.current.push({ o, base: u.uT.value, p: o, shared: true }) }) }
@@ -714,6 +821,7 @@ function Studio() {
     T.sun.set(0.55, 0.75, 0.6).normalize(); T.day = 1; T.dusk = 0; T.night = 0
     for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * 9 * st.move; st.dist += dt * 0.27 * st.move }
     if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
+    if (q.has('act')) { stNew.act = q.get('act'); stNew.actW = 1; stNew.move = 0 }
     const d = compare ? 1.35 : 0.95, cx = 0
     camera.position.set(cx + Math.sin(ang) * d, 0.3, Math.cos(ang) * d); camera.up.set(0, 1, 0); camera.lookAt(cx, 0.2, 0)
   })
@@ -797,9 +905,9 @@ export default function App() {
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8, 30], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
       {ADAPT && live && <PerformanceMonitor factor={1} flipflops={3} onChange={({ factor }) => setDpr(Math.min(devicePixelRatio || 1, Math.round((1 + (DPR_MAX - 1) * factor) * 20) / 20))} />}
-      <Boot onLive={() => setLive(true)} /><Clock /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
+      <Boot onLive={() => setLive(true)} /><Clock /><Talk P={P} /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={TOUCH ? 2 : 4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
         <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
@@ -811,6 +919,7 @@ export default function App() {
     </div>
     {GAMEON && <GameSlot ui />}
     <TouchPad />
+    <TalkOverlay />
     <HomeOverlay />
   </>
 }
