@@ -21,7 +21,7 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
-import { inkRim, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
+import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
 const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
 const fixed = q.has('t') || q.has('phase')
@@ -341,8 +341,9 @@ function Vegetation() {
     const fir = new THREE.ConeGeometry(0.32, 1.25, 7); fir.translate(0, 0.9, 0)
     const fl = new THREE.IcosahedronGeometry(0.035, 1)
     // far LOD (whole clusters swap, see HorizonCull): same silhouette, fewer facets
-    const tuftLo = new THREE.SphereGeometry(0.07, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo.scale(1.04, 0.75, 1.04)
-    const flLo = new THREE.IcosahedronGeometry(0.037, 0), crownLo = new THREE.IcosahedronGeometry(0.43, 0); crownLo.scale(1, 1.15, 1); crownLo.translate(0, 0.85, 0)
+    const tuftLo = new THREE.SphereGeometry(0.07, 10, 3, 0, Math.PI * 2, 0, Math.PI / 2); tuftLo.scale(1.08, 0.9, 1.08) // same lobes, smooth normals, a touch fuller so ridges stay full
+    { const q2 = tuftLo.attributes.position; for (let i = 0; i < q2.count; i++) { const x = q2.getX(i), z = q2.getZ(i), a = Math.atan2(z, x); const w = 1 + 0.18 * Math.sin(a * 5); q2.setX(i, x * w); q2.setZ(i, z * w); q2.setY(i, q2.getY(i) * (1 + 0.25 * Math.sin(a * 5))) } tuftLo.computeVertexNormals() }
+    const flLo = new THREE.IcosahedronGeometry(0.039, 0), crownLo = new THREE.IcosahedronGeometry(0.43, 0); crownLo.scale(1, 1.15, 1); crownLo.translate(0, 0.85, 0)
     return { tuft, crown, trunk, fir, fl, tuftLo, flLo, crownLo }
   }, [])
   const mats = useMemo(() => ({ grass: windify(toon('#ffffff'), 6), crown: windify(toon('#ffffff'), 0.08, 0.4), fir: windify(toon('#ffffff'), 0.06, 0.3), trunk: MAT.wood, fl: toon('#ffffff') }), [])
@@ -652,7 +653,7 @@ function Stats() {
 }
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
-const LOD_D = +(q.get('lodd') || 7)
+const LOD_D = +(q.get('lodd') || 16) // tufts are ~10px here: facets don't read
 function HorizonCull() {
   const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
   useFrame(() => {
@@ -679,12 +680,12 @@ function HorizonCull() {
     }
     // ink hulls: thin out by projected line width (material.visible, so object.visible/layers owned by other code are untouched) and drop once under ~0.5px (fade, not pop)
     if (!hulls.current || n.current % 240 === 1) { hulls.current = []; pl.parent.parent.traverse(o => { const u = o.material && o.material.uniforms; if (o.isMesh && u && u.thickness && o.material.side === THREE.BackSide && o.parent && o.parent.parent && o.parent.parent.isMesh && !o.parent.parent.isInstancedMesh) hulls.current.push({ o, base: u.thickness.value, p: o.parent.parent }); else if (o.isMesh && u && u.uT && o.material.side === THREE.BackSide) hulls.current.push({ o, base: u.uT.value, p: o, shared: true }) }) }
-    const pxK = gl.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2))
+    const pxK = gl.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)); INK_K.value = pxK
     for (const h of hulls.current) { if (h.shared) { if (h.base * pxK / Math.max(0.01, _w.setFromMatrixPosition(h.p.matrixWorld).distanceTo(camera.position)) < 0.6) h.o.layers.disable(0); continue } // character ink (shared material): off below ~0.6px (runs after the horizon pass, so only ever removes)
       const u = h.o.material.uniforms.thickness
       if (u.value > 1e-6 && Math.abs(u.value - h.base) > 1e-6 && u.value !== h.cur) h.base = u.value // React re-applied the prop
       const px = h.base * pxK / Math.max(0.01, _w.setFromMatrixPosition(h.p.matrixWorld).distanceTo(camera.position))
-      const f = ss(0.45, 1.1, px); h.o.material.visible = f > 0; u.value = h.cur = h.base * (0.35 + 0.65 * f) }
+      const f = ss(0.3, 0.75, px); h.o.material.visible = f > 0; u.value = h.cur = h.base * (0.6 + 0.4 * f) } // full weight down to ~0.75px, as before
   })
   return null
 }

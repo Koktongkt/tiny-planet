@@ -74,12 +74,14 @@ export function paint(mat, amt = 0.12, shadow = true, scale = 2.2) { mat.userDat
 // Terrain ink: darkens a constant-pixel-width band where the surface turns away from the eye (planet rim,
 // hill ridges against farther ground), so the silhouette reads as an ink line without a hull copy.
 // ndv / fwidth(ndv) = pixels to the silhouette, so the line stays ~W px wide at any distance.
-export const INK_W = { value: 2.6 }
+export const INK_W = { value: 2.6 }, INK_K = { value: 1100 } // INK_K = px per world unit at distance 1 (set per frame by HorizonCull)
 export function inkRim(mat) { const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey
-  mat.onBeforeCompile = (sh, r) => { prev && prev(sh, r); sh.uniforms.uInkW = INK_W
-    sh.fragmentShader = 'uniform float uInkW;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+  mat.onBeforeCompile = (sh, r) => { prev && prev(sh, r); sh.uniforms.uInkW = INK_W; sh.uniforms.uInkK = INK_K
+    sh.fragmentShader = 'uniform float uInkW, uInkK;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
       { vec3 Vd = normalize(vViewPosition); float ndv = abs(dot(normalize(vNormal), Vd));
-        float px = ndv / max(fwidth(ndv), 1e-4); float ink = 1. - smoothstep(uInkW * .55, uInkW, px);
+        float px = ndv / max(fwidth(ndv), 1e-4);
+        // width = the old hull's 0.06 world units projected (thick on near ridges), never under uInkW px
+        float wpx = clamp(.06 * uInkK / length(vViewPosition), uInkW, 28.); float ink = 1. - smoothstep(wpx * .7, wpx, px);
         gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(${[0x4a, 0x3a, 0x35].map(v => (v / 255).toFixed(3)).join(',')}), ink * .92); }`) }
   mat.customProgramCacheKey = () => (key ? key() : '') + 'ink'
   return mat
