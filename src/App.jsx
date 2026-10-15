@@ -8,10 +8,9 @@ import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, d
 import { Person, PEOPLE } from './people.jsx'
 import { GhibliPerson, Character } from './GhibliPerson.jsx'
 import { VILLAGERS } from './villagers.js'
-import { houseGeos, crownGeos, firGeos, foliage, fernGeo, tallGrassGeo, shrubGeo, shrubLo, rockGeo } from './scenery.js'
+import { houseGeos, crownGeos, firGeos, foliage } from './scenery.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { NPCS, TALK, periodAt } from './talk/state.js'
-import { Talk, TalkOverlay } from './talk/Talk.jsx'
 // prototype-only characters load on demand (keeps them, and the 214 KB sprite sheet, out of the startup bundle)
 const GhibliPersonV1 = lazy(() => import('./GhibliPersonV1.jsx').then(m => ({ default: m.GhibliPersonV1 })))
 const SpritePerson = lazy(() => import('./SpritePerson.jsx').then(m => ({ default: m.SpritePerson })))
@@ -176,10 +175,11 @@ const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.la
 
 const DM = { plank: paint(toon('#b07a4f'), 0.18, true, 12), rail: toon('#8a5a3c'), cloth: ['#ffffff', '#f59ab0', '#8fc3e8', '#ffd36e'].map(c => toon(c, { side: THREE.DoubleSide })), rope: toon('#e8dcc0'), red: toon('#d9534f'), soil: paint(toon('#8a6248'), 0.2, true, 14), cabbage: toon('#8fcf6a'), carrot: toon('#ef8a3c'), fence: toon('#f3e6cc'), stone: paint(toon('#c9c0b2'), 0.15, true, 15), moss: toon('#7fae5f'), cat: toon('#f2a65a'), catW: toon('#fff4e6'), dark: toon('#3a2e2a'), sign: toon('#ffd36e'), curtains: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'].map(c => toon(c)), smoke: toon('#f4f1ee', { transparent: true, opacity: 0.85 }), wing: ['#ffd36e', '#ffffff', '#f59ab0', '#a8d8ff'].map(c => toon(c, { side: THREE.DoubleSide })) }
 
+// the 11 planks merged into one mesh (same shapes / tilts): 2 draw calls per bridge instead of 22
+const PLANKS = (() => { const planks = 11, a = []; for (let k = 0; k < planks; k++) { const u = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((u / BL) * Math.PI); const g = new THREE.BoxGeometry(0.26, 0.022, BL / planks * 0.9); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.sin((u / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0))); g.translate(0, y, u); a.push(g) } return mergeGeometries(a) })()
 function Bridge({ b }) {
-  const planks = 11
   return <Basis n={b.c} fwd={b.tan} lift={0.0}>
-    {Array.from({ length: planks }, (_, k) => { const a = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((a / BL) * Math.PI); return <mesh key={k} position={[0, y, a]} rotation={[-Math.sin((a / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0]} material={DM.plank}><boxGeometry args={[0.26, 0.022, BL / planks * 0.9]} /><Outlines thickness={0.008} color={INK} /></mesh> })}
+    <mesh geometry={PLANKS} material={DM.plank}><Outlines thickness={0.008} color={INK} /></mesh>
     {[-1, 1].map(s => <group key={s}>
       {[-0.28, 0, 0.28].map(a => <mesh key={a} position={[s * 0.13, 0.07 + 0.07 * Math.cos((a / BL) * Math.PI), a]} material={DM.rail}><boxGeometry args={[0.022, 0.12, 0.022]} /></mesh>)}
       {[-1, 1].map(h => <mesh key={h} position={[s * 0.13, 0.155 + 0.035, h * 0.15]} rotation={[h * 0.22, 0, 0]} material={DM.rail}><boxGeometry args={[0.02, 0.018, 0.3]} /><Outlines thickness={0.005} color={INK} /></mesh>)}
@@ -319,7 +319,7 @@ function Seeds() {
 function Wildflowers() {
   const { heads, stems } = useMemo(() => {
     const heads = [], stems = [], fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff', '#ff9a7a', '#a8d8ff'].map(C)
-    for (let i = 0; i < 2000 * DENS; i++) { const n = randDir(); if (busy(n) || onBridge(n) || zoneWet(n)) continue; const s = 0.7 + rnd() * 0.6, p = place(n, 0, rnd() * 6); stems.push({ ...p, s }); heads.push({ ...place(n, 0.075 * s), s, c: fc[Math.floor(rnd() * 6)] }) }
+    for (let i = 0; i < 2000 * DENS * (TOUCH ? 0.6 : 0.85); i++) { const n = randDir(); if (busy(n) || onBridge(n) || zoneWet(n)) continue; const s = 0.7 + rnd() * 0.6, p = place(n, 0, rnd() * 6); stems.push({ ...p, s }); heads.push({ ...place(n, 0.075 * s), s, c: fc[Math.floor(rnd() * 6)] }) }
     return { heads, stems }
   }, [])
   const geos = useMemo(() => { const st = new THREE.CylinderGeometry(0.004, 0.005, 0.075, 3); st.translate(0, 0.0375, 0); const hd = new THREE.IcosahedronGeometry(0.022, 0); hd.scale(1, 0.6, 1); return { st, hd } }, [])
@@ -347,10 +347,10 @@ function Vegetation() {
   const { grass, flowers } = useMemo(() => {
     const grass = [], flowers = [], g1 = C('#86c46c'), g2 = C('#b9de86'), fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff'].map(C)
     const _t = new THREE.Vector3()
-    for (let i = 0; i < 750 * DENS; i++) { // lawn patches: soft dome tufts with flower clumps
+    for (let i = 0; i < 750 * DENS * (TOUCH ? 0.62 : 0.72); i++) { // lawn (patches a bit bigger + sparser than DENS: grass is the biggest triangle cost) patches: soft dome tufts with flower clumps
       const c = randDir(); if (busy(c)) continue
       const k = 6 + Math.floor(rnd() * 14), sp = (0.03 + rnd() * 0.05) * K, col = g1.clone().lerp(g2, rnd())
-      for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (distToCurve(n, streamDir, 90) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: 0.7 + rnd() * 0.8, c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
+      for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (distToCurve(n, streamDir, 90) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
       if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
     }
     return { grass, flowers }
@@ -371,10 +371,11 @@ function Vegetation() {
   const mats = useMemo(() => ({ grass: windify(toon('#ffffff'), 6), crown: foliage(toon('#ffffff', { vertexColors: true }), 0.08, 0.4), fir: foliage(toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }), 0.06, 0.3), trunk: MAT.wood, fl: toon('#ffffff') }), [])
   const trunkItems = [...TREES, ...FIRS].map(t => ({ ...t, c: null }))
   return <>
-    <Instanced items={grass} geo={geos.tuft} lo={geos.tuftLo} lo2={geos.tuftLo2} mat={mats.grass} />
+    {/* mobile tier: one LOD step coarser everywhere (budget 350k tris in walk views) */}
+    <Instanced items={grass} geo={TOUCH ? geos.tuftLo : geos.tuft} lo={TOUCH ? geos.tuftLo2 : geos.tuftLo} lo2={geos.tuftLo2} mat={mats.grass} />
     <Instanced items={flowers} geo={geos.fl} lo={geos.flLo} mat={mats.fl} />
     <Instanced items={trunkItems} geo={geos.trunk} mat={mats.trunk} />
-    <Instanced items={TREES} geo={geos.crown} lo={geos.crownLo} lo2={geos.crownLo2} mat={mats.crown} isOcc />
+    <Instanced items={TREES} geo={TOUCH ? geos.crownLo : geos.crown} lo={TOUCH ? geos.crownLo2 : geos.crownLo} lo2={geos.crownLo2} mat={mats.crown} isOcc />
     <Instanced items={FIRS} geo={geos.fir} lo={geos.firLo} mat={mats.fir} isOcc />
     <EdgeVeg />
   </>
@@ -388,26 +389,8 @@ function Vegetation() {
 // path verges, tall grass along the path and stream banks, mossy rocks scattered and on the banks
 const _ev = new THREE.Vector3()
 const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && distToCurve(n, streamDir, 140) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
-function EdgeVeg() {
-  const S = useMemo(() => {
-    const ferns = [], shrubs = [], tall = [], rocks = [], fc = C('#7fb86a'), sc = ['#6fa860', '#86b86a', '#5f9a5a'].map(C), gc = C('#9ccf72'), rc = C('#ffffff')
-    const put = (arr, n, s, c, lift = -0.005) => { if (vergeOK(n)) arr.push({ ...place(n, lift, rnd() * 6.28), s, c }) }
-    for (const t of [...TREES, ...FIRS]) { if (rnd() < 0.35) continue; const k = 1 + Math.floor(rnd() * 3); for (let j = 0; j < k; j++) put(ferns, around(t.n, (0.12 + rnd() * 0.2) / R, rnd() * 6.28), 0.75 + rnd() * 0.6, fc.clone().multiplyScalar(0.85 + rnd() * 0.3)) }
-    HOUSES.forEach((h, i) => { const w = 0.55 + (i % 3) * 0.1; for (const [x, z] of [[-w / 2 - 0.07, -0.18], [w / 2 + 0.07, 0.12], [-w / 2 - 0.06, 0.15], [w / 2 + 0.08, -0.2], [-0.24, -0.33], [0.2, -0.32], [w / 2 - 0.05, 0.36]]) { if (rnd() < 0.25) continue; const n = onHouse(i, x, z); shrubs.push({ ...place(n, -0.01, rnd() * 6.28), s: 0.7 + rnd() * 0.5, c: sc[Math.floor(rnd() * 3)].clone() }) } })
-    for (let i = 0; i < 1300 * DENS; i++) { const t = rnd() * Math.PI * 2, c = (rnd() < 0.62 ? pathDir : streamDir)(t).normalize(), t2 = (c === null ? 0 : 1); const f = pathDir(t + 0.01).normalize().sub(c), side = _ev.crossVectors(c, f).normalize(), off = (rnd() < 0.5 ? -1 : 1) * (0.2 + rnd() * 0.22) / R
-      const n = c.clone().addScaledVector(side, off).normalize(); const r = rnd(); if (r < 0.62) put(tall, n, 0.7 + rnd() * 0.7, gc.clone().multiplyScalar(0.85 + rnd() * 0.25)); else if (r < 0.8) put(shrubs, n, 0.6 + rnd() * 0.5, sc[Math.floor(rnd() * 3)].clone()); else if (r < 0.88) put(rocks, n, 0.5 + rnd() * 0.6, rc.clone().multiplyScalar(0.9 + rnd() * 0.15), -0.015) }
-    for (let i = 0; i < 260 * DENS; i++) { const n = randDir(); if (busy(n)) continue; put(rocks, n, 0.6 + rnd() * 1.1, rc.clone().multiplyScalar(0.88 + rnd() * 0.15), -0.02); if (rnd() < 0.5) put(ferns, around(n, 0.12 / R, rnd() * 6), 0.7 + rnd() * 0.4, fc.clone()) }
-    return { ferns, shrubs, tall, rocks }
-  }, [])
-  const G_ = useMemo(() => ({ fern: fernGeo(6), fernLo: fernGeo(4), tall: tallGrassGeo(7), tallLo: tallGrassGeo(3), shrub: shrubGeo(), shrubLo: shrubLo(), rock: rockGeo(1, 2), rockLo: rockGeo(0, 2) }), [])
-  const M_ = useMemo(() => ({ leaf: windify(toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }), 4, 0), shrub: foliage(toon('#ffffff', { vertexColors: true }), 1.5, 0.02), rock: paint(toon('#ffffff', { vertexColors: true }), 0.14, true, 14) }), [])
-  return <>
-    <Instanced items={S.ferns} geo={G_.fern} lo={G_.fernLo} mat={M_.leaf} />
-    <Instanced items={S.tall} geo={G_.tall} lo={G_.tallLo} mat={M_.leaf} />
-    <Instanced items={S.shrubs} geo={G_.shrub} lo={G_.shrubLo} mat={M_.shrub} />
-    <Instanced items={S.rocks} geo={G_.rock} lo={G_.rockLo} mat={M_.rock} />
-  </>
-}
+const EdgeVegLazy = lazy(() => import('./edgeveg.jsx'))
+function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /></Suspense> : null }
 function House({ n, i }) {
   const hg = houseVariant(i)
   return <Surface n={n} lift={HOUSE_LIFT} spin={i * 1.3}>
@@ -542,7 +525,7 @@ function Walker({ w, i }) {
     if (planetRef.current) { // cull by distance (close views) and by horizon (anything on the planet's far side)
       _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); _c0.setFromMatrixPosition(planetRef.current.matrixWorld)
       const up = _wy.copy(_f).sub(_c0).normalize(), toCam = _wz.copy(camera.position).sub(_f).normalize()
-      g.visible = up.dot(toCam) > -0.05 && (VIEW.mode === 'orbit' || camera.position.distanceTo(_f) < 12) } else g.visible = true
+      g.visible = up.dot(toCam) > -0.05 && (VIEW.mode === 'orbit' || camera.position.distanceTo(_f) < (TOUCH ? 9 : 12)) } else g.visible = true
   })
   return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={56} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
@@ -570,7 +553,9 @@ function Clouds() {
   const cl = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ axis: new THREE.Vector3(rnd() - 0.5, 1, rnd() - 0.5).normalize(), off: rnd() * 6, r: (11.5 + rnd() * 2.5) * WS, y: (i % 2 ? -1 : 1) * (4.2 + rnd() * 3.5) * WS, puffs: Array.from({ length: 4 + (i % 3) }, (_, k) => [k * 0.65 - 1.1, rnd() * 0.35, rnd() * 0.4, 0.5 + rnd() * 0.45]) })), [])
   const refs = useRef([]); const mat = useMemo(() => toon('#ffffff'), [])
   useFrame(() => { const t = wind.time.value; mat.emissive.set('#000000').lerp(CC('#ff9f80'), T.dusk * 0.35).lerp(CC('#2a3170'), T.night * 0.5); mat.color.set('#ffffff').lerp(CC('#ffd2c0'), T.dusk * 0.7).lerp(CC('#8a94c4'), T.night * 0.7); cl.forEach((c, i) => { const a = c.off + t * 0.03; const g = refs.current[i]; g.position.set(Math.cos(a) * c.r, c.y, Math.sin(a) * c.r); g.lookAt(0, c.y, 0) }) })
-  return cl.map((c, i) => <group key={i} ref={el => refs.current[i] = el}>{c.puffs.map((p, k) => <mesh key={k} position={[p[0], p[1], p[2]]} scale={p[3]} material={mat}><icosahedronGeometry args={[1, 2]} /><Outlines thickness={0.025} color="#8a8fb0" /></mesh>)}</group>)
+  // each cloud's puffs merged into one mesh (+1 hull): 12+12 draw calls instead of ~120
+  const geos = useMemo(() => cl.map(c => mergeGeometries(c.puffs.map(p => new THREE.IcosahedronGeometry(1, 2).scale(p[3], p[3], p[3]).translate(p[0], p[1], p[2])))), [])
+  return cl.map((c, i) => <group key={i} ref={el => refs.current[i] = el}><mesh geometry={geos[i]} material={mat}><Outlines thickness={0.025} color="#8a8fb0" /></mesh></group>)
 }
 function Birds() {
   const birds = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ f: Math.floor(i / 4), k: i % 4 })), []); const refs = useRef([]); const mat = useMemo(() => toon('#3f3a4a', { side: THREE.DoubleSide }), [])
@@ -717,6 +702,10 @@ function loadGame() {
   })
 }
 if (GAMEON) onBoot('frame', () => setTimeout(loadGame, 0))
+// villager chat (profiles, lines, dialogue UI) is fetched after the first frame: keeps it out of the startup chunk
+const TK = { m: null }
+if (VIEW.mode === 'follow') onBoot('frame', () => setTimeout(() => import('./talk/Talk.jsx').then(m => { TK.m = m; bootStage('talk', 1) }), 0))
+function TalkSlot({ ui }) { const [, f] = useState(0); useEffect(() => onBoot('talk', () => f(1)), []); if (!TK.m) return null; return ui ? <TK.m.TalkOverlay /> : <TK.m.Talk P={P} /> }
 function GameSlot({ ui }) { const [, f] = useState(0); useEffect(() => onBoot('game', () => f(1)), []); const C = ui ? GM.U?.GameUI : GM.W?.GameWorld; return C ? <C /> : null }
 window.__player = P
 // far zones (lake, harbour, cliff, terraces, ruins…) mount in the first idle slot after the first frame
@@ -757,8 +746,8 @@ function Stats() {
 }
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
-const LOD_D = +(q.get('lodd') || 16) // tufts are ~10px here: facets don't read
-const LOD_D2 = +(q.get('lodd2') || 34) // third tier: a few px, only the silhouette lump matters
+const LOD_D = +(q.get('lodd') || (TOUCH ? 9 : 16)) // tufts are ~10px here: facets don't read
+const LOD_D2 = +(q.get('lodd2') || (TOUCH ? 20 : 34)) // third tier: a few px, only the silhouette lump matters
 function HorizonCull() {
   const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
   useFrame(() => {
@@ -778,6 +767,8 @@ function HorizonCull() {
       const par = h.mesh.parent; if (!par) continue
       _p.copy(h.c).applyMatrix3(_m.setFromMatrix4(par.matrixWorld)).normalize()
       const hide = Math.acos(Math.max(-1, Math.min(1, _p.dot(_tc)))) - h.rad > limA
+      if (h.orbit) { if (hide || VIEW.mode !== 'orbit') h.mesh.layers.disable(0); else h.mesh.layers.enable(0); continue }
+      if (VIEW.mode === 'orbit') { h.mesh.layers.disable(0); h.lo && h.lo.layers.disable(0); h.lo2 && h.lo2.layers.disable(0); continue }
       // LOD: cluster whose nearest edge is farther than LOD_D from the camera draws its low-poly twin
       const dd = h.lo ? _w.copy(_p).multiplyScalar(R).add(_o).distanceTo(camera.position) - h.rad * R : 0
       const far = !!h.lo && (VIEW.mode === 'orbit' || dd > LOD_D), far2 = far && !!h.lo2 && (VIEW.mode === 'orbit' || dd > LOD_D2)
@@ -792,7 +783,7 @@ function HorizonCull() {
       const u = h.o.material.uniforms.thickness
       if (u.value > 1e-6 && Math.abs(u.value - h.base) > 1e-6 && u.value !== h.cur) h.base = u.value // React re-applied the prop
       const px = h.base * pxK / Math.max(0.01, _w.setFromMatrixPosition(h.p.matrixWorld).distanceTo(camera.position))
-      const f = ss(0.3, 0.75, px); h.o.material.visible = f > 0; u.value = h.cur = h.base * (0.6 + 0.4 * f) } // full weight down to ~0.75px, as before
+      const f = TOUCH ? ss(0.6, 1.1, px) : ss(0.3, 0.75, px); h.o.material.visible = f > 0; u.value = h.cur = h.base * (0.6 + 0.4 * f) } // full weight down to ~0.75px, as before
   })
   return null
 }
@@ -907,7 +898,7 @@ export default function App() {
   return <>
     <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
       {ADAPT && live && <PerformanceMonitor factor={1} flipflops={3} onChange={({ factor }) => setDpr(Math.min(devicePixelRatio || 1, Math.round((1 + (DPR_MAX - 1) * factor) * 20) / 20))} />}
-      <Boot onLive={() => setLive(true)} /><Clock /><Talk P={P} /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
+      <Boot onLive={() => setLive(true)} /><Clock /><TalkSlot /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={TOUCH ? 2 : 4}>
         <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
         <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
@@ -919,7 +910,7 @@ export default function App() {
     </div>
     {GAMEON && <GameSlot ui />}
     <TouchPad />
-    <TalkOverlay />
+    <TalkSlot ui />
     <HomeOverlay />
   </>
 }

@@ -25,6 +25,9 @@ export const planetRef = { current: null }
 export const HCL = [] // { mesh, c: local centre direction, rad: angular radius }
 const DIRS = (() => { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, a = []; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(p, i).normalize(); if (!a.some(u => u.distanceToSquared(v) < 1e-6)) a.push(v) } g.dispose(); return a })()
 const CLUSTER_MIN = 160
+// mobile orbit: the densest sets (grass) draw every other instance from orbit (budget 500k tris)
+const isThin = () => typeof document !== 'undefined' && document.documentElement.classList.contains('tp-touch')
+const DIRS12 = (() => { const g = new THREE.IcosahedronGeometry(1, 0), p = g.attributes.position, a = []; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(p, i).normalize(); if (!a.some(u => u.distanceToSquared(v) < 1e-6)) a.push(v) } g.dispose(); return a })()
 function InstancedBatch({ items, geo, mat, outline, isOcc, hc, lo, lo2 }) {
   const ref = useRef(), lref = useRef(), l2ref = useRef()
   useEffect(() => { const m = ref.current, o = new THREE.Object3D(); items.forEach((it, i) => { o.position.copy(it.pos); o.quaternion.copy(it.q); o.scale.setScalar(it.s); o.updateMatrix(); m.setMatrixAt(i, o.matrix); if (it.c) m.setColorAt(i, it.c) }); m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true
@@ -52,8 +55,14 @@ export function Instanced(props) {
       const lift = Math.acos(Math.min(1, R / Math.max(R, top)))
       return { list, hc: { c, rad: rad + lift + 0.03 } } }).filter(Boolean)
   }, [items])
+  // orbit view: the whole set in ~12 coarse clusters with its cheapest geometry (the fine 42-way clusters cost a
+  // draw call each, and from orbit everything is a few px anyway). Swapped in/out by HorizonCull.
+  const coarse = useMemo(() => { if (!groups) return null; const b = DIRS12.map(() => []), _n = new THREE.Vector3()
+    for (const it of items) { _n.copy(it.pos).normalize(); let k = 0, best = -2; for (let j = 0; j < DIRS12.length; j++) { const d = DIRS12[j].dot(_n); if (d > best) { best = d; k = j } } b[k].push(it) }
+    const thin = isThin() && items.length > 3000; return b.map(list => { if (thin) list = list.filter((_, k) => k % 2 === 0); if (!list.length) return null; const c = new THREE.Vector3(); list.forEach(it => c.add(_n.copy(it.pos).normalize())); c.normalize(); let rad = 0; list.forEach(it => { rad = Math.max(rad, c.angleTo(_n.copy(it.pos).normalize())) }); return { list, hc: { c, rad: rad + 0.05, orbit: true } } }).filter(Boolean) }, [groups])
   if (!groups) return <InstancedBatch {...props} />
-  return <>{groups.map((g, i) => <InstancedBatch key={i} {...props} items={g.list} hc={g.hc} />)}</>
+  const og = props.lo2 || props.lo || props.geo
+  return <>{groups.map((g, i) => <InstancedBatch key={i} {...props} items={g.list} hc={g.hc} />)}{coarse.map((g, i) => <InstancedBatch key={'o' + i} items={g.list} geo={og} mat={props.mat} hc={g.hc} />)}</>
 }
 export const PU = { uDay: { value: 1 } }
 export const NOISE_GLSL = `float ph(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }

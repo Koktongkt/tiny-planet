@@ -68,7 +68,7 @@ export function houseGeos({ w, tall, roof, wall, curtain, seed = 0, porch = true
     for (const sx of [-1, 1]) det.push(box(0.022, 0.29, 0.022, sx * 0.13, 0.145, fz + 0.15, T))
     shell.push(box(0.34, 0.02, 0.2, 0, 0.305, fz + 0.09, rc.clone().multiplyScalar(0.85), null, 0.32))
     det.push(box(0.3, 0.016, 0.016, 0, 0.285, fz + 0.15, T))
-    det.push(box(0.22, 0.05, 0.12, 0, 0.0, fz + 0.06, '#c9c0b2', (c, x, y, z) => c.multiplyScalar(0.9 + 0.15 * hash(Math.round(x * 40), 1, Math.round(z * 40)))))
+    det.push(box(0.22, 0.07, 0.12, 0, 0.02, fz + 0.06, '#c9c0b2', (c, x, y, z) => c.multiplyScalar(0.9 + 0.15 * hash(Math.round(x * 40), 1, Math.round(z * 40)))))
   }
   return { shell: merge(shell), detail: merge(det), glass: merge(glass), chimney: new THREE.Vector3(chx, tall + 0.49, chz) }
 }
@@ -111,7 +111,7 @@ export function foliage(mat, amp = 0.08, base = 0.4) {
       { float ndv = abs(dot(normalize(vNormal), normalize(vViewPosition))); float rim = pow(1. - ndv, 3.);
         gl_FragColor.rgb += rim * (vec3(1.,.86,.55) * .22 * clamp(dot(normalize(vNormal), vec3(0.,1.,0.)) + .4, 0., 1.) + vec3(.12,.16,.22) * .35); }`)
   }
-  mat.customProgramCacheKey = () => 'foliage' + amp + '_' + base + (prevKey ? prevKey() : '')
+  mat.customProgramCacheKey = () => 'foliage' + amp + '_' + base
   return mat
 }
 
@@ -140,6 +140,6 @@ export function shrubLo() { return merge([tint(lump(0.13, 0, 0, 0.07, 0, 1.1, 0.
 export function rockGeo(det = 1, seed = 1) {
   const g = new THREE.IcosahedronGeometry(0.1, det), p = g.attributes.position
   for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = 1 + 0.22 * Math.sin(x * 31 + seed) * Math.sin(z * 27 + y * 13); p.setXYZ(i, x * k * 1.25, Math.max(y * k * 0.62, -0.02) + 0.02, z * k) }
-  g.computeVertexNormals(); const ng = g.toNonIndexed(); ng.computeVertexNormals(); const nr = ng.attributes.normal
+  const ng = g; ng.computeVertexNormals(); const nr = ng.attributes.normal
   return tint(ng, '#c4bcae', (c, x, y, z, i) => { const up = nr.getY(i), m = Math.max(0, Math.min(1, (up - 0.55) * 3.2 + 0.4 * Math.sin(x * 50 + z * 40))); c.multiplyScalar(0.86 + 0.18 * hash(Math.round(x * 60), Math.round(y * 60), seed)); c.lerp(_c.set(m > 0.6 ? '#7fae5f' : '#94b86a'), m) })
 }
