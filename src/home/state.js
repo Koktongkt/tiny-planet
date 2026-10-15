@@ -21,7 +21,7 @@ export const HOME = {
   hp: { x: 0.55, z: -0.35, yaw: 0.6, target: null }, // her room-local position / facing (yaw 0 faces +z)
   near: [], // [(consider, playerLocal) => void] proximity hooks registered by room / cat / dog
   colliders: [], homeN: null, doorN: null, outN: null, houseQ: null, GAME: null,
-  petCam: 0,
+  petCam: 0, camYaw: Math.PI,
 }
 // she starts inside her house (unless a debug spot or another view was asked for)
 HOME.inside = VIEW.mode === 'follow' && !q.has('nogame') && !q.has('at') && !q.has('out')

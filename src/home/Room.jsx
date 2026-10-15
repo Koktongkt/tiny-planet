@@ -44,7 +44,7 @@ HOME.stepInside = (dt, KEYS, P, obj) => {
   HOME.P = P; HOME.playerObj = obj; const hp = HOME.hp
   let f = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0), turn = (KEYS.a || KEYS.arrowleft ? 1 : 0) - (KEYS.d || KEYS.arrowright ? 1 : 0)
   if (CAM.yaw) { hp.yaw -= CAM.yaw; CAM.yaw = 0 }
-  if (PAD.active && PAD.mag > 0.12 && !f && !turn) { const want = Math.atan2(PAD.x, -PAD.y) + Math.PI; let d = want - hp.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); hp.yaw += d * Math.min(1, dt * 9); f = Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(d) < 1.6 ? 1 : 0.3) }
+  if (PAD.active && PAD.mag > 0.12 && !f && !turn) { const want = HOME.camYaw - Math.atan2(PAD.x, PAD.y); /* camera-relative: up = away from the camera, right = screen right (the old +PI mirrored both axes) */ let d = want - hp.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); hp.yaw += d * Math.min(1, dt * 9); f = Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(d) < 1.6 ? 1 : 0.3) }
   if (f || turn) hp.target = null
   if (hp.target) { const dx = hp.target.x - hp.x, dz = hp.target.z - hp.z, d = Math.hypot(dx, dz); if (d < 0.05) hp.target = null; else { let dd = Math.atan2(dx, dz) - hp.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); hp.yaw += dd * Math.min(1, dt * 10); f = Math.abs(dd) < 1.2 ? 1 : 0.2 } }
   if (HOME.busy || (G.ui.panel)) f = turn = 0
@@ -69,7 +69,7 @@ HOME.camera = (camera, g, dt) => {
   _look.set(fx * 0.85, 0.22 + CAT.y * w, Math.min(fz - 0.12, 0.5))
   if (PETCAM) { const a = +PETCAM || 0.5; _goal.set(CAT.x + Math.sin(a) * 0.55, CAT.y + 0.32, CAT.z + Math.cos(a) * 0.55); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
   const k = snapFrames > 0 ? 1 : 1 - Math.exp(-dt * 3.5); snapFrames--
-  camL.lerp(_goal, k); lookL.lerp(_look, k); if (k === 1) { camL.copy(_goal); lookL.copy(_look) }
+  camL.lerp(_goal, k); lookL.lerp(_look, k); HOME.camYaw = Math.atan2(lookL.x - camL.x, lookL.z - camL.z); /* yaw the interior camera faces (≈π) */ if (k === 1) { camL.copy(_goal); lookL.copy(_look) }
   camera.position.copy(roomToWorld(camL.x, camL.y, camL.z, _a)); camera.up.copy(_b.copy(UP).transformDirection(HOME.roomObj.matrixWorld)); camera.lookAt(roomToWorld(lookL.x, lookL.y, lookL.z, _c))
   return true
 }
