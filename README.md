@@ -93,6 +93,8 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Before → after** (live site, headless Chromium with software WebGL, time to the first rendered frame): unthrottled **36.4 s → 1.8–3.0 s**; Fast 3G + 4x CPU **147 s → 9.4 s**. Total transfer is about 374 KB gzipped either way.
 - **Smoother loading and play (perf2):** the title card animates as separate composited layers, so filters are drawn once. The world is built in slices, and shaders plus first draws warm up in short tasks behind the loader, so there are no multi-second freezes. Repeated scenery such as grass, flowers and trees is grouped so off-screen and far-side groups are skipped, which roughly halves the triangles in the game views. Render resolution is capped at 1.5x.
 
+- **perf3:** per-frame code no longer allocates (cached colours, scratch vectors), and the clock re-renders only when its text changes. Rendering pauses while the tab is hidden, and resolution adapts between 1x and the cap when frames struggle (`?q=fixed` pins it). The room's static furniture is batched per material, which cuts indoor meshes from 595 to 271 and draw calls from 404 to 226 (`?nomerge` turns it off).
+
 ## Licences
 
 See [ASSETS.md](ASSETS.md).
