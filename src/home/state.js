@@ -24,7 +24,7 @@ export const HOME = {
   petCam: 0, camYaw: Math.PI,
 }
 // she starts inside her house (unless a debug spot or another view was asked for)
-HOME.inside = VIEW.mode === 'follow' && !q.has('nogame') && !q.has('at') && !q.has('out')
+HOME.inside = VIEW.mode === 'follow' && !q.has('nogame') && !q.has('at') && !q.has('out') && !q.has('petsdemo') /* ?petsdemo is an outdoor pets view: starting inside left an empty-looking room */
 if (typeof window !== 'undefined') window.__home = HOME
 
 const _v = new THREE.Vector3()

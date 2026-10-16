@@ -72,7 +72,8 @@ function Recipes() {
           {!own && !ok && k && <div className="miss-l">Missing: {have.filter(h => !h.ok).map(({ need: [id, n], have: h }) => `${n - h} ${typeof id === 'string' ? ITEMS[id].name : 'Herbs or Tea'}`).join(', ')}</div>}
           {!k && <div className="miss-l">Discover its ingredients to learn this recipe.</div>}
         </div>
-        {bench && !own && k && <button className="tp-craft" disabled={!ok || !!G.ui.crafting} onClick={() => craft(r, () => emit())} style={{ '--hold': q.get('craft') === r.id ? 'paused' : 'running' }}>{busy ? 'Crafting…' : 'Craft'}</button>}
+        {bench && !own && k && r.at === 'stove' && <div className="miss-l">Cook this on the stove at home.</div>}
+        {bench && !own && k && r.at !== 'stove' && <button className="tp-craft" disabled={!ok || !!G.ui.crafting} onClick={() => craft(r, () => emit())} style={{ '--hold': q.get('craft') === r.id ? 'paused' : 'running' }}>{busy ? 'Crafting…' : 'Craft'}</button>}
       </div> })}</div></React.Fragment>)}
   </Panel>
 }
