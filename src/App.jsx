@@ -13,6 +13,7 @@ import { GhibliPerson, Character } from './GhibliPerson.jsx'
 import { VILLAGERS } from './villagers.js'
 import { houseGeos, crownGeos, firGeos, foliage } from './scenery.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { MinimapLazy } from './minimap/index.js'
 import { NPCS, TALK, periodAt } from './talk/state.js'
 // prototype-only characters load on demand (keeps them, and the 214 KB sprite sheet, out of the startup bundle)
 const GhibliPersonV1 = lazy(() => import('./GhibliPersonV1.jsx').then(m => ({ default: m.GhibliPersonV1 })))
@@ -193,16 +194,7 @@ function Stones() {
 
 const ShrineLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Shrine }))) // ship trim: lazy chunk
 
-function BusStop() {
-  const tex = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#ffd36e'; x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill(); x.lineWidth = 10; x.strokeStyle = '#d9534f'; x.stroke(); x.fillStyle = '#4a3a35'; x.font = '600 34px Fredoka, sans-serif'; x.textAlign = 'center'; x.fillText('BUS', 64, 58); x.font = '500 18px Fredoka, sans-serif'; x.fillText('Inaba', 64, 86); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t }, [])
-  return <Surface n={SPOTS.bus} spin={2.2}>
-    <mesh position={[0, 0.22, 0]} material={MAT.stone}><cylinderGeometry args={[0.012, 0.014, 0.44, 6]} /></mesh>
-    <mesh position={[0, 0.44, 0.012]}><circleGeometry args={[0.075, 24]} /><meshToonMaterial map={tex} gradientMap={toonRamp} /></mesh>
-    <mesh position={[0, 0.44, 0.008]} rotation={[Math.PI / 2, 0, 0]} material={DM.red}><cylinderGeometry args={[0.078, 0.078, 0.01, 24]} /></mesh>
-    <mesh position={[0.2, 0.07, 0]} material={MAT.wood}><boxGeometry args={[0.22, 0.02, 0.07]} /><Outlines thickness={0.005} color={INK} /></mesh>
-    {[-1, 1].map(s => <mesh key={s} position={[0.2 + s * 0.09, 0.03, 0]} material={MAT.wood}><boxGeometry args={[0.02, 0.06, 0.06]} /></mesh>)}
-  </Surface>
-}
+const BusStopLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.BusStop }))) // r7: lazy (startup budget)
 
 const HGEO = new Map()
 const houseVariant = (i) => { const k = `${i % 3}|${i % 2}|${i % 4}`; let g = HGEO.get(k); if (!g) HGEO.set(k, g = houseGeos({ w: 0.55 + (i % 3) * 0.1, tall: i % 2 ? 0.55 : 0.45, roof: ['#d9655b', '#5f8fc4', '#e8a24a', '#c97b9a'][i % 4], wall: i % 2 ? '#fbf3e4' : '#f2e2c4', curtain: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'][i % 4], seed: i % 4 })); return g }
@@ -259,7 +251,7 @@ function Wildflowers() {
 function Details() {
   return <>
     {<Suspense fallback={null}>{BRIDGES.map((b, i) => <BridgeLazy key={i} b={b} Basis={Basis} DM={DM} />)}</Suspense>}
-    <Suspense fallback={null}><LaundryLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><CatLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><ShrineLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /></Suspense><BusStop /><Moss /><Smoke /><Butterflies /><Seeds /><Wildflowers /><Stones />
+    <Suspense fallback={null}><LaundryLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><CatLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><ShrineLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /></Suspense><Suspense fallback={null}><BusStopLazy DM={DM} SPOTS={SPOTS} /></Suspense><Moss /><Smoke /><Butterflies /><Seeds /><Wildflowers /><Stones />
     {[0, 1, 3, 4].map(i => <Mailbox key={i} i={i} />)}
     <VegPatch i={4} /><VegPatch i={5} />
   </>
@@ -521,7 +513,7 @@ function Fireflies() {
 }
 
 // ---------- traveller ----------
-const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
+const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
 { const t = new THREE.Vector3(0, 1, 0); P.fwd.copy(t.sub(P.n.clone().multiplyScalar(P.n.dot(t)))).normalize().negate() }
 const KEYS = {}
 if (VIEW.mode === 'detail') { P.n.copy(bl(B0, 0.08, 0)); P.fwd.copy(B0.tan) }
@@ -578,18 +570,36 @@ const PM = { tunic: toon('#5f8fc4'), skin: toon('#f8d9bf'), hat: toon('#e9c46a')
 const PST = { phase: 0, move: 0, t: 0, turn: 0, dist: 0 }
 const _pp = new THREE.Vector3()
 const _pf = new THREE.Vector3()
+// r7: the body faces where she actually moves (velocity), not the control heading P.fwd: S walks her toward the camera
+// instead of moonwalking; turning in place (A/D, stick) still turns her. Smooth turn: ~10/s angular blend on the tangent plane.
+const _fv = new THREE.Vector3(), _fp = new THREE.Vector3(), _fq = new THREE.Vector3()
+function faceStep(dt) {
+  if (P.face.lengthSq() < 0.5) P.face.copy(P.fwd)
+  _fv.copy(P.n).sub(_fp); const moved = _fp.lengthSq() > 0 && _fv.length() > 0.02 * dt / R; _fp.copy(P.n)
+  const tgt = moved ? _fv.addScaledVector(P.n, -_fv.dot(P.n)).normalize() : P.move < 0.05 ? P.fwd : null
+  P.face.addScaledVector(P.n, -P.face.dot(P.n)).normalize()
+  if (tgt) { const a = Math.atan2(_fq.copy(P.face).cross(tgt).dot(P.n), P.face.dot(tgt)); P.face.applyAxisAngle(P.n, a * Math.min(1, dt * 10)) }
+}
+// r7: same rule indoors — the room code moves hp.x/z along hp.yaw (S = backwards); the body yaw follows the actual motion
+const FI = { yaw: null, x: 0, z: 0 }, _Y = new THREE.Vector3(0, 1, 0)
+function faceInside(dt, obj) { const hp = HOME.hp; if (!hp) return
+  if (FI.yaw === null) { FI.yaw = hp.yaw; FI.x = hp.x; FI.z = hp.z }
+  const dx = hp.x - FI.x, dz = hp.z - FI.z; FI.x = hp.x; FI.z = hp.z
+  const moved = Math.hypot(dx, dz) > 0.02 * dt, want = moved ? Math.atan2(dx, dz) : P.move < 0.05 ? hp.yaw : null
+  if (want !== null) { let d = want - FI.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); FI.yaw += d * Math.min(1, dt * 10) }
+  HOME.faceYaw = FI.yaw; obj.quaternion.setFromAxisAngle(_Y, FI.yaw) }
 function Traveller() {
   const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); HOME.playerObj = ref.current
-    if (HOME.inside) HOME.stepInside(dt, KEYS, P, ref.current) // inside her house
+    if (HOME.inside) { HOME.stepInside(dt, KEYS, P, ref.current); faceInside(dt, ref.current) } // inside her house
     else { stepPlayer(dt)
-    const side = _wx.crossVectors(P.n, P.fwd)
-    ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.fwd))
+    faceStep(dt); const side = _wx.crossVectors(P.n, P.face)
+    ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.face))
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
     tickAct(PST); PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
-    if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(P.fwd).dot(P.n), _pf.dot(P.fwd)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(P.fwd)
+    if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
   return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{GM.W && <GM.W.PlayerLantern />}</group>
 }
@@ -871,6 +881,7 @@ export default function App() {
     </div>
     {GAMEON && <GameSlot ui />}
     <TouchPad />
+    {live && <Suspense fallback={null}><MinimapLazy /></Suspense>}{/* r7: minimap (src/minimap, lazy) */}
     <TalkSlot ui />
     <HomeOverlay />
   </>

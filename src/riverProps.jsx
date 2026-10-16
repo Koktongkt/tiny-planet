@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { R, K, place, pathDir, streamDir, streamHalf, waterAt, onBridge, JUMPS, JUMP_HALF, BRIDGES, height, wind } from './world.js'
+import { R, K, place, pathDir, streamDir, streamHalf, waterAt, onBridge, JUMPS, JUMP_HALF, BRIDGES, height, wind, toonRamp } from './world.js'
 import { toon, paint, C, T, INK, MAT, Surface } from './common.jsx'
 // round6: edge stones along the trail, pebbles on the river banks, stepping stones + marker stakes at the jump spots.
 // One instanced mesh for every stone (8-tri octahedra) and one for the stakes: +2 draw calls, ~6k triangles.
@@ -133,5 +133,16 @@ export function Shrine({ Basis, DM, SPOTS }) {
     <mesh position={[0, 0.27, 0.3]} material={DM.red}><boxGeometry args={[0.32, 0.024, 0.03]} /><Outlines thickness={0.005} color={INK} /></mesh>
     <mesh position={[0, 0.22, 0.3]} material={DM.red}><boxGeometry args={[0.24, 0.014, 0.02]} /></mesh>
     <mesh position={[0.13, 0.02, 0.06]} material={DM.stone}><icosahedronGeometry args={[0.04, 0]} /></mesh>
+  </Surface>
+}
+
+export function BusStop({ DM, SPOTS }) {
+  const tex = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#ffd36e'; x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill(); x.lineWidth = 10; x.strokeStyle = '#d9534f'; x.stroke(); x.fillStyle = '#4a3a35'; x.font = '600 34px Fredoka, sans-serif'; x.textAlign = 'center'; x.fillText('BUS', 64, 58); x.font = '500 18px Fredoka, sans-serif'; x.fillText('Inaba', 64, 86); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t }, [])
+  return <Surface n={SPOTS.bus} spin={2.2}>
+    <mesh position={[0, 0.22, 0]} material={MAT.stone}><cylinderGeometry args={[0.012, 0.014, 0.44, 6]} /></mesh>
+    <mesh position={[0, 0.44, 0.012]}><circleGeometry args={[0.075, 24]} /><meshToonMaterial map={tex} gradientMap={toonRamp} /></mesh>
+    <mesh position={[0, 0.44, 0.008]} rotation={[Math.PI / 2, 0, 0]} material={DM.red}><cylinderGeometry args={[0.078, 0.078, 0.01, 24]} /></mesh>
+    <mesh position={[0.2, 0.07, 0]} material={MAT.wood}><boxGeometry args={[0.22, 0.02, 0.07]} /><Outlines thickness={0.005} color={INK} /></mesh>
+    {[-1, 1].map(s => <mesh key={s} position={[0.2 + s * 0.09, 0.03, 0]} material={MAT.wood}><boxGeometry args={[0.02, 0.06, 0.06]} /></mesh>)}
   </Surface>
 }
