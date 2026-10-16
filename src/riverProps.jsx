@@ -76,10 +76,12 @@ const railsFor = (BL) => { const a = [], posts = [-0.47, -0.16, 0.16, 0.47].map(
     for (let k = 0; k < posts.length - 1; k++) { const u0 = posts[k], u1 = posts[k + 1], y0 = y(u0) + 0.13, y1 = y(u1) + 0.13, L = Math.hypot(u1 - u0, y1 - y0); const g = new THREE.BoxGeometry(0.02, 0.018, L + 0.02); g.rotateX(-Math.atan2(y1 - y0, u1 - u0)); g.translate(s * 0.13, (y0 + y1) / 2, (u0 + u1) / 2); a.push(g) } }
   return mergeGeometries(a) }
 export function Bridge({ b, Basis, DM }) {
-  const [PLANKS, RAILS] = useMemo(() => [planksFor(b.L), railsFor(b.L)], [])
+  // ship trim: planks + rails in one vertex-coloured mesh with one outline (was 2 meshes + 2 outlines): -2 calls per bridge
+  const DECK = useMemo(() => { const tint = (g, h) => { g = g.index ? g.toNonIndexed() : g; const c = C(h), a = new Float32Array(g.attributes.position.count * 3); for (let k = 0; k < a.length; k += 3) { a[k] = c.r; a[k + 1] = c.g; a[k + 2] = c.b } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); if (g.attributes.uv) g.deleteAttribute('uv'); return g }
+    return mergeGeometries([tint(planksFor(b.L), '#b07a4f'), tint(railsFor(b.L), '#8a5a3c')]) }, [])
+  const mat = useMemo(() => paint(toon('#ffffff', { vertexColors: true }), 0.18, true, 12), [])
   return <Basis n={b.c} fwd={b.tan} lift={0.0}>
-    <mesh geometry={PLANKS} material={DM.plank}><Outlines thickness={0.008} color={INK} /></mesh>
-    <mesh geometry={RAILS} material={DM.rail}><Outlines thickness={0.005} color={INK} /></mesh>
+    <mesh geometry={DECK} material={mat}><Outlines thickness={0.007} color={INK} /></mesh>
   </Basis>
 }
 
