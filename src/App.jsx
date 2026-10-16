@@ -38,12 +38,13 @@ window.__setPhase = (p) => { rot.a = typeof p === 'string' ? PRESET[p] : p; rot.
 const spin = { a: -0.8 * rot.a + 0.25, v: 0 }
 const _v = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _s = new THREE.Vector3()
 const DAY0 = 0
+export const DAY_SEC = q.has('daylen') ? Math.max(10, +q.get('daylen') || 3600) : 3600
 function Clock() {
   const camera = useThree(s => s.camera)
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05)
-    wind.time.value += dt
-    if (!fixed) rot.a += dt * Math.PI * 2 / 180 // full day every 3 minutes
+    wind.time.value += dt; T.h += dt * 24 / DAY_SEC
+    if (!fixed) rot.a += dt * Math.PI * 2 / DAY_SEC // round6: one in-game day per real hour (?daylen=<sec> to override)
     const p = rot.a, e = Math.cos(p)
     if (!fixed) newDay(Math.max(0, Math.floor((rot.a + Math.PI / 2) / (Math.PI * 2)) + DAY0))
     if (VIEW.mode === 'follow' && P.wUp.lengthSq() > 0) { // sun relative to the traveller's sky
@@ -629,12 +630,12 @@ function stepPlayer(dt) {
     else { P.fwd.lerp(tg.normalize(), Math.min(1, dt * 8)); go = 1 }
   }
   P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
-  P.n.addScaledVector(P.fwd, go * (run ? 1.68 : 0.975) / R * dt).normalize() // polish: another ~22% slower stroll
+  P.n.addScaledVector(P.fwd, go * (run ? 1.51 : 0.88) / R * dt).normalize() // round6: outdoor stroll another ~10% slower (0.975/1.68 -> 0.88/1.51)
   const pass = ropePass(P.n)
   for (const c of COLLIDERS) { if (pass && c.n === Zc.cliff) continue; const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
   P.fwd.addScaledVector(P.n, -P.fwd.dot(P.n)).normalize()
   const fl = floorLift(P.n); P.vy -= 7 * dt; P.h += P.vy * dt; if (P.h < fl) { if (fl - P.h < 0.12 || P.vy < 0) { P.h = fl; P.vy = 0 } } // gravity toward planet centre
-  P.phase += dt * (run ? 11 : 8.2) * P.move
+  P.phase += dt * (run ? 10 : 7.4) * P.move // cadence follows the slower stride
 }
 const PM = { tunic: toon('#5f8fc4'), skin: toon('#f8d9bf'), hat: toon('#e9c46a'), band: toon('#d9655b'), cape: toon('#d9655b', { side: THREE.DoubleSide }), boot: toon('#6b4a3a'), eye: toon('#2e2420'), cheek: toon('#f4a3a0'), bag: toon('#b98a5a') }
 const PST = { phase: 0, move: 0, t: 0, turn: 0, dist: 0 }
