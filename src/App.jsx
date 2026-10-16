@@ -151,11 +151,11 @@ function Stream() {
   const m = useMemo(() => new THREE.ShaderMaterial({ uniforms: { uTime: wind.time, uN: { value: 0 }, uD: { value: 0 } }, polygonOffset: true, polygonOffsetFactor: -3,
     vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
     fragmentShader: `varying vec2 vUv; uniform float uTime,uN,uD; void main(){ float e = abs(vUv.x-.5)*2.;
-      vec3 c = mix(vec3(.16,.42,.6), vec3(.36,.68,.8), smoothstep(.15,.85,e));
+      vec3 c = mix(vec3(.1,.31,.5), vec3(.27,.56,.72), smoothstep(.1,.8,e));
       float w = sin(vUv.x*9.+vUv.y*.3)*1.5;
       float f = sin(vUv.y*1.3 - uTime*2.2 + w); float f2 = sin(vUv.y*3.1 - uTime*3.4 + vUv.x*17. + w*.6);
-      c = mix(c, vec3(.82,.95,1.), smoothstep(.86,.93,f)*.75*(1.-e*.5)); c = mix(c, vec3(.7,.9,.98), smoothstep(.9,.97,f2)*.45);
-      c = mix(c, vec3(.94,1.,1.), smoothstep(.8,.9,e)*(.75+.25*sin(vUv.y*4.-uTime*3.)));
+      c = mix(c, vec3(.78,.93,1.), smoothstep(.86,.93,f)*.7*(1.-e*.5)); c = mix(c, vec3(.55,.8,.92), smoothstep(.9,.97,f2)*.5);
+      c = mix(c, vec3(.92,.98,1.), smoothstep(.82,.9,e)*(.7+.3*sin(vUv.y*4.-uTime*3.)));
       c = mix(c, vec3(.29,.24,.2), smoothstep(.93,.985,e));
       c = mix(c, c*vec3(1.,.8,.75)+vec3(.12,.04,.06), uD*.5); c = mix(c, vec3(.1,.16,.32)+vec3(.15,.13,.05)*smoothstep(.85,.93,f), uN*.8);
       gl_FragColor = vec4(c,1.); }` }), [])

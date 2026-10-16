@@ -16,7 +16,7 @@ export const CAT_CFG = { s: 1.05, species: 'cat', body: [0.055, 0.055, 0.072], l
   tail: { n: 8, seg: 0.028, r: 0.01, curl: 0.08, tip: 2 }, col: { main: '#f6b46e', belly: '#fffaf2', dark: '#c46a2e', inner: '#f4a3a0', nose: '#e8857e', eye: '#1a1410', iris: '#d4b028', pupil: '#0e0a08', eyeWhite: '#fffaf2', shine: '#ffffff', whisker: '#4a3a32' } }
 // nap spots (room-local; y = surface height). from: floor point to hop up from. claim: she can be 'beaten' to it
 const SPOT = { beam: { x: -0.62, z: 0.25, y: 0, face: 2.2 }, bed: { x: -0.92, z: -0.5, y: 0.29, from: { x: -0.5, z: -0.48 }, face: 0.8, claim: 'the bed' }, sill: { x: -1.2, z: 0.15, y: 0.44, from: { x: -0.98, z: 0.15 } }, bedK: { x: -1.0, z: -0.3, y: 0.29, from: { x: -0.5, z: -0.3 } },
-  rug: { x: 0.12, z: 0.5, y: 0.006, face: 1.4, claim: 'the rug' }, chair: { x: -0.14, z: 0.26, y: 0.225, from: { x: -0.34, z: 0.34 }, face: 2.6, claim: 'the stool' }, shelf: { x: -0.02, z: -0.9, y: 0.865, from: { x: -0.02, z: -0.66 }, face: 0, claim: null }, sillNap: { x: -1.2, z: 0.05, y: 0.44, from: { x: -0.98, z: 0.05 }, face: 0.2 } }
+  rug: { x: 0.12, z: 0.5, y: 0.006, face: 1.4, claim: 'the rug' }, chair: { x: -0.14, z: 0.26, y: 0.225, from: { x: -0.34, z: 0.34 }, face: 2.6, claim: 'the stool' }, shelf: { x: -0.12, z: -0.9, y: 0.865, from: { x: -0.12, z: -0.66 }, face: 0, claim: null }, sillNap: { x: -1.2, z: 0.05, y: 0.44, from: { x: -0.98, z: 0.05 }, face: 0.2 } }
 export const CAT_SCALE = 0.7 // round6: Mochi ~30% smaller so she reads as a pet next to her
 const pick = (w) => { let s = 0; for (const k in w) s += w[k]; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return Object.keys(w)[0] }
 const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a))

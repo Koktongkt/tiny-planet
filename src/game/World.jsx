@@ -55,7 +55,7 @@ export function layout(Zc, village, homeN, blocked) {
   const dirAway = cc.clone().sub(toward(cc, Zc.lake, 0.05)).normalize()
   const A = toward(cc, cc.clone().add(dirAway), cr + 0.24), B = toward(cc, cc.clone().add(dirAway), cr - 0.03)
   const top = toward(cc, cc.clone().add(dirAway), cr * 0.35)
-  G.benchPos = posOf(benchN); LAYOUT = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
+  G.benchPos = posOf(benchN); LAYOUT = window.__layout = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
   void out
   if (q.get('decor') === 'demo') { const hpos = posOf(homeN); G.s.placed = [['wreath', 0.3, 0.55, 0], ['basket', 0.62, 0.2, 0.6], ['mosslamp', 0.18, 0.72, 0], ['chime', 0.75, -0.15, 0.3]].map(([item, x, z, rot], i) => ({ uid: 'demo' + i, item, rot, n: hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize().toArray() })) }
   if (q.has('place')) G.ui.place = { item: q.get('place'), rot: 0.6 }
