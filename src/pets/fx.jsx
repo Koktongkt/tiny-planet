@@ -15,9 +15,9 @@ export function Hearts({ gref, y = 0.2, size = 0.11 }) {
   return <group ref={g} userData={{ slots }}>{mats.map((m, i) => <sprite key={i} material={m} visible={false} />)}</group>
 }
 const bubbleTex = (txt) => canvasTex(256, 128, (x) => { x.fillStyle = '#fffaf0'; x.strokeStyle = '#4a3a35'; x.lineWidth = 6; x.beginPath(); x.ellipse(128, 56, 110, 46, 0, 0, 7); x.fill(); x.stroke(); x.beginPath(); x.moveTo(70, 92); x.lineTo(56, 124); x.lineTo(100, 98); x.fill(); x.stroke(); x.fillStyle = '#fffaf0'; x.fillRect(66, 86, 40, 12); x.fillStyle = '#5a3a24'; x.font = '600 54px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, 128, 58) })
-export function Bubble({ bref, text = 'Woof!' }) {
+export function Bubble({ bref, text = 'Woof!', scale = 1 }) {
   const m = useMemo(() => new THREE.SpriteMaterial({ map: bubbleTex(text), transparent: true, depthWrite: false }), [])
-  return <sprite ref={bref} material={m} visible={false} scale={[0.22, 0.11, 1]} />
+  return <sprite ref={bref} material={m} visible={false} scale={[0.22 * scale, 0.11 * scale, 1]} />
 }
 // puffs: dirt (dig) or droplets (splash)
 export function Puffs({ pref, color = '#a8835a', n = 10 }) {

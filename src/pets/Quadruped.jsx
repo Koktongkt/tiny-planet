@@ -8,7 +8,7 @@ import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { cel, OUT, GEO } from '../home/kit.jsx'
 
-export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0 }
+export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
 const K = { hop: 30, roll: 4, bodyYaw: 6, purr: 10 }
 function Part({ geo = GEO.sph, mat, out = OUT.pet, pos, scl, rot, children, gref }) {
@@ -37,7 +37,7 @@ export function Quadruped({ cfg, st }) {
     const B = R_.body
     B.position.set(0, baseY * (1 - 0.5 * lie - 0.34 * p.crouch - 0.12 * p.stretch - 0.22 * sit) + bob + p.hop * c.s * 0.7 - roll * bh * 0.25, -sit * bl * 0.25)
     B.rotation.set(pitch, p.bodyYaw, roll * 2.6 + Math.sin(t * 9) * 0.05 * p.crouch * (1 - roll))
-    const br = 1 + Math.sin(t * (lie > 0.5 ? 2.2 : 3)) * 0.025 + Math.sin(t * 60) * 0.012 * p.purr // breathing (+ purr buzz)
+    const br = 1 + Math.sin(t * (lie > 0.5 ? 2.2 : 3 + 11 * p.pant)) * (0.025 + 0.03 * p.pant) + Math.sin(t * 60) * 0.012 * p.purr // breathing (+ purr buzz, quick panting breaths)
     R_.torso.scale.set(bw * br, bh * br * (1 - 0.1 * lie), bl * (1 + 0.08 * p.stretch))
     for (const [k, sx, fz, off] of legs) {
       const L = R_['leg' + k]; if (!L) continue
@@ -63,7 +63,7 @@ export function Quadruped({ cfg, st }) {
     }
     const eo = Math.max(0.08, Math.min(p.eyes, blink)); R_.eyeL.scale.y = R_.eyeR.scale.y = eo
     if (R_.pupilL) { const pv = c.pupils === 'vert' ? [hr * 0.035, hr * 0.13 * eo, hr * 0.02] : [hr * 0.07, hr * 0.07 * eo, hr * 0.02]; R_.pupilL.scale.set(...pv); R_.pupilR.scale.set(...pv) }
-    R_.mouth.scale.set(1, 0.3 + 2.4 * p.mouth, 1); if (R_.tongue) { R_.tongue.visible = p.tongue > 0.1; R_.tongue.position.y = -hr * (0.42 + 0.12 * p.tongue); R_.tongue.scale.set(1, 0.6 + 0.9 * p.tongue, 1) }
+    R_.mouth.scale.set(1, 0.3 + 2.4 * (p.mouth + Math.max(0, Math.sin(t * 14)) * 0.25 * p.pant), 1); if (R_.tongue) { R_.tongue.visible = p.tongue > 0.1; R_.tongue.position.y = -hr * (0.42 + 0.12 * p.tongue); R_.tongue.scale.set(1, 0.6 + 0.9 * p.tongue + 0.35 * p.pant * Math.max(0, Math.sin(t * 14)), 1) }
     // tail: a springy chain; up/curl from mood, side-to-side wag
     const n = c.tail.n, wag = p.tailWag, wf = p.tailSpeed
     for (let i = 0; i < n; i++) { const s = R_['t' + i]; if (!s) continue

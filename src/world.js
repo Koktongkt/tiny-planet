@@ -82,9 +82,9 @@ export const BRIDGES = []
 { let prev = null; for (let i = 0; i <= 3000; i++) { const t = (i / 3000) * Math.PI * 2; const d = latOfN(pathDir(t).normalize()) - latOfN(streamDir(t).normalize()); if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(t).normalize(), tan = pathDir(t + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t }) } prev = d } }
 BRIDGES.sort((a, b) => a.c.distanceTo(VILL) - b.c.distanceTo(VILL))
 export const BL = 1.0 // bridge length (world units), spans the pinched river with its banks
-export function bridgeLift(n) { for (const b of BRIDGES) { const dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; const a = (dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R, s = (dx * b.side.x + dy * b.side.y + dz * b.side.z) * R; if (Math.abs(a) < BL / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / BL) * Math.PI) } return 0 }
-export const onBridgeDeck = (n, pad = 0) => BRIDGES.some(b => { const dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; return Math.abs((dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R) < BL / 2 + pad && Math.abs((dx * b.side.x + dy * b.side.y + dz * b.side.z) * R) < 0.13 + pad * 0.3 })
-export const onBridge = (n) => BRIDGES.some(b => b.c.angleTo(n) < (BL / 2 + 0.08) / R)
+export function bridgeLift(n) { for (const b of BRIDGES) { const L = b.L || BL, dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; const a = (dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R, s = (dx * b.side.x + dy * b.side.y + dz * b.side.z) * R; if (Math.abs(a) < L / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / L) * Math.PI) } return 0 }
+export const onBridgeDeck = (n, pad = 0) => BRIDGES.some(b => { const dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; return Math.abs((dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R) < (b.L || BL) / 2 + pad && Math.abs((dx * b.side.x + dy * b.side.y + dz * b.side.z) * R) < 0.13 + pad * 0.3 })
+export const onBridge = (n) => BRIDGES.some(b => b.c.angleTo(n) < ((b.L || BL) / 2 + 0.08) / R)
 // narrow jump spots: spread around the loop, away from bridges, lake and harbour
 const _wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a))
 export const JUMPS = []
@@ -92,7 +92,7 @@ export const JUMPS = []
     if (BRIDGES.some(b => Math.abs(_wrap(b.t - t)) < 0.55) || JUMPS.some(j => Math.abs(_wrap(j.t - t)) < 0.9)) continue
     if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.6 || ang(n, ZONES.lake) < ZONES.lake.r * 1.6 || ang(n, ZONES.forest) < ZONES.forest.r * 0.8) continue
     const tan = streamDir(t + 0.004).normalize().sub(n).normalize(); JUMPS.push({ t, c: n, tan, side: new THREE.Vector3().crossVectors(tan, n).normalize() }) } }
-export const RIVER_HALF = 0.46, BRIDGE_HALF = 0.32, JUMP_HALF = 0.14
+export const RIVER_HALF = 0.46, BRIDGE_HALF = 0.2, JUMP_HALF = 0.14
 const gauss = (d, s) => Math.exp(-(d * d) / (s * s))
 export function streamHalf(t) { let h = RIVER_HALF
   for (const b of BRIDGES) h -= (RIVER_HALF - BRIDGE_HALF) * gauss(_wrap(t - b.t), 0.07)
@@ -124,12 +124,18 @@ export function waterAt(n, margin = 0.02) {
   if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.2 && height(n) < HARB_W - 0.03) return true
   return false
 }
+// each bridge spans the water it actually crosses (the path meets the river at a slant): centre it on the water and
+// size it to the span + a little bank either side
+for (const b of BRIDGES) { let lo = 0, hi = 0; const _n = new THREE.Vector3()
+  const wet = (a) => { _n.copy(b.c).addScaledVector(b.tan, a / R).normalize(); const sn = streamNear(_n); return sn.d < sn.half }
+  while (lo > -2 && wet(lo - 0.02)) lo -= 0.02; while (hi < 2 && wet(hi + 0.02)) hi += 0.02
+  const mid = (lo + hi) / 2; b.c = b.c.clone().addScaledVector(b.tan, mid / R).normalize(); b.side.crossVectors(b.c, b.tan).normalize(); b.tan.crossVectors(b.side, b.c).normalize(); b.L = Math.max(0.8, hi - lo + 0.34) }
 // river crossing gates (bridges + jump spots) for anything that has to path across (Pip)
 export const GATES = [...BRIDGES.map(b => ({ kind: 'bridge', t: b.t, c: b.c, b })), ...JUMPS.map(j => ({ kind: 'jump', t: j.t, c: j.c, j }))]
 // a point on the given side of the river at gate g, `off` units out from that side's bank
 export function gateSide(g, side, off = 0.18, out = new THREE.Vector3()) {
   const n = g.c, t = g.t, h = streamHalf(t), lat = streamLat(t) + side * (h + off) / R
-  if (g.kind === 'bridge') { const b = g.b; out.copy(b.c).addScaledVector(b.tan, (BL / 2 + off * 0.5) / R).normalize(); if (streamNear(out).side !== side) out.copy(b.c).addScaledVector(b.tan, -(BL / 2 + off * 0.5) / R).normalize(); return out }
+  if (g.kind === 'bridge') { const b = g.b; const L = b.L || BL; out.copy(b.c).addScaledVector(b.tan, (L / 2 + off * 0.5) / R).normalize(); if (streamNear(out).side !== side) out.copy(b.c).addScaledVector(b.tan, -(L / 2 + off * 0.5) / R).normalize(); return out }
   return out.copy(dir(lat, t))
 }
 if (typeof window !== 'undefined') window.__river = { streamNear, waterAt, BRIDGES, JUMPS, GATES, streamHalf, gateSide }

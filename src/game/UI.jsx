@@ -28,6 +28,11 @@ function Prompt() {
   else if (n.kind === 'decor') { icon = n.item; verb = 'Pick up'; name = ITEMS[n.item].name }
   else { const it = n.spot.item; icon = it; name = ITEMS[it].name; verb = it === 'fish' ? 'Fish for' : it === 'wool' ? 'Shear' : it === 'firefly' ? 'Catch' : it === 'water' ? 'Fill can with' : 'Gather'; if (it === 'wool') name = 'the sheep' }
   const need = n.kind === 'spot' && NEEDS_TOOL[n.spot.item]; const lack = need && !G.s.tools[need]
+  // round6: compact chips (pets): a small main chip, plus an optional secondary chip (e.g. throw a stick, key F)
+  if (n.chip) return <div className="tp-chips">
+    <button className="tp-chip paper" onClick={() => GAME.actions.act?.()}><span className="key">E</span><Icon id={icon} size={24} /><span>{verb}{name ? <> <b>{name}</b></> : null}</span></button>
+    {n.alt && <button className="tp-chip tp-chip-alt paper" onClick={() => n.alt.act()}><span className="key">{n.alt.key || 'F'}</span><Icon id={n.alt.icon} size={20} /><span>{n.alt.verb}</span></button>}
+  </div>
   return <button className={'tp-prompt paper' + (lack ? ' lack' : '')} onClick={() => GAME.actions.act?.()}>
     <span className="key">E</span><Icon id={icon} size={38} /><span>{verb} <b>{name}</b>{lack && <em>needs {ITEMS[need].name}</em>}</span>
   </button>
@@ -113,6 +118,7 @@ export function GameUI() {
       else if (e.code === 'KeyB' || e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); setPanel('bag') }
       else if (e.code === 'KeyC') setPanel('recipes')
       else if (e.code === 'KeyE' && !G.ui.panel) GAME.actions.act?.()
+      else if (e.code === 'KeyF' && !G.ui.panel && G.near?.alt) G.near.alt.act()
     }
     addEventListener('keydown', k); return () => removeEventListener('keydown', k)
   }, [])

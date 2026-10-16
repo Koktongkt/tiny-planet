@@ -201,19 +201,22 @@ const floorLift = (n) => bridgeLift(n) + ropeLift(n)
 const HB = (i) => place(HOUSES[i], 0, i * 1.3)
 const onHouse = (i, x, z) => { const p = HB(i); return p.pos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(p.q)).normalize() }
 const SPOTS = { shrine: dir(0.12, -1.05), bus: dir(0.52, 1.2), cat: bl(B0, -0.55, 0.32), laundryA: bl(B0, -1.45, 0.05), laundryB: bl(B0, -0.8, -0.3), view1: bl(B0, -1.2, 1.0), view2: bl(B0, -0.3, 0.55) }
+// round6: the wider river reaches a couple of the old spots near the first bridge; walk them back onto dry bank
+for (const k of ['cat', 'laundryA', 'laundryB', 'view1', 'view2']) { let g = 0; while (g++ < 40 && (waterAt(SPOTS[k], -0.12) || onBridge(SPOTS[k]))) SPOTS[k].addScaledVector(B0.tan, -0.05 / R).normalize() }
 window.__spots = { SPOTS, B0 }
 const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c)]
 
 const DM = { plank: paint(toon('#b07a4f'), 0.18, true, 12), rail: toon('#8a5a3c'), cloth: ['#ffffff', '#f59ab0', '#8fc3e8', '#ffd36e'].map(c => toon(c, { side: THREE.DoubleSide })), rope: toon('#e8dcc0'), red: toon('#d9534f'), soil: paint(toon('#8a6248'), 0.2, true, 14), cabbage: toon('#8fcf6a'), carrot: toon('#ef8a3c'), fence: toon('#f3e6cc'), stone: paint(toon('#c9c0b2'), 0.15, true, 15), moss: toon('#7fae5f'), cat: toon('#f2a65a'), catW: toon('#fff4e6'), dark: toon('#3a2e2a'), sign: toon('#ffd36e'), curtains: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'].map(c => toon(c)), smoke: toon('#f4f1ee', { transparent: true, opacity: 0.85 }), wing: ['#ffd36e', '#ffffff', '#f59ab0', '#a8d8ff'].map(c => toon(c, { side: THREE.DoubleSide })) }
 
 // the 11 planks merged into one mesh (same shapes / tilts): 2 draw calls per bridge instead of 22
-const PLANKS = (() => { const planks = 17, a = []; for (let k = 0; k < planks; k++) { const u = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((u / BL) * Math.PI); const g = new THREE.BoxGeometry(0.26, 0.022, BL / planks * 0.9); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.sin((u / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0))); g.translate(0, y, u); a.push(g) } return mergeGeometries(a) })()
+const planksFor = (BL) => { const planks = Math.round(BL * 16), a = []; for (let k = 0; k < planks; k++) { const u = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((u / BL) * Math.PI); const g = new THREE.BoxGeometry(0.26, 0.022, BL / planks * 0.9); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.sin((u / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0))); g.translate(0, y, u); a.push(g) } return mergeGeometries(a) }
 // round6: posts + handrails follow the (longer) arched deck, merged into one mesh: 2 draw calls instead of 14
-const RAILS = (() => { const a = [], posts = [-0.47, -0.16, 0.16, 0.47], y = (u) => 0.035 + 0.07 * Math.cos((u / BL) * Math.PI)
+const railsFor = (BL) => { const a = [], posts = [-0.47, -0.16, 0.16, 0.47].map(u => u * BL / 1.0), y = (u) => 0.035 + 0.07 * Math.cos((u / BL) * Math.PI)
   for (const s of [-1, 1]) { for (const u of posts) a.push(new THREE.BoxGeometry(0.024, 0.15, 0.024).translate(s * 0.13, y(u) + 0.065, u))
     for (let k = 0; k < posts.length - 1; k++) { const u0 = posts[k], u1 = posts[k + 1], y0 = y(u0) + 0.13, y1 = y(u1) + 0.13, L = Math.hypot(u1 - u0, y1 - y0); const g = new THREE.BoxGeometry(0.02, 0.018, L + 0.02); g.rotateX(-Math.atan2(y1 - y0, u1 - u0)); g.translate(s * 0.13, (y0 + y1) / 2, (u0 + u1) / 2); a.push(g) } }
-  return mergeGeometries(a) })()
+  return mergeGeometries(a) }
 function Bridge({ b }) {
+  const [PLANKS, RAILS] = useMemo(() => [planksFor(b.L), railsFor(b.L)], [])
   return <Basis n={b.c} fwd={b.tan} lift={0.0}>
     <mesh geometry={PLANKS} material={DM.plank}><Outlines thickness={0.008} color={INK} /></mesh>
     <mesh geometry={RAILS} material={DM.rail}><Outlines thickness={0.005} color={INK} /></mesh>

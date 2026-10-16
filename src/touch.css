@@ -123,3 +123,9 @@ html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-plac
   background:radial-gradient(64% 58% at 36% 30%,#f6fbe9e0 0,#d3e6bdc0 55%,#9cbf86a8 100%)!important;
   box-shadow:inset 0 0 0 1.8px #3b2f22,inset 0 2px 8px #3f5f3240,0 2px 6px #2a1e1426}
 @media (prefers-reduced-motion:reduce){.tp-pad .tp-stick,.tp-pad .tp-acts{transition:none}}
+
+/* round6: pet chips sit just above the pad row and stay small */
+html.tp-touch .tp-chips{bottom:calc(env(safe-area-inset-bottom,0px) + 178px)}
+html.tp-touch .tp-chip .key{display:none}
+html.tp-touch .tp-chip{min-height:34px;font-size:14px;padding:3px 12px 3px 6px}
+@media (orientation:landscape) and (max-height:520px){html.tp-touch .tp-chips{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}}
