@@ -129,39 +129,8 @@ function Ground() {
   return <mesh geometry={geo} material={useMemo(() => inkRim(paint(toon('#ffffff', { vertexColors: true }), 0.09, true, 1.6)), [])} />
 }
 
-// ribbon along a curve. width: half-width (number or fn(t)); cross: [u in -1..1, colour?] columns across it
-function ribbon(f, width, lift, N = 500, skip, cross = [[-1], [1]], liftFn) {
-  const pos = [], uv = [], idx = [], col = [], hasC = cross.some(c => c[1]), cc = cross.map(c => c[1] ? C(c[1]) : null), M = cross.length
-  for (let i = 0; i <= N; i++) {
-    const t = (i / N) * Math.PI * 2, n = f(t).normalize(), n2 = f(t + 0.01).normalize()
-    const tan = n2.clone().sub(n).normalize(), side = new THREE.Vector3().crossVectors(tan, n).normalize()
-    const wob = typeof width === 'function' ? width(t) : width * (1 + 0.12 * Math.sin(t * 13))
-    cross.forEach(([u], j) => { const d = n.clone().addScaledVector(side, u * wob / R).normalize(); pos.push(...d.multiplyScalar(R + height(d) + (skip && skip(d) ? -0.3 : liftFn ? liftFn(u, t) : lift)).toArray()); uv.push(u * 0.5 + 0.5, t * 20); if (hasC) { const c = cc[j]; col.push(c.r, c.g, c.b) } })
-    if (i < N) for (let j = 0; j < M - 1; j++) { const k = i * M + j; idx.push(k, k + 1, k + M, k + 1, k + M + 1, k + M) }
-  }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); if (hasC) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g
-}
-// round6: a packed-dirt trail with defined edges: dark trodden rims, a lighter crown, a faint wheel-rut either side
-// (vertex colours on one ribbon: no extra draw call), plus edge stones / grass fringe from RiverStones + edgeveg
-const PATH_X = [[-1, '#8a6c46'], [-0.86, '#a4855a'], [-0.72, '#c9ad7c'], [-0.4, '#bf9f6e'], [-0.28, '#d6bd8c'], [0.28, '#d6bd8c'], [0.4, '#bf9f6e'], [0.72, '#c9ad7c'], [0.86, '#a4855a'], [1, '#8a6c46']]
-function Path() { const g = useMemo(() => ribbon(pathDir, (t) => 0.17 * (1 + 0.08 * Math.sin(t * 13)), 0.045, 900, (d) => onBridge(d), PATH_X, (u) => 0.045 - 0.012 * Math.max(0, Math.abs(u) - 0.85) / 0.15), []); return <mesh geometry={g} material={useMemo(() => paint(toon('#ffffff', { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.16, true, 8), [])} /> }
-function Stream() {
-  const g = useMemo(() => ribbon(streamDir, (t) => streamHalf(t), -0.012, 1800, null, [[-1], [-0.6], [0], [0.6], [1]]), [])
-  // round6: deeper colour toward the middle, a dark bank line + bright foam at the edges, two layers of drifting flow streaks
-  const m = useMemo(() => new THREE.ShaderMaterial({ uniforms: { uTime: wind.time, uN: { value: 0 }, uD: { value: 0 } }, polygonOffset: true, polygonOffsetFactor: -3,
-    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-    fragmentShader: `varying vec2 vUv; uniform float uTime,uN,uD; void main(){ float e = abs(vUv.x-.5)*2.;
-      vec3 c = mix(vec3(.1,.31,.5), vec3(.27,.56,.72), smoothstep(.1,.8,e));
-      float w = sin(vUv.x*9.+vUv.y*.3)*1.5;
-      float f = sin(vUv.y*1.3 - uTime*2.2 + w); float f2 = sin(vUv.y*3.1 - uTime*3.4 + vUv.x*17. + w*.6);
-      c = mix(c, vec3(.78,.93,1.), smoothstep(.86,.93,f)*.7*(1.-e*.5)); c = mix(c, vec3(.55,.8,.92), smoothstep(.9,.97,f2)*.5);
-      c = mix(c, vec3(.92,.98,1.), smoothstep(.82,.9,e)*(.7+.3*sin(vUv.y*4.-uTime*3.)));
-      c = mix(c, vec3(.29,.24,.2), smoothstep(.93,.985,e));
-      c = mix(c, c*vec3(1.,.8,.75)+vec3(.12,.04,.06), uD*.5); c = mix(c, vec3(.1,.16,.32)+vec3(.15,.13,.05)*smoothstep(.85,.93,f), uN*.8);
-      gl_FragColor = vec4(c,1.); }` }), [])
-  useFrame(() => { m.uniforms.uN.value = T.night; m.uniforms.uD.value = T.dusk })
-  return <mesh geometry={g} material={m} />
-}
+// ship trim: Path / Stream ribbons (+ their shaders) live in the riverProps lazy chunk now (startup index -~2 KB gz)
+const PathLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Path }))), StreamLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Stream })))
 const RiverStonesLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.RiverStones })))
 
 const VILLAGE = dir(1.05, 0.2)
@@ -183,50 +152,10 @@ const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.la
 
 const DM = { plank: paint(toon('#b07a4f'), 0.18, true, 12), rail: toon('#8a5a3c'), cloth: ['#ffffff', '#f59ab0', '#8fc3e8', '#ffd36e'].map(c => toon(c, { side: THREE.DoubleSide })), rope: toon('#e8dcc0'), red: toon('#d9534f'), soil: paint(toon('#8a6248'), 0.2, true, 14), cabbage: toon('#8fcf6a'), carrot: toon('#ef8a3c'), fence: toon('#f3e6cc'), stone: paint(toon('#c9c0b2'), 0.15, true, 15), moss: toon('#7fae5f'), cat: toon('#f2a65a'), catW: toon('#fff4e6'), dark: toon('#3a2e2a'), sign: toon('#ffd36e'), curtains: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'].map(c => toon(c)), smoke: toon('#f4f1ee', { transparent: true, opacity: 0.85 }), wing: ['#ffd36e', '#ffffff', '#f59ab0', '#a8d8ff'].map(c => toon(c, { side: THREE.DoubleSide })) }
 
-// the 11 planks merged into one mesh (same shapes / tilts): 2 draw calls per bridge instead of 22
-const planksFor = (BL) => { const planks = Math.round(BL * 16), a = []; for (let k = 0; k < planks; k++) { const u = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((u / BL) * Math.PI); const g = new THREE.BoxGeometry(0.26, 0.022, BL / planks * 0.9); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.sin((u / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0))); g.translate(0, y, u); a.push(g) } return mergeGeometries(a) }
-// round6: posts + handrails follow the (longer) arched deck, merged into one mesh: 2 draw calls instead of 14
-const railsFor = (BL) => { const a = [], posts = [-0.47, -0.16, 0.16, 0.47].map(u => u * BL / 1.0), y = (u) => 0.035 + 0.07 * Math.cos((u / BL) * Math.PI)
-  for (const s of [-1, 1]) { for (const u of posts) a.push(new THREE.BoxGeometry(0.024, 0.15, 0.024).translate(s * 0.13, y(u) + 0.065, u))
-    for (let k = 0; k < posts.length - 1; k++) { const u0 = posts[k], u1 = posts[k + 1], y0 = y(u0) + 0.13, y1 = y(u1) + 0.13, L = Math.hypot(u1 - u0, y1 - y0); const g = new THREE.BoxGeometry(0.02, 0.018, L + 0.02); g.rotateX(-Math.atan2(y1 - y0, u1 - u0)); g.translate(s * 0.13, (y0 + y1) / 2, (u0 + u1) / 2); a.push(g) } }
-  return mergeGeometries(a) }
-function Bridge({ b }) {
-  const [PLANKS, RAILS] = useMemo(() => [planksFor(b.L), railsFor(b.L)], [])
-  return <Basis n={b.c} fwd={b.tan} lift={0.0}>
-    <mesh geometry={PLANKS} material={DM.plank}><Outlines thickness={0.008} color={INK} /></mesh>
-    <mesh geometry={RAILS} material={DM.rail}><Outlines thickness={0.005} color={INK} /></mesh>
-  </Basis>
-}
+// ship trim: Bridge + Laundry moved to the riverProps lazy chunk (App-only helpers passed as props)
+const BridgeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Bridge }))), LaundryLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Laundry })))
 
-function Laundry() {
-  const A = SPOTS.laundryA, B = SPOTS.laundryB, f = B.clone().sub(A), mid = A.clone().add(B).normalize(), len = A.angleTo(B) * R
-  const cloth = useRef([])
-  useFrame(() => { const t = wind.time.value; cloth.current.forEach((c, k) => { if (!c) return; c.rotation.x = 0.25 + Math.sin(t * 3.2 + k * 1.1) * 0.28 + Math.sin(t * 7.3 + k) * 0.06; c.rotation.z = Math.sin(t * 2.1 + k) * 0.05 }) })
-  return <Basis n={mid} fwd={f}>
-    {[-1, 1].map(s => <mesh key={s} position={[0, 0.25, s * len / 2]} material={DM.rail}><cylinderGeometry args={[0.014, 0.018, 0.5, 6]} /><Outlines thickness={0.005} color={INK} /></mesh>)}
-    {[-1, 1].map(s => <mesh key={'r' + s} position={[0, 0.465, s * len / 4]} rotation={[s * 0.12, 0, 0]} material={DM.rope}><boxGeometry args={[0.006, 0.006, len / 2]} /></mesh>)}
-    {[-0.3, -0.1, 0.1, 0.3].map((u, k) => <group key={k} ref={el => cloth.current[k] = el} position={[0, 0.455 - (1 - (2 * u) ** 2) * 0.03, u * len]}>
-      <mesh position={[0, -0.08, 0]} rotation={[0, Math.PI / 2, 0]} material={DM.cloth[k]}><planeGeometry args={[k % 2 ? 0.15 : 0.12, k % 2 ? 0.13 : 0.17]} /><Outlines thickness={0.004} color={INK} /></mesh>
-    </group>)}
-  </Basis>
-}
-
-function Cat() {
-  const body = useRef(), tail = useRef()
-  useFrame(() => { const t = wind.time.value; const b = 1 + Math.sin(t * 1.7) * 0.07; body.current.scale.set(1 + (b - 1) * 0.4, b, 1 + (b - 1) * 0.4); tail.current.rotation.y = Math.sin(t * 0.9) * 0.15 })
-  return <Basis n={SPOTS.cat} fwd={B0.tan.clone().negate()}>
-    <group scale={1.4}>
-      <mesh ref={body} position={[0, 0.035, 0]} scale={[1, 0.62, 1.25]} material={DM.cat}><sphereGeometry args={[0.06, 14, 10]} /><Outlines thickness={0.006} color={INK} /></mesh>
-      <group position={[0.045, 0.04, 0.05]}>
-        <mesh material={DM.cat}><sphereGeometry args={[0.034, 12, 10]} /><Outlines thickness={0.005} color={INK} /></mesh>
-        {[-1, 1].map(s => <mesh key={s} position={[s * 0.018, 0.03, 0]} rotation={[0, 0, -s * 0.3]} material={DM.cat}><coneGeometry args={[0.012, 0.024, 4]} /></mesh>)}
-        {[-1, 1].map(s => <mesh key={'e' + s} position={[s * 0.013, 0.002, 0.031]} material={DM.dark}><boxGeometry args={[0.012, 0.0025, 0.003]} /></mesh>)}
-        <mesh position={[0, -0.012, 0.028]} material={DM.catW}><sphereGeometry args={[0.014, 8, 6]} /></mesh>
-      </group>
-      <mesh ref={tail} position={[-0.01, 0.012, -0.01]} rotation={[Math.PI / 2, 0, 0]} material={DM.cat}><torusGeometry args={[0.065, 0.011, 6, 18, Math.PI * 1.1]} /></mesh>
-    </group>
-  </Basis>
-}
+const CatLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Cat }))) // ship trim: lazy chunk
 
 function Mailbox({ i }) {
   return <Surface n={onHouse(i, -0.42, 0.42)} spin={i * 1.3}>
@@ -262,18 +191,7 @@ function Stones() {
   return <Instanced items={items} geo={geo} mat={DM.stone} />
 }
 
-function Shrine() {
-  return <Surface n={SPOTS.shrine} spin={0.4}>
-    <mesh position={[0, 0.04, 0]} material={DM.stone}><boxGeometry args={[0.3, 0.08, 0.28]} /><Outlines thickness={0.006} color={INK} /></mesh>
-    <mesh position={[0, 0.17, 0]} material={MAT.wood}><boxGeometry args={[0.16, 0.18, 0.14]} /><Outlines thickness={0.006} color={INK} /></mesh>
-    {[-1, 1].map(s => <mesh key={s} position={[s * 0.07, 0.3, 0]} rotation={[0, 0, s * 0.55]} material={DM.red}><boxGeometry args={[0.15, 0.015, 0.22]} /><Outlines thickness={0.006} color={INK} /></mesh>)}
-    <mesh position={[0, 0.13, 0.075]} material={MAT.win}><planeGeometry args={[0.05, 0.06]} /></mesh>
-    {[-1, 1].map(s => <mesh key={'t' + s} position={[s * 0.11, 0.13, 0.3]} material={DM.red}><cylinderGeometry args={[0.012, 0.014, 0.26, 6]} /></mesh>)}
-    <mesh position={[0, 0.27, 0.3]} material={DM.red}><boxGeometry args={[0.32, 0.024, 0.03]} /><Outlines thickness={0.005} color={INK} /></mesh>
-    <mesh position={[0, 0.22, 0.3]} material={DM.red}><boxGeometry args={[0.24, 0.014, 0.02]} /></mesh>
-    <mesh position={[0.13, 0.02, 0.06]} material={DM.stone}><icosahedronGeometry args={[0.04, 0]} /></mesh>
-  </Surface>
-}
+const ShrineLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Shrine }))) // ship trim: lazy chunk
 
 function BusStop() {
   const tex = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#ffd36e'; x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill(); x.lineWidth = 10; x.strokeStyle = '#d9534f'; x.stroke(); x.fillStyle = '#4a3a35'; x.font = '600 34px Fredoka, sans-serif'; x.textAlign = 'center'; x.fillText('BUS', 64, 58); x.font = '500 18px Fredoka, sans-serif'; x.fillText('Inaba', 64, 86); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t }, [])
@@ -340,8 +258,8 @@ function Wildflowers() {
 
 function Details() {
   return <>
-    {BRIDGES.map((b, i) => <Bridge key={i} b={b} />)}
-    <Laundry /><Cat /><Shrine /><BusStop /><Moss /><Smoke /><Butterflies /><Seeds /><Wildflowers /><Stones />
+    {<Suspense fallback={null}>{BRIDGES.map((b, i) => <BridgeLazy key={i} b={b} Basis={Basis} DM={DM} />)}</Suspense>}
+    <Suspense fallback={null}><LaundryLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><CatLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><ShrineLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /></Suspense><BusStop /><Moss /><Smoke /><Butterflies /><Seeds /><Wildflowers /><Stones />
     {[0, 1, 3, 4].map(i => <Mailbox key={i} i={i} />)}
     <VegPatch i={4} /><VegPatch i={5} />
   </>
@@ -762,7 +680,7 @@ function Planet() {
   const k = useSlices()
   const onDown = (e) => { if (VIEW.mode !== 'follow' || TALK.open) return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); onTap(e.nativeEvent || e, () => { P.target = l }) }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
-    <Ground /><Path /><Stream />{k >= 2 && <Vegetation />}
+    <Ground /><Suspense fallback={null}><PathLazy /><StreamLazy /></Suspense>{k >= 2 && <Vegetation />}
     {k >= 2 && HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
     {k >= 2 && MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
     {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
