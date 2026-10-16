@@ -158,14 +158,7 @@ const BridgeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m
 
 const CatLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Cat }))) // ship trim: lazy chunk
 
-function Mailbox({ i }) {
-  return <Surface n={onHouse(i, -0.42, 0.42)} spin={i * 1.3}>
-    <mesh position={[0, 0.11, 0]} material={DM.rail}><boxGeometry args={[0.02, 0.22, 0.02]} /></mesh>
-    <mesh position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]} material={DM.red}><cylinderGeometry args={[0.04, 0.04, 0.1, 12, 1, false, 0, Math.PI]} /><Outlines thickness={0.005} color={INK} /></mesh>
-    <mesh position={[0, 0.235, 0]} material={DM.red}><boxGeometry args={[0.08, 0.03, 0.1]} /></mesh>
-    <mesh position={[0.045, 0.27, -0.02]} material={MAT.roofs[2]}><boxGeometry args={[0.006, 0.05, 0.03]} /></mesh>
-  </Surface>
-}
+const MailboxLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Mailbox }))) // r7-ship: lazy (startup budget)
 
 function VegPatch({ i }) {
   const n = onHouse(i, 0.05, -0.75)
@@ -207,15 +200,7 @@ function Moss() { // moss cushions on the tile rows (follow the roof slope) and 
   return <Instanced items={items} geo={geo} mat={useMemo(() => toon('#ffffff'), [])} />
 }
 const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3), c = houseVariant(i).chimney; return { top: p.pos.clone().add(c.clone().applyQuaternion(p.q)), up: p.n } })
-function Smoke() {
-  const ref = useRef(), K = 6, o = useMemo(() => new THREE.Object3D(), []), side = useMemo(() => new THREE.Vector3(1, 0, 0), [])
-  useFrame(() => {
-    const t = wind.time.value; let j = 0
-    CHIMNEYS.forEach((c, i) => { for (let k = 0; k < K; k++) { const u = (t * 0.22 + k / K + i * 0.13) % 1; o.position.copy(c.top).addScaledVector(c.up, u * 0.75).addScaledVector(side, u * u * 0.35 + Math.sin(t * 1.3 + k + i) * 0.03); o.scale.setScalar((0.035 + u * 0.11) * Math.min(1, u * 8) * (1 - u) ** 0.6); o.updateMatrix(); ref.current.setMatrixAt(j++, o.matrix) } })
-    ref.current.instanceMatrix.needsUpdate = true; DM.smoke.color.set('#f4f1ee').lerp(CC('#9aa0c4'), T.night * 0.7); DM.smoke.opacity = 0.85 - 0.25 * T.night
-  })
-  return <instancedMesh ref={ref} args={[useMemo(() => new THREE.IcosahedronGeometry(1, 2), []), DM.smoke, CHIMNEYS.length * K]} />
-}
+const SmokeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Smoke }))) // r7-ship: lazy (startup budget)
 
 function Butterflies() {
   const bs = useMemo(() => Array.from({ length: 16 }, (_, i) => ({ base: (i < 10 ? VILLAGE.clone().add(randDir().multiplyScalar(0.35)) : randDir()).normalize(), ph: rnd() * 6, ax: randDir(), m: DM.wing[i % 4] })), [])
@@ -251,8 +236,8 @@ function Wildflowers() {
 function Details() {
   return <>
     {<Suspense fallback={null}>{BRIDGES.map((b, i) => <BridgeLazy key={i} b={b} Basis={Basis} DM={DM} />)}</Suspense>}
-    <Suspense fallback={null}><LaundryLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><CatLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><ShrineLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /></Suspense><Suspense fallback={null}><BusStopLazy DM={DM} SPOTS={SPOTS} /></Suspense><Moss /><Smoke /><Butterflies /><Seeds /><Wildflowers /><Stones />
-    {[0, 1, 3, 4].map(i => <Mailbox key={i} i={i} />)}
+    <Suspense fallback={null}><LaundryLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><CatLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><ShrineLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /></Suspense><Suspense fallback={null}><BusStopLazy DM={DM} SPOTS={SPOTS} /></Suspense><Moss /><Suspense fallback={null}><SmokeLazy DM={DM} CHIMNEYS={CHIMNEYS} /></Suspense><Butterflies /><Seeds /><Wildflowers /><Stones />
+    <Suspense fallback={null}>{[0, 1, 3, 4].map(i => <MailboxLazy key={i} i={i} DM={DM} onHouse={onHouse} />)}</Suspense>
     <VegPatch i={4} /><VegPatch i={5} />
   </>
 }
@@ -585,6 +570,7 @@ const FI = { yaw: null, x: 0, z: 0 }, _Y = new THREE.Vector3(0, 1, 0)
 function faceInside(dt, obj) { const hp = HOME.hp; if (!hp) return
   if (FI.yaw === null) { FI.yaw = hp.yaw; FI.x = hp.x; FI.z = hp.z }
   const dx = hp.x - FI.x, dz = hp.z - FI.z; FI.x = hp.x; FI.z = hp.z
+  const ps = HOME.pose; if ((ps && ps.k > 0.001) || Math.hypot(dx, dz) > 0.15) { FI.yaw = ps && ps.k > 0.001 ? ps.yaw : hp.yaw; return } // merge: activity poses own the body (bed/tub/chair); teleports (placeAt) resync
   const moved = Math.hypot(dx, dz) > 0.02 * dt, want = moved ? Math.atan2(dx, dz) : P.move < 0.05 ? hp.yaw : null
   if (want !== null) { let d = want - FI.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); FI.yaw += d * Math.min(1, dt * 10) }
   HOME.faceYaw = FI.yaw; obj.quaternion.setFromAxisAngle(_Y, FI.yaw) }

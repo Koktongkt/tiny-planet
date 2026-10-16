@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { R, K, place, pathDir, streamDir, streamHalf, waterAt, onBridge, JUMPS, JUMP_HALF, BRIDGES, height, wind, toonRamp } from './world.js'
-import { toon, paint, C, T, INK, MAT, Surface } from './common.jsx'
+import { toon, paint, C, CC, T, INK, MAT, Surface } from './common.jsx'
 // round6: edge stones along the trail, pebbles on the river banks, stepping stones + marker stakes at the jump spots.
 // One instanced mesh for every stone (8-tri octahedra) and one for the stakes: +2 draw calls, ~6k triangles.
 export function RiverStones({ colliders: COLLIDERS, houses: HOUSES, touch: TOUCH }) {
@@ -145,4 +145,23 @@ export function BusStop({ DM, SPOTS }) {
     <mesh position={[0.2, 0.07, 0]} material={MAT.wood}><boxGeometry args={[0.22, 0.02, 0.07]} /><Outlines thickness={0.005} color={INK} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[0.2 + s * 0.09, 0.03, 0]} material={MAT.wood}><boxGeometry args={[0.02, 0.06, 0.06]} /></mesh>)}
   </Surface>
+}
+
+export function Mailbox({ i, DM, onHouse }) {
+  return <Surface n={onHouse(i, -0.42, 0.42)} spin={i * 1.3}>
+    <mesh position={[0, 0.11, 0]} material={DM.rail}><boxGeometry args={[0.02, 0.22, 0.02]} /></mesh>
+    <mesh position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]} material={DM.red}><cylinderGeometry args={[0.04, 0.04, 0.1, 12, 1, false, 0, Math.PI]} /><Outlines thickness={0.005} color={INK} /></mesh>
+    <mesh position={[0, 0.235, 0]} material={DM.red}><boxGeometry args={[0.08, 0.03, 0.1]} /></mesh>
+    <mesh position={[0.045, 0.27, -0.02]} material={MAT.roofs[2]}><boxGeometry args={[0.006, 0.05, 0.03]} /></mesh>
+  </Surface>
+}
+
+export function Smoke({ DM, CHIMNEYS }) {
+  const ref = useRef(), K = 6, o = useMemo(() => new THREE.Object3D(), []), side = useMemo(() => new THREE.Vector3(1, 0, 0), [])
+  useFrame(() => {
+    const t = wind.time.value; let j = 0
+    CHIMNEYS.forEach((c, i) => { for (let k = 0; k < K; k++) { const u = (t * 0.22 + k / K + i * 0.13) % 1; o.position.copy(c.top).addScaledVector(c.up, u * 0.75).addScaledVector(side, u * u * 0.35 + Math.sin(t * 1.3 + k + i) * 0.03); o.scale.setScalar((0.035 + u * 0.11) * Math.min(1, u * 8) * (1 - u) ** 0.6); o.updateMatrix(); ref.current.setMatrixAt(j++, o.matrix) } })
+    ref.current.instanceMatrix.needsUpdate = true; DM.smoke.color.set('#f4f1ee').lerp(CC('#9aa0c4'), T.night * 0.7); DM.smoke.opacity = 0.85 - 0.25 * T.night
+  })
+  return <instancedMesh ref={ref} args={[useMemo(() => new THREE.IcosahedronGeometry(1, 2), []), DM.smoke, CHIMNEYS.length * K]} />
 }
