@@ -9,7 +9,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
 import { HOME } from '../home/state.js'
 import { GEO, cel, OUT } from '../home/kit.jsx'
-import { R, height, ZONES, LAKE_W, HARB_W, around, dir as dirLL, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, GATES, gateSide } from '../world.js'
+import { R, height, ZONES, LAKE_W, HARB_W, around, dir as dirLL, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, BRIDGES, JUMPS, BL, streamHalf, streamLat } from '../world.js'
 import { TALK } from '../talk/state.js'
 import { T, q } from '../common.jsx'
 import { G, add, toast } from '../game/store.js'
@@ -40,6 +40,16 @@ const DOGCAM = q.get('dogcam') // debug: close camera on the dog (?dogcam=angle)
 if (DOGCAM) HOME.camOverride = (camera, g) => { const D = DOG, a = window.__camA ?? (+DOGCAM || 0.6), dd = window.__camD ?? 0.62, side = _s.crossVectors(D.n, D.f); const p = surf(D.n, new THREE.Vector3()); const c = p.clone().addScaledVector(D.f, Math.cos(a) * dd).addScaledVector(side, Math.sin(a) * dd).addScaledVector(D.n, 0.38 * dd / 0.75)
   camera.position.copy(c.applyMatrix4(g.matrixWorld)); camera.up.copy(D.n).transformDirection(g.matrixWorld); camera.lookAt(p.addScaledVector(D.n, 0.1).applyMatrix4(g.matrixWorld)); return true }
 // ---- round6 helpers ----
+// river crossing gates (bridges + jump spots) for anything that has to path across (Pip)
+const GATES = [...BRIDGES.map(b => ({ kind: 'bridge', t: b.t, c: b.c, b })), ...JUMPS.map(j => ({ kind: 'jump', t: j.t, c: j.c, j }))]
+// a point on the given side of the river at gate g, `off` units out from that side's bank
+function gateSide(g, side, off = 0.18, out = new THREE.Vector3()) {
+  const n = g.c, t = g.t, h = streamHalf(t), lat = streamLat(t) + side * (h + off) / R
+  if (g.kind === 'bridge') { const b = g.b; const L = b.L || BL; out.copy(b.c).addScaledVector(b.tan, (L / 2 + off * 0.5) / R).normalize(); if (streamNear(out).side !== side) out.copy(b.c).addScaledVector(b.tan, -(L / 2 + off * 0.5) / R).normalize(); return out }
+  return out.copy(dirLL(lat, t))
+}
+if (typeof window !== 'undefined' && window.__river) Object.assign(window.__river, { GATES, gateSide })
+
 // sticks lie about on the meadow and along the trail; fetch is only offered there, when he's playful, and not again
 // for a few in-game hours after the last game (debug: ?fetch=1 always offers it)
 const FETCH_DBG = q.get('fetch') === '1'

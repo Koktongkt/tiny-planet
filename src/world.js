@@ -130,15 +130,7 @@ for (const b of BRIDGES) { let lo = 0, hi = 0; const _n = new THREE.Vector3()
   const wet = (a) => { _n.copy(b.c).addScaledVector(b.tan, a / R).normalize(); const sn = streamNear(_n); return sn.d < sn.half }
   while (lo > -2 && wet(lo - 0.02)) lo -= 0.02; while (hi < 2 && wet(hi + 0.02)) hi += 0.02
   const mid = (lo + hi) / 2; b.c = b.c.clone().addScaledVector(b.tan, mid / R).normalize(); b.side.crossVectors(b.c, b.tan).normalize(); b.tan.crossVectors(b.side, b.c).normalize(); b.L = Math.max(0.8, hi - lo + 0.34) }
-// river crossing gates (bridges + jump spots) for anything that has to path across (Pip)
-export const GATES = [...BRIDGES.map(b => ({ kind: 'bridge', t: b.t, c: b.c, b })), ...JUMPS.map(j => ({ kind: 'jump', t: j.t, c: j.c, j }))]
-// a point on the given side of the river at gate g, `off` units out from that side's bank
-export function gateSide(g, side, off = 0.18, out = new THREE.Vector3()) {
-  const n = g.c, t = g.t, h = streamHalf(t), lat = streamLat(t) + side * (h + off) / R
-  if (g.kind === 'bridge') { const b = g.b; const L = b.L || BL; out.copy(b.c).addScaledVector(b.tan, (L / 2 + off * 0.5) / R).normalize(); if (streamNear(out).side !== side) out.copy(b.c).addScaledVector(b.tan, -(L / 2 + off * 0.5) / R).normalize(); return out }
-  return out.copy(dir(lat, t))
-}
-if (typeof window !== 'undefined') window.__river = { streamNear, waterAt, BRIDGES, JUMPS, GATES, streamHalf, gateSide }
+if (typeof window !== 'undefined') window.__river = { streamNear, waterAt, BRIDGES, JUMPS, streamHalf }
 // old-style 'centre distance' (radians) measured from the new bank: scatter rules tuned for the thin stream keep their meaning
 export const streamDist = (n) => { const r = streamNear(n); return Math.max(0, r.d - r.half + 0.17) / R }
 if (typeof window !== 'undefined') window.__height = height
