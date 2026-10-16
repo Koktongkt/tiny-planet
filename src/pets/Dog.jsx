@@ -54,7 +54,8 @@ const _sn = { d: 9, half: 0, t: 0, side: 1 }
 function dogBlocked(n, edge = 0.1) { const s = streamNear(n, _sn); if (s.d < s.half - edge && !onBridgeDeck(n, 0.02)) return true
   if (zoneAng(n, ZONES.lake) < ZONES.lake.r * 1.2 && height(n) < LAKE_W - 0.09) return true
   if (zoneAng(n, ZONES.harbour) < ZONES.harbour.r * 1.2 && height(n) < HARB_W - 0.09) return true; return false }
-const sideOf = (n) => streamNear(n, _sn).side
+const _sn2 = { d: 9, half: 0, t: 0, side: 1 }, _sn3 = { d: 9, half: 0, t: 0, side: 1 }
+const sideOf = (n) => streamNear(n, _sn2).side
 const pickW = (w) => { let s = 0; for (const k in w) s += w[k]; if (s <= 0) return null; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return null }
 const _ga = new THREE.Vector3(), _gb = new THREE.Vector3(), _prev = new THREE.Vector3(), _f0 = new THREE.Vector3()
 export function Dog() {
@@ -103,7 +104,7 @@ export function Dog() {
     D.playWin -= dt; D.playRoll -= dt; if (D.playRoll < 0) { D.playRoll = 40 + Math.random() * 30; if (Math.random() < 0.4) D.playWin = 30 + Math.random() * 20 } // playful moods come and go
     D.ex = Math.max(0, D.ex + (D.speed > 1.8 ? dt : -dt * 0.25)) // exertion -> panting
     const g = st.goal; Object.assign(g, POSE0); bub.current.visible = false
-    const dHer = angTo(D.n, P.n) * R, herMoving = P.move > 0.2, sN = streamNear(D.n, _sn), sGap = sN.d - sN.half, wet = height(D.n) < LAKE_W - 0.03 || (sGap < -0.02 && !onBridgeDeck(D.n))
+    const dHer = angTo(D.n, P.n) * R, herMoving = P.move > 0.2, sN = streamNear(D.n, _sn3), sGap = sN.d - sN.half, wet = height(D.n) < LAKE_W - 0.03 || (sGap < -0.02 && !onBridgeDeck(D.n))
     if (wet) D.wetT += dt; else if (D.wetT > 0.6 && !FETCHING.has(D.state) && D.state !== 'splash' && D.state !== 'shake' && D.state !== 'wait' && D.state !== 'toDoor') { D.wasWet = true; D.wetT = 0; go('shake', 1.1) } else if (!wet) D.wetT = 0
     g.tailUp = 0.6 + 0.6 * D.mood; g.tailWag = 0.25 + 0.75 * D.mood; g.tailSpeed = 8 + 8 * D.mood; g.tongue = D.speed > 1 || D.ex > 1.2 ? 1 : 0.4 * D.mood; g.mouth = g.tongue * 0.25; if (D.ex > 1.2 && D.speed < 0.6) { g.pant = Math.min(1, D.ex / 3); g.mouth = 0.55 }
     let target = null, spd = 0, face = null, arrive = 0.08
@@ -161,14 +162,15 @@ export function Dog() {
     if (D.state === 'follow') { // ---------- the default: keep a loose distance, choose little side-quests ----------
       const side = _s.crossVectors(P.n, P.fwd); if (Math.random() < dt * 0.05) D.side *= -1
       const slot = _t.copy(P.n).addScaledVector(P.fwd, -0.36 / R).addScaledVector(side, D.side * 0.24 / R).normalize()
+      if (sideOf(slot) !== sideOf(P.n) || dogBlocked(slot, -0.08)) slot.copy(P.n) // her back is to the water: just come to her
       const dSlot = angTo(D.n, slot) * R
       if (dSlot > 0.12 || herMoving) { target = slot; spd = dHer > 2.2 ? 2.7 : dHer > 1.0 ? 1.7 : herMoving ? 1.2 : 0.6; arrive = 0.09 }
-      if (!herMoving && dHer < 0.8) { D.idleT += dt; if (D.idleT > 0.9) go('sit', 999) } else D.idleT = 0
+      if (!herMoving && dHer < 0.8 && sideOf(D.n) === sideOf(P.n) && !dogBlocked(D.n, 0)) { D.idleT += dt; if (D.idleT > 0.9) go('sit', 999) } else D.idleT = 0
       // side-quests
       const sheep = HOME.GAME?.sheep; if (sheep && D.barkCD < 0) for (const sh of sheep) if (angTo(D.n, sh.n) * R < 1.2) { D.barkCD = 18; D.sheep = sh; go('bark', 2.6); break }
       const lake = ZONES.lake, lc = _x.set(lake.x, lake.y, lake.z), toLake = angTo(D.n, lc)
       if (D.state === 'follow' && D.splashCD < 0 && toLake < lake.r * 1.6 && dHer < 1.5) { D.splashCD = 25; D.splashT = lakeEdge(lc); go('splash', 4.5) }
-      if (D.state === 'follow' && D.splashCD < 0 && sGap < 0.35 && sGap > 0 && dHer < 1.2) { if (Math.random() < 0.5) { D.splashCD = 30; D.splashT = riverEdge(); go('splash', 3.5) } else D.splashCD = 12 }
+      if (D.state === 'follow' && D.splashCD < 0 && sGap < 0.35 && sGap > 0 && dHer < 1.2 && !D.route && sideOf(P.n) === sN.side) { if (Math.random() < 0.5) { D.splashCD = 30; D.splashT = riverEdge(); go('splash', 3.5) } else D.splashCD = 12 }
       if (D.state === 'follow' && D.decT < 0) chooseQuest(herMoving)
     }
     if ((D.state === 'sit' || D.state === 'lie') && !D.forced && D.t > 2.5 && D.decT < 0) chooseQuest(false)
@@ -199,8 +201,8 @@ export function Dog() {
     // ---------- river crossings: if the goal is across the water, go by the nearest bridge or jump spot ----------
     if (target && !HOME.inside) { const ts = sideOf(target), ms = sideOf(D.n), rt = D.route
       if (rt && rt.phase === 1) { const dB = angTo(D.n, rt.B) * R; if (dB < 0.1 || (sideOf(D.n) === rt.to && !dogBlocked(D.n, -0.05) && dB < 0.35)) D.route = null; else { target = rt.B; spd = Math.max(spd, 1.1); arrive = 0.04 } }
-      else if (ts !== ms && !dogBlocked(target, -0.3) && !onBridgeDeck(D.n, 0.05)) {
-        if (!rt || rt.to !== ts || D.routeT < 0) { D.routeT = 1.5; let best = null, bc = 1e9; for (const gt of GATES) { const A = gateSide(gt, ms, 0.2, new THREE.Vector3()), B = gateSide(gt, ts, 0.2, new THREE.Vector3()); const c = angTo(D.n, A) + angTo(B, target) + (gt.kind === 'jump' ? 0.02 : 0); if (c < bc) { bc = c; best = { g: gt, A, B, to: ts, phase: 0 } } } D.route = best }
+      else if (ts !== ms && !dogBlocked(target)) {
+        if (!rt || rt.to !== ts) { D.routeT = 1.5; let best = null, bc = 1e9; for (const gt of GATES) { const A = gateSide(gt, ms, 0.2, new THREE.Vector3()), B = gateSide(gt, ts, 0.2, new THREE.Vector3()); const c = angTo(D.n, A) + angTo(B, target) + (gt.kind === 'jump' ? 0.02 : 0); if (c < bc) { bc = c; best = { g: gt, A, B, to: ts, phase: 0 } } } D.route = best }
         const r2 = D.route; if (r2) { if (angTo(D.n, r2.A) * R < 0.1) { r2.phase = 1; r2.t0 = D.clock; r2.d0 = angTo(r2.A, r2.B) * R } else { target = r2.A; spd = Math.max(spd, 1.1); arrive = 0.04 } } }
       else if (rt && rt.phase === 0) D.route = null }
     const crossing = D.route && D.route.phase === 1, jumpX = crossing && D.route.g.kind === 'jump'
@@ -217,6 +219,8 @@ export function Dog() {
     _prev.copy(D.n); D.n.addScaledVector(D.f, D.speed / R * dt).normalize()
     if (!crossing && !D.forced && dogBlocked(D.n) && !dogBlocked(_prev)) { // he wades the edge but won't swim: slide along the bank
       D.n.copy(_prev); _f0.copy(D.f); let ok = false; for (const a of [0.7, -0.7, 1.3, -1.3]) { _ga.copy(_f0).applyAxisAngle(_prev, a); _gb.copy(_prev).addScaledVector(_ga, D.speed * Math.cos(a) / R * dt).normalize(); if (!dogBlocked(_gb)) { D.n.copy(_gb); D.f.lerp(_ga, 0.3).normalize(); ok = true; break } } if (!ok) D.speed *= 0.5 }
+    // safety: if he ever ends up in deep river water (outside a crossing), paddle him out to his own bank
+    if (!crossing && !D.forced && dogBlocked(D.n, 0.1) && !onBridgeDeck(D.n, 0.02)) { const q2 = streamNear(D.n, _sn2); if (q2.d < q2.half) { const la = Math.asin(D.n.y) + q2.side * 0.7 * dt / R, lo = Math.atan2(D.n.x, D.n.z); D.n.copy(dirLL(la, lo)) } }
     if (jumpX) { const r = D.route, k = Math.min(1, Math.max(0, 1 - angTo(D.n, r.B) * R / Math.max(0.1, r.d0))); g.hop = Math.sin(k * Math.PI) * 0.12 * (r.d0 > 0.3 ? 1 : 0.6); g.stretch = k > 0.2 && k < 0.8 ? 0.8 : 0; D.speed = Math.max(D.speed, 1.6) }
     for (const cl of CL) { const a = angTo(D.n, cl.n); if (a < cl.r) { const dd = tan(cl.n, D.n, _y); D.n.copy(cl.n).multiplyScalar(Math.cos(cl.r)).addScaledVector(dd, Math.sin(cl.r)).normalize() } }
     if (dHer < 0.18 && !HOME.inside && !crossing) D.n.addScaledVector(tan(D.n, _a.copy(D.n).sub(P.n), _a), 0.4 / R * dt).normalize()

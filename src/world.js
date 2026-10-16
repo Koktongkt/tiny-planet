@@ -141,3 +141,4 @@ export function gateSide(g, side, off = 0.18, out = new THREE.Vector3()) {
 if (typeof window !== 'undefined') window.__river = { streamNear, waterAt, BRIDGES, JUMPS, GATES, streamHalf, gateSide }
 // old-style 'centre distance' (radians) measured from the new bank: scatter rules tuned for the thin stream keep their meaning
 export const streamDist = (n) => { const r = streamNear(n); return Math.max(0, r.d - r.half + 0.17) / R }
+if (typeof window !== 'undefined') window.__height = height
