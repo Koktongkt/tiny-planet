@@ -6,4 +6,4 @@
 .mm-touch{left:12px;bottom:auto;top:calc(env(safe-area-inset-top,0px) + 132px)}
 .mm-touch .mm-map{width:150px;height:70px}
 .mm-touch.mm-idle{opacity:0}
-@media (orientation:landscape) and (max-height:500px){.mm-touch{top:auto;bottom:auto;left:auto;right:calc(env(safe-area-inset-right,0px) + 96px);top:calc(env(safe-area-inset-top,0px) + 10px)} .mm-touch .mm-map{width:150px;height:66px}}
+@media (orientation:landscape) and (max-height:500px){.mm-touch{left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 52px)} .mm-touch .mm-map{width:150px;height:66px}} /* under the title, above the stick */
