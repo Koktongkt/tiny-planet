@@ -75,6 +75,8 @@ HOME.camera = (camera, g, dt) => {
   _goal.set(Math.max(-0.8, Math.min(0.8, fx * 0.5)), 0.68 + 0.36 * z + 0.12 * CAM.pitch, ROOM.z1 - 0.08)
   _look.set(fx * 0.85, 0.22 + CAT.y * w, Math.min(fz - 0.12, 0.5))
   if (PETCAM) { const a = window.__camA ?? (+PETCAM || 0.5), dd = window.__camD ?? 0.55; _goal.set(CAT.x + Math.sin(a) * dd, CAT.y + (window.__camH ?? 0.32 * dd / 0.55 * 0.8 + 0.06), CAT.z + Math.cos(a) * dd); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
+  const ps = HOME.pose; if (ps && !PETCAM && ps.cam !== false) { const pk = Math.min(1, ps.k), cz = Math.min(ROOM.z1 - 0.08, ps.z + 0.62) // round7: activities frame the bed / tub / chair
+    const nearF = ps.z > 0.35; _goal.lerp(_a.set(nearF ? ps.x + 0.6 : Math.max(-0.9, Math.min(0.9, ps.x * 0.75)), nearF ? 1.0 : 0.82, cz), pk); _look.lerp(_b.set(ps.x, 0.24 + (ps.y || 0), ps.z - 0.05), pk) }
   const k = snapFrames > 0 ? 1 : 1 - Math.exp(-dt * 2.0); snapFrames-- // polish: softer interior cam
   camL.lerp(_goal, k); lookL.lerp(_look, k); HOME.camYaw = Math.atan2(lookL.x - camL.x, lookL.z - camL.z); /* yaw the interior camera faces (≈π) */ if (k === 1) { camL.copy(_goal); lookL.copy(_look) }
   camera.position.copy(roomToWorld(camL.x, camL.y, camL.z, _a)); camera.up.copy(_b.copy(UP).transformDirection(HOME.roomObj.matrixWorld)); camera.lookAt(roomToWorld(lookL.x, lookL.y, lookL.z, _c))

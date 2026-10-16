@@ -24,8 +24,8 @@ const CHAIR = { x: 0.31, z: -0.68 }
 const BOWL = { x: 0.9, z: 0.1 }
 CAT.bowlPos = BOWL
 const PLANTS = [
-  { id: 'big', x: -1.18, z: 0.82, y: 0, s: 1.5, big: true, stand: [-1.06, 0.5], lim: 0.4 },
-  { id: 'kitchen', x: 1.15, z: 0.68, y: 0.43, s: 0.55, stand: [0.84, 0.6], lim: 0.34 },
+  { id: 'big', x: -1.18, z: 0.82, y: 0, s: 1.5, big: true, stand: [-1.06, 0.5], lim: 0.4, cam: { p: [-0.75, 0.85, -0.05], l: [-1.12, 0.25, 0.7] } },
+  { id: 'kitchen', x: 1.15, z: 0.68, y: 0.43, s: 0.55, stand: [0.84, 0.6], lim: 0.34, cam: { p: [0.35, 0.82, 0.3], l: [1.0, 0.35, 0.62] } },
   { id: 'door', x: 0.55, z: -0.9, y: 0, s: 0.85, stand: [0.56, -0.64], lim: 0.26 },
 ]
 if (!BLOCKS.some(b => b.id === 'tub')) BLOCKS.push(
@@ -102,7 +102,7 @@ const morningA = (a) => { const P2 = Math.PI * 2; let k = Math.ceil((a + 1.2 + 0
 function skipTime(toMorning) { const rot = window.__rot; if (!rot) return; const a0 = rot.a, a1 = toMorning ? morningA(a0) : a0 + 2 / 24 * Math.PI * 2; rot.a = a1; T.h += (a1 - a0) / (Math.PI * 2) * 24; newDay(Math.max(0, Math.floor((a1 + Math.PI / 2) / (Math.PI * 2)))) }
 async function sleep(full) {
   const dur = full ? 6.2 : 5.2; if (!await begin('sleep', dur, 'sleep')) return
-  placeAt(-0.52, -0.5, -Math.PI / 2); pose({ x: -0.98, z: -0.3, y: 0.33, yaw: Math.PI, tilt: -Math.PI / 2, rate: 3 })
+  placeAt(-0.52, -0.5, -Math.PI / 2); pose({ x: -0.98, z: -0.3, y: 0.33, yaw: 0, tilt: -Math.PI / 2, rate: 3, cam: { p: [-0.3, 0.95, 0.25], l: [-0.95, 0.25, -0.55] } })
   if (CAT.state !== 'petted' && !CAT.hop) Object.assign(CAT, { state: 'nap', t: 0, dur: 20, where: 'bed', target: null, forced: false }) // he joins her
   await wait(900); await fadeTo(1, 900); skipTime(full); await wait(full ? 700 : 300)
   await fadeTo(0, 900); toast(full ? `Good morning! Day ${G.s.day + 1} — the light is soft through the window.` : 'A short, cosy nap. You wake up rested.', full ? 'sun' : 'moon', 3400)
@@ -124,7 +124,7 @@ async function cook() {
 async function bath() {
   if (!await begin('bath', 7.4, 'bath')) return
   placeAt(-0.48, 0.62, -Math.PI / 2); await fadeTo(1, 380)
-  pose({ x: TUB.x, z: TUB.z, y: 0.04, yaw: 0, rate: 60 }); HOME.pose.k = 1; A.soak = 1
+  pose({ x: TUB.x, z: TUB.z, y: 0.04, yaw: Math.PI / 2, rate: 60, cam: { p: [-0.42, 0.75, 0.25], l: [-1.0, 0.25, 0.62] } }); HOME.pose.k = 1; A.soak = 1
   await fadeTo(0, 420); toast('Ahh… a warm soak in the ofuro. ♨', 'water', 3200)
   await wait(5200); await fadeTo(1, 380); HOME.pose = null; A.soak = 0; toast('Warm and rosy-cheeked.', 'leaf', 2000)
   await fadeTo(0, 420); end()
@@ -146,13 +146,13 @@ async function read() {
   await wait(5600); A.book = 0; end()
 }
 async function water(pl) {
-  if (!await begin('water', 1.9, 'water')) return
-  const [sx, sz] = pl.stand; placeAt(sx, sz, Math.atan2(pl.x - sx, pl.z - sz)); pose({ x: sx, z: sz, yaw: Math.atan2(pl.x - sx, pl.z - sz), rate: 8 })
+  if (!await begin('water', 2.6, 'water')) return
+  const [sx, sz] = pl.stand; placeAt(sx, sz, Math.atan2(pl.x - sx, pl.z - sz)); pose({ x: sx, z: sz, yaw: Math.atan2(pl.x - sx, pl.z - sz), rate: 8, cam: pl.cam })
   const first = A.watered()[pl.id] !== G.s.day; A.watered()[pl.id] = G.s.day; pl.perkT = performance.now(); emit()
   for (let i = 0; i < 6; i++) setTimeout(() => FX && FX.drop.emit(pl.x, pl.y + 0.3 * pl.s, pl.z, 3, { spread: 0.06, up: 0.05, size: 0.022, life: 0.6 }), 250 + i * 160)
   setTimeout(() => FX && FX.spark.emit(pl.x, pl.y + 0.25 * pl.s, pl.z, 6, { spread: 0.12, up: 0.25, size: 0.04, life: 1 }), 1100)
   toast(first ? 'The leaves lift and brighten — thank you, they seem to say.' : 'Still happy from earlier. A little sip anyway.', 'can', 2600)
-  await wait(1900); end()
+  await wait(2600); end()
 }
 async function feedCat() {
   if (CAT.bowl > 0) { toast(`${CAT.name}'s bowl is still full.`, 'fish', 2000); return }
@@ -231,7 +231,7 @@ function Clutter() {
     <mesh position={[0.84, 0.004, 0.2]} rotation={[-Math.PI / 2, 0, 0]} material={tm('#e8a24a')} scale={[0.16, 0.5, 1]}><planeGeometry args={[1, 1]} /></mesh>
     {[-0.2, -0.05, 0.1, 0.25, 0.4].map(z => <mesh key={z} position={[0.84, 0.006, 0.2 + z * 0.8]} rotation={[-Math.PI / 2, 0, 0]} material={tm('#c96a5a')} scale={[0.14, 0.02, 1]}><planeGeometry args={[1, 1]} /></mesh>)}
     {/* firewood stack by the stove */}
-    <group position={[1.16, 0, -0.46]}>{[0, 1, 2].flatMap(r => [0, 1, 2 - (r > 1 ? 1 : 0)].map(i => <Box key={r + '' + i} geo={GEO.cyl} p={[-0.08 + i * 0.07 + r * 0.035, 0.035 + r * 0.058, 0]} s={[0.032, 0.2, 0.032]} rot={[Math.PI / 2, 0, 0]} c={(r + i) % 2 ? '#a8744c' : '#8a5a3c'} out={OUT.fine} />))}</group>
+    <group position={[1.16, 0, -0.46]}>{[0, 1, 2].flatMap(r => [0, 1, 2].slice(0, r > 1 ? 2 : 3).map(i => <Box key={r + '-' + i} geo={GEO.cyl} p={[-0.08 + i * 0.07 + r * 0.035, 0.035 + r * 0.058, 0]} s={[0.032, 0.2, 0.032]} rot={[Math.PI / 2, 0, 0]} c={(r + i) % 2 ? '#a8744c' : '#8a5a3c'} out={OUT.fine} />))}</group>
     {/* runner rug beside the bed, reading rug, more books on the table and the sill, a basket by the window */}
     <mesh position={[-0.47, 0.004, -0.55]} rotation={[-Math.PI / 2, 0, 0]} material={tm('#8cc084')} scale={[0.2, 0.55, 1]}><planeGeometry args={[1, 1]} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[-0.47 + s * 0.08, 0.006, -0.55]} rotation={[-Math.PI / 2, 0, 0]} material={tm('#f6ead2')} scale={[0.015, 0.5, 1]}><planeGeometry args={[1, 1]} /></mesh>)}
