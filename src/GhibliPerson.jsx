@@ -9,6 +9,7 @@ import { useFrame, createPortal } from '@react-three/fiber'
 import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { T, C, CC } from './common.jsx'
+import { POSES } from './act.js'
 
 // ---------- shading ----------
 export const CEL_U = { uSun: { value: new THREE.Vector3(0.4, 0.8, 0.5).normalize() }, uLight: { value: new THREE.Color(1, 0.97, 0.92) }, uAmb: { value: new THREE.Color(0.1, 0.1, 0.14) }, uRim: { value: new THREE.Color(1, 0.93, 0.8) }, uShadeTint: { value: new THREE.Color(0.8, 0.62, 0.68) } }
@@ -489,6 +490,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
         mix(B.upR, 'x', -1.1 - 0.15 * tilt + sway); mix(B.foR, 'x', -0.45); mix(B.upR, 'z', 0.25 * tilt); mix(B.upL, 'x', -0.3); mix(B.chest, 'x', 0.22); mix(B.chest, 'y', 0.12 * tilt); mix(B.head, 'x', 0.3); mix(B.root, 'x', 0.08) }
       else if (a === 'door') { const at = st.actT || 0, push = Math.min(1, at / 0.3)
         mix(B.upR, 'x', -1.35 * push); mix(B.foR, 'x', -0.25); mix(B.upR, 'z', 0.08); mix(B.chest, 'x', 0.12 * push); mix(B.head, 'x', 0.05) }
+      else if (POSES[a]) POSES[a](B, mix, st, t, w) // round7: home-activity poses (lazy chunk)
       else if (a === 'carry') { for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'x', -0.55); mix(B['up' + k], 'z', sd * -0.12); mix(B['fo' + k], 'x', -1.2) } mix(B.chest, 'x', -0.06) }
     }
     const hairX = spring(sp.hairX, -0.12 * m - bobVel * 2.2 - sp.headX.v * 0.06, 28, 4.5, dt), hairZ = spring(sp.hairZ, -sp.headY.v * 0.05 + (st.turn || 0) * 0.1, 26, 4, dt)

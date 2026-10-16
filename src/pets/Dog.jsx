@@ -69,8 +69,14 @@ const _sn2 = { d: 9, half: 0, t: 0, side: 1 }, _sn3 = { d: 9, half: 0, t: 0, sid
 const sideOf = (n) => streamNear(n, _sn2).side
 const pickW = (w) => { let s = 0; for (const k in w) s += w[k]; if (s <= 0) return null; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return null }
 const _ga = new THREE.Vector3(), _gb = new THREE.Vector3(), _prev = new THREE.Vector3(), _f0 = new THREE.Vector3()
+// round7: Pip's food bowl, outside on the porch beside the door. She fills it (E); he trots over and eats.
+const BOWLD = { n: null, eat: null, full: 0 }
+function bowlN() { if (BOWLD.n || !HOME.outN || !HOME.homeN) return BOWLD.n
+  const away = tan(HOME.outN, HOME.outN.clone().sub(HOME.homeN), new THREE.Vector3()), side = new THREE.Vector3().crossVectors(HOME.outN, away)
+  BOWLD.n = HOME.outN.clone().addScaledVector(side, -0.5 / R).addScaledVector(away, 0.06 / R).normalize(); BOWLD.eat = BOWLD.n.clone().addScaledVector(away, 0.13 / R).normalize(); BOWLD.away = away; return BOWLD.n }
+if (typeof window !== 'undefined') window.__dogBowl = BOWLD
 export function Dog() {
-  const st = useMemo(() => newPet(), []), root = useRef(), stickW = useRef(), stickM = useRef(), crit = useRef(), bub = useRef(), puff = useRef(), drops = useRef(), hearts = useRef(), dugRefs = useRef([])
+  const st = useMemo(() => newPet(), []), root = useRef(), stickW = useRef(), stickM = useRef(), crit = useRef(), bub = useRef(), puff = useRef(), drops = useRef(), hearts = useRef(), dugRefs = useRef([]), bowlR = useRef()
   const D = DOG
   const go = (s, dur, x = {}) => { D.state = s; D.t = 0; D.dur = dur; Object.assign(D, x) }
   useMemo(() => {
@@ -79,6 +85,7 @@ export function Dog() {
       if (HOME.inside || HOME.busy) return
       const P = HOME.P; if (!P) return
       const d = angTo(D.n, P.n) * R
+      const bn = bowlN(); if (bn && D.state !== 'eat') consider({ kind: 'ext', id: 'dogbowl', icon: 'fish', verb: BOWLD.full ? 'Pip\'s bowl is' : 'Feed', name: BOWLD.full ? 'full' : D.name, act: feedDog }, pp.distanceTo(surf(bn, _a)), 0.36)
       if (FETCHING.has(D.state) || D.stick.mode === 'fly') return
       // round6: the default near Pip is a small 'Pet' chip; the stick is only offered sometimes, as a second small chip
       const fetchOK = fetchOffered(P)
@@ -89,6 +96,7 @@ export function Dog() {
     })
   }, [])
   function petDog() { const P = HOME.P; startAct('pet', { dur: 1.2 }); D.route = null; D.petCD = 6; D.mood = Math.min(1, D.mood + 0.25); go('petted', 2.6); burst(hearts.current, 5); toast(`${D.name} leans into your hand, tail going ♥`, 'hand'); window.__lastAct = { kind: 'dog', t: performance.now() } }
+  function feedDog() { if (BOWLD.full) { toast(`${D.name}'s bowl is already full.`, 'fish', 1800); return } startAct('feed', { dur: 1.3 }); setTimeout(() => { BOWLD.full = 1; puff.current?.emit(0, 0, 0) }, 650); D.route = null; D.stick.mode = 'none'; D.throws = 0; go('eat', 25); toast(`You fill ${D.name}'s bowl — he comes running, tail a blur!`, 'fish', 2600) }
   function throwStick() { startAct('cast', { dur: 0.7, sound: 'cast' })
     const P = HOME.P, s = D.stick
     s.a.copy(P.n); let dist = 1.6 + Math.random() * 0.6
@@ -136,6 +144,11 @@ export function Dog() {
     else if (S === 'fetchBack') { target = P.n; spd = 2.4; arrive = 0.3; g.tailWag = 1.2; g.tailSpeed = 18; g.tongue = 0; g.mouth = 0
       if (dHer < 0.28) { s.mode = 'ground'; s.n.copy(D.n).addScaledVector(D.f, 0.06 / R).normalize(); if (D.throws >= 3) D.lastFetchH = T.h; go('sitWait', 6); D.mood = Math.min(1, D.mood + 0.2); burst(hearts.current, 2) } }
     else if (S === 'sitWait') { face = P.n; g.sit = 1; g.tailWag = 1.3; g.tailSpeed = 18; g.headPitch = -0.25; g.headTilt = Math.sin(D.t * 1.3) * 0.3; if (D.ex > 1.2) { g.pant = 1; g.mouth = 0.7; g.tongue = 1 } if (dHer > 0.9 || D.t > D.dur) { D.lastFetchH = T.h; D.throws = 0; go('follow', 0) } }
+    else if (S === 'eat') { const bn = BOWLD.eat
+      if (!bn) go('follow', 0); else if (angTo(D.n, bn) * R > 0.05 || !BOWLD.full) { target = bn; spd = D.t < 3 ? 2.2 : 1.2; arrive = 0.03; g.tailWag = 1.3; g.tailSpeed = 18; if (!BOWLD.full) { face = BOWLD.n; g.sit = 1; g.headTilt = 0.35; target = null } }
+      else { face = BOWLD.n; const chomp = Math.sin(D.t * 12); g.crouch = 0.35; g.sniff = 1; g.headPitch = 0.3 + chomp * 0.08; g.mouth = Math.max(0, chomp) * 0.5; g.tongue = 0; g.tailWag = 1.2; g.tailSpeed = 16; g.eyes = 0.6
+        D.ate = (D.ate || 0) + dt; if (D.ate > 5) { D.ate = 0; BOWLD.full = 0; toast(`${D.name} wolfs it down and licks his nose. ♥`, 'hand', 2600); burst(hearts.current, 3); D.mood = Math.min(1, D.mood + 0.2); go('sit', 999) } }
+      if (D.t > D.dur) { BOWLD.full = 0; go('follow', 0) } }
     else if (S === 'sniff') { g.sniff = 1; g.headYaw = Math.sin(D.t * 2.3) * 0.35; g.tailWag = 0.5; g.earBack = -0.2; g.mouth = 0; g.tongue = 0; if (D.t % 0.6 < dt) puff.current?.emit(1, 0.15, 0.1, [0, 0.01, 0.1]); if (D.t > D.dur && !D.forced) go('follow', 0) }
     else if (S === 'dig') { g.crouch = 0.6; g.sniff = 0.6; const a = Math.sin(D.t * 16); g.pawL = Math.max(0, a) * 0.6; g.pawR = Math.max(0, -a) * 0.6; g.tailWag = 1; g.tailSpeed = 14; g.tailUp = 1
       if (D.t % 0.12 < dt) puff.current?.emit(2, 0.6, 0.3, [0, 0.015, 0.085])
@@ -240,6 +253,7 @@ export function Dog() {
     if (D.speed > 0.05 && Math.random() < dt * 0.3 && !wet) puff.current?.emit(1, 0.1, 0.12, [0, 0.005, -0.055])
     // ---------- gait + placement ----------
     st.speed = D.speed / DOG_CFG.s; st.run = D.speed > 1.9 ? 1 : 0; st.phase += dt * D.speed / (DOG_CFG.stride * DOG_CFG.s) * (st.run ? 1.1 : 1.5)
+    const bnow = bowlN(); if (bnow && bowlR.current) { bowlR.current.position.copy(surf(bnow, _ga)); bowlR.current.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(bnow, BOWLD.away), bnow, BOWLD.away)); bowlR.current.children[2].visible = !!BOWLD.full; bowlR.current.visible = !HOME.inside }
     root.current.position.copy(surf(D.n, _a)).addScaledVector(D.n, bridgeLift(D.n)); root.current.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(D.n, D.f), D.n, D.f))
   })
   return <>
@@ -257,6 +271,8 @@ export function Dog() {
       <group><mesh geometry={GEO.sph} material={cel('#8a6a5a')} scale={[0.018, 0.016, 0.026]} position={[0, 0.02, 0]} /><mesh geometry={GEO.sph} material={OUT.pet} scale={[0.018, 0.016, 0.026]} position={[0, 0.02, 0]} />{[1, -1].map(s => <group key={s} position={[0, 0.025, 0]}><mesh position={[s * 0.02, 0, 0]} material={cel('#6a4a3a')} scale={[0.03, 0.004, 0.018]} geometry={GEO.sph} /></group>)}</group>
     </group>
     <DugItems />
+    <group ref={bowlR}><mesh geometry={GEO.half} material={cel('#d9655b')} position={[0, 0.032, 0]} scale={[0.065, -0.032, 0.065]} /><mesh geometry={GEO.half} material={OUT.pet} position={[0, 0.032, 0]} scale={[0.065, -0.032, 0.065]} />
+      <group position={[0, 0.03, 0]}>{[...Array(8)].map((_, i) => <mesh key={i} geometry={GEO.sphL} material={cel('#a8683a')} position={[Math.cos(i * 2.4) * 0.03 * (i % 3) / 2, 0.004 * (i % 2), Math.sin(i * 2.4) * 0.03 * (i % 3) / 2]} scale={0.014} />)}</group></group>
   </>
 }
 const WING = new THREE.MeshToonMaterial({ color: '#ffd36e', side: THREE.DoubleSide })

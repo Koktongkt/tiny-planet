@@ -14,11 +14,13 @@ import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
 import { CAT } from '../pets/catState.js'
 const Cat = React.lazy(() => import('../pets/Cat.jsx').then(m => ({ default: m.Cat })))
+// round7: home activities (sleep, cook, bath, tea, read, water plants, feed the pets) + the refined interior clutter: own chunk
+const Activities = React.lazy(() => import('./Activities.jsx'))
 const PETCAM = q.get('petcam') // debug: close camera on the cat (?petcam=1, or an angle in radians)
 
 const UP = new THREE.Vector3(0, 1, 0), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3()
 const LAYER = 5
-const W = { wall: '#f6e7cc', wain: '#b98a5a', wood: '#a8744c', dark: '#7a5236', light: '#d9b07a', quilt: '#e8846a', sheet: '#fbf3e4', pot: '#d9825a', leaf: '#6fae5f', leaf2: '#8fcf6a', rug: '#c96a5a', rug2: '#f2c46a', iron: '#4a4048' }
+export const W = { wall: '#f6e7cc', wain: '#b98a5a', wood: '#a8744c', dark: '#7a5236', light: '#d9b07a', quilt: '#e8846a', sheet: '#fbf3e4', pot: '#d9825a', leaf: '#6fae5f', leaf2: '#8fcf6a', rug: '#c96a5a', rug2: '#f2c46a', iron: '#4a4048' }
 
 // ---------- transitions ----------
 let snapFrames = 0
@@ -55,7 +57,10 @@ HOME.stepInside = (dt, KEYS, P, obj) => {
   const sp = f * (run ? 0.81 : 0.52) / ROOM.S * 1.15 * dt; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09) // polish: ~22% slower indoors
   P.move += ((f ? Math.max(0.35, Math.abs(f)) : 0) - P.move) * Math.min(1, dt * 8); P.phase += dt * (run ? 11 : 8.2) * P.move; P.h = 0; P.vy = 0
   obj.position.set(hp.x * ROOM.S, ROOM.y, hp.z * ROOM.S); obj.quaternion.setFromAxisAngle(UP, hp.yaw)
+  const ps = HOME.pose; if (ps && ps.k > 0.001) { // round7: home activities place her (bed / tub / chair), eased by ps.k
+    _a.set(ps.x * ROOM.S, ROOM.y + ps.y * ROOM.S, ps.z * ROOM.S); obj.position.lerp(_a, ps.k); _q.setFromAxisAngle(UP, ps.yaw); if (ps.tilt) _q.multiply(_q2.setFromAxisAngle(_X, ps.tilt)); obj.quaternion.slerp(_q, ps.k) }
 }
+const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0)
 // interior camera: stays inside the walls (never clips), eases after her, slightly wider lens
 const camL = new THREE.Vector3(), lookL = new THREE.Vector3(), _goal = new THREE.Vector3(), _look = new THREE.Vector3()
 let fov0 = null
@@ -88,7 +93,7 @@ const view = () => canvasTex(512, 384, (x, w, h) => { const g = x.createLinearGr
   x.fillStyle = '#fff4f0'; for (let k = 0; k < 40; k++) { x.beginPath(); x.arc((k * 97) % w, 300 + (k * 53) % 80, 3, 0, 7); x.fill() } })
 
 // ---------- furniture ----------
-function Box({ p, s, c, paint = 0, out = OUT.room, rot, geo = GEO.box }) { return <O geo={geo} mat={tm(c, paint)} position={p} scale={s} rotation={rot} out={out} /> }
+export function Box({ p, s, c, paint = 0, out = OUT.room, rot, geo = GEO.box }) { return <O geo={geo} mat={tm(c, paint)} position={p} scale={s} rotation={rot} out={out} /> }
 function Walls() {
   const { x0, x1, z0, z1, h } = ROOM, t = 0.06, wall = W.wall
   const dl = DOOR.x - DOOR.w / 2, dr = DOOR.x + DOOR.w / 2, wz0 = -0.1, wz1 = 0.4, wy0 = 0.42, wy1 = 0.86
@@ -219,15 +224,15 @@ function Table() {
     <Box geo={GEO.cyl} p={[0, 0.015, 0]} s={[0.1, 0.02, 0.1]} c={W.dark} />
     <mesh position={[0, 0.317, 0]} rotation={[-Math.PI / 2, 0, 0.3]} material={tm('#fffaf0')}><planeGeometry args={[0.18, 0.18]} /></mesh>
     {/* teapot, cups, flowers */}
-    <group position={[-0.05, 0.315, 0.03]}><Box geo={GEO.sph} p={[0, 0.04, 0]} s={[0.045, 0.038, 0.045]} c={'#8cc084'} /><Box geo={GEO.cone} p={[0.05, 0.05, 0]} s={[0.012, 0.045, 0.012]} c={'#8cc084'} rot={[0, 0, -1.0]} /><Box geo={GEO.sph} p={[0, 0.08, 0]} s={0.012} c={W.dark} /></group>
-    {[[0.08, -0.06], [0.07, 0.09]].map(([x, z], i) => <Box key={i} geo={GEO.cyl} p={[x, 0.335, z]} s={[0.018, 0.035, 0.018]} c={'#fffaf0'} />)}
+    {/* round7: the teapot + her cup are animated in Activities.jsx (make tea) */}
+    <Box geo={GEO.cyl} p={[0.07, 0.335, 0.09]} s={[0.018, 0.035, 0.018]} c={'#fffaf0'} />
     <group position={[-0.08, 0.315, -0.1]}><Box geo={GEO.cyl} p={[0, 0.035, 0]} s={[0.018, 0.07, 0.018]} c={'#8fc3e8'} />{[0, 1, 2, 3].map(i => <group key={i} position={[Math.cos(i * 1.6) * 0.012, 0.1 + i * 0.008, Math.sin(i * 1.6) * 0.012]}><Box geo={GEO.sph} p={[0, 0, 0]} s={0.013} c={['#f59ab0', '#ffd36e', '#fffaf0', '#c9b3ff'][i]} out={OUT.fine} /></group>)}</group>
     {/* stools */}
     {[[-0.34, 0.08], [0.2, -0.28], [0.32, 0.26]].map(([x, z], i) => <group key={i} position={[x, 0, z]}><Box geo={GEO.cyl} p={[0, 0.18, 0]} s={[0.075, 0.025, 0.075]} c={W.light} paint={0.15} />{[0, 1, 2].map(k => <Box key={k} geo={GEO.cyl} p={[Math.cos(k * 2.1) * 0.05, 0.085, Math.sin(k * 2.1) * 0.05]} s={[0.01, 0.17, 0.01]} c={W.dark} rot={[Math.sin(k * 2.1) * 0.12, 0, -Math.cos(k * 2.1) * 0.12]} />)}<O geo={GEO.pillow} mat={tm(['#f59ab0', '#8fc3e8', '#f2c46a'][i])} position={[0, 0.2, 0]} scale={[0.12, 0.022, 0.12]} out={OUT.fine} /></group>)}
   </group>
 }
-function Plant({ p, s = 1, big }) {
-  return <group position={p} scale={s}>
+export function Plant({ p, s = 1, big, gref }) { // round7: the indoor plants live in Activities.jsx (they perk up when watered)
+  return <group ref={gref} position={p} scale={s}>
     <Box geo={GEO.cyl} p={[0, 0.07, 0]} s={[0.08, 0.14, 0.08]} c={W.pot} paint={0.12} /><Box geo={GEO.cyl} p={[0, 0.145, 0]} s={[0.088, 0.02, 0.088]} c={'#c46f4a'} />
     {(big ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4]).map(i => { const a = i * 2.4, tilt = 0.5 + (i % 3) * 0.2; return <group key={i} position={[0, 0.15, 0]} rotation={[Math.cos(a) * tilt, 0, Math.sin(a) * tilt]}><Box geo={GEO.cyl} p={[0, 0.1 + (i % 2) * 0.04, 0]} s={[0.005, 0.2 + (i % 2) * 0.08, 0.005]} c={'#5a8a44'} out={null} /><O geo={GEO.sph} mat={tm(i % 2 ? W.leaf : W.leaf2)} position={[0, 0.22 + (i % 2) * 0.08, 0]} scale={[0.075, 0.018, 0.05]} rotation={[0.3, a, 0]} out={OUT.fine} /></group> })}
   </group>
@@ -321,8 +326,8 @@ export function Room() {
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
     <Floor onDown={onDown} /><Window /><Sunbeam /><Stove /><Door /><Lamp />
-    <Merge><Hanging /><Walls /><Bed /><Shelf /><Kitchen /><Table /><Pictures />
-    <Plant p={[-1.18, 0, 0.82]} s={1.5} big /><Plant p={[0.46, 0, -0.9]} s={0.9} /><Plant p={[1.15, 0.43, 0.68]} s={0.5} /></Merge>
+    <Merge><Hanging /><Walls /><Bed /><Shelf /><Kitchen /><Table /><Pictures /></Merge>
+    <React.Suspense fallback={null}><Activities /></React.Suspense>
     <InsideDecor />
     <React.Suspense fallback={null}><Cat /></React.Suspense>
   </group>

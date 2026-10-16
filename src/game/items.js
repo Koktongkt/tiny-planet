@@ -32,6 +32,7 @@ export const ITEMS = {
   soup: { name: 'Mushroom Soup', cat: 'food', desc: 'Warm and earthy.' },
   jam: { name: 'Berry Jam', cat: 'food', desc: 'A jar of summer.' },
   teacup: { name: 'Herbal Tea', cat: 'food', desc: 'Steaming and calm.' },
+  grilledfish: { name: 'Grilled Fish', cat: 'food', desc: 'Salted and crisp, straight off her stove.' },
   wreath: { name: 'Flower Wreath', cat: 'decor', desc: 'Hang it by your door.' },
   mosslamp: { name: 'Moss Lamp', cat: 'decor', desc: 'A soft green glow.' },
   basket: { name: 'Woven Basket', cat: 'decor', desc: 'For things worth keeping.' },
@@ -48,6 +49,7 @@ export const RECIPES = [
   { id: 'onigiri', cat: 'Food', makes: 'onigiri', needs: [['rice', 2], ['fish', 1]] },
   { id: 'soup', cat: 'Food', makes: 'soup', needs: [['mushroom', 3], ['water', 1]] },
   { id: 'jam', cat: 'Food', makes: 'jam', needs: [['berries', 4]] },
+  { id: 'grilledfish', cat: 'Food', makes: 'grilledfish', needs: [['fish', 1]], at: 'stove' }, // round7: cooked at home
   { id: 'teacup', cat: 'Food', makes: 'teacup', needs: [[{ any: ['herbs', 'tea'] }, 2], ['water', 1]] },
   { id: 'wreath', cat: 'Decor', makes: 'wreath', needs: [['flower', 5], ['reed', 1]] },
   { id: 'mosslamp', cat: 'Decor', makes: 'mosslamp', needs: [['moss', 2], ['glowmoss', 2], ['clay', 1]] },

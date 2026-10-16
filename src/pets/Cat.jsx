@@ -64,8 +64,14 @@ export function Cat() {
       if (c.y > 0.01 && (s.y < 0.01 || Math.hypot(s.x - c.x, s.z - c.z) > 0.15)) { const f = c.onFrom || { x: c.x + (c.x < -0.9 ? 0.3 : 0.25), z: c.z }; c.onFrom = null; hopTo({ x: f.x, y: 0, z: f.z }); return false }
       if (!s.from) { walkTo(s.x, s.z, 0.06, fast); return false } const f = s.from; if (walkTo(f.x, f.z, 0.06, fast)) c.onFrom = f, hopTo({ x: s.x, y: s.y, z: s.z }); return false }
     // ---------- brain ----------
+    // round7: she filled his bowl: he heads over and eats (unless forced / mid-cuddle)
+    if (CAT.bowl > 0 && c.state !== 'eat' && !c.forced && c.state !== 'petted' && c.state !== 'stretch') go('eat', 30)
     const S = c.state
-    if (S === 'wander') { if (!c.target) { for (let i = 0; i < 20; i++) { const x = -1.1 + Math.random() * 2.1, z = -0.7 + Math.random() * 1.6; if (freeAt(x, z, 0.08)) { c.target = { x, z }; break } } }
+    if (S === 'eat') { const b = CAT.bowlPos || { x: 0.9, z: 0.1 } // round7: eat from his bowl
+      if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }, true); else if (walkTo(b.x - 0.12, b.z, 0.03, c.t < 1.5)) { face = Math.atan2(b.x - c.x, b.z - c.z); const chew = Math.sin(c.t * 10); g.crouch = 0.55; g.headPitch = 0.75 + chew * 0.06; g.mouth = Math.max(0, chew) * 0.3; g.eyes = 0.45; g.tailUp = 0.7; g.tailWag = 0.25; g.earBack = -0.1
+        c.ate = (c.ate || 0) + dt; if (c.ate > 5.5) { c.ate = 0; CAT.bowl = 0; toast(`${c.name} licks the bowl clean and washes his face.`, 'fish', 2600); go('groom', 4) } } else { g.tailUp = 1.1 }
+      if (c.t > c.dur) { CAT.bowl = 0; next() } }
+    else if (S === 'wander') { if (!c.target) { for (let i = 0; i < 20; i++) { const x = -1.1 + Math.random() * 2.1, z = -0.7 + Math.random() * 1.6; if (freeAt(x, z, 0.08)) { c.target = { x, z }; break } } }
       if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }); else if (c.target && walkTo(c.target.x, c.target.z, 0.06)) c.target = null
       if (c.t > c.dur) next() }
     else if (S === 'nap' || S === 'claim') { const s = SPOT[c.where] || SPOT.beam; if (c.forced) Object.assign(c, { x: s.x, z: s.z, y: s.y })
