@@ -472,7 +472,7 @@ function Walker({ w, i }) {
       const up = _wy.copy(_f).sub(_c0).normalize(), toCam = _wz.copy(camera.position).sub(_f).normalize()
       g.visible = up.dot(toCam) > (TOUCH && VIEW.mode === 'orbit' ? 0.5 : -0.05) && (VIEW.mode === 'orbit' || /* mobile orbit: skip the few-px villagers along the limb */ camera.position.distanceTo(_f) < (TOUCH ? 7 : 10) /* polish-ship: tighter villager range to fit village budget */) } else g.visible = true
   })
-  return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 40 : 48} scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 // the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
 function Bench() {
@@ -704,8 +704,8 @@ function Stats() {
 }
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
-const LOD_D = +(q.get('lodd') || (TOUCH ? 5.5 : 10)) /* polish-ship: sooner LOD for village budget */ // tufts are ~10px here: facets don't read
-const LOD_D2 = +(q.get('lodd2') || (TOUCH ? 20 : 34)) // third tier: a few px, only the silhouette lump matters
+const LOD_D = +(q.get('lodd') || (TOUCH ? 5 : 9)) /* polish-ship: sooner LOD for village budget */ // tufts are ~10px here: facets don't read
+const LOD_D2 = +(q.get('lodd2') || (TOUCH ? 17 : 28)) // third tier: a few px, only the silhouette lump matters
 function HorizonCull() {
   const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
   useFrame(() => {

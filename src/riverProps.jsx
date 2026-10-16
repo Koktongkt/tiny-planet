@@ -1,6 +1,6 @@
 // round6 (lazy chunk): trail edge stones, river-bank pebbles, stepping stones + marker stakes at the jump spots
 import * as THREE from 'three'
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
@@ -25,13 +25,15 @@ export function RiverStones({ colliders: COLLIDERS, houses: HOUSES, touch: TOUCH
   // ship trim: stones + stakes baked into ONE static vertex-coloured mesh (was two instanced meshes): -1 draw call
   const merged = useMemo(() => { const o = new THREE.Object3D(), parts = []
     const tint = (g, c) => { const a = new Float32Array(g.attributes.position.count * 3); for (let k = 0; k < a.length; k += 3) { a[k] = c.r; a[k + 1] = c.g; a[k + 2] = c.b } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g }
-    const base = new THREE.OctahedronGeometry(1, 0); base.translate(0, 0.25, 0); base.deleteAttribute('uv')
+    const base = new THREE.OctahedronGeometry(1, 0); base.translate(0, 0.25, 0); base.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(base.attributes.position.count * 2), 2))
     stones.forEach((s, i) => { o.position.copy(s.p.pos); o.quaternion.copy(s.p.q); o.scale.set(s.s, s.s * s.h, s.s * (0.8 + (i % 5) * 0.08)); o.updateMatrix(); parts.push(tint(base.clone().applyMatrix4(o.matrix), s.c)) })
-    const col = (g, h) => { g.deleteAttribute('uv'); return tint(g, C(h)) }
+    const col = (g, h) => { g.attributes.uv.array.fill(0); return tint(g, C(h)) }
     const stake = mergeGeometries([col(new THREE.BoxGeometry(0.022, 0.2, 0.022).translate(0, 0.1, 0), '#8a5a3c'), col(new THREE.BoxGeometry(0.004, 0.035, 0.05).translate(0.012, 0.17, 0.025), '#d9534f'), col(new THREE.BoxGeometry(0.026, 0.012, 0.026).translate(0, 0.2, 0), '#6e4a33')].map(g => g.toNonIndexed()))
     stakes.forEach(p => { o.position.copy(p.pos); o.quaternion.copy(p.q); o.scale.setScalar(1); o.updateMatrix(); parts.push(stake.clone().applyMatrix4(o.matrix)) })
+    if (PS.g) parts.unshift(PS.g.toNonIndexed())
     const g = mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g)); g.computeBoundingSphere(); return g }, [])
-  const mat = useMemo(() => paint(toon('#ffffff', { vertexColors: true }), 0.12, true, 14), [])
+  const mat = useMemo(() => PS.m || paint(toon('#ffffff', { vertexColors: true }), 0.12, true, 14), [])
+  useEffect(() => { if (PS.g) PS.merged = true; return () => { PS.merged = false } }, [])
   return <mesh geometry={merged} material={mat} />
 }
 // ribbon along a curve. width: half-width (number or fn(t)); cross: [u in -1..1, colour?] columns across it
@@ -49,7 +51,11 @@ function ribbon(f, width, lift, N = 500, skip, cross = [[-1], [1]], liftFn) {
 // round6: a packed-dirt trail with defined edges: dark trodden rims, a lighter crown, a faint wheel-rut either side
 // (vertex colours on one ribbon: no extra draw call), plus edge stones / grass fringe from RiverStones + edgeveg
 const PATH_X = [[-1, '#8a6c46'], [-0.86, '#a4855a'], [-0.72, '#c9ad7c'], [-0.4, '#bf9f6e'], [-0.28, '#d6bd8c'], [0.28, '#d6bd8c'], [0.4, '#bf9f6e'], [0.72, '#c9ad7c'], [0.86, '#a4855a'], [1, '#8a6c46']]
-export function Path() { const g = useMemo(() => ribbon(pathDir, (t) => 0.17 * (1 + 0.08 * Math.sin(t * 13)), 0.045, 900, (d) => onBridge(d), PATH_X, (u) => 0.045 - 0.012 * Math.max(0, Math.abs(u) - 0.85) / 0.15), []); return <mesh geometry={g} material={useMemo(() => paint(toon('#ffffff', { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.16, true, 8), [])} /> }
+// ship trim: the trail ribbon and the stones share one mesh once RiverStones has built (-1 draw call); Path hides itself then
+const PS = { g: null, m: null, merged: false }
+export function Path() { const g = useMemo(() => (PS.g = ribbon(pathDir, (t) => 0.17 * (1 + 0.08 * Math.sin(t * 13)), 0.045, 700, (d) => onBridge(d), PATH_X, (u) => 0.045 - 0.012 * Math.max(0, Math.abs(u) - 0.85) / 0.15)), []), ref = useRef()
+  const m = useMemo(() => (PS.m = paint(toon('#ffffff', { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.16, true, 8)), [])
+  useFrame(() => { if (ref.current) ref.current.visible = !PS.merged }); return <mesh ref={ref} geometry={g} material={m} /> }
 export function Stream() {
   const g = useMemo(() => ribbon(streamDir, (t) => streamHalf(t), -0.012, 1200, null, [[-1], [-0.6], [0], [0.6], [1]]), [])
   // round6: deeper colour toward the middle, a dark bank line + bright foam at the edges, two layers of drifting flow streaks
