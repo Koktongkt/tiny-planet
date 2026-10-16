@@ -69,3 +69,69 @@ export function windify(mat, amp = 0.15, base = 0) {
   mat.customProgramCacheKey = () => 'wind' + amp + '_' + base
   return mat
 }
+
+// ---------------- round6: a real river (wide, banked, impassable) + crossings ----------------
+// The stream is a closed loop given as latitude = f(longitude): streamDir(t) = dir(lat(t), t), so "which side" and
+// "how far" are cheap. Width varies: ~0.92 wide in general (too far to jump), pinched at the bridges and at a few
+// narrow, marked jump spots (~0.3 wide).
+const latOfN = (n) => Math.asin(Math.max(-1, Math.min(1, n.y)))
+export const streamLat = (t) => latOfN(streamDir(t))
+// bridges: where the path crosses the stream (same longitude parameter); nearest the village first
+const VILL = dir(1.05, 0.2)
+export const BRIDGES = []
+{ let prev = null; for (let i = 0; i <= 3000; i++) { const t = (i / 3000) * Math.PI * 2; const d = latOfN(pathDir(t).normalize()) - latOfN(streamDir(t).normalize()); if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(t).normalize(), tan = pathDir(t + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t }) } prev = d } }
+BRIDGES.sort((a, b) => a.c.distanceTo(VILL) - b.c.distanceTo(VILL))
+export const BL = 1.0 // bridge length (world units), spans the pinched river with its banks
+export function bridgeLift(n) { for (const b of BRIDGES) { const dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; const a = (dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R, s = (dx * b.side.x + dy * b.side.y + dz * b.side.z) * R; if (Math.abs(a) < BL / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / BL) * Math.PI) } return 0 }
+export const onBridgeDeck = (n, pad = 0) => BRIDGES.some(b => { const dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; return Math.abs((dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R) < BL / 2 + pad && Math.abs((dx * b.side.x + dy * b.side.y + dz * b.side.z) * R) < 0.13 + pad * 0.3 })
+export const onBridge = (n) => BRIDGES.some(b => b.c.angleTo(n) < (BL / 2 + 0.08) / R)
+// narrow jump spots: spread around the loop, away from bridges, lake and harbour
+const _wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a))
+export const JUMPS = []
+{ for (let k = 0; k < 14 && JUMPS.length < 4; k++) { const t = ((k * 0.618034) % 1) * Math.PI * 2; const n = streamDir(t).normalize()
+    if (BRIDGES.some(b => Math.abs(_wrap(b.t - t)) < 0.55) || JUMPS.some(j => Math.abs(_wrap(j.t - t)) < 0.9)) continue
+    if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.6 || ang(n, ZONES.lake) < ZONES.lake.r * 1.6 || ang(n, ZONES.forest) < ZONES.forest.r * 0.8) continue
+    const tan = streamDir(t + 0.004).normalize().sub(n).normalize(); JUMPS.push({ t, c: n, tan, side: new THREE.Vector3().crossVectors(tan, n).normalize() }) } }
+export const RIVER_HALF = 0.46, BRIDGE_HALF = 0.32, JUMP_HALF = 0.14
+const gauss = (d, s) => Math.exp(-(d * d) / (s * s))
+export function streamHalf(t) { let h = RIVER_HALF
+  for (const b of BRIDGES) h -= (RIVER_HALF - BRIDGE_HALF) * gauss(_wrap(t - b.t), 0.07)
+  for (const j of JUMPS) h = Math.min(h, RIVER_HALF - (RIVER_HALF - JUMP_HALF) * gauss(_wrap(t - j.t), 0.03))
+  return h * (1 + 0.06 * Math.sin(t * 13)) }
+// nearest point on the river: { d: world-unit distance from the centre line, half: half width there, t, side: +1 north / -1 south }
+const SN = 1800; let SP = null
+const _sr = { d: 9, half: 0, t: 0, side: 1 }
+export function streamNear(n, out = _sr) {
+  if (!SP) { SP = new Float32Array(SN * 3); for (let i = 0; i < SN; i++) { const p = streamDir(i / SN * Math.PI * 2).normalize(); SP[i * 3] = p.x; SP[i * 3 + 1] = p.y; SP[i * 3 + 2] = p.z } }
+  const len = Math.hypot(n.x, n.y, n.z), x = n.x / len, y = n.y / len, z = n.z / len, lon = Math.atan2(x, z), lat = Math.asin(Math.max(-1, Math.min(1, y)))
+  const dl = lat - streamLat(lon); out.side = dl >= 0 ? 1 : -1
+  if (Math.abs(dl) > 0.16) { out.d = Math.abs(dl) * R; out.t = lon; out.half = RIVER_HALF; return out } // far: the latitude gap is a fine bound
+  // search samples within +-0.25 rad of longitude
+  const i0 = Math.round(((lon % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2) * SN), w = Math.ceil(0.25 / (Math.PI * 2) * SN)
+  let m = 9, bi = i0
+  for (let k = -w; k <= w; k++) { const i = ((i0 + k) % SN + SN) % SN; const dx = SP[i * 3] - x, dy = SP[i * 3 + 1] - y, dz = SP[i * 3 + 2] - z, d = dx * dx + dy * dy + dz * dz; if (d < m) { m = d; bi = i } }
+  // refine on the two neighbouring segments
+  let best = Math.sqrt(m), bt = bi / SN * Math.PI * 2
+  for (const j of [bi - 1, bi]) { const a = ((j % SN) + SN) % SN, b = (a + 1) % SN; const ax = SP[a * 3], ay = SP[a * 3 + 1], az = SP[a * 3 + 2], ex = SP[b * 3] - ax, ey = SP[b * 3 + 1] - ay, ez = SP[b * 3 + 2] - az, L2 = ex * ex + ey * ey + ez * ez
+    const u = Math.max(0, Math.min(1, ((x - ax) * ex + (y - ay) * ey + (z - az) * ez) / L2)), dx = ax + ex * u - x, dy = ay + ey * u - y, dz = az + ez * u - z, d = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    if (d < best) { best = d; bt = (a + u) / SN * Math.PI * 2 } }
+  out.d = best * R; out.t = bt; out.half = streamHalf(bt); return out
+}
+// is this point open water she can't stand in? (river away from the bridge decks, deep lake, harbour)
+export function waterAt(n, margin = 0.02) {
+  const s = streamNear(n); if (s.d < s.half - margin && !onBridgeDeck(n)) return true
+  if (ang(n, ZONES.lake) < ZONES.lake.r * 1.2 && height(n) < LAKE_W - 0.03) return true
+  if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.2 && height(n) < HARB_W - 0.03) return true
+  return false
+}
+// river crossing gates (bridges + jump spots) for anything that has to path across (Pip)
+export const GATES = [...BRIDGES.map(b => ({ kind: 'bridge', t: b.t, c: b.c, b })), ...JUMPS.map(j => ({ kind: 'jump', t: j.t, c: j.c, j }))]
+// a point on the given side of the river at gate g, `off` units out from that side's bank
+export function gateSide(g, side, off = 0.18, out = new THREE.Vector3()) {
+  const n = g.c, t = g.t, h = streamHalf(t), lat = streamLat(t) + side * (h + off) / R
+  if (g.kind === 'bridge') { const b = g.b; out.copy(b.c).addScaledVector(b.tan, (BL / 2 + off * 0.5) / R).normalize(); if (streamNear(out).side !== side) out.copy(b.c).addScaledVector(b.tan, -(BL / 2 + off * 0.5) / R).normalize(); return out }
+  return out.copy(dir(lat, t))
+}
+if (typeof window !== 'undefined') window.__river = { streamNear, waterAt, BRIDGES, JUMPS, GATES, streamHalf, gateSide }
+// old-style 'centre distance' (radians) measured from the new bank: scatter rules tuned for the thin stream keep their meaning
+export const streamDist = (n) => { const r = streamNear(n); return Math.max(0, r.d - r.half + 0.17) / R }

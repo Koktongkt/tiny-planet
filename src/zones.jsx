@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
-import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, LAKE_W, HARB_W, CLIFF_H, zoneAng, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
+import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 
 const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
@@ -14,12 +14,12 @@ export { Zc }
 
 // ---------- placement helpers ----------
 export const LAKE_DOCK_B = 3.6, HARB_PIER_B = 1.2
-export const HARBOUR_HOUSES = [0, 1, 2, 3, 4].map(k => around(Zc.harbour, ZONES.harbour.r * 1.3, 2.0 + k * 0.62)).filter(n => distToCurve(n, streamDir, 200) > 0.05)
+export const HARBOUR_HOUSES = [0, 1, 2, 3, 4].map(k => around(Zc.harbour, ZONES.harbour.r * 1.3, 2.0 + k * 0.62)).filter(n => streamDist(n) > 0.05)
 export const MILL_FIELD = []
 for (let i = 0; i < 9 && MILL_FIELD.length < 6; i++) { const n = around(Zc.mills, ZONES.mills.r * (0.25 + 0.7 * ((i * 0.37) % 1)), i * 2.2); if (distToCurve(n, pathDir, 200) > 0.05 && !MILL_FIELD.some(m => m.angleTo(n) < 0.07)) MILL_FIELD.push(n) }
 const RUIN_COLS = [0, 1, 2, 3, 4, 5, 6].map(k => ({ n: around(Zc.ruins, 0.55 / R, k * 0.9 + 0.3), h: [0.75, 0.35, 0.6, 0.2, 0.8, 0.45, 0.3][k], tilt: [0, 0.1, 0, 0.25, 0, 0.05, 0.15][k] }))
 const CAMPHORS = []
-for (let i = 0; i < 160 && CAMPHORS.length < 34; i++) { const n = around(Zc.forest, Math.sqrt(rnd()) * ZONES.forest.r, rnd() * 6.283); if (distToCurve(n, streamDir, 120) < 0.06 * K || distToCurve(n, pathDir, 120) < 0.06 * K || angTo(n, 'giant') < 0.12 || CAMPHORS.some(c => c.n.angleTo(n) < 0.085)) continue; CAMPHORS.push({ n, s: 0.85 + rnd() * 0.5, spin: rnd() * 6 }) }
+for (let i = 0; i < 160 && CAMPHORS.length < 34; i++) { const n = around(Zc.forest, Math.sqrt(rnd()) * ZONES.forest.r, rnd() * 6.283); if (streamDist(n) < 0.06 * K || distToCurve(n, pathDir, 120) < 0.06 * K || angTo(n, 'giant') < 0.12 || CAMPHORS.some(c => c.n.angleTo(n) < 0.085)) continue; CAMPHORS.push({ n, s: 0.85 + rnd() * 0.5, spin: rnd() * 6 }) }
 
 export function zoneBusy(n) {
   return angTo(n, 'lake') < ZONES.lake.r * 1.2 || angTo(n, 'harbour') < ZONES.harbour.r * 1.15 || angTo(n, 'cliff') < ZONES.cliff.r + 0.035 || angTo(n, 'terraces') < ZONES.terraces.r + 0.02 ||

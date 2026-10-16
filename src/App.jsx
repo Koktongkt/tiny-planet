@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
-import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W } from './world.js'
+import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, RIVER_HALF, JUMP_HALF, streamDist } from './world.js'
 import { PEOPLE } from './peopleData.js'
 const PersonLazy = lazy(() => import('./people.jsx').then(m => ({ default: m.Person })))
 const Person = (p) => <Suspense fallback={null}><PersonLazy {...p} /></Suspense>
@@ -25,7 +25,7 @@ import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
-import { newDay, G } from './game/store.js'
+import { newDay, G, toast } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
@@ -107,7 +107,7 @@ const _wv = new THREE.Vector3(), _wv2 = new THREE.Vector3()
 function Ground() {
   const geo = useMemo(() => {
     const g = new THREE.IcosahedronGeometry(R, 64); const p = g.attributes.position, v = new THREE.Vector3(), cols = []
-    const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#ecd9a8'), bank = C('#6fa86a'), worn = C('#cfd690'), tmp = new THREE.Color()
+    const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#d9bf86'), bank = C('#5f9a5e'), worn = C('#c7cf86'), mud = C('#8f7d5c'), bed = C('#4e7f7a'), tmp = new THREE.Color()
     // the icosphere is non-indexed (~6 copies of each point): shade each unique point once
     const seen = new Map()
     for (let i = 0; i < p.count; i++) {
@@ -116,11 +116,12 @@ function Ground() {
       v.fromBufferAttribute(p, i).normalize(); const hh = height(v)
       const w = Math.sin(v.x * 6 + v.y * 4) * Math.sin(v.z * 5 - v.y * 3)
       tmp.copy(a).lerp(b, w * 0.5 + 0.5).lerp(c, Math.max(0, Math.sin(v.x * 11 + v.z * 9) * Math.sin(v.y * 13)) )
-      const ds = distToCurve(v, streamDir, 420); if (ds < 0.07 * K) tmp.lerp(bank, 1 - ds / (0.07 * K))
-      const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.6 * (1 - dp / (0.05 * K)))
+      const sn = streamNear(v), gap = sn.d - sn.half // round6: world units outside the river's edge (<0 = under water)
+      if (gap < 0.3) { if (gap < 0) tmp.copy(bed); else if (gap < 0.07) tmp.lerp(mud, 0.85); else tmp.lerp(bank, 0.8 * (1 - (gap - 0.07) / 0.23)) }
+      const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.8 * (1 - dp / (0.05 * K)))
       if (dp < 0.1 * K && dp >= 0.05 * K) tmp.lerp(worn, 0.35 * (1 - (dp - 0.05 * K) / (0.05 * K)) * (0.6 + 0.4 * Math.sin(v.x * 90 + v.z * 70))) // trampled verge
       { const wd = wornAt(v); if (wd > 0) tmp.lerp(wd > 0.55 ? sand : worn, Math.min(0.75, wd)) }
-      zoneColour(v, tmp); cols.push(tmp.r, tmp.g, tmp.b); v.multiplyScalar(R + hh - (ds < 0.05 * K ? 0.08 * (1 - ds / (0.05 * K)) : 0)); p.setXYZ(i, v.x, v.y, v.z); seen.set(key, [tmp.r, tmp.g, tmp.b, v.x, v.y, v.z])
+      zoneColour(v, tmp); cols.push(tmp.r, tmp.g, tmp.b); v.multiplyScalar(R + hh - (gap < 0.04 ? 0.03 + 0.11 * ss(0.04, -0.3, gap) : 0)); p.setXYZ(i, v.x, v.y, v.z); seen.set(key, [tmp.r, tmp.g, tmp.b, v.x, v.y, v.z])
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals(); { const nr = g.attributes.normal, cl = g.attributes.color, nv = new THREE.Vector3(), pv = new THREE.Vector3(), cc = new THREE.Color(); for (let i = 0; i < p.count; i++) { pv.fromBufferAttribute(p, i).normalize(); nv.fromBufferAttribute(nr, i); cc.fromBufferAttribute(cl, i); rockify(pv, nv, cc); cl.setXYZ(i, cc.r, cc.g, cc.b) } } return g
   }, [])
@@ -128,49 +129,75 @@ function Ground() {
   return <mesh geometry={geo} material={useMemo(() => inkRim(paint(toon('#ffffff', { vertexColors: true }), 0.09, true, 1.6)), [])} />
 }
 
-function ribbon(f, width, lift, N = 500, skip) {
-  const pos = [], uv = [], idx = []
+// ribbon along a curve. width: half-width (number or fn(t)); cross: [u in -1..1, colour?] columns across it
+function ribbon(f, width, lift, N = 500, skip, cross = [[-1], [1]], liftFn) {
+  const pos = [], uv = [], idx = [], col = [], hasC = cross.some(c => c[1]), cc = cross.map(c => c[1] ? C(c[1]) : null), M = cross.length
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * Math.PI * 2, n = f(t).normalize(), n2 = f(t + 0.01).normalize()
     const tan = n2.clone().sub(n).normalize(), side = new THREE.Vector3().crossVectors(tan, n).normalize()
-    const wob = width * (1 + 0.25 * Math.sin(t * 13))
-    for (const s of [-1, 1]) { const d = n.clone().addScaledVector(side, s * wob / R).normalize(); pos.push(...d.multiplyScalar(R + height(d) + (skip && skip(d) ? -0.3 : lift)).toArray()); uv.push(s * 0.5 + 0.5, t * 20) }
-    if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2) }
+    const wob = typeof width === 'function' ? width(t) : width * (1 + 0.12 * Math.sin(t * 13))
+    cross.forEach(([u], j) => { const d = n.clone().addScaledVector(side, u * wob / R).normalize(); pos.push(...d.multiplyScalar(R + height(d) + (skip && skip(d) ? -0.3 : liftFn ? liftFn(u, t) : lift)).toArray()); uv.push(u * 0.5 + 0.5, t * 20); if (hasC) { const c = cc[j]; col.push(c.r, c.g, c.b) } })
+    if (i < N) for (let j = 0; j < M - 1; j++) { const k = i * M + j; idx.push(k, k + 1, k + M, k + 1, k + M + 1, k + M) }
   }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); if (hasC) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g
 }
-function Path() { const g = useMemo(() => ribbon(pathDir, 0.16, 0.045, 700, (d) => onBridge(d)), []); return <mesh geometry={g} material={paint(toon('#ecd9a8', { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.12, true, 8)} /> }
+// round6: a packed-dirt trail with defined edges: dark trodden rims, a lighter crown, a faint wheel-rut either side
+// (vertex colours on one ribbon: no extra draw call), plus edge stones / grass fringe from RiverStones + edgeveg
+const PATH_X = [[-1, '#8a6c46'], [-0.86, '#a4855a'], [-0.72, '#c9ad7c'], [-0.4, '#bf9f6e'], [-0.28, '#d6bd8c'], [0.28, '#d6bd8c'], [0.4, '#bf9f6e'], [0.72, '#c9ad7c'], [0.86, '#a4855a'], [1, '#8a6c46']]
+function Path() { const g = useMemo(() => ribbon(pathDir, (t) => 0.17 * (1 + 0.08 * Math.sin(t * 13)), 0.045, 900, (d) => onBridge(d), PATH_X, (u) => 0.045 - 0.012 * Math.max(0, Math.abs(u) - 0.85) / 0.15), []); return <mesh geometry={g} material={useMemo(() => paint(toon('#ffffff', { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.16, true, 8), [])} /> }
 function Stream() {
-  const g = useMemo(() => ribbon(streamDir, 0.17, -0.012, 900), [])
+  const g = useMemo(() => ribbon(streamDir, (t) => streamHalf(t), -0.012, 1800, null, [[-1], [-0.6], [0], [0.6], [1]]), [])
+  // round6: deeper colour toward the middle, a dark bank line + bright foam at the edges, two layers of drifting flow streaks
   const m = useMemo(() => new THREE.ShaderMaterial({ uniforms: { uTime: wind.time, uN: { value: 0 }, uD: { value: 0 } }, polygonOffset: true, polygonOffsetFactor: -3,
     vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
     fragmentShader: `varying vec2 vUv; uniform float uTime,uN,uD; void main(){ float e = abs(vUv.x-.5)*2.;
-      vec3 c = mix(vec3(.38,.72,.86), vec3(.6,.88,.9), e);
-      float f = sin(vUv.y*1.3 - uTime*2.5 + sin(vUv.x*9.+vUv.y*.3)*1.5); c = mix(c, vec3(.92,.99,1.), smoothstep(.82,.9,f)*.8);
-      c = mix(c, vec3(.96,1.,1.), smoothstep(.75,.95,e));
-      c = mix(c, c*vec3(1.,.8,.75)+vec3(.12,.04,.06), uD*.5); c = mix(c, vec3(.13,.2,.38)+vec3(.15,.13,.05)*smoothstep(.8,.9,f), uN*.8);
+      vec3 c = mix(vec3(.16,.42,.6), vec3(.36,.68,.8), smoothstep(.15,.85,e));
+      float w = sin(vUv.x*9.+vUv.y*.3)*1.5;
+      float f = sin(vUv.y*1.3 - uTime*2.2 + w); float f2 = sin(vUv.y*3.1 - uTime*3.4 + vUv.x*17. + w*.6);
+      c = mix(c, vec3(.82,.95,1.), smoothstep(.86,.93,f)*.75*(1.-e*.5)); c = mix(c, vec3(.7,.9,.98), smoothstep(.9,.97,f2)*.45);
+      c = mix(c, vec3(.94,1.,1.), smoothstep(.8,.9,e)*(.75+.25*sin(vUv.y*4.-uTime*3.)));
+      c = mix(c, vec3(.29,.24,.2), smoothstep(.93,.985,e));
+      c = mix(c, c*vec3(1.,.8,.75)+vec3(.12,.04,.06), uD*.5); c = mix(c, vec3(.1,.16,.32)+vec3(.15,.13,.05)*smoothstep(.85,.93,f), uN*.8);
       gl_FragColor = vec4(c,1.); }` }), [])
   useFrame(() => { m.uniforms.uN.value = T.night; m.uniforms.uD.value = T.dusk })
   return <mesh geometry={g} material={m} />
 }
-
-
+// round6: edge stones along the trail, pebbles on the river banks, stepping stones + marker stakes at the jump spots.
+// One instanced mesh for every stone (8-tri octahedra) and one for the stakes: +2 draw calls, ~6k triangles.
+function RiverStones() {
+  const { stones, stakes } = useMemo(() => { let sd_ = 99; const rnd = () => (sd_ = (sd_ * 16807) % 2147483647) / 2147483647 // own RNG: leaves the world scatter sequence untouched
+    const COLLIDERS_NEAR = (m) => COLLIDERS.some(c => m.angleTo(c.n) < c.r + 0.004)
+    const st = [], sk = [], o = new THREE.Object3D(), c = new THREE.Color(), tan = new THREE.Vector3(), side = new THREE.Vector3()
+    const put = (n, s, h, col, spin) => { if (waterAt(n, -0.02) && col !== 'step') return; const p = place(n, -0.01, spin); st.push({ p, s, h, c: col === 'step' ? C('#d8d0c0').multiplyScalar(0.95 + rnd() * 0.08) : c.set(col).multiplyScalar(0.85 + rnd() * 0.25).clone() }) }
+    const along = (f, step, halfFn, skipP, cols, fringe) => { for (let t = 0; t < Math.PI * 2; t += step) { const n = f(t).normalize(); tan.copy(f(t + 0.004)).normalize().sub(n).normalize(); side.crossVectors(tan, n).normalize()
+      for (const sd of [-1, 1]) { if (rnd() < skipP) continue; const hw = halfFn(t) + fringe * (0.5 + rnd()); const m = n.clone().addScaledVector(side, sd * hw / R).addScaledVector(tan, (rnd() - 0.5) * step * 0.6).normalize()
+        if (onBridge(m) || HOUSES.some(h => h.distanceTo(m) < 0.11 * K) || COLLIDERS_NEAR(m)) continue; put(m, 0.022 + rnd() * 0.03, 0.45 + rnd() * 0.35, cols[Math.floor(rnd() * cols.length)], rnd() * 6) } } }
+    along(pathDir, 0.0042, (t) => 0.17 * (1 + 0.08 * Math.sin(t * 13)), TOUCH ? 0.6 : 0.4, ['#cfc3b0', '#b8ad9c', '#d9cfbd'], 0.03)
+    along(streamDir, 0.0045, streamHalf, TOUCH ? 0.6 : 0.42, ['#a59a88', '#8f8778', '#c2b7a4'], 0.04)
+    for (const j of JUMPS) { const n = j.c; for (const sd of [-1, 1]) { const bank = JUMP_HALF + 0.02; for (const [a, o_, s] of [[0, 0.02, 0.07], [0.09, 0.11, 0.05], [-0.08, 0.1, 0.045]]) put(n.clone().addScaledVector(j.side, sd * (bank + o_) / R).addScaledVector(j.tan, a / R).normalize(), s, 0.32, 'step', rnd() * 6)
+      sk.push(place(n.clone().addScaledVector(j.side, sd * (bank + 0.17) / R).addScaledVector(j.tan, (sd * 0.16) / R).normalize(), -0.01, rnd() * 6)) } }
+    return { stones: st, stakes: sk }
+  }, [])
+  const ref = useRef(), sref = useRef()
+  useEffect(() => { const o = new THREE.Object3D()
+    stones.forEach((s, i) => { o.position.copy(s.p.pos); o.quaternion.copy(s.p.q); o.scale.set(s.s, s.s * s.h, s.s * (0.8 + (i % 5) * 0.08)); o.updateMatrix(); ref.current.setMatrixAt(i, o.matrix); ref.current.setColorAt(i, s.c) })
+    ref.current.instanceMatrix.needsUpdate = true; ref.current.instanceColor.needsUpdate = true; ref.current.computeBoundingSphere()
+    stakes.forEach((p, i) => { o.position.copy(p.pos); o.quaternion.copy(p.q); o.scale.setScalar(1); o.updateMatrix(); sref.current.setMatrixAt(i, o.matrix) }); sref.current.instanceMatrix.needsUpdate = true; sref.current.computeBoundingSphere() }, [])
+  const geo = useMemo(() => { const g = new THREE.OctahedronGeometry(1, 0); g.translate(0, 0.25, 0); return g }, []), mat = useMemo(() => paint(toon('#ffffff'), 0.12, true, 14), [])
+  const stakeG = useMemo(() => { const col = (g, h) => { const c = C(h), a = []; for (let k = 0; k < g.attributes.position.count; k++) a.push(c.r, c.g, c.b); g.setAttribute('color', new THREE.Float32BufferAttribute(a, 3)); return g }
+    return mergeGeometries([col(new THREE.BoxGeometry(0.022, 0.2, 0.022).translate(0, 0.1, 0), '#8a5a3c'), col(new THREE.BoxGeometry(0.004, 0.035, 0.05).translate(0.012, 0.17, 0.025), '#d9534f'), col(new THREE.BoxGeometry(0.026, 0.012, 0.026).translate(0, 0.2, 0), '#6e4a33')]) }, [])
+  const stakeM = useMemo(() => toon('#ffffff', { vertexColors: true }), [])
+  return <><instancedMesh ref={ref} args={[geo, mat, stones.length]} /><instancedMesh ref={sref} args={[stakeG, stakeM, stakes.length]} /></>
+}
 const VILLAGE = dir(1.05, 0.2)
 const MILLS = [dir(0.25, 1.4), dir(0.45, 1.75)]
 const HOUSES = [[0.9, -0.15], [1.18, 0.55], [0.92, 0.78], [1.3, -0.3], [1.0, 0.95], [0.3, -0.6], [0.75, 2.2], [0.5, 2.55], [0.92, 2.6], [0.35, 2.25], [0.7, 2.85]].map(([la, lo]) => dir(la, lo))
 // ---------- painted shading: hand-painted noise + drifting cloud shadows ----------
 
 // ---------- bridges where the path crosses the stream ----------
-const latOf = (n) => Math.asin(n.y)
-const BRIDGES = []
-{ let prev = null; for (let i = 0; i <= 3000; i++) { const t = (i / 3000) * Math.PI * 2; const d = latOf(pathDir(t).normalize()) - latOf(streamDir(t).normalize()); if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(t).normalize(), tan = pathDir(t + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize() }) } prev = d } }
-BRIDGES.sort((a, b) => a.c.distanceTo(VILLAGE) - b.c.distanceTo(VILLAGE))
 const B0 = BRIDGES[0]
-const BL = 0.62 // bridge length (world units)
 const bl = (b, along, side) => b.c.clone().addScaledVector(b.tan, along / R).addScaledVector(b.side, side / R).normalize()
 const floorLift = (n) => bridgeLift(n) + ropeLift(n)
-function bridgeLift(n) { for (const b of BRIDGES) { const d = n.clone().sub(b.c); const a = d.dot(b.tan) * R, s = d.dot(b.side) * R; if (Math.abs(a) < BL / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / BL) * Math.PI) } return 0 }
-const onBridge = (n) => BRIDGES.some(b => b.c.angleTo(n) < 0.062 * K)
 const HB = (i) => place(HOUSES[i], 0, i * 1.3)
 const onHouse = (i, x, z) => { const p = HB(i); return p.pos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(p.q)).normalize() }
 const SPOTS = { shrine: dir(0.12, -1.05), bus: dir(0.52, 1.2), cat: bl(B0, -0.55, 0.32), laundryA: bl(B0, -1.45, 0.05), laundryB: bl(B0, -0.8, -0.3), view1: bl(B0, -1.2, 1.0), view2: bl(B0, -0.3, 0.55) }
@@ -180,14 +207,16 @@ const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.la
 const DM = { plank: paint(toon('#b07a4f'), 0.18, true, 12), rail: toon('#8a5a3c'), cloth: ['#ffffff', '#f59ab0', '#8fc3e8', '#ffd36e'].map(c => toon(c, { side: THREE.DoubleSide })), rope: toon('#e8dcc0'), red: toon('#d9534f'), soil: paint(toon('#8a6248'), 0.2, true, 14), cabbage: toon('#8fcf6a'), carrot: toon('#ef8a3c'), fence: toon('#f3e6cc'), stone: paint(toon('#c9c0b2'), 0.15, true, 15), moss: toon('#7fae5f'), cat: toon('#f2a65a'), catW: toon('#fff4e6'), dark: toon('#3a2e2a'), sign: toon('#ffd36e'), curtains: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'].map(c => toon(c)), smoke: toon('#f4f1ee', { transparent: true, opacity: 0.85 }), wing: ['#ffd36e', '#ffffff', '#f59ab0', '#a8d8ff'].map(c => toon(c, { side: THREE.DoubleSide })) }
 
 // the 11 planks merged into one mesh (same shapes / tilts): 2 draw calls per bridge instead of 22
-const PLANKS = (() => { const planks = 11, a = []; for (let k = 0; k < planks; k++) { const u = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((u / BL) * Math.PI); const g = new THREE.BoxGeometry(0.26, 0.022, BL / planks * 0.9); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.sin((u / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0))); g.translate(0, y, u); a.push(g) } return mergeGeometries(a) })()
+const PLANKS = (() => { const planks = 17, a = []; for (let k = 0; k < planks; k++) { const u = (k / (planks - 1) - 0.5) * BL, y = 0.035 + 0.07 * Math.cos((u / BL) * Math.PI); const g = new THREE.BoxGeometry(0.26, 0.022, BL / planks * 0.9); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.sin((u / BL) * Math.PI) * 0.35, (k % 2 ? 0.03 : -0.03), 0))); g.translate(0, y, u); a.push(g) } return mergeGeometries(a) })()
+// round6: posts + handrails follow the (longer) arched deck, merged into one mesh: 2 draw calls instead of 14
+const RAILS = (() => { const a = [], posts = [-0.47, -0.16, 0.16, 0.47], y = (u) => 0.035 + 0.07 * Math.cos((u / BL) * Math.PI)
+  for (const s of [-1, 1]) { for (const u of posts) a.push(new THREE.BoxGeometry(0.024, 0.15, 0.024).translate(s * 0.13, y(u) + 0.065, u))
+    for (let k = 0; k < posts.length - 1; k++) { const u0 = posts[k], u1 = posts[k + 1], y0 = y(u0) + 0.13, y1 = y(u1) + 0.13, L = Math.hypot(u1 - u0, y1 - y0); const g = new THREE.BoxGeometry(0.02, 0.018, L + 0.02); g.rotateX(-Math.atan2(y1 - y0, u1 - u0)); g.translate(s * 0.13, (y0 + y1) / 2, (u0 + u1) / 2); a.push(g) } }
+  return mergeGeometries(a) })()
 function Bridge({ b }) {
   return <Basis n={b.c} fwd={b.tan} lift={0.0}>
     <mesh geometry={PLANKS} material={DM.plank}><Outlines thickness={0.008} color={INK} /></mesh>
-    {[-1, 1].map(s => <group key={s}>
-      {[-0.28, 0, 0.28].map(a => <mesh key={a} position={[s * 0.13, 0.07 + 0.07 * Math.cos((a / BL) * Math.PI), a]} material={DM.rail}><boxGeometry args={[0.022, 0.12, 0.022]} /></mesh>)}
-      {[-1, 1].map(h => <mesh key={h} position={[s * 0.13, 0.155 + 0.035, h * 0.15]} rotation={[h * 0.22, 0, 0]} material={DM.rail}><boxGeometry args={[0.02, 0.018, 0.3]} /><Outlines thickness={0.005} color={INK} /></mesh>)}
-    </group>)}
+    <mesh geometry={RAILS} material={DM.rail}><Outlines thickness={0.005} color={INK} /></mesh>
   </Basis>
 }
 
@@ -340,7 +369,7 @@ function Details() {
   </>
 }
 
-const busy = (n) => EXTRA_BUSY.some(e => e.distanceTo(n) < 0.1 * K) || SPOTS.view1.distanceTo(n) < 0.2 * K || SPOTS.view2.distanceTo(n) < 0.16 * K || HOUSES.some(h => h.distanceTo(n) < 0.12 * K) || MILLS.some(m => m.distanceTo(n) < 0.12 * K) || zoneBusy(n) || distToCurve(n, pathDir, 140) < 0.05 * K || distToCurve(n, streamDir, 140) < 0.06 * K
+const busy = (n) => EXTRA_BUSY.some(e => e.distanceTo(n) < 0.1 * K) || SPOTS.view1.distanceTo(n) < 0.2 * K || SPOTS.view2.distanceTo(n) < 0.16 * K || HOUSES.some(h => h.distanceTo(n) < 0.12 * K) || MILLS.some(m => m.distanceTo(n) < 0.12 * K) || zoneBusy(n) || distToCurve(n, pathDir, 140) < 0.05 * K || streamDist(n) < 0.06 * K
 
 const tc = ['#5fae63', '#7cc26a', '#4f9a5e', '#9ccf6a'].map(C)
 const TREES = [], FIRS = []
@@ -354,7 +383,7 @@ function Vegetation() {
     for (let i = 0; i < 750 * DENS * (TOUCH ? 0.52 : 0.62); i++) { // lawn (patches a bit bigger + sparser than DENS: grass is the biggest triangle cost) patches: soft dome tufts with flower clumps
       const c = randDir(); if (busy(c)) continue
       const k = 6 + Math.floor(rnd() * 14), sp = (0.03 + rnd() * 0.05) * K, col = g1.clone().lerp(g2, rnd())
-      for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (distToCurve(n, streamDir, 90) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
+      for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (streamDist(n) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
       if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
     }
     return { grass, flowers }
@@ -392,7 +421,7 @@ function Vegetation() {
 // layered vegetation at the edges (instanced, clustered + LOD): ferns at tree feet, shrubs hugging house walls and
 // path verges, tall grass along the path and stream banks, mossy rocks scattered and on the banks
 const _ev = new THREE.Vector3()
-const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && distToCurve(n, streamDir, 140) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
+const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && streamDist(n) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
 const EdgeVegLazy = lazy(() => import('./edgeveg.jsx'))
 function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /></Suspense> : null }
 function House({ n, i }) {
@@ -611,6 +640,8 @@ function Keys() {
   }, [])
   return null
 }
+const _prevN = new THREE.Vector3(), _mv = new THREE.Vector3(), _mv2 = new THREE.Vector3(), _mv3 = new THREE.Vector3(), LAST_DRY = { n: new THREE.Vector3(), toast: 0, landed: false }
+const NOWATER = q.has('nowater') // debug: walk through water like before
 function stepPlayer(dt) {
   let f = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0), turn = (KEYS.a || KEYS.arrowleft ? 1 : 0) - (KEYS.d || KEYS.arrowright ? 1 : 0)
   if (CAM.yaw) { P.fwd.applyAxisAngle(P.n, -CAM.yaw); CAM.yaw = 0; P.target = null } // touch camera drag turns the traveller; the follow camera swings with them
@@ -630,7 +661,17 @@ function stepPlayer(dt) {
     else { P.fwd.lerp(tg.normalize(), Math.min(1, dt * 8)); go = 1 }
   }
   P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
+  _prevN.copy(P.n)
   P.n.addScaledVector(P.fwd, go * (run ? 1.51 : 0.88) / R * dt).normalize() // round6: outdoor stroll another ~10% slower (0.975/1.68 -> 0.88/1.51)
+  // round6: the river, lake and harbour are impassable on foot. Airborne (a jump) she may cross; landing in water
+  // puts her back on the bank she jumped from. On foot, slide along the bank instead of stepping in.
+  const air = P.h - floorLift(P.n) > 0.012
+  if (!air && !NOWATER && waterAt(P.n)) { const step = _mv.copy(P.n).sub(_prevN), len = step.length(); P.n.copy(_prevN)
+    if (len > 1e-7) for (const a of [0.6, -0.6, 1.1, -1.1]) { _mv2.copy(step).applyAxisAngle(_prevN, a).multiplyScalar(Math.cos(a)); _mv3.copy(_prevN).add(_mv2).normalize(); if (!waterAt(_mv3)) { P.n.copy(_mv3); break } }
+    if (waterAt(P.n)) { P.n.copy(LAST_DRY.n.lengthSq() ? LAST_DRY.n : _prevN); if (performance.now() - LAST_DRY.toast > 6000 && LAST_DRY.landed) { LAST_DRY.toast = performance.now(); toast('Too wide to jump here. Look for a bridge or the marked stepping stones.', 'leaf', 3000) } }
+    if (P.target) P.target = null }
+  if (!air && !waterAt(P.n)) LAST_DRY.n.copy(P.n)
+  LAST_DRY.landed = air
   const pass = ropePass(P.n)
   for (const c of COLLIDERS) { if (pass && c.n === Zc.cliff) continue; const a = P.n.angleTo(c.n); if (a < c.r) { const d = P.n.clone().addScaledVector(c.n, -P.n.dot(c.n)).normalize(); P.n.copy(c.n).multiplyScalar(Math.cos(c.r)).addScaledVector(d, Math.sin(c.r)).normalize() } }
   P.fwd.addScaledVector(P.n, -P.fwd.dot(P.n)).normalize()
@@ -714,7 +755,7 @@ function loadGame() {
   return Promise.all([import('./game/World.jsx'), import('./game/UI.jsx')]).then(([W, U]) => {
     ropeLift = W.ropeLift; ropePass = W.ropePass; gameBlocksKeys = U.gameBlocksKeys
     W.GAME.P = P; W.GAME.H = HOME; HOME.GAME = W.GAME
-    W.layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || distToCurve(n, streamDir, 140) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
+    W.layout(Zc, VILLAGE, HOUSES[0], (n) => COLLIDERS.some(c => n.angleTo(c.n) < c.r + 0.012) || streamDist(n) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K))
     if (q.has('at')) W.teleport(P, q.get('at'))
     const at = q.get('at'); if (at === 'village' || at === 'talk') { // debug spots for the villager round
       const n = at === 'village' ? around(SQ, 0.62 / R, 2.75) : CHAT_A.clone().addScaledVector(tangentAt(CHAT_A, 1.9), 0.38 / R).normalize(), look = at === 'village' ? SQ : CHAT_A
@@ -754,7 +795,7 @@ function Planet() {
     {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
     {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
     <Traveller /><HomeLayer />{k >= 4 && <Details />}
-    {k >= 4 && <Fireflies />}
+    {k >= 4 && <Fireflies />}{k >= 4 && <RiverStones />}
     {k >= 4 && GAMEON && <GameSlot />}
   </group></group>
 }
