@@ -16,8 +16,8 @@ import { G, add, toast } from '../game/store.js'
 import { ITEMS } from '../game/items.js'
 import { Bubble, Puffs, Hearts, burst } from './fx.jsx'
 
-export const DOG_CFG = { s: 1.0, /* round6: ~31% smaller (was 1.45) so he reads as her dog, not her size */ species: 'dog', floppy: true, body: [0.052, 0.062, 0.125], legH: 0.105, legR: 0.015, stride: 0.08, head: 0.055, headY: 0.06, snout: 0.1, eye: 0.13, ear: 0.55, earSplay: 0.12, collar: true, tongue: true, socks: true, tufts: true, pupils: 'round',
-  tail: { n: 7, seg: 0.032, r: 0.026, curl: 0.7, tip: 1, bushy: true }, col: { main: '#c9955a', belly: '#fff6e4', dark: '#8a5a30', inner: '#f08f8f', nose: '#1a1410', eye: '#1a1410', iris: '#5a3820', pupil: '#0e0a08', eyeWhite: '#fffaf0', shine: '#ffffff', collar: '#2f6f8a', tag: '#ffd36e' } }
+export const DOG_CFG = { s: 1.0, /* round6 size kept; round7: a Shiba Inu */ species: 'dog', floppy: false, body: [0.05, 0.058, 0.112], legH: 0.1, legR: 0.0155, stride: 0.08, head: 0.056, headY: 0.05, snout: 0.1, eye: 0.115, ear: 0.52, earSplay: 0.2, spring: 1.9, collar: true, tongue: true, pupils: 'round',
+  tail: { n: 0, seg: 0.03, r: 0.017, ring: 0.026, taper: 0 }, col: { main: '#d9772f', dark: '#b05a24', dark2: '#9a4a1e', cream: '#fbecd6', belly: '#fbecd6', inner: '#e98a86', nose: '#1a1410', lip: '#2a1a14', iris: '#3a2214', pupil: '#0e0a08', lid: '#2a1a14', shine: '#ffffff', collar: '#2f6f8a', tag: '#ffd36e' } }
 const _t = new THREE.Vector3(), _a = new THREE.Vector3(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3()
 const tan = (n, v, out) => out.copy(v).addScaledVector(n, -n.dot(v)).normalize()
 // nearby colliders: the planet has hundreds (every tree), so the dog keeps a short list around itself, refreshed at
@@ -32,13 +32,14 @@ const DIG = ['acorn', 'stone', 'coin', 'shell', 'pinecone', 'clay', 'shard']
 export const DOG = { n: new THREE.Vector3(0, 1, 0), f: new THREE.Vector3(1, 0, 0), speed: 0, state: 'follow', t: 0, dur: 0, mood: 0.6, side: 1, idleT: 0, barkCD: 4, splashCD: 0, name: 'Pip',
   petCD: 0, ex: 0, wetT: 0, decT: 2, playWin: 0, playRoll: 20, lastFetchH: -99, throws: 0, cd: {}, route: null, routeT: 0, stick: { mode: 'none', n: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector3(), t: 0 }, critter: { on: false, kind: 'fly', n: new THREE.Vector3(), d: new THREE.Vector3(), t: 0, up: 0 }, dug: [] }
 if (typeof window !== 'undefined') window.__dog = DOG
-const FORCE = q.get('dog')
+const DEMO = q.has('petsdemo') // ?petsdemo: both pets side by side outdoors (Mochi's rig sits beside Pip), close camera
+const FORCE = q.get('dog') || (DEMO ? 'sit' : null)
 // debug: ?petsdemo puts a sitting Mochi rig beside Pip for the side-by-side shot (Mochi really lives indoors)
 const PetsDemo = q.has('petsdemo') ? lazy(() => import('./Cat.jsx').then(m => ({ default: function CatDemo() { const st = useMemo(() => { const s = newPet(); s.goal.sit = 1; s.goal.tailUp = 0.6; return s }, []); return <group position={[0.17, 0, 0.05]} rotation={[0, -0.5, 0]} scale={m.CAT_SCALE}><Quadruped cfg={m.CAT_CFG} st={st} /></group> } }))) : null
 
-const DOGCAM = q.get('dogcam') // debug: close camera on the dog (?dogcam=angle)
-if (DOGCAM) HOME.camOverride = (camera, g) => { const D = DOG, a = window.__camA ?? (+DOGCAM || 0.6), dd = window.__camD ?? 0.62, side = _s.crossVectors(D.n, D.f); const p = surf(D.n, new THREE.Vector3()); const c = p.clone().addScaledVector(D.f, Math.cos(a) * dd).addScaledVector(side, Math.sin(a) * dd).addScaledVector(D.n, 0.38 * dd / 0.75)
-  camera.position.copy(c.applyMatrix4(g.matrixWorld)); camera.up.copy(D.n).transformDirection(g.matrixWorld); camera.lookAt(p.addScaledVector(D.n, 0.1).applyMatrix4(g.matrixWorld)); return true }
+const DOGCAM = q.get('dogcam') || (DEMO ? '0.75' : null) // debug: close camera on the dog (?dogcam=angle)
+if (DOGCAM) HOME.camOverride = (camera, g) => { const D = DOG, a = window.__camA ?? (+DOGCAM || 0.6), dd = window.__camD ?? (DEMO ? 0.85 : 0.62), side = _s.crossVectors(D.n, D.f); const p = surf(D.n, new THREE.Vector3()); const c = p.clone().addScaledVector(D.f, Math.cos(a) * dd).addScaledVector(side, Math.sin(a) * dd).addScaledVector(D.n, 0.38 * dd / 0.75 + (window.__camH ?? 0.1) - 0.1)
+  camera.position.copy(c.applyMatrix4(g.matrixWorld)); camera.up.copy(D.n).transformDirection(g.matrixWorld); camera.lookAt(p.addScaledVector(D.n, window.__camH ?? 0.1).applyMatrix4(g.matrixWorld)); return true }
 // ---- round6 helpers ----
 // river crossing gates (bridges + jump spots) for anything that has to path across (Pip)
 const GATES = [...BRIDGES.map(b => ({ kind: 'bridge', t: b.t, c: b.c, b })), ...JUMPS.map(j => ({ kind: 'jump', t: j.t, c: j.c, j }))]

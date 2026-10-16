@@ -12,8 +12,8 @@ import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
 import { Hearts, burst } from './fx.jsx'
 
-export const CAT_CFG = { s: 1.05, species: 'cat', body: [0.055, 0.055, 0.072], legH: 0.042, legR: 0.014, stride: 0.05, head: 0.058, headY: 0.05, snout: 0.008, eye: 0.2, ear: 0.78, earSplay: 0.36, whiskers: true, socks: true, stripes: true, tufts: true, pupils: 'vert',
-  tail: { n: 8, seg: 0.028, r: 0.01, curl: 0.08, tip: 2 }, col: { main: '#f6b46e', belly: '#fffaf2', dark: '#c46a2e', inner: '#f4a3a0', nose: '#e8857e', eye: '#1a1410', iris: '#d4b028', pupil: '#0e0a08', eyeWhite: '#fffaf2', shine: '#ffffff', whisker: '#4a3a32' } }
+export const CAT_CFG = { s: 1.05, species: 'cat', body: [0.05, 0.052, 0.08], legH: 0.046, legR: 0.012, stride: 0.05, head: 0.056, headY: 0.045, snout: 0.008, eye: 0.235, ear: 0.72, earSplay: 0.3, whiskers: true, stripes: true, tufts: true, pupils: 'vert',
+  tail: { n: 10, seg: 0.03, r: 0.0105, curl: 0.08, tip: 2, taper: 0.03 }, col: { main: '#f2a65e', belly: '#fff7ec', dark: '#c8682a', tip: '#c8682a', inner: '#f4a3a0', nose: '#e8857e', lip: '#6a3a30', iris: '#e8b23a', pupil: '#0e0a08', lid: '#3a2a22', shine: '#ffffff', whisker: '#6a4a3e' } }
 // nap spots (room-local; y = surface height). from: floor point to hop up from. claim: she can be 'beaten' to it
 const SPOT = { beam: { x: -0.62, z: 0.25, y: 0, face: 2.2 }, bed: { x: -0.92, z: -0.5, y: 0.29, from: { x: -0.5, z: -0.48 }, face: 0.8, claim: 'the bed' }, sill: { x: -1.2, z: 0.15, y: 0.44, from: { x: -0.98, z: 0.15 } }, bedK: { x: -1.0, z: -0.3, y: 0.29, from: { x: -0.5, z: -0.3 } },
   rug: { x: 0.12, z: 0.5, y: 0.006, face: 1.4, claim: 'the rug' }, chair: { x: -0.14, z: 0.26, y: 0.225, from: { x: -0.34, z: 0.34 }, face: 2.6, claim: 'the stool' }, shelf: { x: -0.12, z: -0.9, y: 0.865, from: { x: -0.12, z: -0.66 }, face: 0, claim: null }, sillNap: { x: -1.2, z: 0.05, y: 0.44, from: { x: -0.98, z: 0.05 }, face: 0.2 } }
