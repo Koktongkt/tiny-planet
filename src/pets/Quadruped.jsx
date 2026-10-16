@@ -11,6 +11,11 @@ import { cel, OUT, GEO } from '../home/kit.jsx'
 
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
+const _lw = new THREE.Vector3(), _ls = new THREE.Vector3(), LOD_PET = 1.7
+function lodStep(root, lod, cam) { if (!root) return
+  if (!lod.current) { const L = []; root.updateWorldMatrix(true, true); root.traverse(o => { if (!o.isMesh || !o.geometry) return; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); o.getWorldScale(_ls); if (o.geometry.boundingSphere.radius * Math.max(_ls.x, _ls.y, _ls.z) < 0.008) L.push(o) }); lod.current = { L, vis: true, n: 0 }; if (typeof window !== 'undefined') (window.__petLod = window.__petLod || []).push(lod.current) }
+  const D = lod.current; if (D.n++ % 6) return; root.getWorldPosition(_lw); const v = cam.position.distanceTo(_lw) < LOD_PET
+  if (v !== D.vis) { D.vis = v; for (const o of D.L) o.visible = v } }
 const K = { hop: 30, roll: 4, bodyYaw: 6, purr: 10 }
 function Part({ geo = GEO.sph, mat, out = OUT.pet, pos, scl, rot, children, gref }) {
   return <group ref={gref} position={pos} rotation={rot}><group scale={scl}><mesh geometry={geo} material={mat} />{out && <mesh geometry={geo} material={out} />}</group>{children}</group>
@@ -21,8 +26,12 @@ export function Quadruped({ cfg, st }) {
   const legs = useMemo(() => [['FL', 1, 1, 0], ['FR', -1, 1, Math.PI], ['RL', 1, -1, Math.PI], ['RR', -1, -1, 0]], [])
   const baseY = c.legH + bh * 0.55
   const floppy = !!c.floppy, species = c.species || (floppy ? 'dog' : 'cat'), hr0 = c.head
-  useFrame((_, dt) => {
-    if (st.frozen) return // off-screen (cat while she's outdoors, dog waiting by the door while she's in)
+  // r7-ship trim: tiny face/fur details (eye shines, brows, tufts, whiskers, inner ears...) are a few px past ~1.7 units:
+  // hide them there (each is its own draw call). Collected once by world size.
+  const lodRoot = useRef(), lod = useRef(null)
+  useFrame((S3, dt) => {
+    if (st.frozen) return
+    lodStep(lodRoot.current, lod, S3.camera) // off-screen (cat while she's outdoors, dog waiting by the door while she's in)
     dt = Math.min(dt, 0.05); st.t += dt; const p = st.p, g = st.goal, R_ = r.current, t = st.t
     for (const k in g) { const kk = K[k] ?? 7; p[k] += (g[k] - p[k]) * Math.min(1, dt * kk) }
     // blink + ear twitches
@@ -80,7 +89,7 @@ export function Quadruped({ cfg, st }) {
   })
   const seg = c.tail.seg, tailChain = (i) => i >= c.tail.n ? null : <group ref={set('t' + i)} position={[0, 0, i === 0 ? 0 : -seg]}>
     <Part mat={i >= c.tail.n - (c.tail.tip ?? 0) ? M.tip || M.belly : M.main} pos={[0, 0, -seg * 0.5]} scl={[c.tail.r * (1 - i * c.tail.taper), c.tail.r * (1 - i * c.tail.taper), seg * 0.64]} />{tailChain(i + 1)}</group>
-  return <group>
+  return <group ref={lodRoot}>
     <group ref={set('body')}>
       {species === 'dog' ? <DogBody c={c} M={M} set={set} legs={legs} /> : <CatBody c={c} M={M} set={set} legs={legs} />}
       {species === 'dog'
