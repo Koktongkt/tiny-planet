@@ -65,7 +65,7 @@ test('train: board at the village stop (free), ride, alight at the forest stop; 
   await expect(page.locator('.tp-prompt')).toContainText('first ride free')
   await page.keyboard.press('e')
   await page.waitForFunction(() => window.__scRide.riding && window.__game.G.ui.lock === 'ride', null, { timeout: 30_000 })
-  await expect(page.locator('.tpc-ride')).toBeVisible()
+  await expect(page.locator('.rd-card')).toBeVisible()
   // fast-forward to just before the forest stop
   await page.evaluate(() => { const sc = window.__sc, l = sc.SCH.legs[0]; sc.toff = (l.t0 + l.dwell + l.run - 0.3) - sc.t() })
   await page.waitForFunction(() => !window.__scRide.riding && !window.__game.G.ui.lock, null, { timeout: 90_000, polling: 250 })
