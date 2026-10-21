@@ -53,7 +53,8 @@
   .tpp-tray{width:100vw;border-radius:22px 26px 0 0/20px 24px 0 0;padding:6px 10px calc(env(safe-area-inset-bottom,0px) + 10px)}
   .tpp-tab{font-size:16px!important;padding:4px 8px 6px}
   .tpp-flt{width:80px}.tpp-sw{width:50px;height:50px}
-  .tpp-prow{grid-template-columns:1fr}.tpp-row.chips{flex-wrap:nowrap}
+  .tpp-prow{grid-template-columns:auto 1fr;gap:4px}.tpp-who{font-size:15px;gap:3px}.tpp-who .tpp-dd{width:24px;height:24px}.tpp-row.chips{flex-wrap:nowrap}
+  .tpp-chip{min-height:36px;padding:3px 11px 5px;font-size:15.5px!important}
   .tpp-last{bottom:auto;top:70px;right:12px;width:120px}
 }
 @media (prefers-reduced-motion:reduce){.tpp-flash,.tpp-tray,.tpp-last{animation-duration:.01s}}

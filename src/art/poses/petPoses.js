@@ -28,10 +28,10 @@ export const PET_POSE_IDS = { pip: Object.keys(PET_POSES.pip), mochi: Object.key
 export const PET_POSE_LABELS = { sit: 'Sit', lie: 'Lie down', happy: 'Happy', tilt: 'Head tilt', beg: 'Beg', play_bow: 'Play bow', roll: 'Belly up', loaf: 'Loaf', stretch: 'Big stretch', paw_wave: 'Paw wave' }
 export const PAIR_POSES = {
   side_by_side: { label: 'Side by side', her: 'kneel', pip: { pose: 'sit', at: [0.17, 0.1], yaw: -0.25 }, mochi: { pose: 'sit', at: [-0.15, 0.1], yaw: 0.3 } },
-  cuddle: { label: 'Cuddle', her: 'sit', pip: { pose: 'lie', at: [0.14, 0.06], yaw: -1.2 }, mochi: { pose: 'loaf', at: [-0.12, 0.1], yaw: 0.9 } },
+  cuddle: { label: 'Cuddle', her: 'sit', pip: { pose: 'lie', at: [0.2, 0.02], yaw: -0.9 }, mochi: { pose: 'loaf', at: [-0.15, 0.08], yaw: 0.7 } },
   playtime: { label: 'Playtime', her: 'twirl', pip: { pose: 'play_bow', at: [0.2, 0.14], yaw: -0.9 }, mochi: { pose: 'paw_wave', at: [-0.18, 0.12], yaw: 0.8 } },
   pose_off: { label: 'Look at us!', her: 'peace', pip: { pose: 'beg', at: [0.16, 0.12], yaw: -0.15 }, mochi: { pose: 'tilt', at: [-0.15, 0.12], yaw: 0.15 } },
-  naptime: { label: 'Nap time', her: 'sit', pip: { pose: 'roll', at: [0.16, 0.08], yaw: -0.6 }, mochi: { pose: 'loaf', at: [0.02, 0.17], yaw: 0.2 } },
+  naptime: { label: 'Nap time', her: 'sit', pip: { pose: 'roll', at: [0.21, 0.03], yaw: -0.6 }, mochi: { pose: 'loaf', at: [-0.13, 0.12], yaw: 0.4 } },
 }
 export const PAIR_POSE_IDS = Object.keys(PAIR_POSES)
 /** write a pose into a pet's goal (st from Quadruped newPet()); unknown ids fall back to 'sit'. POSE0 resets unlisted keys. */

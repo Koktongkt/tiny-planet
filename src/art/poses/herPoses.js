@@ -21,7 +21,7 @@ export const HER_POSES = {
   twirl(B, mix, st, t) { const s = Math.sin(t * 2.2); mix(B.hips, 'y', s * 0.35); mix(B.chest, 'y', s * 0.15); mix(B.head, 'z', 0.15 - s * 0.08); mix(B.head, 'x', -0.12)
     for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'z', sd * (1.25 + 0.12 * s * sd)); mix(B['up' + k], 'x', -0.15); mix(B['fo' + k], 'x', -0.25) }
     mix(B.thR, 'x', -0.25); mix(B.shRn, 'x', 0.55); mix(B.ftR, 'x', 0.4) /* one foot kicked up behind */ },
-  kneel(B, mix, st, t, w) { B.root.position.y -= 0.085 * w; mix(B.root, 'x', 0.1); mix(B.chest, 'x', 0.18); mix(B.head, 'x', 0.15); mix(B.head, 'z', 0.12)
+  kneel(B, mix, st, t, w) { B.root.position.y -= 0.085 * w; mix(B.root, 'x', 0.1); mix(B.chest, 'x', 0.12); mix(B.head, 'x', -0.08); mix(B.head, 'z', 0.14)
     mix(B.thL, 'x', -1.45); mix(B.shLn, 'x', 1.5); mix(B.thR, 'x', 0.05); mix(B.shRn, 'x', 1.6); mix(B.ftR, 'x', 0.6) // one knee down
     mix(B.upR, 'x', -0.95); mix(B.upR, 'z', 0.2); mix(B.foR, 'x', -0.4) /* hand out to the pets */; mix(B.upL, 'x', -0.6); mix(B.foL, 'x', -1.0) },
   hold_fish(B, mix, st, t) { breathe(B, mix, t); const bob = Math.sin(t * 3) * 0.04 // both hands up in front, showing it off

@@ -43,11 +43,11 @@ function Meadow() {
     {flowers.map((p, i) => <mesh key={i} material={i % 3 ? m.fl : m.fl2} position={p}><sphereGeometry args={[0.012, 6, 4]} /></mesh>)}
   </group>
 }
-function Cam() { const cam = useThree(s => s.camera); useEffect(() => { cam.position.set(0.05, 0.3, 0.95); cam.lookAt(0, 0.15, 0); cam.updateProjectionMatrix() }, []); return null }
+function Cam() { const cam = useThree(s => s.camera); useEffect(() => { const port = innerWidth < innerHeight; cam.position.set(0.05, port ? 0.34 : 0.3, port ? 1.75 : 0.95); cam.lookAt(0, port ? 0.12 : 0.15, 0); cam.updateProjectionMatrix() }, []); return null }
 function FilterOnCanvas({ id }) { const gl = useThree(s => s.gl); useEffect(() => applyLiveFilter(gl.domElement, id), [id]); return null }
 export default function PreviewPhoto() {
   const pair = q.get('pair'), P = pair && PAIR_POSES[pair]
-  const [v, setV] = useState({ ...PHOTO_DEFAULT, filter: q.get('filter') || 'none', pose: P ? P.her : q.get('pose') || 'stand', pair: pair || null, grid: q.has('grid'), frame: q.has('frame'),
+  const [v, setV] = useState({ ...PHOTO_DEFAULT, filter: q.get('filter') || 'none', pose: P ? P.her : q.get('pose') || 'stand', pair: pair || null, grid: q.has('grid'), frame: q.has('frame'), hideUI: q.has('hide'),
     petPose: { pip: P ? P.pip.pose : q.get('pip') || 'sit', mochi: P ? P.mochi.pose : q.get('mochi') || 'sit' } })
   const [last, setLast] = useState(null), glRef = useRef()
   const lay = v.pair ? PAIR_POSES[v.pair] : DEF_AT
