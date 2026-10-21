@@ -12,6 +12,7 @@ import { NPCS, TALK, weatherFor, noteActivity, recentActivity, periodAt } from '
 import { buildLines, PROFILES } from './profiles.js'
 import { HeartsBadge } from '../ui/gifts/Hearts.jsx'
 import './talk.css'
+const HoshinoPortrait = React.lazy(() => import('../art/museum/portrait.jsx').then(m => ({ default: m.HoshinoPortrait }))) // Stage C (Studio)
 
 const NEAR = 0.62, _w = new THREE.Vector3(), _h = new THREE.Vector3(), _up = new THREE.Vector3()
 const modal = () => !!(G.ui.panel || G.ui.place || G.ui.fish || G.ui.crafting)
@@ -84,7 +85,7 @@ export function TalkOverlay() {
   return <>
     <div className="tk-bubble" ref={el => BUBBLE.el = el} aria-hidden="true"><span>…</span></div>
     {L && <div className="tk-box" role="dialog" aria-label={`Talking with ${L.name}`} onPointerDown={e => { e.stopPropagation(); e.preventDefault(); advance() }}>
-      <div className="tk-plate"><b>{L.name}</b><i>{L.role}</i>{window.__sb && TALK.open && <HeartsBadge hearts={window.__sb.friend(TALK.open.key).hearts} size={18} className="tk-hearts" />}</div>
+      <div className="tk-plate">{TALK.open && TALK.open.key === 'scholar' && <React.Suspense fallback={null}><HoshinoPortrait size={44} className="tk-portrait" /></React.Suspense>}<b>{L.name}</b><i>{L.role}</i>{window.__sb && TALK.open && <HeartsBadge hearts={window.__sb.friend(TALK.open.key).hearts} size={18} className="tk-hearts" />}</div>
       {window.__sb && TALK.open && <button className="tk-gift" aria-label="Give a gift" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); gift(TALK.open) }}>♥ Gift{TOUCHY ? '' : ' (G)'}</button>}
       <button className="tk-x" aria-label="Close" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); close() }}>✕</button>
       <p key={pg}>{L.pages[pg]}</p>

@@ -39,18 +39,23 @@ function PhotoCapture() {
 // everything reads the __T hooks liveC writes. Drift uses driftAnchor (off in the desktop forest), touch winter is tint-only.
 const SeasonLayer = lazy(() => import('../art/season/SeasonLayer.jsx'))
 const TrainC = lazy(() => import('./TrainC.jsx')) // Studio stations + carriages + ride pose
+const MuseumHall = lazy(() => import('./MuseumHall.jsx')) // Studio's museum interior (own layer), after the first visit
+const MUM = { m: null, visited: false }
 function RidePin() { useFrame(() => { if (RIDE.pin && HOME.playerObj) RIDE.pin(HOME.playerObj) }); return null }
 export function StageCWorld({ GAME }) {
+  const scene = useThree(s => s.scene), [, force] = useReducer(x => x + 1, 0)
+  const visit = () => import('./museumC.js').then(m => { MUM.m = m; if (!MUM.visited) { MUM.visited = true; force() } setTimeout(() => m.enter(scene), 60) })
   useEffect(() => {
     LC = window.__scLayout = layoutStageC(GAME)
     if (hooked || !GAME.H) return; hooked = true
     GAME.H.near.push((consider, pp) => {
+      if (MUM.m && MUM.m.MU.inside) { MUM.m.nearInside(consider, SC); return }
       if (!LC || GAME.H.inside || G.ui.lock) return
       for (const st of LC.stations) { const d = pp.distanceTo(st.pos); if (d < 0.7) { const o = SC.stationPrompt(st.id); consider({ kind: 'ext', id: 'station:' + st.id + ':' + (o.ready ? 'ready' : o.name), ...o }, d, 0.7) } }
       for (const dg of LC.digs) { const d = pp.distanceTo(dg.pos); if (d < 0.3 && SC.C.canDig(G.s.dig, dg.i, G.s.day)) consider({ kind: 'ext', id: 'dig' + dg.i, icon: 'shard', verb: 'Dig at', name: 'the old stones', act: () => SC.digAt(dg.i) }, d, 0.3) }
-      if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', icon: 'book', verb: 'Visit', name: 'the ruins museum', act: () => setPanel('museum') }, d, 0.5) }
+      if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', icon: 'book', verb: 'Visit', name: 'the ruins museum', act: visit }, d, 0.5) }
     })
   }, [])
-  return <><PhotoCapture /><RidePin /><Suspense fallback={null}><SeasonLayer /></Suspense><Suspense fallback={null}><TrainC riding={RIDE.riding} /></Suspense></>
+  return <><PhotoCapture /><RidePin /><Suspense fallback={null}><SeasonLayer /></Suspense><Suspense fallback={null}><TrainC riding={RIDE.riding} /></Suspense>{MUM.visited && <Suspense fallback={null}><MuseumHall /></Suspense>}</>
 }
 export default StageCWorld

@@ -9,7 +9,7 @@ test('touch: tutorial note, journal + photo chips, photo mode hides the pads, re
   await expect(page.locator('.tpt-slip')).toBeVisible() // folded on touch
   await page.locator('.tpt-slip').tap(); await expect(page.locator('.tpt-note')).toBeVisible()
   await page.locator('.tpt-x').tap(); await expect(page.locator('.tpt')).toBeHidden()
-  await page.locator('.tp-jbtn').tap(); await expect(page.locator('.tpc-book')).toBeVisible(); await page.locator('.tpc-book .tp-x').tap()
+  await page.locator('.tp-jbtn').tap(); await expect(page.locator('.jn-veil')).toBeVisible(); await page.locator('.jn-veil .tpx-x').tap()
   await page.locator('.tp-cambtn').tap()
   await page.waitForFunction(() => document.documentElement.classList.contains('tp-photo'), null, { timeout: 30_000 })
   await expect(page.locator('.tp-pad')).toBeHidden(); await expect(page.locator('.tpp-shutter')).toBeVisible()

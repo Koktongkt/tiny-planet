@@ -279,7 +279,7 @@ export function GameWorld() {
     _pp.copy(P.n).multiplyScalar(R + height(P.n) + P.h)
     const night = T.night > 0.5; G.night = night
     let best = null, bd = 1e9
-    const H = GAME.H, inside = !!(H && H.inside)
+    const H = GAME.H, inside = !!(H && (H.inside || H.alt)) // H.alt: the Stage C museum interior
     const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
     forageTick(); let forageShown = 0
     for (const sp of L.spots) {

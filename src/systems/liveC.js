@@ -19,6 +19,8 @@ import { HOME } from '../home/state.js'
 import { CAM } from '../touch.jsx'
 import { wind, R, TRAIN_LAT, dir, height } from '../world.js'
 import { SB } from './live.js'
+import { registerRelicIcons } from '../art/museum/icons.jsx'
+registerRelicIcons() // the 5 new relics' bag / journal icons (Studio)
 const S = () => G.s
 const rotA = () => (window.__rot ? window.__rot.a : 0.4)
 const nm = (id) => (ITEMS[id] && ITEMS[id].name) || id
@@ -146,7 +148,7 @@ export function setPhoto(v) {
   applyPets(v); emit()
 }
 export function photo(on = !PH.on) {
-  if (on === PH.on) return; if (on && (G.ui.panel || G.ui.fish || G.ui.lock || performance.now() - (PH.closed || -1e9) < 350)) return // the P that closed it doesn't reopen it
+  if (on === PH.on) return; if (on && HOME.alt) return; if (on && (G.ui.panel || G.ui.fish || G.ui.lock || performance.now() - (PH.closed || -1e9) < 350)) return // the P that closed it doesn't reopen it
   PH.on = on; document.documentElement.classList.toggle('tp-photo', on)
   if (on) { PH.yaw = 0.5; PH.pitch = 0.35; PH.dist = 2.4 * (CAM.zoom || 1); G.ui.lock = 'photo'; PH.prevCam = HOME.camera; HOME.camera = (c, g, dt) => photoCam(c) || PH.prevCam(c, g, dt); addEventListener('keydown', keyPH, true); addEventListener('wheel', wheelPH, { passive: true })
     Promise.resolve(loadPhotoMods()).then(() => { if (PH.on) setPhoto(PH.v || PH.mods.f && { filter: 'none', pose: 'stand', petPose: { pip: null, mochi: null }, pair: null, frame: false, grid: false, hideUI: false }) }) }
@@ -193,6 +195,6 @@ DAY_HOOKS.push(() => tut('sleep'))
 
 // ---------- boot ----------
 setInterval(tickWeather, 100); setInterval(tickTutorial, 500)
-export const SC = { toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
+export const SC = { itemName: nm, toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
 window.__sc = SC
 emit()

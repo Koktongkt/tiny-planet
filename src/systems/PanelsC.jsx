@@ -3,7 +3,7 @@
 // Journal / DonateCard / PhotoMode / RideOverlay / TutorialNote replace them by props when art-c lands.
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { G, emit } from '../game/store.js'
+import { G, emit, count } from '../game/store.js'
 import { ITEMS } from '../game/items.js'
 import { Icon } from '../game/icons.jsx'
 import { FISH_TEXT } from '../game/itemsC.js'
@@ -24,23 +24,18 @@ function Book({ title, icon, children }) {
     <div className="tp-head"><Icon id={icon} size={44} /><h3>{title}</h3><button className="tp-x" onClick={close} aria-label="close"><Icon id="close" size={32} wash={false} /></button></div>
     <div className="tp-scroll">{children}</div></div></div>
 }
-const TABS = [['fish', 'Fish'], ['relics', 'Relics'], ['forage', 'Forage'], ['photos', 'Photos']]
+// Studio's field notebook (journal) and Hoshino's catalogue card (museum plinths / tank slots), both lazy
+const JournalBook = lazy(() => import('../ui/journal/Journal.jsx'))
+const DonateCard = lazy(() => import('../ui/museum/DonateCard.jsx'))
 function Journal() {
-  const [tab, setTab] = useState('fish'), list = SC.journal(tab), pr = SC.C.progress(G.s)
-  return <Book title="Journal" icon="book">
-    <div className="tpc-tabs">{TABS.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}<span>{pr.fish}/{pr.fishOf} fish · {pr.donated}/{pr.donatedOf} in the museum</span></div>
-    {tab === 'photos' ? (list.length ? <div className="tpc-photos">{list.map(p => <figure key={p.id}><img src={p.src} alt={'Photo from day ' + (p.day + 1)} /><figcaption>Day {p.day + 1}</figcaption></figure>)}</div> : <p className="tp-empty">No photos yet — press <span className="key">P</span> or the Photo button.</p>)
-      : <div className="tpc-grid">{list.map(e => <div key={e.id} className={'tpc-entry' + (e.seen ? '' : ' unseen')}><Icon id={e.seen ? e.id : 'unknown'} size={44} dim={!e.seen} />
-        <b>{e.seen ? label(e) || e.id : '???'}</b><small>{e.seen ? [e.count && `×${e.count}`, e.best && `best ${e.best} cm`, e.donated && 'in museum'].filter(Boolean).join(' · ') : 'not found yet'}</small></div>)}</div>}
-  </Book>
+  const [tab, setTab] = useState('fish')
+  return <JournalBook tab={tab} onTab={setTab} entries={SC.journal(tab)} progress={SC.C.progress(G.s)} onClose={close} touch={TOUCH} />
 }
-function Museum() {
-  const can = SC.donatable(), don = Object.keys(G.s.museum.donated)
-  return <Book title="Ruins Museum" icon="book">
-    <p className="tp-sub">Professor Hoshino looks up from his notebook. “Anything for the collection today?”</p>
-    <h4>From your bag</h4>{can.length ? <div className="tp-grid">{can.map(id => <button key={id} className="tp-slot act" onClick={() => SC.donate(id)}><Icon id={id} size={52} /><span className="nm">{ITEMS[id]?.name || id}</span><span className="tag">donate</span></button>)}</div> : <p className="tp-empty">Nothing new to donate. Dig at the old stones, gather shards, or catch something rare.</p>}
-    <h4>On display ({don.length}/{SC.C.DONATABLE.length})</h4><div className="tp-grid">{SC.C.DONATABLE.map(id => <div key={id} className={'tp-slot' + (don.includes(id) ? '' : ' ghost')}><Icon id={don.includes(id) ? id : 'unknown'} size={52} dim={!don.includes(id)} /><span className="nm">{don.includes(id) ? ITEMS[id]?.name || id : '—'}</span></div>)}</div>
-  </Book>
+function Donate() {
+  const d = G.ui.donate; if (!d) return null
+  const don = G.s.museum.donated[d.id], have = count(d.id)
+  const done = () => { G.ui.donate = null; close() }
+  return <DonateCard itemId={d.id} mode={d.mode} have={have} donatedDay={don} onClose={done} onDonate={() => SC.donate(d.id)} />
 }
 // Studio's PhotoMode, portalled to <body>: its overlay layers blend with the canvas, so no stacking-context ancestor (.tp-ui has z-index)
 function Photo() {
@@ -69,6 +64,6 @@ function Catch() {
 }
 export function StageCPanels() {
   const p = G.ui.panel
-  return <Suspense fallback={null}>{p === 'journal' && <Journal />}{p === 'museum' && <Museum />}<Photo /><Ride /><Tutorial /><Catch /></Suspense>
+  return <Suspense fallback={null}>{p === 'journal' && <Journal />}{p === 'donate' && <Donate />}<Photo /><Ride /><Tutorial /><Catch /></Suspense>
 }
 export default StageCPanels
