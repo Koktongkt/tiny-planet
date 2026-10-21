@@ -24,7 +24,7 @@ function Capture() {
   useFrame(() => {
     const p = PH.pending; if (!p) return; PH.pending = null
     const src = gl.domElement, cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height
-    const ctx = cv.getContext('2d'); if (p.css) ctx.filter = p.css; ctx.drawImage(src, 0, 0); p.res(cv)
+    cv.getContext('2d').drawImage(src, 0, 0); p.res(cv) // raw frame; Studio's gradeCanvas bakes the filter look
   }, 2) // after EffectComposer (priority 1) in the same task, so the drawing buffer still holds the frame
   return null
 }

@@ -2,6 +2,7 @@
 // ride chip and the first-day tutorial note. These are Codor's plain fallbacks on the existing paper styles; Studio's
 // Journal / DonateCard / PhotoMode / RideOverlay / TutorialNote replace them by props when art-c lands.
 import React, { Suspense, lazy, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { G, emit } from '../game/store.js'
 import { ITEMS } from '../game/items.js'
 import { Icon } from '../game/icons.jsx'
@@ -13,6 +14,7 @@ import { registerFishIcons } from '../art/fish/icons.jsx'
 import './panelsC.css'
 const TutorialNote = lazy(() => import('../ui/tutorial/TutorialNote.jsx'))
 const CatchCard = lazy(() => import('../ui/fish/CatchCard.jsx'))
+const PhotoMode = lazy(() => import('../ui/photo/PhotoMode.jsx'))
 registerFishIcons() // species icons for the journal (Studio, art/fish/icons.jsx)
 const close = () => { G.ui.panel = null; emit() }
 const label = (e) => e.kind === 'fish' ? FISH_TEXT[e.id]?.name : ITEMS[e.id]?.name
@@ -39,19 +41,11 @@ function Museum() {
     <h4>On display ({don.length}/{SC.C.DONATABLE.length})</h4><div className="tp-grid">{SC.C.DONATABLE.map(id => <div key={id} className={'tp-slot' + (don.includes(id) ? '' : ' ghost')}><Icon id={don.includes(id) ? id : 'unknown'} size={52} dim={!don.includes(id)} /><span className="nm">{don.includes(id) ? ITEMS[id]?.name || id : '—'}</span></div>)}</div>
   </Book>
 }
-function PhotoBar() {
-  const [flash, setFlash] = useState(0)
-  useEffect(() => { window.__scFlash = () => setFlash(performance.now()); return () => { window.__scFlash = null } }, [])
-  useEffect(() => { document.documentElement.style.setProperty('--tpc-filter', SC.FILTER_CSS[PH.filter] || 'none') })
-  if (!PH.on) return null
-  const ids = Object.keys(SC.FILTER_CSS)
-  return <div className="tpc-photo">{flash > 0 && <div className="tpc-flash" key={flash} />}
-    <div className="tpc-pbar paper">
-      <div className="tpc-filters">{ids.map(id => <button key={id} className={PH.filter === id ? 'on' : ''} onClick={() => { PH.filter = id; emit() }}>{id}</button>)}</div>
-      <button className="tpc-shutter" onClick={() => SC.shutter()} aria-label="Take photo"><i /></button>
-      <button className="tpc-close" onClick={() => SC.photo(false)}>Done{!TOUCH && <> <span className="key">Esc</span></>}</button>
-      <small>{TOUCH ? 'Drag to orbit · pinch to zoom' : 'Drag / A D to orbit · W S tilt · Q E or wheel zoom · R F height · Space to shoot'}</small>
-    </div></div>
+// Studio's PhotoMode, portalled to <body>: its overlay layers blend with the canvas, so no stacking-context ancestor (.tp-ui has z-index)
+function Photo() {
+  if (!PH.on || !PH.v) return null
+  return createPortal(<Suspense fallback={null}><PhotoMode value={PH.v} touch={TOUCH} pets={{ pip: !!window.__dog, mochi: !!(window.__cat && window.__home && window.__home.inside) }} lastShot={PH.last}
+    onChange={(v) => SC.setPhoto(v)} onShutter={() => SC.shutter()} onClose={() => SC.photo(false)} /></Suspense>, document.body)
 }
 function Ride() {
   const [, f] = useState(0)
@@ -60,9 +54,9 @@ function Ride() {
   return <div className="tpc-ride paper"><Icon id="coin" size={30} /><span>{STOP_NAME[RIDE.from]} → <b>{STOP_NAME[RIDE.to]}</b></span><i><b style={{ width: Math.round(RIDE.progress * 100) + '%' }} /></i></div>
 }
 function Tutorial() {
-  const [open, setOpen] = useState(!TOUCH) // touch: starts as the small pinned slip so it doesn't cover the button column
   if (!SC.tutorialVisible() || G.ui.panel || PH.on || RIDE.riding) return null
-  return <div className="tpc-tut"><TutorialNote steps={withProgress(G.s.tutorial.done)} touch={TOUCH} open={open} onToggle={setOpen} onDismiss={() => SC.tutorial(false)} signer={TUTORIAL_SIGNER.name} /></div>
+  const t = G.s.tutorial, open = t.open ?? !TOUCH // saved; touch starts as the small pinned slip so it doesn't cover the button column
+  return <div className="tpc-tut"><TutorialNote steps={withProgress(t.done)} touch={TOUCH} open={open} onToggle={SC.tutorialFold} onDismiss={() => SC.tutorial(false)} signer={TUTORIAL_SIGNER.name} /></div>
 }
 // Studio's catch card after a landed fish (G.ui.panel = 'catch' keeps the game keys off while it's up)
 function Catch() {
@@ -73,6 +67,6 @@ function Catch() {
 }
 export function StageCPanels() {
   const p = G.ui.panel
-  return <Suspense fallback={null}>{p === 'journal' && <Journal />}{p === 'museum' && <Museum />}<PhotoBar /><Ride /><Tutorial /><Catch /></Suspense>
+  return <Suspense fallback={null}>{p === 'journal' && <Journal />}{p === 'museum' && <Museum />}<Photo /><Ride /><Tutorial /><Catch /></Suspense>
 }
 export default StageCPanels

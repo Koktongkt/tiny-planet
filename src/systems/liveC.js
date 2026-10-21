@@ -97,8 +97,9 @@ export function digAt(spot) {
 }
 
 // ---------- photo mode ----------
-export const PH = { on: false, yaw: 0, pitch: 0.35, dist: 2.4, lift: 0.3, filter: 'none', pending: null, n: 0 }
-export const FILTER_CSS = { none: '', sunny: 'saturate(1.25) brightness(1.06)', sepia: 'sepia(.6) contrast(1.05)', ink: 'grayscale(1) contrast(1.3)', pastel: 'saturate(.7) brightness(1.1) contrast(.9)', twilight: 'hue-rotate(-18deg) saturate(1.2) brightness(.92)', film: 'contrast(1.1) saturate(.85) sepia(.15)' }
+// Codor: free camera, HUD hidden, capture + album. Studio (lazy, loaded on open): PhotoMode UI, filters (applyLiveFilter /
+// gradeCanvas / photoThumb), her poses (holdHerPose) and the pets' poses (applyPetPose, PAIR_POSES in her local frame).
+export const PH = { on: false, yaw: 0, pitch: 0.35, dist: 2.4, lift: 0.3, pending: null, n: 0, v: null, mods: null, unfilter: null, last: null }
 const _t = new THREE.Vector3(), _s = new THREE.Vector3(), _o = new THREE.Vector3()
 function photoCam(camera) {
   const P = window.__player; if (!P) return false
@@ -111,37 +112,62 @@ function photoCam(camera) {
   if (camera.position.length() < R + 0.25) camera.position.setLength(R + 0.25) // never under the ground
   camera.up.copy(P.wUp); camera.lookAt(_t); return true
 }
+// orbit keys (PhotoMode owns Space/Enter shutter, 1-7 filters, G grid, F frame, H hide, Esc/P close)
 const keyPH = (e) => {
-  if (!PH.on) return; const k = e.code
-  if (k === 'Escape' || k === 'KeyP') { e.preventDefault(); photo(false); return }
-  const a = 0.12; if (k === 'ArrowLeft' || k === 'KeyA') PH.yaw -= a; else if (k === 'ArrowRight' || k === 'KeyD') PH.yaw += a
+  if (!PH.on) return; const k = e.code, a = 0.12
+  if (k === 'ArrowLeft' || k === 'KeyA') PH.yaw -= a; else if (k === 'ArrowRight' || k === 'KeyD') PH.yaw += a
   else if (k === 'ArrowUp' || k === 'KeyW') PH.pitch += a * 0.6; else if (k === 'ArrowDown' || k === 'KeyS') PH.pitch -= a * 0.6
-  else if (k === 'KeyQ') PH.dist *= 0.9; else if (k === 'KeyE') PH.dist *= 1.1; else if (k === 'KeyR') PH.lift = Math.min(1.2, PH.lift + 0.08); else if (k === 'KeyF') PH.lift = Math.max(0.05, PH.lift - 0.08)
-  else if (k === 'Space' || k === 'Enter') { e.preventDefault(); shutter() } else return
+  else if (k === 'KeyQ') PH.dist *= 0.9; else if (k === 'KeyE') PH.dist *= 1.1; else if (k === 'KeyR') PH.lift = Math.min(1.2, PH.lift + 0.08); else if (k === 'KeyT') PH.lift = Math.max(0.05, PH.lift - 0.08)
+  else return
   e.stopPropagation()
 }
 const wheelPH = (e) => { if (PH.on) PH.dist *= e.deltaY > 0 ? 1.08 : 0.93 }
+const loadPhotoMods = () => PH.mods || (PH.mods = Promise.all([import('../ui/photo/filters.js'), import('../art/poses/herPoses.js'), import('../art/poses/petPoses.js'), import('../pets/Quadruped.jsx')]).then(([f, h, p, q]) => (PH.mods = { f, h, p, POSE0: q.POSE0 })))
+const _r = new THREE.Vector3(), _fw = new THREE.Vector3()
+// pets: freeze their brains (DOG.photo / CAT.photo, read by Dog.jsx / Cat.jsx) and hold a pose, placed by the pair offsets
+function applyPets(v) {
+  const M = PH.mods; if (!M || !M.p) return
+  const pair = v.pair && M.p.PAIR_POSES[v.pair], dog = window.__dog, cat = window.__cat, P = window.__player
+  const want = (pet) => pair ? pair[pet] : v.petPose && v.petPose[pet] ? { pose: v.petPose[pet] } : null
+  const set = (obj, pet) => { if (!obj) return; const w = want(pet); if (!w) { obj.photo = null; return }
+    obj.photo = (st, D) => { M.p.applyPetPose(st, pet, w.pose, M.POSE0)
+      if (w.at && P && D && D.n) { // her local frame: x right, z toward the camera (her front); yaw 0 = facing the camera like her
+        const F = P.face && P.face.lengthSq() > 0.01 ? P.face : P.fwd; _fw.copy(F).addScaledVector(P.n, -F.dot(P.n)).normalize(); _r.crossVectors(_fw, P.n).normalize()
+        D.n.copy(P.n).addScaledVector(_r, w.at[0] / R).addScaledVector(_fw, w.at[1] / R).normalize()
+        D.f.copy(_fw).applyAxisAngle(D.n, w.yaw || 0).addScaledVector(D.n, -D.f.dot(D.n)).normalize() } } }
+  // outdoors Pip is placed + posed; Mochi lives indoors (pose only, he keeps his spot); indoor Pip keeps his own brain
+  if (HOME.inside) { if (dog) dog.photo = null; set(cat, 'mochi') } else { if (cat) cat.photo = null; set(dog, 'pip') }
+}
+export function setPhoto(v) {
+  const M = PH.mods; PH.v = v
+  if (M && M.f) { PH.unfilter && PH.unfilter(); const cv = document.querySelector('canvas'); PH.unfilter = cv ? M.f.applyLiveFilter(cv, v.filter) : null }
+  if (M && M.h) { const pair = v.pair && M.p.PAIR_POSES[v.pair]; M.h.holdHerPose(pair ? pair.her : v.pose) }
+  applyPets(v); emit()
+}
 export function photo(on = !PH.on) {
-  if (on === PH.on) return; if (on && (G.ui.panel || G.ui.fish || G.ui.lock)) return
+  if (on === PH.on) return; if (on && (G.ui.panel || G.ui.fish || G.ui.lock || performance.now() - (PH.closed || -1e9) < 350)) return // the P that closed it doesn't reopen it
   PH.on = on; document.documentElement.classList.toggle('tp-photo', on)
-  if (on) { PH.yaw = 0.5; PH.pitch = 0.35; PH.dist = 2.4 * (CAM.zoom || 1); G.ui.lock = 'photo'; PH.prevCam = HOME.camera; HOME.camera = (c, g, dt) => photoCam(c) || PH.prevCam(c, g, dt); addEventListener('keydown', keyPH, true); addEventListener('wheel', wheelPH, { passive: true }) }
-  else { G.ui.lock = null; if (PH.prevCam) { HOME.camera = PH.prevCam; PH.prevCam = null } removeEventListener('keydown', keyPH, true); removeEventListener('wheel', wheelPH) }
+  if (on) { PH.yaw = 0.5; PH.pitch = 0.35; PH.dist = 2.4 * (CAM.zoom || 1); G.ui.lock = 'photo'; PH.prevCam = HOME.camera; HOME.camera = (c, g, dt) => photoCam(c) || PH.prevCam(c, g, dt); addEventListener('keydown', keyPH, true); addEventListener('wheel', wheelPH, { passive: true })
+    Promise.resolve(loadPhotoMods()).then(() => { if (PH.on) setPhoto(PH.v || PH.mods.f && { filter: 'none', pose: 'stand', petPose: { pip: null, mochi: null }, pair: null, frame: false, grid: false, hideUI: false }) }) }
+  else { G.ui.lock = null; PH.closed = performance.now(); if (PH.prevCam) { HOME.camera = PH.prevCam; PH.prevCam = null }; removeEventListener('keydown', keyPH, true); removeEventListener('wheel', wheelPH)
+    PH.unfilter && PH.unfilter(); PH.unfilter = null; const M = PH.mods; if (M && M.h) M.h.releaseHerPose(); if (window.__dog) window.__dog.photo = null; if (window.__cat) window.__cat.photo = null }
   emit()
 }
 // one rendered frame -> 2D canvas, read in the same task as the render (WorldC useFrame after the composer); no preserveDrawingBuffer
-export function capture(filter = PH.filter) { return new Promise((res) => { PH.pending = { res, css: FILTER_CSS[filter] || '' } }) }
+export function capture() { return new Promise((res) => { PH.pending = { res } }) }
 let ALBUM = null
 const photoStore = () => { if (!ALBUM) { try { ALBUM = JSON.parse(localStorage.getItem(Ph.KEY) || '{}') || {} } catch (e) { ALBUM = {} } Ph.reconcile(S().photos.list, ALBUM) } return ALBUM }
 const saveAlbum = () => { try { localStorage.setItem(Ph.KEY, JSON.stringify(ALBUM)); return true } catch (e) { return false } }
 export async function shutter({ download = true } = {}) {
-  const cv = await capture(), [w, h] = Ph.thumbSize(cv.width, cv.height), th = document.createElement('canvas'); th.width = w; th.height = h
-  th.getContext('2d').drawImage(cv, 0, 0, w, h)
-  const meta = { id: 'ph' + Date.now().toString(36), day: S().day, filter: PH.filter, w: cv.width, h: cv.height }, url = th.toDataURL('image/jpeg', Ph.THUMB_Q)
+  const M = await loadPhotoMods(), v = PH.v || { filter: 'none' }, raw = await capture()
+  const caption = `Day ${S().day + 1} · ${T.season || 'spring'}`, cv = M.f.gradeCanvas(raw, v.filter, { frame: !!v.frame, caption })
+  const url = M.f.photoThumb(cv, Ph.THUMB_W, Ph.THUMB_Q)
+  const meta = { id: 'ph' + Date.now().toString(36), day: S().day, filter: v.filter, w: cv.width, h: cv.height }
   photoStore(); Ph.addPhoto(S().photos.list, ALBUM, meta, url)
   if (!saveAlbum()) { Ph.removePhoto(S().photos.list, ALBUM, meta.id); toast('No room left to keep the photo in your journal.', 'unknown') }
-  PH.n++
+  PH.n++; PH.last = { url, caption: 'Saved to your journal' }
   if (download) cv.toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = Ph.fileName(S().day, PH.n); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000) }, 'image/png')
-  window.__scFlash && window.__scFlash(); emit(); return { meta, thumbBytes: url.length, w: cv.width, h: cv.height }
+  emit(); return { meta, thumbBytes: url.length, w: cv.width, h: cv.height }
 }
 
 // ---------- tutorial ----------
@@ -149,7 +175,8 @@ export const TUT = { open: false }
 function tut(id) { if (Tu.mark(S().tutorial, id)) { emit(); if (Tu.allDone(S().tutorial) && TUT.open) setTimeout(() => toast('That\'s everything! The planet is yours.', 'leaf', 3200), 600) } }
 export const tutorialSteps = () => Tu.steps(S().tutorial)
 export const tutorialVisible = () => Tu.visible(S().tutorial, S().day, TUT.reopened)
-export function tutorial(open) { if (open) { TUT.reopened = true } else { TUT.reopened = false; S().tutorial.dismissed = true } emit() }
+export function tutorial(open) { if (open) { TUT.reopened = true; S().tutorial.open = true } else { TUT.reopened = false; S().tutorial.dismissed = true } emit() }
+export function tutorialFold(open) { S().tutorial.open = !!open; emit() }
 let n0 = null, c0 = S().crafted
 function tickTutorial() {
   const P = window.__player, t = S().tutorial
@@ -165,6 +192,6 @@ DAY_HOOKS.push(() => tut('sleep'))
 
 // ---------- boot ----------
 setInterval(tickWeather, 100); setInterval(tickTutorial, 500)
-export const SC = { toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, capture, shutter, tutorial, tutorialSteps, tutorialVisible, FILTER_CSS, height }
+export const SC = { toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
 window.__sc = SC
 emit()

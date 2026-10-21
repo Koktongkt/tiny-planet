@@ -41,8 +41,9 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   // photo mode: P opens the free camera, the HUD hides, the shutter saves a thumbnail into the journal album
   await page.waitForTimeout(1500); await page.keyboard.press('p')
   await page.waitForFunction(() => document.documentElement.classList.contains('tp-photo') && window.__game.G.ui.lock === 'photo', null, { timeout: 30_000 })
-  await expect(page.locator('.tpc-pbar')).toBeVisible(); await expect(page.locator('.tp-btns')).toBeHidden()
-  await page.keyboard.press('a'); await page.keyboard.press('q')
+  await expect(page.locator('.tpp-shutter')).toBeVisible(); await expect(page.locator('.tp-btns')).toBeHidden()
+  await page.keyboard.press('a'); await page.keyboard.press('q'); await page.keyboard.press('Digit2') // Studio's filter keys
+  expect(await page.evaluate(() => window.__sc.PH.v.filter)).not.toBe('none')
   const shot = await page.evaluate(() => window.__sc.shutter({ download: false }).then(r => ({ ...r, n: window.__game.G.s.photos.list.length, stored: Object.keys(JSON.parse(localStorage.getItem('tinyplanet.photos') || '{}')).length })))
   expect(shot.n).toBe(1); expect(shot.stored).toBe(1); expect(shot.w).toBeGreaterThan(100); expect(shot.thumbBytes).toBeLessThan(80_000)
   await page.keyboard.press('Escape')
