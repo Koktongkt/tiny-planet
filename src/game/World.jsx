@@ -11,6 +11,8 @@ import { T, C, toon, glow, planetRef } from '../common.jsx'
 import { G, emit, add, markTaken, available, toast, count, take } from './store.js'
 import { ITEMS, DECOR } from './items.js'
 import { SPAWNS, NEEDS_TOOL } from './recipes.js'
+import { FORAGE, forageSpawns } from './forageTable.js'
+const ForageProp = lazy(() => import('../art/forage/ForageProp.jsx')) // Stage C seasonal forage props (Studio)
 
 const q = new URLSearchParams(location.search)
 let seed = 4242; const rr = () => (seed = (seed * 16807) % 2147483647) / 2147483647
@@ -57,6 +59,12 @@ export function layout(Zc, village, homeN, blocked) {
   const dirAway = cc.clone().sub(toward(cc, Zc.lake, 0.05)).normalize()
   const A = toward(cc, cc.clone().add(dirAway), cr + 0.24), B = toward(cc, cc.clone().add(dirAway), cr - 0.03)
   const top = toward(cc, cc.clone().add(dirAway), cr * 0.35)
+  // Stage C seasonal forage: laid out for every season with their own seed (the main rr() sequence stays as before),
+  // up to the rain-boosted count; which ones show follows forageSpawns(T.season, T.wet) (see FORAGE_N)
+  { let fs = 9173; const fr = () => (fs = (fs * 16807) % 2147483647) / 2147483647
+    for (const f of FORAGE) { const max = Math.ceil(f.n * (f.rain || 1)), c = zc(f.zone), r = zr(f.zone)
+      for (let i = 0, tries = 0; i < max && tries < 200; tries++) { const pn = around(c, Math.sqrt(fr()) * r * 0.85, fr() * 6.283); if (blocked(pn) && tries < 150) continue
+        const pos = posOf(pn); spots.push({ id: `${f.id}-${f.zone}-${i}`, item: f.id, zone: f.zone, n: pn, stand: pn, pos, standPos: pos, forage: i, spin: fr() * 6.28, s: 1.35 + fr() * 0.35 }); i++ } } }
   G.benchPos = posOf(benchN); LAYOUT = window.__layout = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
   void out
   if (q.get('decor') === 'demo') { const hpos = posOf(homeN); G.s.placed = [['wreath', 0.3, 0.55, 0], ['basket', 0.62, 0.2, 0.6], ['mosslamp', 0.18, 0.72, 0], ['chime', 0.75, -0.15, 0.3]].map(([item, x, z, rot], i) => ({ uid: 'demo' + i, item, rot, n: hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize().toArray() })) }
@@ -89,6 +97,10 @@ const GE = (() => {
   g.ring = new THREE.RingGeometry(0.8, 1, 32)
   return g
 })()
+// in-season forage counts, refreshed when the season or the wet level (0.1 steps) changes; empty until liveC sets __T.season
+const FORAGE_N = {}, FORAGE_SET = new Set(FORAGE.map(f => f.id)); let forageKey = ''
+function forageTick() { const k = T.season ? T.season + ((T.wet || 0) * 10 | 0) : ''; if (k === forageKey) return; forageKey = k
+  for (const id in FORAGE_N) FORAGE_N[id] = 0; if (k) for (const [, id, n] of forageSpawns(T.season, T.wet || 0)) FORAGE_N[id] = n }
 function Prop({ item, s = 1 }) {
   const t = (k, c) => m(k, c)
   switch (item) {
@@ -115,7 +127,7 @@ function Prop({ item, s = 1 }) {
     case 'shard': return <group scale={s}><Mx geo={GE.box} mat={t('pot', '#e8dcc8')} scale={[0.05, 0.006, 0.035]} position={[0, 0.006, 0]} rotation={[0.1, 0.4, 0.15]} /><mesh geometry={GE.box} material={t('potb', '#5f8fc4')} scale={[0.04, 0.007, 0.008]} position={[0, 0.007, 0.006]} rotation={[0.1, 0.4, 0.15]} /></group>
     case 'firefly': return <group scale={s}><mesh geometry={GE.sph} material={G_FLY} scale={0.012} position={[0, 0.25, 0]} /><mesh geometry={GE.sph} material={G_HALO} scale={0.04} position={[0, 0.25, 0]} /></group>
     case 'fish': return <group scale={s}><mesh geometry={GE.ring} material={G_SPARK} scale={0.12} rotation={[-Math.PI / 2, 0, 0]} /><mesh geometry={GE.ring} material={G_SPARK} scale={0.07} rotation={[-Math.PI / 2, 0, 0]} /><Mx geo={GE.sph} mat={t('fishb', '#7aa2b8')} scale={[0.012, 0.012, 0.04]} position={[0.02, 0.006, 0]} rotation={[0, 0.6, 0]} hull={0} /></group>
-    default: return null
+    default: return FORAGE_SET.has(item) ? <Suspense fallback={null}><ForageProp item={item} s={s} /></Suspense> : null
   }
 }
 const G_GLOW = glow('#b8ff7a'), G_CRYS = new THREE.MeshToonMaterial({ color: '#b8d4ff', emissive: '#6a7ad0', emissiveIntensity: 0.4 }), G_WATER = new THREE.MeshBasicMaterial({ color: '#9fe6f0' }), G_SPARK = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false })
@@ -269,9 +281,10 @@ export function GameWorld() {
     let best = null, bd = 1e9
     const H = GAME.H, inside = !!(H && H.inside)
     const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
+    forageTick()
     for (const sp of L.spots) {
       const g = refs.current[sp.id]; if (!g) continue
-      const live = available(sp.id) && (!sp.night || night)
+      const live = available(sp.id) && (!sp.night || night) && (sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0))
       const dc = camera.position.distanceTo(_w.copy(sp.pos).applyMatrix4(planetRef.current.matrixWorld))
       const a = anim.current[sp.id]
       if (a) { // pop -> fly to the player's bag
@@ -282,7 +295,7 @@ export function GameWorld() {
         g.scale.setScalar((1 + 0.35 * Math.sin(Math.min(1, k / 0.35) * Math.PI)) * Math.max(0.05, 1 - Math.max(0, (k - 0.5) / 0.5)))
         g.rotation.y = k * 8; g.visible = true; continue
       }
-      g.visible = live && dc < (sp.item === 'glowmoss' && G.s.tools.lantern ? 14 : 10)
+      g.visible = live && dc < (sp.item === 'glowmoss' && G.s.tools.lantern ? 14 : sp.forage !== undefined ? 7 : 10) // forage props are small: a shorter draw range
       if (g.visible) {
         g.position.copy(sp.pos); g.scale.setScalar(1)
         if (sp.item === 'firefly') g.position.addScaledVector(sp.n, Math.sin(performance.now() / 600 + sp.spin) * 0.05)

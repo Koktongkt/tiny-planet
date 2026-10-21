@@ -2,7 +2,7 @@
 // dig spots and the museum door, plus photo-mode capture (one frame read right after the composer renders it).
 // Studio's art (stations, carriage, museum, rain, seasons) mounts here as its own lazy chunks once it lands.
 import * as THREE from 'three'
-import { useEffect, useReducer } from 'react'
+import React, { useEffect, useReducer, lazy, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { R, height, around } from '../world.js'
 import { G, setPanel, subscribe } from '../game/store.js'
@@ -35,6 +35,9 @@ function PhotoCapture() {
   return PH.on ? <Capture /> : null
 }
 // train ride: after Traveller's frame (this lazy subscriber runs later at the same priority), sit her in the carriage
+// Studio's seasons + weather look (season tint / wet patch on the scene's materials, Drift, Rain, Puddles), its own lazy chunk;
+// everything reads the __T hooks liveC writes. Drift uses driftAnchor (off in the desktop forest), touch winter is tint-only.
+const SeasonLayer = lazy(() => import('../art/season/SeasonLayer.jsx'))
 function RidePin() { useFrame(() => { if (RIDE.pin && HOME.playerObj) RIDE.pin(HOME.playerObj) }); return null }
 export function StageCWorld({ GAME }) {
   useEffect(() => {
@@ -47,6 +50,6 @@ export function StageCWorld({ GAME }) {
       if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', icon: 'book', verb: 'Visit', name: 'the ruins museum', act: () => setPanel('museum') }, d, 0.5) }
     })
   }, [])
-  return <><PhotoCapture /><RidePin /></>
+  return <><PhotoCapture /><RidePin /><Suspense fallback={null}><SeasonLayer /></Suspense></>
 }
 export default StageCWorld
