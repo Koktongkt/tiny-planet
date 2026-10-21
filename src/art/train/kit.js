@@ -17,8 +17,8 @@ export function kit({ ink = 0.006, inkOn = true } = {}) {
       return K
     },
     /** cylinder radius r, length l along local Y (rotate to lay it down), seg radial segments, theta for half-cylinders */
-    cyl(r, l, pos, color, { rot = [0, 0, 0], seg = 8, scale = [1, 1, 1], theta = Math.PI * 2, hull: hl = true, glow: gl = false, r2 } = {}) {
-      const mk = (rr, rr2, ll) => paint(flat(new THREE.CylinderGeometry(rr2 ?? rr, rr, ll, seg, 1, theta < Math.PI * 2 ? false : false, 0, theta)), color)
+    cyl(r, l, pos, color, { rot = [0, 0, 0], seg = 8, scale = [1, 1, 1], theta = Math.PI * 2, t0 = 0, hull: hl = true, glow: gl = false, r2 } = {}) {
+      const mk = (rr, rr2, ll) => paint(flat(new THREE.CylinderGeometry(rr2 ?? rr, rr, ll, seg, 1, false, t0, theta)), color)
       ;(gl ? glow : body).push(put(mk(r, r2, l), pos, rot, scale))
       if (inkOn && hl && !gl) hull.push(put(mk(r + ink / Math.max(0.3, Math.min(...scale)), r2 != null ? r2 + ink : undefined, l + ink * 2), pos, rot, scale))
       return K

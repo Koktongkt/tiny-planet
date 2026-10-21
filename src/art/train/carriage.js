@@ -14,7 +14,7 @@ export function buildCoachGeometry({ touch = false } = {}) {
   K.box(0.17, 0.07, 0.36, [0, 0.096, 0], C.maroon)
   K.box(0.17, 0.075, 0.36, [0, 0.168, 0], C.cream)
   K.box(0.176, 0.009, 0.366, [0, 0.132, 0], C.brass, { hull: false })
-  K.cyl(0.098, 0.39, [0, 0.205, 0], C.roof, { rot: [Math.PI / 2, 0, 0], seg: touch ? 6 : 10, scale: [1, 1, 0.36], theta: Math.PI, hull: true }) // half-cylinder roof, squashed
+  K.cyl(0.098, 0.39, [0, 0.203, 0], C.roof, { rot: [Math.PI / 2, 0, 0], seg: touch ? 6 : 10, scale: [1, 1, 0.36], theta: Math.PI, t0: Math.PI / 2, hull: true }) // half-cylinder roof, squashed
   for (const s of [-1, 1]) K.box(0.012, 0.11, 0.05, [s * 0.086, 0.13, 0.155], C.maroon, { hull: false }) // doors near the front
   wheels(K, touch ? 6 : 8)
   // windows: 3 per side + one at each end (glow part)
@@ -34,7 +34,7 @@ export function buildOpenCarGeometry({ touch = false } = {}) {
   K.box(0.13, 0.012, 0.06, [0, 0.122, -0.02], C.bench); K.box(0.13, 0.06, 0.012, [0, 0.155, -0.052], C.bench)
   for (const x of [-0.055, 0.055]) K.box(0.012, 0.03, 0.05, [x, 0.108, -0.02], C.wheel, { hull: false })
   // rear lantern posts
-  for (const s of [-1, 1]) { K.box(0.012, 0.15, 0.012, [s * 0.078, 0.215, -0.17], C.post, { hull: false }); K.box(0.024, 0.03, 0.024, [s * 0.078, 0.3, -0.17], '#ffcf86', { glow: true }) }
+  for (const s of [-1, 1]) { K.box(0.012, 0.11, 0.012, [s * 0.078, 0.195, -0.17], C.post, { hull: false }); K.box(0.026, 0.032, 0.026, [s * 0.078, 0.265, -0.17], '#ffcf86', { glow: true }) }
   wheels(K, touch ? 6 : 8)
   return K.build()
 }
