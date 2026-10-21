@@ -8,17 +8,19 @@
 const clamp = (x, a = 0, b = 1) => x < a ? a : x > b ? b : x
 const rnd = (a, b) => a + Math.random() * (b - a)
 
-/** 2 s of white + brown noise in one pass (~1 ms); sources loop it from different offsets so layers don't correlate */
+/** 2 s of white + brown noise, filled in chunks (each well under 1 ms); sources loop it from different offsets */
 function noiseBuffers(ctx) {
   const n = Math.round(ctx.sampleRate * 2), w = ctx.createBuffer(1, n, ctx.sampleRate), b = ctx.createBuffer(1, n, ctx.sampleRate)
-  const W = w.getChannelData(0), B = b.getChannelData(0); let last = 0
-  for (let i = 0; i < n; i++) { const r = Math.random() * 2 - 1; W[i] = r; last = (last + 0.02 * r) / 1.02; B[i] = last * 3.5 }
-  // make the loop seam continuous for the brown buffer (it drifts): crossfade the last 2000 samples into the start
-  for (let i = 0, m = 2000; i < m; i++) { const k = i / m; B[n - m + i] = B[n - m + i] * (1 - k) + B[i] * k }
-  return { white: w, brown: b }
+  const W = w.getChannelData(0), B = b.getChannelData(0), CH = 12000, steps = []; let last = 0
+  for (let i0 = 0; i0 < n; i0 += CH) steps.push(() => { for (let i = i0, e = Math.min(n, i0 + CH); i < e; i++) { const r = Math.random() * 2 - 1; W[i] = r; last = (last + 0.02 * r) / 1.02; B[i] = last * 3.5 } })
+  // brown noise drifts: crossfade the last 2000 samples into the start so the loop seam is continuous
+  steps.push(() => { for (let i = 0, m = 2000; i < m; i++) { const k = i / m; B[n - m + i] = B[n - m + i] * (1 - k) + B[i] * k } })
+  return { white: w, brown: b, steps }
 }
 
-export function buildGraph(ctx, dest = ctx.destination) {
+/** staged: build in small tasks (<= ~2 ms each, setTimeout between) so the main thread never sees a long task.
+ *  Layer buses exist immediately, so setMix()/schedule() are safe before `ready` resolves. */
+export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   const t0 = ctx.currentTime, N = noiseBuffers(ctx), nodes = []
   const G = (v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g }
   const F = (type, f, Q = 0.7) => { const x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = Q; return x }
@@ -30,27 +32,34 @@ export function buildGraph(ctx, dest = ctx.destination) {
   const limiter = ctx.createDynamicsCompressor(); limiter.threshold.value = -10; limiter.ratio.value = 6; limiter.attack.value = 0.01; limiter.release.value = 0.3
   const master = G(0), amb = G(1), muffle = F('lowpass', 18000, 0.5), music = G(0), sfx = G(1)
   chain(amb, muffle, master); music.connect(master); sfx.connect(master); chain(master, limiter, dest)
+  const wind = G(0), river = G(0), lake = G(0), insects = G(0), birds = G(0), bubbles = G(0)
+  for (const x of [wind, river, lake, insects, birds, bubbles]) x.connect(amb)
+  const steps = [...N.steps]
+  let windLP = null
 
   // ---- wind: brown noise, slow gusts (two incommensurate LFOs on gain), a wandering lowpass and a faint whistle ----
-  const wind = G(0), windLP = F('lowpass', 520, 0.6), gust = G(0.55), wPan = pan(0)
+  steps.push(() => {
+  windLP = F('lowpass', 520, 0.6); const gust = G(0.55), wPan = pan(0)
   chain(noise(N.brown), windLP, gust, wPan, wind); lfo(0.047, 0.3, gust.gain); lfo(0.131, 0.14, gust.gain); lfo(0.071, 260, windLP.frequency)
   if (wPan.pan) lfo(0.023, 0.45, wPan.pan)
   const whistle = G(0.035), wBP = F('bandpass', 1150, 9); chain(noise(N.white), wBP, whistle, wind); lfo(0.09, 0.03, whistle.gain); lfo(0.031, 320, wBP.frequency)
-  wind.connect(amb)
+  })
 
   // ---- water: river burble (band noise with fast irregular AM + glints) and lake lapping (low swells) ----
-  const river = G(0), rBody = F('bandpass', 1300, 0.45), rAM = G(0.5); chain(noise(N.white), rBody, rAM, river)
+  steps.push(() => {
+  const rBody = F('bandpass', 1300, 0.45), rAM = G(0.5); chain(noise(N.white), rBody, rAM, river)
   lfo(4.3, 0.12, rAM.gain); lfo(6.9, 0.08, rAM.gain); lfo(0.63, 0.14, rAM.gain); lfo(0.37, 280, rBody.frequency)
   const glint = G(0.16), gBP = F('bandpass', 3100, 1.6); chain(noise(N.white), gBP, glint, river); lfo(2.7, 650, gBP.frequency); lfo(1.9, 0.09, glint.gain)
   const rLow = G(0.5), rLP = F('lowpass', 320, 0.5); chain(noise(N.brown), rLP, rLow, river)
-  river.connect(amb)
-  const lake = G(0), mkLap = (hz, p, f) => { const g = G(0.45), lp = F('lowpass', f, 0.6); chain(noise(N.brown), lp, g, pan(p), lake); lfo(hz, 0.42, g.gain); lfo(hz * 0.5, 120, lp.frequency) }
+  })
+  steps.push(() => {
+  const mkLap = (hz, p, f) => { const g = G(0.45), lp = F('lowpass', f, 0.6); chain(noise(N.brown), lp, g, pan(p), lake); lfo(hz, 0.42, g.gain); lfo(hz * 0.5, 120, lp.frequency) }
   mkLap(0.12, -0.5, 480); mkLap(0.173, 0.5, 620)
   const hiss = G(0.05), hHP = F('highpass', 2500, 0.5); chain(noise(N.white), hHP, hiss, lake); lfo(0.12, 0.04, hiss.gain)
-  lake.connect(amb)
+  })
 
   // ---- night insects: two crickets (sine carrier x pulse train x chirp gate) + a soft shimmering chorus ----
-  const insects = G(0)
+  steps.push(() => {
   const cricket = (f, pulse, chirp, p, v) => {
     const o = ctx.createOscillator(); o.frequency.value = f; o.start(t0); nodes.push(o)
     const a = G(0), b = G(0), out = G(v), ca = ctx.createConstantSource ? ctx.createConstantSource() : null
@@ -60,11 +69,9 @@ export function buildGraph(ctx, dest = ctx.destination) {
   }
   cricket(4420, 31, 1.55, -0.45, 0.07); cricket(3910, 27, 2.25, 0.5, 0.055); cricket(4780, 36, 0.9, 0.05, 0.03)
   const chorus = G(0.06), cBP = F('bandpass', 5400, 7); chain(noise(N.white), cBP, chorus, insects); lfo(0.31, 0.04, chorus.gain); lfo(0.07, 500, cBP.frequency)
-  insects.connect(amb)
+  })
 
   // ---- birds (and river bubbles): short scheduled voices, created ahead of time by schedule() ----
-  const birds = G(0); birds.connect(amb)
-  const bubbles = G(0); bubbles.connect(amb)
   const voice = (bus, t, f0, f1, d, v, p, type = 'sine') => {
     const o = ctx.createOscillator(), g = G(0), s = pan(p); o.type = type
     o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d)
@@ -94,11 +101,14 @@ export function buildGraph(ctx, dest = ctx.destination) {
   /** set the layer mix (0..1 each); ramps over `tc` seconds so 10 Hz updates sound continuous */
   function setMix(mx, tc = 0.35) {
     const t = ctx.currentTime; Object.assign(S.mix, mx); const m = S.mix
-    wind.gain.setTargetAtTime(0.5 * m.wind, t, tc); windLP.Q.setTargetAtTime(0.5 + m.windTone * 1.2, t, tc)
+    wind.gain.setTargetAtTime(0.5 * m.wind, t, tc); windLP && windLP.Q.setTargetAtTime(0.5 + m.windTone * 1.2, t, tc)
     river.gain.setTargetAtTime(0.55 * m.river, t, tc); lake.gain.setTargetAtTime(0.5 * m.lake, t, tc)
     insects.gain.setTargetAtTime(0.9 * m.insects, t, tc * 3); birds.gain.setTargetAtTime(m.birds, t, tc * 3); bubbles.gain.setTargetAtTime(m.bubbles, t, tc)
     muffle.frequency.setTargetAtTime(500 + 17500 * m.muffle * m.muffle, t, tc)
   }
   function dispose() { for (const n of nodes) try { n.stop() } catch (e) {} try { master.disconnect(); limiter.disconnect() } catch (e) {} }
-  return { ctx, master, amb, music, sfx, setMix, schedule, dispose, S }
+  let ready; const stats = { steps: steps.length, tasks: 0, maxTaskMs: 0 }
+  if (!staged) { steps.forEach(f => f()); ready = Promise.resolve() }
+  else ready = new Promise(res => { let i = 0; const go = () => { const s = performance.now(); while (i < steps.length && performance.now() - s < 1.5) steps[i++](); stats.tasks++; stats.maxTaskMs = Math.max(stats.maxTaskMs, performance.now() - s); if (i < steps.length) setTimeout(go, 0); else res() }; go() })
+  return { ctx, master, amb, music, sfx, setMix, schedule, dispose, S, ready, stats }
 }

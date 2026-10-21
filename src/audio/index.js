@@ -19,7 +19,7 @@ export function startAudio(opts = {}) {
   const t0 = performance.now()
   let ctx = opts.ctx
   if (!ctx) try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch (e) { return (API = { setVolume() {}, setMusic() {}, mute() {}, dispose() {} }) }
-  const E = buildGraph(ctx), getL = opts.getListener || defaultListener, getZ = opts.getZones || zonesAt
+  const E = buildGraph(ctx, undefined, true), getL = opts.getListener || defaultListener, getZ = opts.getZones || zonesAt
   const D = window.__audio = { ctx, E, ticks: 0, tickMs: 0, tickMax: 0, buildMs: 0, mix: null, music: null }
   // share with the SFX blips (src/act.js) if it opts in: window.__tpAudio.{ctx, sfx}
   window.__tpAudio = { ctx, sfx: E.sfx }
@@ -59,7 +59,7 @@ export function startAudio(opts = {}) {
   const vis = () => applyMaster(0.15)
   document.addEventListener('visibilitychange', vis)
   tick(); applyMaster(1.2)
-  D.buildMs = performance.now() - t0
+  D.buildMs = performance.now() - t0; E.ready.then(() => { D.readyMs = performance.now() - t0 })
 
   API = {
     setVolume(v) { SET.volume = Math.max(0, Math.min(1, +v || 0)); persist(); applyMaster() },
