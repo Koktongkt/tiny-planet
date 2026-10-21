@@ -5,7 +5,7 @@ import { buildGraph } from './engine.js'
 import { zonesAt, defaultListener } from './zones.js'
 
 const KEY = 'tp-audio', MUSIC_DELAY = 4000, TICK_MS = 100
-const MUSIC_LEVEL = 0.2, AMB_LEVEL = 0.9 // piano sits well under the ambience
+const MUSIC_LEVEL = 0.28, AMB_LEVEL = 0.9 // piano sits well under the ambience
 let SET = { volume: 0.8, music: 0.7, muted: false }
 try { SET = { ...SET, ...JSON.parse(localStorage.getItem(KEY) || '{}') } } catch (e) {}
 const subs = new Set()
@@ -55,10 +55,10 @@ export function startAudio(opts = {}) {
     }
     D.ticks++; D.tickMs = performance.now() - s; if (D.ticks > 1 && D.tickMs > D.tickMax) D.tickMax = D.tickMs
   }
-  const iv = setInterval(tick, TICK_MS)
+  let iv = 0; E.ready.then(() => { if (API) { tick(); iv = setInterval(tick, TICK_MS) } }) // start ticking once the staged build is done
   const vis = () => applyMaster(0.15)
   document.addEventListener('visibilitychange', vis)
-  tick(); applyMaster(1.2)
+  applyMaster(1.2)
   D.buildMs = performance.now() - t0; E.ready.then(() => { D.readyMs = performance.now() - t0 })
 
   API = {

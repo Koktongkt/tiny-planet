@@ -101,9 +101,9 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   /** set the layer mix (0..1 each); ramps over `tc` seconds so 10 Hz updates sound continuous */
   function setMix(mx, tc = 0.35) {
     const t = ctx.currentTime; Object.assign(S.mix, mx); const m = S.mix
-    wind.gain.setTargetAtTime(0.5 * m.wind, t, tc); windLP && windLP.Q.setTargetAtTime(0.5 + m.windTone * 1.2, t, tc)
-    river.gain.setTargetAtTime(0.55 * m.river, t, tc); lake.gain.setTargetAtTime(0.5 * m.lake, t, tc)
-    insects.gain.setTargetAtTime(0.9 * m.insects, t, tc * 3); birds.gain.setTargetAtTime(m.birds, t, tc * 3); bubbles.gain.setTargetAtTime(m.bubbles, t, tc)
+    wind.gain.setTargetAtTime(0.9 * m.wind, t, tc); windLP && windLP.Q.setTargetAtTime(0.5 + m.windTone * 1.2, t, tc)
+    river.gain.setTargetAtTime(0.28 * m.river, t, tc); lake.gain.setTargetAtTime(0.35 * m.lake, t, tc)
+    insects.gain.setTargetAtTime(0.6 * m.insects, t, tc * 3); birds.gain.setTargetAtTime(2.5 * m.birds, t, tc * 3); bubbles.gain.setTargetAtTime(0.5 * m.bubbles, t, tc)
     muffle.frequency.setTargetAtTime(500 + 17500 * m.muffle * m.muffle, t, tc)
   }
   function dispose() { for (const n of nodes) try { n.stop() } catch (e) {} try { master.disconnect(); limiter.disconnect() } catch (e) {} }
