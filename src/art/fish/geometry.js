@@ -68,9 +68,9 @@ export function buildFishGeometry(id, lod = 'hi') {
     // anal fin
     const a0 = 0.66, a1 = 0.82; slab([[X(a0), -hh(a0) * 0.9], [X(a1), -hh(a1) * 0.9], [X(a1 - 0.02), -hh(a1) - ht * 0.5], [X(a0 + 0.05), -hh(a0) - ht * 0.45]], 'xy', 0.01) }
   if (flat) { // fringe fins all round the oval (flounder), in the body plane
-    for (const sd of [1, -1]) { const pts = []; for (let i = 0; i <= 5; i++) { const u = 0.18 + i * 0.13; pts.push([X(u), sd * hw(u) * 0.98]) } for (let i = 5; i >= 0; i--) { const u = 0.18 + i * 0.13; pts.push([X(u) - 0.01, sd * (hw(u) + 0.045)]) }
-      // the strip is concave-safe as two quads per step
-      for (let i = 0; i < 5; i++) slab([pts[i], pts[i + 1], pts[10 - i], pts[11 - i]], 'xz', 0.01) } }
+    for (const sd of [1, -1]) { const pts = []; for (let i = 0; i <= 3; i++) { const u = 0.16 + i * 0.22; pts.push([X(u), sd * hw(u) * 0.98]) } for (let i = 3; i >= 0; i--) { const u = 0.16 + i * 0.22; pts.push([X(u) - 0.01, sd * (hw(u) + 0.045)]) }
+      // the strip is concave-safe as one quad per step
+      for (let i = 0; i < 3; i++) slab([pts[i], pts[i + 1], pts[6 - i], pts[7 - i]], 'xz', 0.01) } }
   if (lod === 'hi' && !flat) for (const sd of [1, -1]) { const u = 0.27, z = hw(u) * 0.85 * sd, y = -hh(u) * 0.35, l = 0.13 * (0.6 + D)
     // pectoral fin: a small swept triangle angled back and down
     const pts = [new THREE.Vector3(X(u), y, z), new THREE.Vector3(X(u) - l, y - l * 0.35, z + sd * l * 0.55), new THREE.Vector3(X(u) - l * 0.45, y - l * 0.6, z + sd * l * 0.2)]
@@ -80,15 +80,15 @@ export function buildFishGeometry(id, lod = 'hi') {
   const eu = flat ? 0.2 : 0.12, er = Math.max(0.018, Math.min(0.035, A.depth * 0.09)) * (id === 'pufferfish' ? 1.3 : 1)
   for (const sd of [1, -1]) {
     const c = flat ? new THREE.Vector3(X(eu + (sd > 0 ? 0 : 0.07)), hh(eu) * 0.9 + 0.012, sd * hw(eu) * 0.25) : new THREE.Vector3(X(eu), hh(eu) * 0.32, sd * hw(eu) * 0.86)
-    const o = new THREE.OctahedronGeometry(1, lod === 'hi' ? 1 : 0).toNonIndexed(), pa = o.attributes.position
+    const o0 = new THREE.OctahedronGeometry(1, lod === 'hi' ? 1 : 0), o = o0.index ? o0.toNonIndexed() : o0, pa = o.attributes.position
     for (let i = 0; i < pa.count; i += 3) { const vs = [0, 1, 2].map(j => { const n = new THREE.Vector3().fromBufferAttribute(pa, i + j); const p = n.clone().multiplyScalar(er).add(c); const hl = n.x > 0.45 && n.y > 0.45 && Math.abs(n.z) < 0.6
       return { p, n: n.clone(), c: hl ? white : eye, f: { u: eu, v: 0.3, s: sd, m: 0 }, ink: 0 } }); tri(...vs) }
   }
   // ---- extras ----
-  if (A.whiskers) { const wl = 0.12 * A.whiskers; for (const sd of [1, -1]) { const r = 0.006, b0 = new THREE.Vector3(X(0.04), -hh(0.04) * 0.4, sd * hw(0.04) * 0.6), tip = b0.clone().add(new THREE.Vector3(-wl * 0.35, -wl * 0.45, sd * wl * 0.8))
+  if (A.whiskers) { const wl = 0.12 * A.whiskers; for (const sd of [1, -1]) { const r = 0.011, b0 = new THREE.Vector3(X(0.04), -hh(0.04) * 0.4, sd * hw(0.04) * 0.6), tip = b0.clone().add(new THREE.Vector3(-wl * 0.35, -wl * 0.45, sd * wl * 0.8))
     const ax = tip.clone().sub(b0).normalize(), pp = new THREE.Vector3(0, 1, 0).cross(ax).normalize(), qq = ax.clone().cross(pp)
     for (let k = 0; k < 3; k++) { const a0 = k / 3 * Math.PI * 2, a1 = (k + 1) / 3 * Math.PI * 2, d0 = pp.clone().multiplyScalar(Math.cos(a0)).addScaledVector(qq, Math.sin(a0)), d1 = pp.clone().multiplyScalar(Math.cos(a1)).addScaledVector(qq, Math.sin(a1))
-      const v = (p, n) => ({ p, n, c: fin, f: { u: 0, v: 0, s: sd, m: 0 }, ink: 0 }); tri(v(b0.clone().addScaledVector(d0, r), d0), v(b0.clone().addScaledVector(d1, r), d1), v(tip, d0.clone().add(d1).normalize())) } } }
+      const v = (p, n) => ({ p, n, c: C('#4a3a35'), f: { u: 0, v: 0, s: sd, m: 0 }, ink: 0 }); tri(v(b0.clone().addScaledVector(d0, r), d0), v(b0.clone().addScaledVector(d1, r), d1), v(tip, d0.clone().add(d1).normalize())) } } }
   if (A.spikes && lod === 'hi') { for (let i = 0; i < 10; i++) { const u = 0.25 + (i % 5) * 0.13, a = (i < 5 ? 1 : -1) * (0.55 + 0.25 * ((i * 7) % 3) / 2) + Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a)
       const base = new THREE.Vector3(X(u), sa * hh(u), ca * hw(u)), n = new THREE.Vector3(0, sa / hh(u), ca / hw(u)).normalize(), tip = base.clone().addScaledVector(n, 0.05), side = new THREE.Vector3(1, 0, 0), up = n.clone().cross(side).normalize()
       const b1 = base.clone().addScaledVector(side, 0.014), b2 = base.clone().addScaledVector(side, -0.008).addScaledVector(up, 0.012), b3 = base.clone().addScaledVector(side, -0.008).addScaledVector(up, -0.012)

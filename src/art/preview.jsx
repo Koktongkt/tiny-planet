@@ -1,6 +1,7 @@
 // Dev-only art preview harness (art-b): /preview.html?m=<mode>. Renders each Stage B art module with mock data for
 // screenshots and perf checks. Never imported by the game; preview.html is not a build input.
 // modes: grid | world | measure | hearts | gifts | reactions | board | board3d | icons | settings
+// Stage C (art-c, previewC.jsx): tutorial | fishicons | catch | fish | school | photo
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as THREE from 'three'
@@ -81,6 +82,7 @@ function Scene3D() {
 function BoardScene() { return <><Cam pos={[0.9, R + 0.75, 1.5]} look={[0, R + 0.32, 0]} /><Lights sun={[0.7, 0.8, 0.9]} /><Ground /><Board3D position={[0, R, 0]} notes={+(q.get('notes') ?? 3)} /><Post /></> }
 // ---------- DOM bits (lazy) ----------
 const DomPreview = React.lazy(() => import('./previewDom.jsx'))
+const PreviewC = React.lazy(() => import('./previewC.jsx')), IS_C = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo'].includes(MODE)
 const is3D = ['grid', 'world', 'measure', 'board3d'].includes(MODE)
 document.body.classList.add('pv-' + MODE, 'tod-' + TOD_K)
 const css = document.createElement('style'); css.textContent = `
@@ -93,4 +95,4 @@ body.tod-dawn{background:linear-gradient(#8e9ccf 0,#d8b4c4 45%,#f6c9b0 70%,#fde3
 body.tod-night{background:linear-gradient(#0e1330 0,#141a3a 45%,#2e3c6e 100%)!important}
 body.tod-night .pv-lab{background:#2e3c6ed0;color:#f3e6c8;box-shadow:inset 0 0 0 1.5px #f3e6c8aa}`
 document.head.appendChild(css)
-createRoot(document.getElementById('root')).render(is3D ? <Scene3D /> : <Suspense fallback={null}><DomPreview mode={MODE} /></Suspense>)
+createRoot(document.getElementById('root')).render(IS_C ? <Suspense fallback={null}><PreviewC mode={MODE} /></Suspense> : is3D ? <Scene3D /> : <Suspense fallback={null}><DomPreview mode={MODE} /></Suspense>)

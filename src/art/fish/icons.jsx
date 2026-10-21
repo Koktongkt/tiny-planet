@@ -37,7 +37,7 @@ function fishIcon(id) {
   if (!flat && A.dorsal !== 'none') { const u0 = A.dorsal === 'long' ? 0.3 : 0.36, u1 = A.dorsal === 'long' ? 0.78 : 0.62, ht = { low: 0.09, tall: 0.15, spiny: 0.13, long: 0.1 }[A.dorsal] * (0.6 + A.depth) * K * 0.9
     const y = (u) => cy - half(u) + 1.5
     dorsal = A.dorsal === 'spiny' ? poly([[X(u0), y(u0)], [X(u0 + 0.04), y(u0) - ht], [X(u0 + 0.09), y(u0 + 0.09) - ht * 0.6], [X(u0 + 0.14), y(u0 + 0.14) - ht * 0.95], [X(u0 + 0.2), y(u0 + 0.2) - ht * 0.55], [X(u1 - 0.03), y(u1) - ht * 0.6], [X(u1), y(u1)]])
-      : smooth([[X(u0), y(u0)], [X(u0 + 0.06), y(u0) - ht], [X((u0 + u1) / 2 + 0.06), y(u1) - ht * 0.6], [X(u1), y(u1)]], true)
+      : `M${X(u0)} ${y(u0)} Q${X(u0 + 0.01)} ${y(u0) - ht * 1.25} ${X(u0 + 0.09)} ${y(u0 + 0.09) - ht} Q${X((u0 + u1) / 2 + 0.05)} ${y(u1) - ht * 0.75} ${X(u1)} ${y(u1)}Z`
     anal = smooth([[X(0.64), cy + half(0.64) - 1.5], [X(0.7), cy + half(0.68) + ht * 0.5], [X(0.82), cy + half(0.82) + ht * 0.35], [X(0.83), cy + half(0.83) - 1.5]], true) }
   const fringe = flat ? [-1, 1].map(sd => smooth([...Array(9)].map((_, i) => { const u = 0.12 + i * 0.1; return [X(u), cy + sd * (half(u) + 3.2 + (i % 2) * 0.6)] }).concat([...Array(9)].map((_, i) => { const u = 0.92 - i * 0.1; return [X(u), cy + sd * (half(u) - 1)] })), true)) : []
   const pec = flat ? null : smooth([[X(0.27), cy + half(0.27) * 0.25], [X(0.27) + 9, cy + half(0.27) * 0.25 + 4], [X(0.27) + 6, cy + half(0.27) * 0.25 + 7]], true)

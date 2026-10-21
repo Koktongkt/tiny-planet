@@ -22,7 +22,7 @@ export function CatchCard({ fish, size, isNew = false, isRecord = false, where, 
       <div className="tpf-kicker">{f.rarity === 'legend' ? 'Oh my… you caught' : 'You caught'}</div>
       <div className="tpf-art"><svg className="tpf-splash" viewBox="0 0 200 120" aria-hidden><path d="M20 80 Q30 40 70 46 Q90 18 128 34 Q170 28 178 64 Q196 94 150 100 Q100 116 56 104 Q14 104 20 80Z" fill="#cfe6ee" opacity=".7" />
         {[[24, 30], [176, 26], [186, 92], [14, 98], [100, 12]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={3 + (i % 3)} fill="#a9d2e0" opacity=".8" />)}</svg>
-        <Icon id={f.id} size={176} wash={false} />{isNew && <div className="tpf-stamp" aria-label="New to your journal"><span>New!</span></div>}</div>
+        <Icon id={f.id} size={200} wash={false} />{isNew && <div className="tpf-stamp" aria-label="New to your journal"><span>New!</span></div>}</div>
       <h3 className="tpf-name">{t.name}</h3>
       <div className="tpf-meta"><span className="tpf-stars" aria-label={RARITY_LABEL[f.rarity]}>{[0, 1, 2, 3].map(i => <svg key={i} viewBox="0 0 20 20" className={i < n ? 'on' : ''}><path d="M10 2 L12.4 7.4 L18 8 L13.8 11.8 L15 17.6 L10 14.6 L5 17.6 L6.2 11.8 L2 8 L7.6 7.4Z" /></svg>)}<i>{RARITY_LABEL[f.rarity]}</i></span>
         {size != null && <span className="tpf-size"><svg viewBox="0 0 60 14" aria-hidden><path d="M2 7 H58" /><path d="M2 3 V11 M58 3 V11 M16 5 V9 M30 4 V10 M44 5 V9" /></svg><b className="tpx-num">{(+size).toFixed(size >= 100 ? 0 : 1)} cm</b>{isRecord && <em className="tpf-best">Personal best!</em>}</span>}</div>
