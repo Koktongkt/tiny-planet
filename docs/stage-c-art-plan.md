@@ -90,7 +90,7 @@ Hooks come from Codor's `systems/weather.js` (`applyTo(T, phase)` every clock ti
 - Lazy gz (multi-entry measure): season core ~3.8 KB, hooks 1.1, Drift 0.4, SeasonLayer 0.7, Rain 1.5, Puddles 2.5, forage icons+props ~3.8, forageTable 0.4, itemsC 1.7, ambient (+rain/roof) 4.95 KB (stage-c 4.47 KB).
 
 ### Screenshots / audio (tiny-planet-perf/art-c/)
-`season-{spring,summer,autumn,winter}.png` (same village walk view), `winter-snowcaps.png`, `rain-day.png`, `rain-dusk.png`, `puddles-close.png` (+ `puddles-close-2.png`), `forage-items.png`, `rain-preview.ogg` (24 s: clear → rain builds → indoors roof patter → back out, drizzle). Harness: `wx.mjs`, `exact.sh` → `exact-45.jsonl`.
+`season-{spring,summer,autumn,winter}.png` (same village walk view), `winter-snowcaps.png`, `rain-day.png`, `rain-dusk.png`, `puddles-close.png`, `forage-items.png`, `rain-preview.ogg` (24 s: clear → rain builds → indoors roof patter → back out, drizzle). Harness: `wx.mjs`, `exact.sh` → `exact-45.jsonl`.
 
 ### Wiring for Codor
 1. Lazy-mount `<SeasonLayer/>` inside the planet group (GameSlot / World3D).
