@@ -10,6 +10,7 @@ void main(){ vUv = position.xz; vP = aP; vec4 w = modelMatrix * instanceMatrix *
   gl_Position = projectionMatrix * mv; }`
 const FS = `uniform float uTime, uWet, uRain, uSDay, uNight; uniform vec3 uSky, uSunV; varying vec2 vUv; varying vec2 vP; varying vec3 vV; varying vec3 vN;
 float h1(float n){ return fract(sin(n) * 43758.5453); }
+vec3 lin(vec3 c){ return pow(c, vec3(2.2)); } // literals are sRGB; the composer target is linear
 void main(){
   vec2 u = vUv; float sd = vP.x * 17.;
   float ang = atan(u.y, u.x), r = length(u * vec2(1., 1.18));
@@ -21,11 +22,11 @@ void main(){
   if (inside + rim < .01) discard;
   vec3 V = normalize(vV), N = normalize(vN); float ndv = clamp(dot(N, V), 0., 1.);
   float fr = .5 + .5 * pow(1. - ndv, 2.); // a puddle is mostly a sky mirror, even from above
-  vec3 deep = mix(vec3(.42, .52, .62), vec3(.1, .12, .2), uNight);
-  vec3 sky = mix(uSky * 1.1, vec3(.78, .9, 1.), .25 * (1. - uNight));
+  vec3 deep = lin(mix(vec3(.36, .46, .58), vec3(.1, .12, .2), uNight));
+  vec3 sky = mix(uSky * 1.05, lin(vec3(.8, .9, 1.)), .2 * (1. - uNight));
   float cloud = smoothstep(.35, .8, sin(u.x * 2.3 + u.y * 1.1 + sd) * .5 + .5) * .16; // soft reflected cloud band
   vec3 col = mix(deep, sky + cloud * (1. - uNight), fr);
-  float sp = pow(max(dot(reflect(-V, N), normalize(uSunV)), 0.), 160.) * uSDay; col += vec3(1., .95, .82) * sp * 1.4;
+  float sp = pow(max(dot(reflect(-V, N), normalize(uSunV)), 0.), 160.) * uSDay; col += lin(vec3(1., .95, .82)) * sp * 1.4;
   // ripples: 4 rings per puddle, each restarting at a random spot
   float rip = 0.;
   for (int k = 0; k < 4; k++) { float fk = float(k), t = uTime * (.55 + .2 * fk) + fk * .27 + vP.x * 9.; float id = floor(t), f = fract(t);
@@ -35,9 +36,9 @@ void main(){
   float lip = smoothstep(edge - .13, edge - .07, r) * (1. - smoothstep(edge - .07, edge - .04, r)); // bright inner lip
   float ink = smoothstep(edge - .07, edge - .02, r) * inside; // warm-ink outline like the toon hulls
   col = mix(col, vec3(.96, .97, 1.), lip * .35);
-  col = mix(col, vec3(.29, .23, .21), ink * .8);
+  col = mix(col, lin(vec3(.29, .23, .21)), ink * .8);
   float a = inside * .96 + rim * .45;
-  vec3 outc = mix(vec3(.2, .16, .13), col, inside);
+  vec3 outc = mix(lin(vec3(.3, .24, .18)), col, inside);
   gl_FragColor = vec4(outc, a * smoothstep(0., .08, uWet));
 }`
 /** spots: [{ n: Vector3 (planet-local unit dir), r?: radius (world units, default .32), spin? }] */

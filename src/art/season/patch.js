@@ -23,13 +23,14 @@ function inject(sh, o) {
   sh.fragmentShader = f
 }
 /**
- * patchSurface(material, { kind?, cap?, wet? }) — kind ∈ SEASON_KINDS (or null for wet-only), cap = snow caps in winter
+ * patchSurface(material, { kind?, cap?, wet? }) — kind ∈ SEASON_KINDS (or null for wet-only), cap = snow caps in winter (desktop only; forced off on the touch tier)
  * (default: on for desktop, off on the touch tier → winter is a tint there), wet = darker/glossier when __T.wet > 0.
  * Re-patching merges options and rebuilds from the material's original shader hooks. Returns the material.
  */
 export function patchSurface(mat, o = {}) {
   if (!ORIG.has(mat)) ORIG.set(mat, { obc: mat.onBeforeCompile, key: mat.customProgramCacheKey })
-  const opts = { cap: !isTouchTier(), ...(OPTS.get(mat) || {}), ...o }; OPTS.set(mat, opts)
+  const opts = { cap: !isTouchTier(), ...(OPTS.get(mat) || {}), ...o }; if (isTouchTier()) opts.cap = false // Codor: mobile winter is tint-only (no caps), always
+  OPTS.set(mat, opts)
   const { obc, key } = ORIG.get(mat)
   mat.onBeforeCompile = function (sh, r) { if (obc) obc.call(this, sh, r); inject(sh, opts) }
   const tag = `|s:${opts.kind || '-'}${opts.cap ? 'c' : ''}${opts.wet ? 'w' : ''}`
