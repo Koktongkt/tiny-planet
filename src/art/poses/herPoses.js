@@ -1,6 +1,6 @@
 // Her photo poses (Stage C, art-c). Lazy chunk: importing registers POSES['photo_<id>'] into act.js, which her rig
 // (GhibliPerson.jsx) already calls as POSES[kind](B, mix, st, t, w). B = bones, mix(bone, axis, target) eases by w.
-// Arm convention (checked in preview ?m=photo&dbg): upper-arm z > 0 swings upR out/up, z < 0 swings upL out/up; x < 0 = forward.
+// Arm convention (verified visually in preview ?m=photo): upper-arm z > 0 swings upR out/up, z < 0 swings upL out/up; x < 0 = forward.
 // holdHerPose(id) / releaseHerPose() drive act.js's ACT so she eases in and holds until released (photo mode only).
 import { ACT, POSES } from '../../act.js'
 export const HER_POSE_IDS = ['stand', 'wave', 'peace', 'sit', 'look_up', 'twirl', 'kneel', 'hold_fish']

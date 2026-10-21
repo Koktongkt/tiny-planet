@@ -48,8 +48,10 @@ export function PhotoMode({ value = PHOTO_DEFAULT, onChange, onShutter, onClose,
     addEventListener('keydown', k); return () => removeEventListener('keydown', k)
   })
   const F = FILTERS[v.filter] || FILTERS.none
-  return <div className={'tpx tpp' + (v.hideUI ? ' hidden' : '') + (touch ? ' touch' : '')}>
-    <div className="tpp-layers" aria-hidden>{F.layers.map((L, i) => <i key={v.filter + i} style={layerStyle(L)} />)}</div>
+  // filter overlay layers sit OUTSIDE .tpp (which is a stacking context) so their mix-blend-mode reaches the WebGL canvas.
+  // Mount <PhotoMode> where no ancestor has z-index / transform / opacity / filter, or the blend only sees transparency.
+  return <><div className="tpp-layers" aria-hidden>{F.layers.map((L, i) => <i key={v.filter + i} style={layerStyle(L)} />)}</div>
+  <div className={'tpx tpp' + (v.hideUI ? ' hidden' : '') + (touch ? ' touch' : '')}>
     {v.grid && <svg className="tpp-grid" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden><path d="M100 0 V300 M200 0 V300 M0 100 H300 M0 200 H300" /></svg>}
     {v.frame && <div className="tpp-mat" aria-hidden />}
     <svg className="tpp-corners" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden><path d="M2 12 V2 H12 M88 2 H98 V12 M98 88 V98 H88 M12 98 H2 V88" /></svg>
@@ -78,6 +80,6 @@ export function PhotoMode({ value = PHOTO_DEFAULT, onChange, onShutter, onClose,
         <button className="tpp-shutter" onClick={shoot} aria-label="Take the photo (Space)"><span /></button>
       </div></>}
     {lastShot && <div className="tpp-last" key={lastShot.url}><img src={lastShot.url} alt="" /><span>{lastShot.caption || 'Saved to your journal'}</span></div>}
-  </div>
+  </div></>
 }
 export default PhotoMode

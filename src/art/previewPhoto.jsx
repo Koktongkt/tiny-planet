@@ -15,15 +15,14 @@ import { applyLiveFilter, gradeCanvas, photoThumb } from '../ui/photo/filters.js
 import { holdHerPose } from './poses/herPoses.js'
 import { applyPetPose, PAIR_POSES } from './poses/petPoses.js'
 const q = new URLSearchParams(location.search)
-if (q.has('dbg')) import('../act.js').then(({ POSES }) => { POSES.photo_dbg = (B, mix) => { mix(B.upR, 'x', +q.get('x') || 0); mix(B.upR, 'y', +q.get('y') || 0); mix(B.upR, 'z', +q.get('z') || 0); mix(B.foR, 'x', +q.get('f') || 0) } })
 const DEF_AT = { pip: { at: [0.2, 0.12], yaw: -0.5 }, mochi: { at: [-0.18, 0.12], yaw: 0.5 } }
 function Tick() { useFrame((_, dt) => { wind.time.value += Math.min(dt, 0.05) }); return null }
 function Stats() { const gl = useThree(s => s.gl), n = useRef(0); useEffect(() => { gl.info.autoReset = false }, [])
   useFrame(() => { window.__calls = gl.info.render.calls; window.__tris = gl.info.render.triangles; gl.info.reset(); if (++n.current > 40) window.__artReady = true }, -100); return null }
 function Her({ pose }) {
   const st = useMemo(() => ({ phase: 0, move: 0, t: 0, turn: 0, dist: 0, look: 0 }), [])
-  useEffect(() => { holdHerPose(pose); if (q.has('dbg')) setTimeout(() => { window.__act.kind = 'photo_dbg' }, 300) }, [pose])
-  useFrame(() => { tickAct(st); st.t = wind.time.value; window.__herSt = st })
+  useEffect(() => { holdHerPose(pose) }, [pose])
+  useFrame(() => { tickAct(st); st.t = wind.time.value })
   return <Character cfg={TRAVELLER} st={st} res={84} />
 }
 function Pet({ kind, pose, at, yaw }) {
