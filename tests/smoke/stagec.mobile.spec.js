@@ -6,7 +6,9 @@ test('touch: tutorial note, journal + photo chips, photo mode hides the pads, re
   test.setTimeout(420_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=lake&give=rod')
   await page.waitForFunction(() => window.__scReady && window.__sc && window.__scLayout, null, { timeout: 150_000, polling: 250 })
-  await expect(page.locator('.tpt')).toBeVisible()
+  await expect(page.locator('.tpt-slip')).toBeVisible() // folded on touch
+  await page.locator('.tpt-slip').tap(); await expect(page.locator('.tpt-note')).toBeVisible()
+  await page.locator('.tpt-x').tap(); await expect(page.locator('.tpt')).toBeHidden()
   await page.locator('.tp-jbtn').tap(); await expect(page.locator('.tpc-book')).toBeVisible(); await page.locator('.tpc-book .tp-x').tap()
   await page.locator('.tp-cambtn').tap()
   await page.waitForFunction(() => document.documentElement.classList.contains('tp-photo'), null, { timeout: 30_000 })

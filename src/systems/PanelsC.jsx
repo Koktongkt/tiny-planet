@@ -60,7 +60,7 @@ function Ride() {
   return <div className="tpc-ride paper"><Icon id="coin" size={30} /><span>{STOP_NAME[RIDE.from]} → <b>{STOP_NAME[RIDE.to]}</b></span><i><b style={{ width: Math.round(RIDE.progress * 100) + '%' }} /></i></div>
 }
 function Tutorial() {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(!TOUCH) // touch: starts as the small pinned slip so it doesn't cover the button column
   if (!SC.tutorialVisible() || G.ui.panel || PH.on || RIDE.riding) return null
   return <div className="tpc-tut"><TutorialNote steps={withProgress(G.s.tutorial.done)} touch={TOUCH} open={open} onToggle={setOpen} onDismiss={() => SC.tutorial(false)} signer={TUTORIAL_SIGNER.name} /></div>
 }

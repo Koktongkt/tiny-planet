@@ -37,7 +37,7 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   await expect(page.locator('.tpf-card')).toBeVisible(); await page.keyboard.press('Enter'); await expect(page.locator('.tpf-card')).toBeHidden()
   const log = await page.evaluate(() => window.__game.G.s.fish)
   const [id] = Object.keys(log)
-  expect(['minnow', 'crucian', 'catfish', 'koi', 'lake_lord']).toContain(id); expect(log[id].count).toBe(1); expect(log[id].best).toBeGreaterThan(0)
+  expect(await page.evaluate((id) => window.__sc.F.FISH[id].spots.includes('lake'), id)).toBe(true); expect(log[id].count).toBe(1); expect(log[id].best).toBeGreaterThan(0)
   // photo mode: P opens the free camera, the HUD hides, the shutter saves a thumbnail into the journal album
   await page.waitForTimeout(1500); await page.keyboard.press('p')
   await page.waitForFunction(() => document.documentElement.classList.contains('tp-photo') && window.__game.G.ui.lock === 'photo', null, { timeout: 30_000 })
