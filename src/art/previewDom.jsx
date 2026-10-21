@@ -1,7 +1,7 @@
 // DOM half of the art preview harness (see preview.jsx). Mock data only.
 import React, { useEffect, useState } from 'react'
 import { Icon, IconDefs, ICON_IDS } from '../game/icons.jsx'
-import { itemName, ITEM_LABELS } from '../game/items.js'
+import { itemName, ITEM_LABELS } from '../game/itemsB.js'
 import { HeartsBadge, GiftPicker, GiftReaction } from '../ui/gifts/index.js'
 import { ErrandsBoard } from '../ui/errands/ErrandsBoard.jsx'
 import { SettingsPanel } from '../ui/settings/index.js'

@@ -5,7 +5,7 @@
 // Tap an item to choose it, then "Give". Double-tap / Enter gives straight away. Esc or the veil closes.
 import React, { useEffect, useState } from 'react'
 import { Icon, IconDefs } from '../../game/icons.jsx'
-import { itemName } from '../../game/items.js'
+import { itemName } from '../../game/itemsB.js'
 import { HeartsBadge } from './Hearts.jsx'
 import '../../art/parchment.css'
 import './gifts.css'

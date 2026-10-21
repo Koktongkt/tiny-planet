@@ -8,7 +8,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H } from '../world.js'
 import { T, C, toon, glow, planetRef } from '../common.jsx'
 import { G, emit, add, markTaken, available, toast, count, take } from './store.js'
-import { SPAWNS, NEEDS_TOOL, ITEMS, DECOR } from './items.js'
+import { ITEMS, DECOR } from './items.js'
+import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 
 const q = new URLSearchParams(location.search)
 let seed = 4242; const rr = () => (seed = (seed * 16807) % 2147483647) / 2147483647

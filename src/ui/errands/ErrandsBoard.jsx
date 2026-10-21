@@ -7,7 +7,7 @@
 // the signature reads PROFILES[npcId].name + role. Optional extras: names ({npcId: 'Gonta'} override), day (header).
 import React, { useEffect } from 'react'
 import { Icon, IconDefs } from '../../game/icons.jsx'
-import { itemName } from '../../game/items.js'
+import { itemName } from '../../game/itemsB.js'
 import { PROFILES } from '../../talk/profiles.js'
 import { Heart, HeartDefs } from '../gifts/Hearts.jsx'
 import '../../art/parchment.css'

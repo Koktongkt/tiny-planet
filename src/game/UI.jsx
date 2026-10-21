@@ -1,8 +1,10 @@
 // DOM side of Gather & Craft: HUD, prompt, bag, recipe book / bench, toasts, fly-to-bag, fishing minigame, placement bar.
 import { TOUCH } from '../touch.jsx'
 import React, { useEffect, useReducer, useRef, useState } from 'react'
-import { G, subscribe, emit, setPanel, count, haveFor, known, owned, canCraft, craft, reset, ITEMS, RECIPES } from './store.js'
-import { TOOLS, DECOR, NEEDS_TOOL } from './items.js'
+import { G, subscribe, emit, setPanel, count, reset } from './store.js'
+import { haveFor, known, owned, canCraft, craft, ITEMS, RECIPES } from './craft.js'
+import { TOOLS, DECOR } from './items.js'
+import { NEEDS_TOOL } from './recipes.js'
 import { Icon, IconDefs } from './icons.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
