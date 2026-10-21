@@ -10,7 +10,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 110 # stage-b: 5 more smoke tests (slow software-GL runners)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - name: Lint
         run: npm run lint
-      - name: Unit tests (save migrations)
+      - name: Unit tests (save migrations, Stage B systems)
         run: npm run test:unit
       - name: Build
         run: npm run build
