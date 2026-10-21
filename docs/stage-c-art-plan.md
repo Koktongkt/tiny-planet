@@ -74,13 +74,23 @@ Hooks come from Codor's `systems/weather.js` (`applyTo(T, phase)` every clock ti
 - Audio: engine `rain` bus (hiss / body / brown wash) + `roof` bus (skips muffle); `mixFor` adds `rain` / `roof`, hush birds × dry factor; `zones.js` reads `L.rain ?? T.rain`. Indoor roof patter when `L.inside`.
 
 ### Perf (items 4–5)
-- Startup index gz: **69,688 B** (art-c) vs **69,693 B** (stage-c 835ebc1) — **0 bytes added**.
-- Extra programs: **+2** season variants (within Codor's ≤3) + **3** ShaderMaterials (Drift/Rain/Puddles) = **+5** total vs unpatched scene. Cap gated off on touch tier by default.
-- Extra draw calls (exact layer on/off, walk village rain): **+3** (Drift + Rain + Puddles); orbit / indoors hide Drift+Rain via `defaultAnchor` → **+1** (puddles). Tris ≈ **+4 k** for the three quads/points.
-- Lazy gz (multi-entry measure): season index ~3.8 KB, Rain 1.5, Puddles 2.5, Drift 0.4, hooks 1.1, forage icons ~3.8, itemsC 1.7, ambient (+rain) ~5.0 (was ~4.5 on stage-c).
+- Startup index gz: **69,688 B** (art-c) vs **69,693 B** (stage-c 835ebc1): **0 bytes added**. perf:budget (dist, layer not wired yet) all ok; startup 67.92 KB gz by budget.mjs.
+- Programs: seasons replace programs in place (dispose + patch, warm-compiled), **net +2** (within Codor's ≤3; 8 tagged variants `|s:ground/grass/roof cw, leaf/ever/stem/flower/cap c`). Weather adds **3** ShaderMaterials (Drift, Rain, Puddles). Total **+5**.
+- Exact layer on/off deltas, same frame state (median of 3; NPC noise ±1 call):
+
+| view | tier | Δ calls | Δ tris | notes |
+|---|---|---|---|---|
+| walk village, summer rain | desktop | +3 (4 measured incl. noise) | +4.06 k | Drift + Rain (2000 streaks) + Puddles |
+| walk village, summer rain | mobile | +2–3 | +1.2 k (600 streaks after fix) | measured +1.8 k at 900; touch default lowered to 600 |
+| walk village, winter clear | desktop / mobile | +1 | ~0 | Drift (snow) only; Rain + puddles hidden (rain 0, wet 0) |
+| orbit, rain | desktop / mobile | +1 | +36 | puddles only; Drift + Rain hidden in orbit / indoors |
+
+- Headroom vs budget: desktop.forest 497/500 calls base → +3 = 500 (at cap; Codor may want Drift off in the forest view or a cap bump); mobile.village 348.5 k/350 k tris base → +1.24 k = 349.8 k (fits only with the 600-streak touch rain).
+- Snow cap on touch: no measurable difference in the headless (SwiftShader) harness (fps 5–9 both ways, noise), so **cap stays off on touch by default** (tint only) until checked on a real phone; enable with `<SeasonLayer cap />`.
+- Lazy gz (multi-entry measure): season core ~3.8 KB, hooks 1.1, Drift 0.4, SeasonLayer 0.7, Rain 1.5, Puddles 2.5, forage icons+props ~3.8, forageTable 0.4, itemsC 1.7, ambient (+rain/roof) 4.95 KB (stage-c 4.47 KB).
 
 ### Screenshots / audio (tiny-planet-perf/art-c/)
-`season-{spring,summer,autumn,winter}.png`, `winter-snowcaps.png`, `rain-{day,dusk}.png`, `puddles-close.png`, `forage-items.png`, `rain-preview.ogg` (24 s: clear → rain → indoors roof → drizzle).
+`season-{spring,summer,autumn,winter}.png` (same village walk view), `winter-snowcaps.png`, `rain-day.png`, `rain-dusk.png`, `puddles-close.png` (+ `puddles-close-2.png`), `forage-items.png`, `rain-preview.ogg` (24 s: clear → rain builds → indoors roof patter → back out, drizzle). Harness: `wx.mjs`, `exact.sh` → `exact-45.jsonl`.
 
 ### Wiring for Codor
 1. Lazy-mount `<SeasonLayer/>` inside the planet group (GameSlot / World3D).
