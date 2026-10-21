@@ -5,7 +5,6 @@
 // Car local frame (zones.jsx Train): x = side, y = up (planet normal), z = forward (direction of travel).
 import * as THREE from 'three'
 import { kit, tris } from './kit.js'
-import { toon, glow, INK } from '../../common.jsx'
 const C = { maroon: '#a2423a', cream: '#f3e4c4', brass: '#d9a54a', roof: '#5d4a3f', under: '#3b3633', wheel: '#33302e', deck: '#a9774c', bench: '#8a5a3c', rail: '#f3e4c4', post: '#6e4a33' }
 const wheels = (K, seg) => { for (const z of [-0.12, 0.12]) for (const s of [-1, 1]) K.cyl(0.03, 0.014, [s * 0.075, 0.035, z], C.wheel, { rot: [0, 0, Math.PI / 2], seg, hull: false }) }
 export function buildCoachGeometry({ touch = false } = {}) {
@@ -40,14 +39,12 @@ export function buildOpenCarGeometry({ touch = false } = {}) {
 }
 /** seat anchor for the ride on the open car (car index 3 = last), car-local: lift along up + nudge along z */
 export const RIDE_SEAT = { car: 3, lift: 0.075, z: -0.012 }
-let MATS = null
-export function carMaterials() { if (MATS) return MATS; MATS = { body: toon('#ffffff', { vertexColors: true }), hull: new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide }), glow: glow('#ffd79a') }; return MATS }
 /**
  * applyTrainSkin(cars) — cars = TRAIN.cars (zones.jsx Train: [engine, coach1, coach2, coach3] groups). Hides the old coach
  * meshes and adds the new ones as children (they follow the cars for free). -> { restore(), tris, calls }
  */
-export function applyTrainSkin(cars, { touch = false } = {}) {
-  const coach = buildCoachGeometry({ touch }), open = buildOpenCarGeometry({ touch }), M = carMaterials(), added = [], hidden = []
+export function applyTrainSkin(cars, M, { touch = false } = {}) {
+  const coach = buildCoachGeometry({ touch }), open = buildOpenCarGeometry({ touch }), added = [], hidden = []
   let t = 0, calls = 0
   for (let k = 1; k < cars.length; k++) { const g = cars[k]; if (!g) continue
     for (const c of g.children) if (c.visible && !c.userData.artC) { c.visible = false; hidden.push(c) }

@@ -5,7 +5,6 @@
 import * as THREE from 'three'
 import { kit, tris } from './kit.js'
 import { R, TRAIN_LAT, dir, height } from '../../world.js'
-import { toon, glow, paint, INK } from '../../common.jsx'
 
 export const STATION_NAMES = { village: 'Lakeside', forest: 'Forest Edge' }
 const C = { plank: '#c0915f', plank2: '#a8784c', stone: '#b9b2a2', edge: '#f2e4bc', post: '#6e4a33', roof: '#3f6f6a', roofEdge: '#efe2c4', panel: '#efe2c4', bench: '#8a5a3c', iron: '#3b3633', lamp: '#4a3f37', green: '#6f9e4f', bloom: '#e8737a' }
@@ -59,7 +58,7 @@ export function boardsTexture() {
   ATLAS_ROWS.forEach((id, r) => {
     const y0 = r * 256, other = ATLAS_ROWS.find(o => o !== id)
     // sign (0..635): cream board, double ink border, name + arrow to the other stop
-    x.fillStyle = '#f3e6c6'; x.fillRect(0, y0, 635, 256); x.strokeStyle = INK; x.lineWidth = 14; x.strokeRect(10, y0 + 10, 615, 236); x.lineWidth = 4; x.strokeRect(30, y0 + 30, 575, 196)
+    x.fillStyle = '#f3e6c6'; x.fillRect(0, y0, 635, 256); x.strokeStyle = '#4a3a35'; x.lineWidth = 14; x.strokeRect(10, y0 + 10, 615, 236); x.lineWidth = 4; x.strokeRect(30, y0 + 30, 575, 196)
     x.fillStyle = '#3b2f22'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = font(serif, 104); x.fillText(STATION_NAMES[id], 318, y0 + 112)
     x.font = font(round, 40); x.fillStyle = '#6a4f3a'; x.fillText((r === 0 ? '' : '\u2190 ') + STATION_NAMES[other] + (r === 0 ? ' \u2192' : ''), 318, y0 + 190)
     // timetable (635..1024): paper sheet pinned on a dark board, little train doodle, fare line
@@ -75,12 +74,6 @@ export function boardsTexture() {
   })
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; ATLAS = t; return t
 }
-let MATS = null
-export function stationMaterials() {
-  if (MATS) return MATS
-  MATS = { body: paint(toon('#ffffff', { vertexColors: true }), 0.12, true, 8), hull: new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide }), glow: glow('#ffcf86'), boards: toon('#ffffff', { map: boardsTexture() }) }
-  return MATS
-}
 // placement: platform frame at platformN(id) (Codor, systems/liveC.js); -z points at the rails
 const _x = new THREE.Vector3(), _z = new THREE.Vector3(), _m = new THREE.Matrix4()
 export function platformFrame(n, lon) {
@@ -90,8 +83,8 @@ export function platformFrame(n, lon) {
   return { pos, q }
 }
 /** -> THREE.Group with both stations (each its own meshes so the far one is frustum-culled). stops = TRAIN_STOPS */
-export function createStations(stops, platformN, { touch = false } = {}) {
-  const geo = buildStationGeometry({ touch }), M = stationMaterials(), root = new THREE.Group(); root.name = 'stations'
+export function createStations(stops, platformN, M, { touch = false } = {}) {
+  const geo = buildStationGeometry({ touch }), root = new THREE.Group(); root.name = 'stations'
   for (const s of stops) {
     const g = new THREE.Group(); g.name = 'station:' + s.id; const f = platformFrame(platformN(s.id), s.lon); g.position.copy(f.pos); g.quaternion.copy(f.q)
     g.add(new THREE.Mesh(geo.body, M.body), new THREE.Mesh(geo.hull, M.hull), new THREE.Mesh(geo.glow, M.glow), new THREE.Mesh(buildBoardsGeometry(s.id), M.boards))
