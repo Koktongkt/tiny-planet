@@ -15,7 +15,7 @@ void main(){
   float ang = atan(u.y, u.x), r = length(u * vec2(1., 1.18));
   float wob = .08 * sin(ang * 3. + sd) + .05 * sin(ang * 5. - sd * 1.7) + .03 * sin(ang * 9. + sd * 2.3);
   float size = mix(.25, 1., smoothstep(.05, .85, uWet));
-  float edge = .82 * size + wob * size;
+  float edge = .74 * size + wob * size;
   float inside = (1. - smoothstep(edge - .03, edge, r));
   float rim = (1. - smoothstep(edge, edge + .12, r)) * (1. - inside); // soaked ground ring
   if (inside + rim < .01) discard;
