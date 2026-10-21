@@ -39,3 +39,18 @@ export function kit({ ink = 0.006, inkOn = true } = {}) {
   return K
 }
 export const tris = (g) => (g ? (g.index ? g.index.count : g.attributes.position.count) / 3 : 0)
+/**
+ * combine(built, {inkColor, uv, extra}) -> ONE geometry = toon body + ink hull (winding flipped, so a normal FrontSide
+ * material shows only its inner faces = the outline, same trick as BackSide) + extra parts (e.g. textured boards).
+ * One draw call instead of two/three. uv = [u,v] given to every non-extra vertex (a white texel when the material has a map).
+ */
+export function combine({ body, hull }, { inkColor = '#2e2420', uv = null, extra = [] } = {}) {
+  const parts = []
+  const withUV = (g) => { if (uv && !g.attributes.uv) { const n = g.attributes.position.count, a = new Float32Array(n * 2); for (let i = 0; i < n; i++) { a[i * 2] = uv[0]; a[i * 2 + 1] = uv[1] } g.setAttribute('uv', new THREE.BufferAttribute(a, 2)) } return g }
+  if (body) parts.push(withUV(body.clone()))
+  if (hull) { const h = hull.clone(); paint(h, inkColor); for (const k of Object.keys(h.attributes)) { const a = h.attributes[k], s = a.itemSize, arr = a.array; for (let t = 0; t < a.count; t += 3) for (let j = 0; j < s; j++) { const i1 = (t + 1) * s + j, i2 = (t + 2) * s + j, x = arr[i1]; arr[i1] = arr[i2]; arr[i2] = x } }
+    const nr = h.attributes.normal.array; for (let i = 0; i < nr.length; i++) nr[i] = -nr[i] // face inward: lit like the far side, stays dark
+    parts.push(withUV(h)) }
+  for (const e of extra) { const g = e.clone(); if (!g.attributes.color) paint(g, '#ffffff'); parts.push(uv ? g : (g.deleteAttribute('uv'), g)) }
+  const m = mergeGeometries(parts); m.computeBoundingSphere(); m.computeBoundingBox(); return m
+}

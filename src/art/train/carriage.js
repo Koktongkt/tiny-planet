@@ -1,10 +1,10 @@
 // Stage C carriages (art-c): replaces the plain box coaches with a cozy two-tone carriage (maroon + cream, brass belt,
 // curved roof, windows that glow warm at night through the game's night pass) and an open-sided observation car at the
 // back with a forward-facing bench — her seat for the ride (she is too tall to sit inside a toy-scale coach).
-// Per car: 3 draw calls (toon body, ink hull, glow windows/lanterns) instead of ~13 + Outlines today.
+// Per car: 2 draw calls (toon body with its ink hull merged in, glow windows/lanterns) instead of 13 today.
 // Car local frame (zones.jsx Train): x = side, y = up (planet normal), z = forward (direction of travel).
 import * as THREE from 'three'
-import { kit, tris } from './kit.js'
+import { kit, tris, combine } from './kit.js'
 const C = { maroon: '#a2423a', cream: '#f3e4c4', brass: '#d9a54a', roof: '#5d4a3f', under: '#3b3633', wheel: '#33302e', deck: '#a9774c', bench: '#8a5a3c', rail: '#f3e4c4', post: '#6e4a33' }
 const wheels = (K, seg) => { for (const z of [-0.12, 0.12]) for (const s of [-1, 1]) K.cyl(0.03, 0.014, [s * 0.075, 0.035, z], C.wheel, { rot: [0, 0, Math.PI / 2], seg, hull: false }) }
 export function buildCoachGeometry({ touch = false } = {}) {
@@ -44,12 +44,12 @@ export const RIDE_SEAT = { car: 3, lift: 0.075, z: -0.012 }
  * meshes and adds the new ones as children (they follow the cars for free). -> { restore(), tris, calls }
  */
 export function applyTrainSkin(cars, M, { touch = false } = {}) {
-  const coach = buildCoachGeometry({ touch }), open = buildOpenCarGeometry({ touch }), added = [], hidden = []
+  const cg = buildCoachGeometry({ touch }), og = buildOpenCarGeometry({ touch }), coach = { one: combine(cg), glow: cg.glow }, open = { one: combine(og), glow: og.glow }, added = [], hidden = []
   let t = 0, calls = 0
   for (let k = 1; k < cars.length; k++) { const g = cars[k]; if (!g) continue
     for (const c of g.children) if (c.visible && !c.userData.artC) { c.visible = false; hidden.push(c) }
     const geo = k === RIDE_SEAT.car ? open : coach
-    for (const [gg, m] of [[geo.body, M.body], [geo.hull, M.hull], [geo.glow, M.glow]]) if (gg) { const me = new THREE.Mesh(gg, m); me.userData.artC = true; g.add(me); added.push(me); t += tris(gg); calls++ } }
+    for (const [gg, m] of [[geo.one, M.body], [geo.glow, M.glow]]) if (gg) { const me = new THREE.Mesh(gg, m); me.userData.artC = true; g.add(me); added.push(me); t += tris(gg); calls++ } }
   let oldCalls = 0, oldTris = 0 // what the hidden coaches cost (each visible mesh = 1 call; tris from its geometry)
   for (const h of hidden) h.traverse(o => { if ((o.isMesh || o.isLine) && (o === h || o.visible !== false) && o.geometry) { oldCalls++; oldTris += tris(o.geometry) * (o.count || 1) } })
   return { tris: t, calls, oldCalls, oldTris, restore() { for (const m of added) m.removeFromParent(); for (const c of hidden) c.visible = true } }

@@ -15,6 +15,11 @@ const { TRAIN_STOPS } = await import('../../src/world/village.js')
 const T = (g) => tris(g)
 const platformN = (id) => dir(TRAIN_LAT + 0.3 / R, TRAIN_STOPS.find(s => s.id === id).lon)
 
+test('combine folds body + flipped ink hull + extras into one geometry', async () => {
+  const { combine } = await import('../../src/art/train/kit.js')
+  const K = kit(); K.box(1, 1, 1, [0, 0, 0], '#ff0000'); const g = K.build(), one = combine(g, { uv: [0.5, 0.05], extra: [buildBoardsGeometry('village')] })
+  assert.equal(T(one), T(g.body) + T(g.hull) + 8); assert.ok(one.attributes.uv && one.attributes.color)
+})
 test('kit merges parts into body / hull / glow with vertex colours (hull has none)', () => {
   const K = kit(); K.box(1, 1, 1, [0, 0, 0], '#ff0000'); K.box(1, 1, 1, [2, 0, 0], '#ffcc88', { glow: true }); K.cyl(0.5, 1, [0, 2, 0], '#00ff00', { seg: 6 })
   const g = K.build()
@@ -26,18 +31,19 @@ test('station: few draw calls, small tris, every stop on its platform facing the
   for (const s of TRAIN_STOPS) { assert.ok(STATION_NAMES[s.id]); assert.equal(T(buildBoardsGeometry(s.id)), 8) }
   const n = platformN('village'), f = platformFrame(n, 0.75), back = new THREE.Vector3(0, 0, -1).applyQuaternion(f.q), rail = dir(TRAIN_LAT, 0.75).multiplyScalar(R).sub(f.pos).normalize()
   assert.ok(back.dot(rail) > 0.9, 'local -z points at the rails'); assert.ok(new THREE.Vector3(0, 1, 0).applyQuaternion(f.q).dot(n.clone().normalize()) > 0.999)
-  const M = { body: new THREE.MeshBasicMaterial(), hull: new THREE.MeshBasicMaterial(), glow: new THREE.MeshBasicMaterial(), boards: new THREE.MeshBasicMaterial() }
+  const M = { body: new THREE.MeshBasicMaterial(), glow: new THREE.MeshBasicMaterial() }
   const root = createStations(TRAIN_STOPS, platformN, M); assert.equal(root.children.length, TRAIN_STOPS.length)
-  for (const st of root.children) assert.equal(st.children.length, 4, '4 draw calls per station')
+  for (const st of root.children) assert.equal(st.children.length, 2, '2 draw calls per station (body+ink+boards, glow)')
+  assert.ok(root.userData.tris <= 600, `station ${root.userData.tris}`)
 })
 test('carriage skin: 3 calls per car, open car last with the ride seat, restore puts the old coaches back', () => {
   for (const touch of [false, true]) for (const g of [buildCoachGeometry({ touch }), buildOpenCarGeometry({ touch })]) { const t = T(g.body) + T(g.hull) + T(g.glow); assert.ok(t <= 420, `car ${t}`); assert.ok(T(g.glow) > 0, 'glow windows / lanterns') }
   assert.equal(RIDE_SEAT.car, 3); assert.ok(RIDE_SEAT.lift > 0.05 && RIDE_SEAT.lift < 0.12)
   const cars = [0, 1, 2, 3].map(() => { const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial())); return g })
-  const M = { body: new THREE.MeshBasicMaterial(), hull: new THREE.MeshBasicMaterial(), glow: new THREE.MeshBasicMaterial() }
+  const M = { body: new THREE.MeshBasicMaterial(), glow: new THREE.MeshBasicMaterial() }
   const sk = applyTrainSkin(cars, M)
-  assert.equal(sk.calls, 9); assert.equal(sk.oldCalls, 3); assert.ok(cars[0].children[0].visible, 'engine untouched')
-  for (const k of [1, 2, 3]) { assert.equal(cars[k].children[0].visible, false); assert.equal(cars[k].children.length, 4) }
+  assert.equal(sk.calls, 6); assert.equal(sk.oldCalls, 3); assert.ok(cars[0].children[0].visible, 'engine untouched')
+  for (const k of [1, 2, 3]) { assert.equal(cars[k].children[0].visible, false); assert.equal(cars[k].children.length, 3) }
   sk.restore(); for (const k of [1, 2, 3]) { assert.equal(cars[k].children.length, 1); assert.ok(cars[k].children[0].visible) }
 })
 test('ride_sit is registered in POSES and drives a seated, swaying pose', () => {

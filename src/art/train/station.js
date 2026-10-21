@@ -1,9 +1,10 @@
 // Stage C stations (art-c): a small wooden platform per stop with a shelter roof, bench, lamp (lit by the game's existing
 // night pass: common.jsx glow() materials brighten at dusk/night), a station sign and a timetable board.
-// Per station = 4 draw calls (toon body, ink hull, lamp glow, sign+timetable) and ~500 tris; geometry is shared.
+// Per station = 2 draw calls: ONE mesh for the toon body + its ink hull + the sign/timetable boards (atlas, white strip
+// under the vertex colours), and the lamp glow. ~540 tris; body geometry shared, boards uv per station.
 // Local frame: x = along the track (east), y = up, z = away from the rails (rails at z ≈ -0.30, the platformN offset).
 import * as THREE from 'three'
-import { kit, tris } from './kit.js'
+import { kit, tris, combine } from './kit.js'
 import { R, TRAIN_LAT, dir, height } from '../../world.js'
 
 export const STATION_NAMES = { village: 'Lakeside', forest: 'Forest Edge' }
@@ -37,8 +38,9 @@ export function buildStationGeometry({ touch = false } = {}) {
 }
 // sign + timetable boards: double-sided quads into one geometry, uv into a 2×2 atlas (row = station)
 export const ATLAS_ROWS = ['village', 'forest']
+export const ATLAS_WHITE = [0.5, 32 / 576] // centre of the white strip
 export function buildBoardsGeometry(id) {
-  const row = Math.max(0, ATLAS_ROWS.indexOf(id)), v0 = row === 0 ? 0.5 : 0, v1 = v0 + 0.5, pos = [], uv = [], nrm = []
+  const row = Math.max(0, ATLAS_ROWS.indexOf(id)), v1 = 1 - row * 256 / 576, v0 = v1 - 256 / 576, pos = [], uv = [], nrm = []
   const quad = (cx, cy, cz, w, h, u0, u1, face) => { // face: +1 = faces -z (track side), -1 = faces +z
     const x0 = cx - w / 2 * face, x1 = cx + w / 2 * face, y0 = cy - h / 2, y1 = cy + h / 2, z = cz - 0.0015 * face
     pos.push(x0, y0, z, x1, y0, z, x1, y1, z, x0, y0, z, x1, y1, z, x0, y1, z); uv.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1)
@@ -52,9 +54,10 @@ let ATLAS = null
 /** hand-lettered sign + timetable atlas (canvas, built once on first mount) */
 export function boardsTexture() {
   if (ATLAS || typeof document === 'undefined') return ATLAS
-  const W = 1024, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d')
+  const W = 1024, H = 576, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d')
   const serif = 'italic 600 {s}px TPSerif, "Cormorant Garamond", Georgia, serif', round = '600 {s}px Fredoka, "Trebuchet MS", sans-serif'
   const font = (f, s) => f.replace('{s}', s)
+  x.fillStyle = '#ffffff'; x.fillRect(0, 512, W, 64) // white strip: the uv of every vertex-coloured part (see combine())
   ATLAS_ROWS.forEach((id, r) => {
     const y0 = r * 256, other = ATLAS_ROWS.find(o => o !== id)
     // sign (0..635): cream board, double ink border, name + arrow to the other stop
@@ -85,11 +88,13 @@ export function platformFrame(n, lon) {
 /** -> THREE.Group with both stations (each its own meshes so the far one is frustum-culled). stops = TRAIN_STOPS */
 export function createStations(stops, platformN, M, { touch = false } = {}) {
   const geo = buildStationGeometry({ touch }), root = new THREE.Group(); root.name = 'stations'
+  let t = 0
   for (const s of stops) {
     const g = new THREE.Group(); g.name = 'station:' + s.id; const f = platformFrame(platformN(s.id), s.lon); g.position.copy(f.pos); g.quaternion.copy(f.q)
-    g.add(new THREE.Mesh(geo.body, M.body), new THREE.Mesh(geo.hull, M.hull), new THREE.Mesh(geo.glow, M.glow), new THREE.Mesh(buildBoardsGeometry(s.id), M.boards))
+    const one = combine(geo, { uv: ATLAS_WHITE, extra: [buildBoardsGeometry(s.id)] }); one.userData.own = true
+    g.add(new THREE.Mesh(one, M.body), new THREE.Mesh(geo.glow, M.glow)); t = tris(one) + tris(geo.glow)
     root.add(g)
   }
-  root.userData.tris = tris(geo.body) + tris(geo.hull) + tris(geo.glow) + 8
+  root.userData.tris = t
   return root
 }
