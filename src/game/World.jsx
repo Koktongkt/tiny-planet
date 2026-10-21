@@ -281,7 +281,7 @@ export function GameWorld() {
     let best = null, bd = 1e9
     const H = GAME.H, inside = !!(H && H.inside)
     const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
-    forageTick()
+    forageTick(); let forageShown = 0
     for (const sp of L.spots) {
       const g = refs.current[sp.id]; if (!g) continue
       const live = available(sp.id) && (!sp.night || night) && (sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0))
@@ -295,7 +295,8 @@ export function GameWorld() {
         g.scale.setScalar((1 + 0.35 * Math.sin(Math.min(1, k / 0.35) * Math.PI)) * Math.max(0.05, 1 - Math.max(0, (k - 0.5) / 0.5)))
         g.rotation.y = k * 8; g.visible = true; continue
       }
-      g.visible = live && dc < (sp.item === 'glowmoss' && G.s.tools.lantern ? 14 : sp.forage !== undefined ? 7 : 10) // forage props are small: a shorter draw range
+      g.visible = live && dc < (sp.item === 'glowmoss' && G.s.tools.lantern ? 14 : sp.forage !== undefined ? 4 : 10) // forage props are small (and not instanced yet: ~14 calls each):
+      if (g.visible && sp.forage !== undefined && ++forageShown > 2) g.visible = false //   a short draw range and at most 2 on screen
       if (g.visible) {
         g.position.copy(sp.pos); g.scale.setScalar(1)
         if (sp.item === 'firefly') g.position.addScaledVector(sp.n, Math.sin(performance.now() / 600 + sp.spin) * 0.05)
