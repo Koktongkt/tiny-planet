@@ -8,6 +8,8 @@ export const INK = '#4a3a35'
 // T.h: monotonic in-game hours (advances 24 h per day length even when ?t= pins the lighting) for game-time cooldowns
 export const T = { phase: 0.3, night: 0, dusk: 0, day: 1, sun: new THREE.Vector3(), h: 0 }
 if (typeof window !== 'undefined') window.__T = T
+// Stage C (lazy systems/liveC.js) hooks: f(camera, planet, dt) -> true takes the camera (photo mode); pin(obj, dt) after her pose (train ride)
+export const CAMX = { f: null, pin: null }
 export const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 export const C = (h) => new THREE.Color(h)
 // cached read-only colours for per-frame lerp targets (C() allocates; these must never be mutated)

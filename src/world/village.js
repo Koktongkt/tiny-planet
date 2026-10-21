@@ -17,6 +17,10 @@ export const SPOTS = { shrine: dir(0.12, -1.05), bus: dir(0.52, 1.2), cat: bl(B0
 // round6: the wider river reaches a couple of the old spots near the first bridge; walk them back onto dry bank
 for (const k of ['cat', 'laundryA', 'laundryB', 'view1', 'view2']) { let g = 0; while (g++ < 40 && (waterAt(SPOTS[k], -0.12) || onBridge(SPOTS[k]))) SPOTS[k].addScaledVector(B0.tan, -0.05 / R).normalize() }
 window.__spots = { SPOTS, B0 }
+// Stage C train stops on the TRAIN_LAT ring (lon in rad): 'village' by the lake path, 'forest' at the lake/forest edge by the ruins.
+// TRAIN.fn(t) -> lon (set by the lazy schedule, systems/train.js); TRAIN.cars = the engine + carriage groups (zones.jsx Train)
+export const TRAIN_STOPS = [{ id: 'village', lon: 0.75 }, { id: 'forest', lon: 3.7 }]
+export const TRAIN = { fn: null, cars: null }
 export const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c)]
 // Stage B garden beds beside Home (HOUSES[0]): 2 x 3 beds left of the Home sign, 0.36 apart, in the house frame
 // (+x right, +z out of the door). Shared by the lazy garden (systems/World3D.jsx) and the lawn, which keeps tufts out

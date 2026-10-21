@@ -6,6 +6,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
+import { TRAIN } from './world/village.js'
 
 const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
 const angTo = (n, k) => zoneAng(n, ZONES[k])
@@ -186,7 +187,7 @@ function Train() {
   const cars = useRef([]), puffs = useRef()
   const o = useMemo(() => new THREE.Object3D(), [])
   useFrame(() => {
-    const t = wind.time.value, lon0 = trainAt != null ? +trainAt : t * TRAIN_SPEED
+    const t = wind.time.value, lon0 = trainAt != null ? +trainAt : TRAIN.fn ? TRAIN.fn(t) : t * TRAIN_SPEED; TRAIN.cars = cars.current
     cars.current.forEach((g, k) => { if (!g) return; const lon = lon0 - k * 0.44 / (R * Math.cos(TRAIN_LAT)); const p = ringPos(lon), p2 = ringPos(lon + 0.01); const n = _tn.copy(p).normalize(), f = p2.sub(p).normalize(); g.position.copy(p); g.quaternion.setFromRotationMatrix(_tm.makeBasis(_ts.crossVectors(n, f), n, f)); g.position.addScaledVector(n, Math.abs(Math.sin(t * 12 + k)) * 0.004) })
     const eng = cars.current[0]; if (eng) { const up = _tu.copy(eng.position).normalize(); for (let k = 0; k < 8; k++) { const u = (t * 0.6 + k / 8) % 1; o.position.set(0, 0.26 + u * 0.5, 0.12 - u * 0.5).applyQuaternion(eng.quaternion).add(eng.position); o.scale.setScalar((0.03 + u * 0.09) * Math.min(1, u * 6) * (1 - u) ** 0.5); o.updateMatrix(); puffs.current.setMatrixAt(k, o.matrix) } puffs.current.instanceMatrix.needsUpdate = true }
   })

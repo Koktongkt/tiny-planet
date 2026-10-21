@@ -286,6 +286,7 @@ const WEATHER = {
   breezy: ['Hold on to your hat — breezy one today.', 'The wind\'s got the windmills going.'],
   cloudy: ['Clouds are piling up like rice bales.', 'Grey sky, soft light. I don\'t mind it.'],
   drizzle: ['Bit of drizzle about. Good for the paddies.', 'Light rain — the frogs are thrilled.'],
+  rain: ['Proper rain today — the fish love it.', 'Listen to it on the roofs. Puddle weather!'],
 }
 const MOODY = { gruff: 'Hmph. ', wry: 'Heh. ', shy: 'Um… ', bustling: 'Oh! ', cheeky: 'Hey! ', 'wide-eyed': '', energetic: 'Whoa! ' }
 function activityLine(a, p) {

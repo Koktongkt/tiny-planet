@@ -5,7 +5,7 @@ export const STEPS = [
   { id: 'look', icon: 'sun', text: 'Drag to look around, scroll to zoom', textTouch: 'Drag to look, pinch to zoom' },
   { id: 'gather', icon: 'hand', text: 'Press E near things that shimmer', textTouch: 'Tap ✋ near things that shimmer' },
   { id: 'craft', icon: 'book', text: 'Craft something at the bench by Home' },
-  { id: 'talk', icon: 'chat', text: 'Say hello to a villager' },
+  { id: 'talk', icon: 'flower', text: 'Say hello to a villager' },
   { id: 'garden', icon: 'seedpack', text: 'Plant a seed in the garden beds' },
   { id: 'sleep', icon: 'moon', text: 'Sleep in your bed to start a new day' },
 ]

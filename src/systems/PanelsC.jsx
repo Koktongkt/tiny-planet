@@ -1,0 +1,68 @@
+// Stage C DOM side (lazy chunk): journal (fish / relics / forage / photos), ruins museum donations, photo-mode bar, train
+// ride chip and the first-day tutorial note. These are Codor's plain fallbacks on the existing paper styles; Studio's
+// Journal / DonateCard / PhotoMode / RideOverlay / TutorialNote replace them by props when art-c lands.
+import React, { useEffect, useState } from 'react'
+import { G, emit } from '../game/store.js'
+import { ITEMS } from '../game/items.js'
+import { Icon } from '../game/icons.jsx'
+import { FISH_LABELS } from '../game/itemsC.js'
+import { TOUCH } from '../touch.jsx'
+import { SC, RIDE, PH, STOP_NAME } from './liveC.js'
+import './panelsC.css'
+const close = () => { G.ui.panel = null; emit() }
+const label = (e) => e.kind === 'fish' ? FISH_LABELS[e.id]?.name : ITEMS[e.id]?.name
+function Book({ title, icon, children }) {
+  return <div className="tp-veil" onPointerDown={e => { if (e.target === e.currentTarget) close() }}><div className="tp-panel paper wide tpc-book">
+    <div className="tp-head"><Icon id={icon} size={44} /><h3>{title}</h3><button className="tp-x" onClick={close} aria-label="close"><Icon id="close" size={32} wash={false} /></button></div>
+    <div className="tp-scroll">{children}</div></div></div>
+}
+const TABS = [['fish', 'Fish'], ['relics', 'Relics'], ['forage', 'Forage'], ['photos', 'Photos']]
+function Journal() {
+  const [tab, setTab] = useState('fish'), list = SC.journal(tab), pr = SC.C.progress(G.s)
+  return <Book title="Journal" icon="book">
+    <div className="tpc-tabs">{TABS.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}<span>{pr.fish}/{pr.fishOf} fish · {pr.donated}/{pr.donatedOf} in the museum</span></div>
+    {tab === 'photos' ? (list.length ? <div className="tpc-photos">{list.map(p => <figure key={p.id}><img src={p.src} alt={'Photo from day ' + (p.day + 1)} /><figcaption>Day {p.day + 1}</figcaption></figure>)}</div> : <p className="tp-empty">No photos yet — press <span className="key">P</span> or the Photo button.</p>)
+      : <div className="tpc-grid">{list.map(e => <div key={e.id} className={'tpc-entry' + (e.seen ? '' : ' unseen')}><Icon id={e.seen ? (ITEMS[e.id] ? e.id : 'fish') : 'unknown'} size={44} dim={!e.seen} />
+        <b>{e.seen ? label(e) || e.id : '???'}</b><small>{e.seen ? [e.count && `×${e.count}`, e.best && `best ${e.best} cm`, e.donated && 'in museum'].filter(Boolean).join(' · ') : 'not found yet'}</small></div>)}</div>}
+  </Book>
+}
+function Museum() {
+  const can = SC.donatable(), don = Object.keys(G.s.museum.donated)
+  return <Book title="Ruins Museum" icon="book">
+    <p className="tp-sub">Professor Hoshino looks up from his notebook. “Anything for the collection today?”</p>
+    <h4>From your bag</h4>{can.length ? <div className="tp-grid">{can.map(id => <button key={id} className="tp-slot act" onClick={() => SC.donate(id)}><Icon id={id} size={52} /><span className="nm">{ITEMS[id]?.name || id}</span><span className="tag">donate</span></button>)}</div> : <p className="tp-empty">Nothing new to donate. Dig at the old stones, gather shards, or catch something rare.</p>}
+    <h4>On display ({don.length}/{SC.C.DONATABLE.length})</h4><div className="tp-grid">{SC.C.DONATABLE.map(id => <div key={id} className={'tp-slot' + (don.includes(id) ? '' : ' ghost')}><Icon id={don.includes(id) ? id : 'unknown'} size={52} dim={!don.includes(id)} /><span className="nm">{don.includes(id) ? ITEMS[id]?.name || id : '—'}</span></div>)}</div>
+  </Book>
+}
+function PhotoBar() {
+  const [flash, setFlash] = useState(0)
+  useEffect(() => { window.__scFlash = () => setFlash(performance.now()); return () => { window.__scFlash = null } }, [])
+  useEffect(() => { document.documentElement.style.setProperty('--tpc-filter', SC.FILTER_CSS[PH.filter] || 'none') })
+  if (!PH.on) return null
+  const ids = Object.keys(SC.FILTER_CSS)
+  return <div className="tpc-photo">{flash > 0 && <div className="tpc-flash" key={flash} />}
+    <div className="tpc-pbar paper">
+      <div className="tpc-filters">{ids.map(id => <button key={id} className={PH.filter === id ? 'on' : ''} onClick={() => { PH.filter = id; emit() }}>{id}</button>)}</div>
+      <button className="tpc-shutter" onClick={() => SC.shutter()} aria-label="Take photo"><i /></button>
+      <button className="tpc-close" onClick={() => SC.photo(false)}>Done <span className="key">Esc</span></button>
+      <small>{TOUCH ? 'Drag to orbit · pinch to zoom' : 'Drag / A D to orbit · W S tilt · Q E or wheel zoom · R F height · Space to shoot'}</small>
+    </div></div>
+}
+function Ride() {
+  const [, f] = useState(0)
+  useEffect(() => { if (!RIDE.riding) return; const i = setInterval(() => f(x => x + 1), 500); return () => clearInterval(i) }, [RIDE.riding])
+  if (!RIDE.riding) return null
+  return <div className="tpc-ride paper"><Icon id="coin" size={30} /><span>{STOP_NAME[RIDE.from]} → <b>{STOP_NAME[RIDE.to]}</b></span><i><b style={{ width: Math.round(RIDE.progress * 100) + '%' }} /></i></div>
+}
+function Tutorial() {
+  if (!SC.tutorialVisible() || G.ui.panel || PH.on) return null
+  const st = SC.tutorialSteps()
+  return <div className="tpc-tut paper" role="note"><b>Welcome to the planet!</b>
+    <ul>{st.map(s => <li key={s.id} className={s.done ? 'done' : ''}>{TOUCH && s.textTouch ? s.textTouch : s.text}</li>)}</ul>
+    <button onClick={() => SC.tutorial(false)}>Got it</button><small>— Grandma Fuku</small></div>
+}
+export function StageCPanels() {
+  const p = G.ui.panel
+  return <>{p === 'journal' && <Journal />}{p === 'museum' && <Museum />}<PhotoBar /><Ride /><Tutorial /></>
+}
+export default StageCPanels
