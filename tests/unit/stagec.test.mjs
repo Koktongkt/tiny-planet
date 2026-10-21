@@ -58,23 +58,28 @@ test('applyTo fills the __T hooks from the clock phase without allocating new ar
   const p = dayPos(-Math.PI / 2 + 3 * TAU + TAU / 4); assert.equal(p.day, 3); assert.ok(Math.abs(p.u - 0.25) < 1e-9)
 })
 // ---- fish ----
-test('fish table: 12 species, 3 habitats, sane sizes, rare items listed', () => {
+test('fish table: Studio draft, 12 species, 3 habitats, sane sizes, rare items listed', () => {
   assert.equal(FISH_IDS.length, 12)
-  for (const id of FISH_IDS) { const f = FISH[id]; assert.ok(['lake', 'river', 'harbour'].includes(f.habitat)); assert.ok(f.size[0] < f.size[1]); assert.ok(f.w > 0) }
-  assert.deepEqual(RARE_ITEMS, ['koi', 'lake_lord', 'pufferfish']); assert.equal(habitatOf('harbour'), 'harbour'); assert.equal(habitatOf('lake'), 'lake')
+  for (const id of FISH_IDS) { const f = FISH[id]; assert.ok(f.spots.every(h => ['lake', 'river', 'harbour'].includes(h))); assert.ok(f.size[0] < f.size[1]); assert.ok(f.w > 0) }
+  assert.deepEqual(RARE_ITEMS, ['koi', 'sea_bream', 'lake_lord']); assert.equal(habitatOf('harbour'), 'harbour'); assert.equal(habitatOf('lake'), 'lake')
+})
+test('balance: every habitat has a common fish at every season, time and weather', () => {
+  for (const h of ['lake', 'river', 'harbour']) for (const season of ['spring', 'summer', 'autumn', 'winter']) for (const period of ['morning', 'day', 'evening', 'night']) for (const kind of ['clear', 'rain']) {
+    const c = candidates(h, { season, period, kind }); assert.ok(c.some(([id]) => FISH[id].rarity === 'common'), `${h} ${season} ${period} ${kind}`) }
 })
 test('catch rolls respect habitat, season, time and weather', () => {
   const ctx = { season: 'winter', period: 'day', kind: 'clear' }
-  const c = candidates('lake', ctx).map(x => x[0]); assert.ok(c.includes('minnow')); assert.ok(!c.includes('koi') && !c.includes('crucian') && !c.includes('lake_lord') && !c.includes('catfish'))
-  assert.ok(candidates('lake', { season: 'summer', period: 'night', kind: 'rain' }).some(x => x[0] === 'lake_lord'))
-  assert.ok(!candidates('lake', { season: 'summer', period: 'night', kind: 'clear' }).some(x => x[0] === 'lake_lord'))
-  for (let i = 0; i < 200; i++) { const r = rollFish('harbour', { season: 'spring', period: 'morning', kind: 'clear' }); assert.equal(FISH[r.fishId].habitat, 'harbour'); assert.ok(r.size >= FISH[r.fishId].size[0] && r.size <= FISH[r.fishId].size[1]) }
+  const c = candidates('lake', ctx).map(x => x[0]); assert.ok(c.includes('minnow')); assert.ok(!c.includes('koi') && !c.includes('lake_lord') && !c.includes('catfish'))
+  assert.ok(candidates('lake', { season: 'autumn', period: 'night', kind: 'rain' }).some(x => x[0] === 'lake_lord'))
+  assert.ok(!candidates('lake', { season: 'autumn', period: 'night', kind: 'clear' }).some(x => x[0] === 'lake_lord'))
+  assert.ok(!candidates('lake', { season: 'spring', period: 'day', kind: 'rain' }).some(x => x[0] === 'koi'), 'koi is a clear-day fish')
+  for (let i = 0; i < 200; i++) { const r = rollFish('harbour', { season: 'spring', period: 'morning', kind: 'clear' }); assert.ok(FISH[r.fishId].spots.includes('harbour')); assert.ok(r.size >= FISH[r.fishId].size[0] && r.size <= FISH[r.fishId].size[1]) }
   assert.equal(rollFish('lake', ctx, seq([0, 0.5, 0.5])).fishId, 'minnow')
 })
 test('lucky raises rare odds; rain doubles rain fish', () => {
   const w = (ctx, id) => candidates('lake', ctx).find(x => x[0] === id)[1]
   assert.equal(w({ season: 'spring', period: 'day', kind: 'clear', lucky: true }, 'koi'), FISH.koi.w * 1.5)
-  assert.equal(w({ season: 'spring', period: 'night', kind: 'rain' }, 'lake_lord'), FISH.lake_lord.w * 2)
+  assert.equal(w({ season: 'winter', period: 'night', kind: 'rain' }, 'lake_lord'), FISH.lake_lord.w * 2)
 })
 test('catch log tracks count, best size and new/record flags', () => {
   const log = {}

@@ -95,3 +95,5 @@ export function Icon({ id, size = 44, wash = true, dim = false, style }) {
   </svg>
 }
 export const ICON_IDS = Object.keys(D)
+// Stage C (art-c): lazy chunks add their own icons (e.g. art/fish/icons.jsx). Register before the first render that uses them.
+export function registerIcons(map) { Object.assign(D, map) }

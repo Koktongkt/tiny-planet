@@ -16,7 +16,7 @@ test('hooks: save v4, __T season + weather, deterministic rain days, tutorial no
   const d = h.rainDays.findIndex(Boolean)
   const r = await page.evaluate((d) => { const [s] = window.__sc.W.rainWindow(d); window.__setPhase(-Math.PI / 2 + d * Math.PI * 2 + (s + 2) / 24 * Math.PI * 2); return new Promise(res => setTimeout(() => res({ kind: window.__T.kind, rain: window.__T.rain, wet: window.__T.wet }), 400)) }, d)
   expect(r.kind).toBe('rain'); expect(r.rain).toBe(1); expect(r.wet).toBeGreaterThan(0.9)
-  await expect(page.locator('.tpc-tut')).toBeVisible()
+  await expect(page.locator('.tpt')).toBeVisible()
   w.check()
 })
 
@@ -33,6 +33,8 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   await page.evaluate(() => { const s = window.__fishSt; s.prog = 0.97; s.bar = s.fx; s.bv = 0 })
   await page.waitForFunction(() => window.__fishSt.state === 'caught', null, { timeout: 60_000, polling: 100 }); await page.keyboard.up('e')
   await page.waitForFunction(() => (window.__game.G.s.inv.fish || 0) >= 1 && Object.keys(window.__game.G.s.fish).length === 1, null, { timeout: 30_000 })
+  // Studio's catch card, closed with Enter
+  await expect(page.locator('.tpf-card')).toBeVisible(); await page.keyboard.press('Enter'); await expect(page.locator('.tpf-card')).toBeHidden()
   const log = await page.evaluate(() => window.__game.G.s.fish)
   const [id] = Object.keys(log)
   expect(['minnow', 'crucian', 'catfish', 'koi', 'lake_lord']).toContain(id); expect(log[id].count).toBe(1); expect(log[id].best).toBeGreaterThan(0)
@@ -78,10 +80,11 @@ test('train: board at the village stop (free), ride, alight at the forest stop; 
 test('ruins: dig spots, museum donation (+ Hoshino), journal relics; tutorial dismiss + reopen', async ({ page }) => {
   test.setTimeout(300_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home&give=shard:1'); await scReady(page)
-  await expect(page.locator('.tpc-tut')).toBeVisible()
-  await page.locator('.tpc-tut button').click(); await expect(page.locator('.tpc-tut')).toBeHidden()
+  await expect(page.locator('.tpt')).toBeVisible()
+  await page.locator('.tpt-x').click(); await expect(page.locator('.tpt')).toBeHidden()
   expect(await page.evaluate(() => window.__game.G.s.tutorial.dismissed)).toBe(true)
-  await page.evaluate(() => window.__sc.tutorial(true)); await expect(page.locator('.tpc-tut')).toBeVisible(); await page.evaluate(() => window.__sc.tutorial(false))
+  // Settings -> "Read again" brings the note back
+  await page.locator('.tp-gearbtn').click(); await page.locator('.tps-note').click(); await expect(page.locator('.tpt')).toBeVisible(); await page.evaluate(() => window.__sc.tutorial(false))
   await stand(page, () => { const P = window.__player; P.n.copy(window.__scLayout.digs[0].n); P.target = null; window.__snap = 1 })
   await page.waitForFunction(() => window.__game.G.near?.id === 'dig0', null, { timeout: 60_000 })
   await page.keyboard.press('e')

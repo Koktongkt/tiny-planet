@@ -2,38 +2,37 @@
 // Inventory keeps ONE generic 'fish' item (all recipes unchanged); species live in G.s.fish[id] = { count, best, firstDay }.
 // RARE_ITEMS are also added as their own items (gifts / museum). Studio writes the names + blurbs (itemsC.js);
 // Codor balances w (weights), sizes and filters here.
-export const FISH = {
-  minnow: { rarity: 'common', size: [4, 9], habitat: 'lake', season: 'any', time: 'any', weather: 'any', w: 30 },
-  crucian: { rarity: 'common', size: [12, 25], habitat: 'lake', season: ['spring', 'summer', 'autumn'], time: 'any', weather: 'any', w: 24 },
-  catfish: { rarity: 'uncommon', size: [30, 70], habitat: 'lake', season: 'any', time: ['evening', 'night'], weather: 'any', w: 12 },
-  koi: { rarity: 'rare', size: [35, 60], habitat: 'lake', season: ['spring', 'summer'], time: ['morning', 'day'], weather: 'any', w: 5 },
-  lake_lord: { rarity: 'legend', size: [90, 140], habitat: 'lake', season: 'any', time: ['night'], weather: 'rain', w: 1.5 },
-  ayu: { rarity: 'common', size: [12, 22], habitat: 'river', season: ['summer', 'autumn'], time: 'any', weather: 'any', w: 26 },
-  char: { rarity: 'uncommon', size: [20, 40], habitat: 'river', season: ['autumn', 'winter', 'spring'], time: ['morning', 'evening'], weather: 'any', w: 14 },
-  loach: { rarity: 'common', size: [8, 16], habitat: 'river', season: 'any', time: 'any', weather: 'any', w: 22 },
-  mackerel: { rarity: 'common', size: [25, 40], habitat: 'harbour', season: 'any', time: 'any', weather: 'any', w: 30 },
-  flounder: { rarity: 'uncommon', size: [25, 50], habitat: 'harbour', season: 'any', time: 'any', weather: 'any', w: 14 },
-  sea_bream: { rarity: 'uncommon', size: [30, 55], habitat: 'harbour', season: ['spring', 'autumn'], time: ['morning', 'day'], weather: 'any', w: 10 },
-  pufferfish: { rarity: 'rare', size: [15, 35], habitat: 'harbour', season: ['summer', 'winter'], time: 'any', weather: 'rain', w: 4 },
+// The species table is Studio's draft (game/fishTable.js: spots, season, time, weather, rarity); Codor balances it here:
+// BAL overrides per species and the rarity weights W. Balance rules (unit-tested): every habitat always has a common
+// fish at every time of day in every season and weather, so a cast never comes up empty.
+import { FISH as DRAFT, RARE_FISH_ITEMS } from '../game/fishTable.js'
+export const W = { common: 10, uncommon: 4, rare: 1.2, legend: 0.3 }
+const BAL = {
+  mackerel: { time: 'any' }, // harbour had nothing at night
+  loach: { weather: 'any' }, // the river's all-weather common (was rain-only)
+  catfish: { weather: 'any', w: 3 }, // evenings + nights; rain still doubles it below via RAIN_BONUS
+  lake_lord: { w: 0.3 },
 }
+const RAIN_LOVERS = ['catfish', 'loach', 'lake_lord']
+export const FISH = Object.fromEntries(DRAFT.map(f => { const b = BAL[f.id] || {}; return [f.id, { rarity: f.rarity, size: f.size, spots: f.spots, habitat: f.spots[0], season: f.season, time: f.time, weather: f.weather, ...b, w: b.w ?? W[f.rarity] }] }))
 export const FISH_IDS = Object.keys(FISH)
-export const RARE_ITEMS = ['koi', 'lake_lord', 'pufferfish']
+export const RARE_ITEMS = RARE_FISH_ITEMS
 export const RARE = { common: 0, uncommon: 1, rare: 2, legend: 3 }
 // spot zone -> habitat (existing spots are 'lake' and 'harbour'; river spots may be added later)
 export const habitatOf = (zone) => zone === 'harbour' ? 'harbour' : zone === 'river' ? 'river' : 'lake'
 const fits = (v, x) => v === 'any' || v.includes(x)
 // ctx: { season, period, kind: 'clear'|'rain', lucky? }. Returns the weighted candidate list (for tests / journal hints)
 export function candidates(habitat, ctx) {
-  const out = []
-  for (const id of FISH_IDS) { const f = FISH[id]; if (f.habitat !== habitat || !fits(f.season, ctx.season) || !fits(f.time, ctx.period)) continue
-    if (f.weather === 'rain' && ctx.kind !== 'rain') continue
-    let w = f.w; if (ctx.kind === 'rain' && f.weather === 'rain') w *= 2; if (ctx.lucky && RARE[f.rarity] >= 2) w *= 1.5
+  const out = [], wet = ctx.kind === 'rain'
+  for (const id of FISH_IDS) { const f = FISH[id]; if (!f.spots.includes(habitat) || !fits(f.season, ctx.season) || !fits(f.time, ctx.period)) continue
+    if ((f.weather === 'rain' && !wet) || (f.weather === 'clear' && wet)) continue
+    let w = f.w; if (wet && (f.weather === 'rain' || RAIN_LOVERS.includes(id))) w *= 2; if (ctx.lucky && RARE[f.rarity] >= 2) w *= 1.5
     out.push([id, w]) }
   return out
 }
 // rng: () => [0,1). -> { fishId, size } (size in cm, 1 decimal, triangular toward the middle)
 export function rollFish(habitat, ctx, rng = Math.random) {
-  const c = candidates(habitat, ctx); if (!c.length) return { fishId: habitat === 'harbour' ? 'mackerel' : habitat === 'river' ? 'loach' : 'minnow', size: 10 }
+  const c = candidates(habitat, ctx); if (!c.length) return { fishId: habitat === 'harbour' ? 'mackerel' : 'minnow', size: 10 }
   let tot = 0; for (const [, w] of c) tot += w
   let r = rng() * tot, id = c[c.length - 1][0]; for (const [k, w] of c) { if ((r -= w) < 0) { id = k; break } }
   const [a, b] = FISH[id].size, t = (rng() + rng()) / 2

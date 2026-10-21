@@ -70,13 +70,14 @@ export function alight() {
 // ---------- fishing ----------
 export const ctxNow = () => ({ season: T.season || W.seasonOf(S().day), period: periodAt(rotA()), kind: T.kind || 'clear', lucky: SB.Bf.has(S().buffs, 'lucky', SB.now()) })
 // spot ids are `${item}-${zone}-${k}`
-export const rollFor = (spotId) => F.rollFish(F.habitatOf(String(spotId || '').split('-')[1]), ctxNow())
+export const rollFor = (spotId) => { const c = ctxNow(), where = F.habitatOf(String(spotId || '').split('-')[1]); return { ...F.rollFish(where, c), where, period: c.period, weather: c.kind } }
 export function onCatch(r) {
   const s = S(), res = F.recordCatch(s.fish, r.fishId, r.size, s.day)
   if (F.RARE_ITEMS.includes(r.fishId)) setTimeout(() => add(r.fishId, 1, true), 500)
   const tag = res.isNew ? ' — new to your journal!' : res.isRecord ? ' — a new record!' : ''
-  setTimeout(() => toast(`${fishName(r.fishId)}, ${r.size} cm${tag}`, F.RARE_ITEMS.includes(r.fishId) ? r.fishId : 'fish', 3600), 900)
-  window.__scCatch && window.__scCatch({ ...r, ...res }); emit(); return res
+  if (window.__scCatch) setTimeout(() => window.__scCatch && window.__scCatch({ ...r, ...res }), 700)
+  else setTimeout(() => toast(`${fishName(r.fishId)}, ${r.size} cm${tag}`, F.RARE_ITEMS.includes(r.fishId) ? r.fishId : 'fish', 3600), 900)
+  emit(); return res
 }
 
 // ---------- journal + museum + dig ----------
