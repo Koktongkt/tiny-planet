@@ -27,6 +27,7 @@ import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
+import { dayFromPhase } from './save/schema.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 
@@ -37,8 +38,9 @@ window.__rot = rot
 window.__setPhase = (p) => { rot.a = typeof p === 'string' ? PRESET[p] : p; rot.v = 0 }
 
 const spin = { a: -0.8 * rot.a + 0.25, v: 0 }
+// stage-a: the clock phase lives in the save, so the day (and regrowth, sleep) continues across reloads
+if (!fixed && Number.isFinite(G.s.clock?.a)) rot.a = G.s.clock.a
 const _v = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _s = new THREE.Vector3()
-const DAY0 = 0
 export const DAY_SEC = q.has('daylen') ? Math.max(10, +q.get('daylen') || 3600) : 3600
 function Clock() {
   const camera = useThree(s => s.camera)
@@ -47,7 +49,7 @@ function Clock() {
     wind.time.value += dt; T.h += dt * 24 / DAY_SEC
     if (!fixed) rot.a += dt * Math.PI * 2 / DAY_SEC // round6: one in-game day per real hour (?daylen=<sec> to override)
     const p = rot.a, e = Math.cos(p)
-    if (!fixed) newDay(Math.max(0, Math.floor((rot.a + Math.PI / 2) / (Math.PI * 2)) + DAY0))
+    if (!fixed) { G.s.clock.a = rot.a; newDay(dayFromPhase(rot.a)) }
     if (VIEW.mode === 'follow' && P.wUp.lengthSq() > 0) { // sun relative to the traveller's sky
       _s.setFromMatrixColumn(camera.matrixWorld, 0)
       T.sun.copy(P.wUp).multiplyScalar(e).addScaledVector(_s, Math.sin(p) * 0.9).addScaledVector(P.wFwd, -0.35).normalize()
