@@ -16,12 +16,13 @@ export function mountWeatherDev(scene, { gl, camera, drift = true, rain = true, 
   if (rain) { const r = createRain({ count: t ? 900 : 2000 }); scene.add(r.object); parts.push(r) }
   let pz = null
   if (puddles) { const sp = spots || puddleSpots({ near: VILLAGE, count: 18 }); pz = createPuddles(sp); pz.spots = sp; (planetRef.current || scene).add(pz.object); parts.push(pz) }
-  let last = performance.now(), live = true
+  let last = performance.now(), live = true, on = true
   const loop = () => { if (!live) return; const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now
-    tickWeather(camera, dt); const a = anchor ? anchor() : defaultAnchor(); for (const p of parts) p.update(a, camera, gl); requestAnimationFrame(loop) }
+    tickWeather(camera, dt); const a = anchor ? anchor() : defaultAnchor(); for (const p of parts) { if (on) p.update(a, camera, gl); else p.object.visible = false } requestAnimationFrame(loop) }
   requestAnimationFrame(loop)
   window.__wxSpots = pz ? pz.spots : []
-  return { puddles: pz ? pz.object.count : 0, dispose() { live = false; for (const p of parts) p.object.removeFromParent() } }
+  window.__wxParts = parts
+  return { puddles: pz ? pz.object.count : 0, enable(b) { on = !!b; if (!b) for (const p of parts) p.object.visible = false }, dispose() { live = false; for (const p of parts) p.object.removeFromParent() } }
 }
 
 const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
