@@ -93,7 +93,7 @@ export const S_FRAG_COLOR = {
   }\n`,
 }
 // wet: darker + a touch more saturated (patchy), then a sky sheen at grazing angles + a small sun glint
-export const S_WET_COLOR = `sWetF *= (1. - sSnowF) * (.72 + .28 * sN(vSWP * 1.7)); diffuseColor.rgb = sSat(diffuseColor.rgb * mix(1., .68, sWetF), 1. + .18 * sWetF);\n`
+export const S_WET_COLOR = `sWetF *= (1. - sSnowF) * (.72 + .28 * sN(vSWP * 1.7)); diffuseColor.rgb = sSat(diffuseColor.rgb * mix(1., .6, sWetF), 1. + .22 * sWetF);\n`
 export const S_WET_SHEEN = `{ vec3 sNv = normalize(vNormal), sV = normalize(vViewPosition); float ndv = clamp(dot(sNv, sV), 0., 1.);
     float fr = pow(1. - ndv, 4.), sp = pow(max(dot(reflect(-sV, sNv), normalize(uSunV)), 0.), 90.);
     gl_FragColor.rgb += sWetF * (fr * uSky * .38 + sp * vec3(1., .95, .85) * .7 * uSDay); }\n`
