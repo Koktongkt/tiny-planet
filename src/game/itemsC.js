@@ -31,9 +31,30 @@ export const FORAGE_RELIC_TEXT = {
   persimmon: { name: 'Persimmon', desc: 'Glowing orange like a little lantern. Wait until it is soft, or it bites back.' },
   yuzu: { name: 'Yuzu', desc: 'Bumpy, sunny and fragrant. One in the bath on the longest night keeps colds away.' },
   snowdrop: { name: 'Snowdrop', desc: 'The first flower through the snow, head bowed like it is shy about being early.' },
-  relic_tile: { name: 'Glazed Tile', desc: 'Painted with a wave pattern.' }, relic_bell: { name: 'Little Bronze Bell', desc: 'Still rings, faintly.' },
-  relic_lens: { name: 'Old Lens', desc: 'Someone here once watched the stars.' }, relic_mask: { name: 'Festival Mask', desc: 'A smiling fox, cracked at the ear.' },
-  relic_bowl: { name: 'Tea Bowl', desc: 'Lopsided and lovely.' },
+  relic_tile: { name: 'Glazed Tile', desc: 'A blue wave runs across it, painted by someone with a steady hand and the sea on their mind. One corner is chipped, as if it was loved hard.' },
+  relic_bell: { name: 'Little Bronze Bell', desc: 'Give it a shake and it still rings, very softly, like it is trying not to wake anyone.' },
+  relic_lens: { name: 'Old Lens', desc: 'Brass-rimmed and a little cloudy. Hold it up at night: someone here once watched the stars through it.' },
+  relic_mask: { name: 'Festival Mask', desc: 'A grinning fox for a summer festival. Cracked at one ear, but still smiling.' },
+  relic_bowl: { name: 'Tea Bowl', desc: 'Lopsided, thumb-printed and lovely. The glaze ran where it wanted, and the potter let it.' },
 }
 const CAT_C = { bamboo_shoot: 'forest', chestnut: 'forest', cicada_shell: 'forest', maple_leaf: 'forest', persimmon: 'meadow', yuzu: 'meadow', sakura: 'meadow', sunflower: 'meadow', snowdrop: 'meadow' }
 for (const [id, l] of Object.entries(FORAGE_RELIC_TEXT)) ITEMS[id] = { ...ITEMS[id], ...l, cat: CAT_C[id] || 'treasure' }
+// Ruins museum (art-c item 7): plaque lines (one per donatable id, Professor Hoshino's handwriting) + his reactions.
+export const PLAQUE_TEXT = {
+  shard: 'Pottery shard. Blue line, red dots. Part of a water jar, I believe — or a very ambitious cup.',
+  coin: 'Square-holed coin. Strung on a cord and spent at a market that sold, among other things, pickles.',
+  crystal: 'Ruins crystal. Glows faintly after rain. Nobody knows why, which is the best kind of question.',
+  relic_tile: 'Glazed roof tile, wave pattern. The roof is gone; the wave is still going.',
+  relic_bell: 'Shrine bell, bronze. Rung once for every visitor. I rang it for you.',
+  relic_lens: 'Telescope lens. The library had a star-watcher. Of course it did.',
+  relic_mask: 'Fox festival mask. Worn by a child, judging by the size, and laughed in, judging by the wear.',
+  relic_bowl: 'Hand-thrown tea bowl. Lopsided on purpose, or by accident. Either way, it pours.',
+  koi: 'Koi, from the lake. Patient, golden, and rather vain. Do not tap the glass.',
+  sea_bream: 'Sea bream, from the harbour. A lucky fish — the fishermen bow to it.',
+  lake_lord: 'The Lake Lord. Caught on a rainy night and kept, with great respect, in the largest tank we own.',
+}
+export const HOSHINO_LINES = {
+  donate: ['Marvellous! Into the catalogue it goes.', 'Oh, oh — look at that. Thank you, truly.', 'I shall write a very long plaque. Then a shorter one.'],
+  empty: ['The shelves are mostly chalk for now. Chalk is hopeful.', 'Bring me what the ruins give you. Every piece helps.'],
+  full: ['Every plinth filled. The old library would be proud of you. I certainly am.'],
+}
