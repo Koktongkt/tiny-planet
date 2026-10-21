@@ -79,6 +79,21 @@ function Scene3D() {
     <Hud /></>
 }
 function Hud() { const [s, setS] = useState(''); useEffect(() => { const id = setInterval(() => setS(`draw calls ${window.__calls ?? '-'} · triangles ${window.__tris ?? '-'}`), 400); return () => clearInterval(id) }, []); return q.has('hud') ? <div className="pc-hud">{s}</div> : null }
+// ---------------- seasonal forage: icons (top) + 3D props (bottom) ----------------
+function Forage() {
+  useCss(); const [m, setM] = useState(null)
+  useEffect(() => { Promise.all([import('./forage/index.js'), import('../game/itemsC.js')]).then(([F, c]) => { setM({ F, c }); ready() }) }, [])
+  if (!m) return null
+  const SEAS = { spring: '#f6c6d6', summer: '#bfe3a8', autumn: '#f2c48a', winter: '#cfe0f2' }
+  const cells = m.F.FORAGE.map((f, i) => ({ id: f.id, p: [(i - 4) * 0.36, 0, 0] }))
+  return <div className="pc-wrap"><IconDefs /><div className="pc-sec">Stage C seasonal forage · 9 items</div>
+    <div className="pc-icons" style={{ gridTemplateColumns: 'repeat(9,1fr)' }}>{m.F.FORAGE.map(f => <div key={f.id} className="pc-ic" style={{ background: SEAS[f.season[0]] + 'c8' }}><Icon id={f.id} size={+(q.get('sz') || 92)} /><span>{m.c.FORAGE_TEXT[f.id].name}</span><small>{f.season.join('/')} · {f.zone}</small><code>{f.id}</code></div>)}</div>
+    <div style={{ width: 'min(1180px,96vw)', height: 300, borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 0 0 1.6px #3b2f2250', background: 'linear-gradient(#e9f3df,#cfe3b8)' }}>
+      <Canvas dpr={1} camera={{ fov: 22, near: 0.01, far: 30 }} gl={{ antialias: true, alpha: true }}><Tick /><Stats /><Lights /><Cam pos={[0, 0.7, 2.5]} look={[0, 0.08, 0]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001, 0]}><circleGeometry args={[3, 32]} /><meshToonMaterial color="#a9d384" /></mesh>
+        {cells.map((c, i) => <group key={c.id} position={c.p} rotation={[0, 0.5 + i * 0.3, 0]}><m.F.ForageProp item={c.id} s={2.5} /></group>)}</Canvas></div>
+    <div className="pc-row">{m.F.FORAGE.map(f => <Icon key={f.id} id={f.id} size={44} />)}</div></div>
+}
 const MODE = q.get('m')
 const PhotoPv = React.lazy(() => import('./previewPhoto.jsx'))
 export default function PreviewC({ mode }) {
@@ -87,6 +102,7 @@ export default function PreviewC({ mode }) {
   if (mode === 'catch') return <CatchPv />
   if (mode === 'fish' || mode === 'school') return <Scene3D />
   if (mode === 'photo') return <Suspense fallback={null}><PhotoPv /></Suspense>
+  if (mode === 'forage') return <Forage />
   return <div>unknown mode</div>
 }
-export const C_MODES = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo']
+export const C_MODES = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo', 'forage']

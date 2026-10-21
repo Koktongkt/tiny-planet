@@ -14,8 +14,10 @@ export function SeasonLayer({ cap, wet = true, drift = true, rain = true, puddle
   const scene = useThree(s => s.scene), gl = useThree(s => s.gl), camera = useThree(s => s.camera)
   const [ready, setReady] = useState(false)
   useEffect(() => { let r = null, dead = false
-    idle(() => { if (dead) return; seasonizeScene(scene, { gl, camera, cap, wet }).then(x => { if (dead) { x.restore(); return } r = x; setReady(true); onReady && onReady(x.patched) }) })
-    return () => { dead = true; if (r) r.restore() } }, [])
+    let iv = 0
+    idle(() => { if (dead) return; seasonizeScene(scene, { gl, camera, cap, wet }).then(x => { if (dead) { x.restore(); return } r = x; setReady(true); onReady && onReady(x.patched)
+      iv = setInterval(() => r.rescan(), 2000) }) }) // zones behind <Cull> remount with fresh materials
+    return () => { dead = true; clearInterval(iv); if (r) r.restore() } }, [])
   useFrame((s, dt) => { tickWeather(s.camera, dt) })
   return ready ? <>{drift && <Drift get={get} />}{rain && <Rain get={get} />}{puddles && <Puddles spots={spots} />}</> : null
 }

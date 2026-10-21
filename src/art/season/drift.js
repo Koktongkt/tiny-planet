@@ -10,7 +10,7 @@ void main(){
   float h = aSeed.w, h2 = fract(h * 91.73), h3 = fract(h * 357.1);
   vec4 s = uSeason; float type = h < s.x ? 0. : h < s.x + s.y ? 1. : h < s.x + s.y + s.z ? 2. : 3.;
   // how many of each kind are on (fraction of the pool): petals .55, motes .35 (fireflies .7 at night), leaves .5, snow 1 (+rain)
-  float dens = type < .5 ? .55 : type < 1.5 ? mix(.35, .7, uNight) : type < 2.5 ? .5 : min(1., .55 + .45 * uRain);
+  float dens = type < .5 ? .8 : type < 1.5 ? mix(.35, .7, uNight) : type < 2.5 ? .5 : min(1., .55 + .45 * uRain);
   float on = step(h3, dens * uDens * (type > 2.5 ? 1. : 1. - .7 * uRain));
   float fall = type < .5 ? .28 : type < 1.5 ? -.025 : type < 2.5 ? .42 : mix(.34, .55, uRain);
   float sway = type < .5 ? .5 : type < 1.5 ? .25 : type < 2.5 ? .6 : .3;
@@ -24,7 +24,7 @@ void main(){
   p = mod(p, uBox) - uBox * .5; p.y += uBox.y * .3;
   vec3 q = p / uBox; float edge = smoothstep(.5, .36, max(abs(q.x), abs(q.z))) * smoothstep(.5, .4, abs(q.y - .3));
   vec4 mv = modelViewMatrix * vec4(p, 1.);
-  float size = type < .5 ? .07 : type < 1.5 ? mix(.022, .05, uNight) : type < 2.5 ? .09 : mix(.04, .055, h2);
+  float size = type < .5 ? .1 : type < 1.5 ? mix(.03, .06, uNight) : type < 2.5 ? .12 : mix(.05, .075, h2);
   gl_PointSize = size * uPx / max(.2, -mv.z) * on;
   gl_Position = projectionMatrix * mv;
   float near = smoothstep(.25, 1.1, -mv.z);
@@ -32,10 +32,10 @@ void main(){
   vRot = vec3(tum * (type > 2.5 || (type > .5 && type < 1.5) ? 0. : .6) + h * 6.28, max(.25, abs(cos(tum))), h2);
   vType = type;
   vec3 col; float a;
-  if (type < .5) { col = mix(vec3(1., .8, .87), vec3(1., .93, .95), h2); a = .95; }
+  if (type < .5) { col = mix(vec3(.98, .62, .74), vec3(1., .82, .88), h2); a = 1.; }
   else if (type < 1.5) { col = mix(vec3(1., .97, .78), vec3(.86, 1., .5) * 2.2, uNight); a = mix(.55, .9 * (.5 + .5 * sin(uTime * 2.4 + h * 40.)), uNight); }
   else if (type < 2.5) { col = h2 < .35 ? vec3(.95, .5, .2) : h2 < .6 ? vec3(.85, .3, .23) : h2 < .85 ? vec3(.96, .74, .28) : vec3(.72, .55, .3); a = 1.; }
-  else { col = vec3(1.); a = .9; }
+  else { col = vec3(1.); a = 1.; }
   col *= mix(1., .55, uNight * step(vType, 2.5) * step(.5, abs(vType - 1.)));
   vCol = vec4(col, a * edge * near * on);
 }`
@@ -45,11 +45,13 @@ void main(){
   float a;
   if (vType < .5) { // petal: rounded teardrop with a little notch
     vec2 p = q * vec2(2.4, 2.); float d = length(vec2(p.x, p.y * (p.y > 0. ? 1.25 : .9))); a = smoothstep(.62, .5, d) * (1. - smoothstep(.06, 0., abs(p.x)) * step(.42, p.y));
+    gl_FragColor = vec4(mix(vCol.rgb, vCol.rgb * vec3(.78, .6, .66), smoothstep(.3, .55, d)), vCol.a * a); if (a < .02) discard; return;
   } else if (vType < 1.5) { float d = length(q); a = smoothstep(.5, .0, d); a *= a; }
   else if (vType < 2.5) { // leaf: pointed vesica + a darker vein
     vec2 p = q * 2.2; float d = abs(p.x) + p.y * p.y * .9; a = smoothstep(.62, .5, d + abs(p.y) * .35);
     if (abs(p.x) < .045 && abs(p.y) < .5) { gl_FragColor = vec4(vCol.rgb * .7, vCol.a * a); return; }
-  } else { float d = length(q); a = smoothstep(.5, .32, d) * .8 + smoothstep(.2, 0., d) * .3; }
+    gl_FragColor = vec4(mix(vCol.rgb, vCol.rgb * .7, smoothstep(.35, .58, d + abs(p.y) * .35)), vCol.a * a); if (a < .02) discard; return;
+  } else { float d = length(q); a = smoothstep(.5, .4, d); gl_FragColor = vec4(mix(vec3(1.), vec3(.72, .78, .9), smoothstep(.22, .46, d)), vCol.a * a); if (a < .02) discard; return; }
   if (a < .02) discard;
   gl_FragColor = vec4(vCol.rgb, vCol.a * a);
 }`

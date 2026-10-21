@@ -20,13 +20,17 @@ export const ITEM_LABELS_C = Object.fromEntries(RARE_FISH_ITEMS.map(id => [id, F
 export const fishName = (id) => (FISH_TEXT[id] && FISH_TEXT[id].name) || id
 export const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', legend: 'Legendary' }
 for (const [id, l] of Object.entries(ITEM_LABELS_C)) ITEMS[id] = { ...ITEMS[id], ...l, cat: 'water' }
-// Seasonal forage + new relics (Codor ids, contract v1). PROVISIONAL text until Studio writes it.
+// Seasonal forage + new relics (Codor ids, contract v1). Text: Studio (art-c items 4).
 export const FORAGE_RELIC_TEXT = {
-  sakura: { name: 'Sakura Petals', desc: 'A handful of spring.' }, bamboo_shoot: { name: 'Bamboo Shoot', desc: 'Dug before it grows too tall.' },
-  cicada_shell: { name: 'Cicada Shell', desc: 'An empty summer coat.' }, sunflower: { name: 'Sunflower', desc: 'Always looking at the sun.' },
-  maple_leaf: { name: 'Maple Leaf', desc: 'Red as a tiny hand.' }, chestnut: { name: 'Chestnut', desc: 'Prickly outside, sweet inside.' },
-  persimmon: { name: 'Persimmon', desc: 'Orange and soft, best after frost.' }, yuzu: { name: 'Yuzu', desc: 'A bumpy winter citrus.' },
-  snowdrop: { name: 'Snowdrop', desc: 'The first flower through the snow.' },
+  sakura: { name: 'Sakura Petals', desc: 'A handful of blossom the wind let go of. It will not last, which is the point.' },
+  bamboo_shoot: { name: 'Bamboo Shoot', desc: 'Dug up just as it peeked out of the soil. Tender, if you are quick.' },
+  cicada_shell: { name: 'Cicada Shell', desc: 'Left on a tree trunk by someone who grew up and flew away. Very light. Very brave.' },
+  sunflower: { name: 'Sunflower', desc: 'Taller than her, and always looking at the sun. Even on cloudy days it remembers where it is.' },
+  maple_leaf: { name: 'Maple Leaf', desc: 'Red as a tiny hand waving goodbye to summer. Pressed in a book, it keeps waving.' },
+  chestnut: { name: 'Chestnut', desc: 'Hiding in a prickly burr. Roast it and the whole house smells of autumn.' },
+  persimmon: { name: 'Persimmon', desc: 'Glowing orange like a little lantern. Wait until it is soft, or it bites back.' },
+  yuzu: { name: 'Yuzu', desc: 'Bumpy, sunny and fragrant. One in the bath on the longest night keeps colds away.' },
+  snowdrop: { name: 'Snowdrop', desc: 'The first flower through the snow, head bowed like it is shy about being early.' },
   relic_tile: { name: 'Glazed Tile', desc: 'Painted with a wave pattern.' }, relic_bell: { name: 'Little Bronze Bell', desc: 'Still rings, faintly.' },
   relic_lens: { name: 'Old Lens', desc: 'Someone here once watched the stars.' }, relic_mask: { name: 'Festival Mask', desc: 'A smiling fox, cracked at the ear.' },
   relic_bowl: { name: 'Tea Bowl', desc: 'Lopsided and lovely.' },

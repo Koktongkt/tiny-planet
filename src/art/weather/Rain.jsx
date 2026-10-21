@@ -5,7 +5,7 @@ import { createRain } from './rain.js'
 import { tickWeather, isTouchTier } from '../season/hooks.js'
 import { defaultAnchor } from '../season/anchor.js'
 export function Rain({ get, count, box }) {
-  const r = useMemo(() => createRain({ count: count ?? (isTouchTier() ? 700 : 1400), box }), [])
+  const r = useMemo(() => createRain({ count: count ?? (isTouchTier() ? 900 : 2000), box }), [])
   useEffect(() => () => { r.object.geometry.dispose(); r.material.dispose() }, [])
   useFrame((s, dt) => { tickWeather(s.camera, dt); r.update(get ? get() : defaultAnchor(), s.camera, s.gl) })
   return <primitive object={r.object} />

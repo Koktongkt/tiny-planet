@@ -9,17 +9,17 @@ varying vec2 vQ; varying float vA; varying vec3 vC;
 void main(){
   float h = aSeed.w, h2 = fract(h * 71.3);
   vec3 dir = normalize(vec3(.16, -1., .06));            // a gentle slant
-  float speed = 6.5 + 2.5 * h2, len = .26 + .16 * h2;
+  float speed = 6.5 + 2.5 * h2, len = .2 + .14 * h2;
   vec3 p = aSeed.xyz * uBox + dir * uTime * speed;
   p -= uOff; p = mod(p, uBox) - uBox * .5; p.y += uBox.y * .25;
   vec3 q = p / uBox; float edge = smoothstep(.5, .34, max(abs(q.x), abs(q.z))) * smoothstep(.5, .38, abs(q.y - .25));
   vec4 c = modelViewMatrix * vec4(p, 1.);
   vec3 ax = normalize(mat3(modelViewMatrix) * dir), side = normalize(cross(ax, normalize(-c.xyz)));
-  float w = .0075 + .004 * h2;
+  float w = .006 + .004 * h2;
   c.xyz += side * aQ.x * w + ax * aQ.y * len;
   gl_Position = projectionMatrix * c;
   vQ = aQ; float near = smoothstep(.35, 1.4, -c.z), far = smoothstep(14., 7., -c.z);
-  vA = edge * near * far * uRain * (1. - uSnowW) * (.45 + .3 * h2);
+  vA = edge * near * far * uRain * (1. - uSnowW) * (.5 + .35 * h2);
   vC = mix(vec3(.9, .95, 1.), uSky, .35) + vec3(1., .92, .78) * .25 * max(0., uSunV.y);
 }`
 const FS = `varying vec2 vQ; varying float vA; varying vec3 vC;

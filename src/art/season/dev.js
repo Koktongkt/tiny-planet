@@ -12,7 +12,7 @@ export { puddleSpots, SU }
 export function mountWeatherDev(scene, { gl, camera, drift = true, rain = true, puddles = true, spots, anchor } = {}) {
   const parts = [], t = isTouchTier()
   if (drift) { const d = createDrift({ count: t ? 350 : 700 }); scene.add(d.object); parts.push(d) }
-  if (rain) { const r = createRain({ count: t ? 700 : 1400 }); scene.add(r.object); parts.push(r) }
+  if (rain) { const r = createRain({ count: t ? 900 : 2000 }); scene.add(r.object); parts.push(r) }
   let pz = null
   if (puddles) { pz = createPuddles(spots || puddleSpots({ near: VILLAGE })); (planetRef.current || scene).add(pz.object); parts.push(pz) }
   let last = performance.now(), live = true

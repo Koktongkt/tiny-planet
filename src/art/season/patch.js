@@ -60,29 +60,43 @@ export function classify(o) {
   return null
 }
 /**
- * seasonizeScene(root, { gl, camera, cap, wet, only }) -> Promise<{ patched: [{kind, meshes}], restore() }>
- * Finds the ground / grass / foliage / flowers / roofs / rocks in `root` (by their existing shader keys) and swaps in
- * patched clones. With gl.compileAsync the new programs compile off the main thread first (KHR_parallel_shader_compile),
- * so the swap itself never stalls a frame. Without gl it patches in place (compiles on the next render).
+ * seasonizeScene(root, { gl, camera, cap, wet, only }) -> Promise<{ patched: [{kind, meshes}], rescan(), restore() }>
+ * Finds the ground / grass / foliage / flowers / roofs / rocks in `root` (by their existing shader keys) and patches
+ * their materials IN PLACE (so React / Instanced LOD twins keep their references). With gl.compileAsync the new
+ * programs are first warmed on throw-away clones off the main thread (KHR_parallel_shader_compile), so the swap never
+ * stalls a frame. rescan() patches materials that mounted since (Cull'd zones remount with fresh materials) — their
+ * programs are already cached, so it costs a traversal, not a compile.
  */
 export async function seasonizeScene(root, { gl, camera, cap, wet = true, only } = {}) {
-  const groups = new Map() // material -> { opts, meshes }
-  root.traverse(o => { if (!o.isMesh) return; const c = classify(o); if (!c || (only && !only.includes(c.kind))) return
-    let e = groups.get(o.material); if (!e) groups.set(o.material, e = { opts: { ...c, wet: c.wet && wet, ...(cap === undefined ? {} : { cap }) }, meshes: [] }); e.meshes.push(o) })
-  const swaps = []
-  if (gl && gl.compileAsync && camera) {
-    const tmp = new THREE.Scene()
+  const done = new Map() // material -> kind
+  const collect = () => { const groups = new Map()
+    root.traverse(o => { if (!o.isMesh) return; const c = classify(o); if (!c || (only && !only.includes(c.kind))) return
+      let e = groups.get(o.material); if (!e) groups.set(o.material, e = { opts: { ...c, wet: c.wet && wet, ...(cap === undefined ? {} : { cap }) }, meshes: [] }); e.meshes.push(o) })
+    return groups }
+  const apply = (groups) => { for (const [mat, e] of groups) { mat.dispose(); patchSurface(mat, e.opts); done.set(mat, e) } } // dispose: drop the old program
+  const groups = collect()
+  if (gl && gl.compileAsync && camera && groups.size) {
+    const tmp = new THREE.Scene(), clones = []
     for (const [mat, e] of groups) {
-      const m2 = mat.clone(); m2.onBeforeCompile = mat.onBeforeCompile; m2.customProgramCacheKey = mat.customProgramCacheKey; patchSurface(m2, e.opts)
+      const m2 = mat.clone(); m2.onBeforeCompile = mat.onBeforeCompile; m2.customProgramCacheKey = mat.customProgramCacheKey; patchSurface(m2, e.opts); clones.push(m2)
       const src = e.meshes[0], px = src.isInstancedMesh ? new THREE.InstancedMesh(src.geometry, m2, 1) : new THREE.Mesh(src.geometry, m2)
       if (src.isInstancedMesh && src.instanceColor) px.instanceColor = src.instanceColor
-      px.frustumCulled = false; tmp.add(px); swaps.push({ mat, m2, e })
+      px.frustumCulled = false; tmp.add(px)
     }
-    try { await gl.compileAsync(tmp, camera, root.isScene ? root : null) } catch (err) { /* falls back to compile-on-render */ }
-    for (const { mat, m2, e } of swaps) { for (const o of e.meshes) if (o.material === mat) o.material = m2; mat.dispose() } // dispose frees the old program (it recompiles if restored)
-  } else for (const [mat, e] of groups) { patchSurface(mat, e.opts); swaps.push({ mat, m2: mat, e }) }
+    // compile the variant the game actually draws: through a composer (linear render target) the programs must be built
+    // with a render target bound, or they'd be the sRGB-canvas variants and recompile on first use anyway
+    const first = groups.keys().next().value, cur = first && gl.properties.get(first).currentProgram
+    const linear = cur && /,srgb-linear,/.test(cur.cacheKey), prevRT = gl.getRenderTarget(), rt = linear ? new THREE.WebGLRenderTarget(1, 1) : null
+    let job = null
+    try { if (rt) gl.setRenderTarget(rt); job = gl.compileAsync(tmp, camera, root.isScene ? root : null) } catch (err) { /* compile-on-render fallback */ } finally { if (rt) gl.setRenderTarget(prevRT) }
+    try { await job } catch (err) { /* compile-on-render fallback */ }
+    if (rt) rt.dispose()
+    apply(groups)
+    setTimeout(() => clones.forEach(m => m.dispose()), 1500) // after the real materials have picked the cached programs up
+  } else apply(groups)
   return {
-    patched: swaps.map(s => ({ kind: s.e.opts.kind, meshes: s.e.meshes.length })),
-    restore() { for (const { mat, m2, e } of swaps) { if (m2 === mat) unpatch(mat); else for (const o of e.meshes) if (o.material === m2) o.material = mat } },
+    get patched() { const k = {}; for (const e of done.values()) k[e.opts.kind] = (k[e.opts.kind] || 0) + 1; return k },
+    rescan() { const g = collect(); apply(g); return g.size },
+    restore() { for (const mat of done.keys()) { mat.dispose(); unpatch(mat) } done.clear() },
   }
 }
