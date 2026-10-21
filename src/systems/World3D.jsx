@@ -12,8 +12,8 @@ import { SB } from './live.js'
 const GardenPlots = lazy(() => import('../art/garden/GardenPlots.jsx')) // (not index.js: an "index-*" chunk name would look like the startup chunk)
 const NoticeBoard = lazy(() => import('../ui/errands/NoticeBoard.jsx'))
 const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n) + lift)
-// 2 x 3 beds on the left of the house front (home frame: +x right, +z out of the door), 0.36 apart
-const BEDS = [[-0.62, 0.42], [-0.98, 0.42], [-0.62, 0.78], [-0.98, 0.78], [-0.62, 1.14], [-0.98, 1.14]]
+// 2 x 3 beds left of the Home sign (home frame: +x right, +z out of the door), 0.36 apart
+const BEDS = [[-0.84, 0.3], [-1.2, 0.3], [-0.84, 0.66], [-1.2, 0.66], [-0.84, 1.02], [-1.2, 1.02]]
 const _z = new THREE.Vector3(), _x = new THREE.Vector3(), _f = new THREE.Vector3()
 // yaw so a frame built like art/garden plotMatrix (forward = world +Z on the tangent plane) faces `fwd`
 function yawFor(u, fwd) { _z.set(0, 0, 1); if (Math.abs(u.z) > 0.95) _z.set(1, 0, 0); _z.addScaledVector(u, -_z.dot(u)).normalize(); _x.crossVectors(u, _z); _f.copy(fwd).addScaledVector(u, -fwd.dot(u)).normalize(); return Math.atan2(_f.dot(_x), _f.dot(_z)) }
