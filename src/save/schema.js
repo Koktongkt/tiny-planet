@@ -14,7 +14,7 @@ const SET = () => ({ volume: 0.8, music: 0.7, muted: false, textScale: 1 })
 const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [] }, buffs: [], settings: SET() })
 // v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
 // tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.
-const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0 }, dig: { taken: {} } })
+const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0, open: null }, dig: { taken: {} } })
 export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4() })
 
 // each step takes a save of version `from` and returns one of version `from + 1`
@@ -60,6 +60,7 @@ export function normalize(s) {
   if (!Array.isArray(o.photos.list)) o.photos = { list: [] }
   if (!Number.isFinite(o.train.rides)) o.train = { rides: 0 }
   if (!isObj(o.tutorial.done)) o.tutorial = { ...c.tutorial, dismissed: !!o.tutorial.dismissed }
+  if (typeof o.tutorial.open !== 'boolean') o.tutorial.open = null // null = device default (open on desktop, folded slip on touch)
   if (!isObj(o.dig.taken)) o.dig = { taken: {} }
   o.settings = { ...b.settings, ...(isObj(o.settings) ? o.settings : {}) }
   if (!isObj(o.clock) || !Number.isFinite(o.clock.a)) o.clock = { a: START_PHASE + o.day * TAU }
