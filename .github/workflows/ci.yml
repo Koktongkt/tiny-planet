@@ -1,0 +1,48 @@
+name: CI
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests (save migrations)
+        run: npm run test:unit
+      - name: Build
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Serve the build
+        run: |
+          nohup npx vite preview --port 4173 --strictPort > preview.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:4173/ > /dev/null && exit 0; sleep 1; done; cat preview.log; exit 1
+      - name: Perf budget (startup chunk + draw calls / triangles per view)
+        run: npm run perf:budget -- http://localhost:4173/
+      - name: Smoke tests
+        if: ${{ !cancelled() }}
+        run: npm run test:smoke
+        env:
+          BASE_URL: http://localhost:4173/
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            perf-report.*
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore

@@ -55,8 +55,13 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 **Decor:** tap a decor item in the Bag to place it. A ghost preview appears ahead of you. It is green when valid (within about 2.2 units of Home) and red otherwise. Stand next to placed decor and press E to pick it back up.
 
 ## Persistence
-- Saved to localStorage under `tinyplanet.save.v1`: inventory, discoveries, tools, placements, unlocks, taken spots, day and chest.
-- Items respawn at each in-game sunrise (one day is 3 minutes).
+- Saved to localStorage under `tinyplanet.save.v1` (the key keeps its historic name): inventory, discoveries, tools, placements, unlocks, taken spots, the day counter, the chest, Studio's plant waterings, and the **clock**.
+- Every save carries an explicit format version `v` (currently **2**). On load the save runs through an ordered migration chain in `src/save/schema.js` (v1 → v2 → …), then missing or broken fields are filled from the defaults. A save without `v` is treated as v1. A save from a newer build still loads (fields it understands are kept).
+- **Time of day carries over.** The sun phase (`clock.a`) is saved every 15 s and when the tab is hidden or closed, so after a reload the day continues where it was: regrowth keeps going and the clock shows the right day. One in-game day is one real hour (`?daylen=<seconds>` to change it).
+- Items respawn at each in-game sunrise (a spot taken on day *d* is back on day *d*+1).
+- **Sleep** in the bed skips to the next morning and advances the day (Day *n* → *n*+1), also after a reload. A nap skips two hours.
+- Old v1 saves (day counter, no clock) resume on their saved day at the default early-afternoon time.
+- With `?t=` or `?phase=` the lighting is pinned and the clock is neither advanced nor saved.
 - To start over, use Bag → Reset save, or open the URL with `?reset`.
 
 ## Debug URL params
@@ -68,7 +73,10 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 | `?at=forest\|meadow\|lake\|harbour\|terraces\|cliff\|ruins\|home\|decor\|bridge\|onbridge\|top` | Start at a spot |
 | `?t=day\|dusk\|night`, `?phase=x` | Set the time of day |
 | `?camd=0.8` | Camera distance |
-| `?nosave` | Don't save |
+| `?nosave` | Don't load or save (tests and screenshots) |
+| `?reset` | Delete the save on load |
+| `?daylen=60` | Day length in seconds (default 3600) |
+| `?view=orbit\|lineup\|charstudio` | Planet view / villager line-up / character turntable (the last two are lazy dev chunks) |
 | `?nogame` | Turn the game layer off |
 | `?decor=demo`, `?place=chime` | Demo placements / start placing |
 | `?pick=0.45`, `?fish=1`, `?craft=jam` | Freeze the animation for screenshots |

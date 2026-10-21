@@ -16,7 +16,7 @@ A cozy, watercolour-toon 3D tiny planet you can walk around. Every mesh is gener
   - Meadow hills with a field of windmills
 - **People:** the traveller and 22 villagers share a soft-body look (SDF body parts blended and baked with marching cubes, GPU-skinned). Clothes are painted in the shader; hair, hats and props ride on bones. Body shapes, hair, outfits and props vary by zone (fishers, farmers, bakers, elders). They stroll the path, chat in the square, fish, and work the terraces and docks.
 - **You:** a soft-body kid traveller in a straw hat, overalls and satchel (default). Hold Shift to run.
-- **Time of day:** a full day/night cycle every 3 minutes, from day to dusk to night, with glowing windows, lamps and fireflies.
+- **Time of day:** a full day/night cycle every real hour, from day to dusk to night, with glowing windows, lamps and fireflies.
 
 ## Controls
 
@@ -74,7 +74,7 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Fishing minigame:** stop the marker in the green zone (3 tries).
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
-- **Day cycle and saves:** items respawn each in-game sunrise (3 minutes per day); progress saves to localStorage. Reset from the Bag or with `?reset`.
+- **Day cycle and saves:** items respawn each in-game sunrise (one day is one real hour); progress, including the time of day, saves to localStorage and carries over across reloads. Reset from the Bag or with `?reset`.
 
 ## Home & pets
 
@@ -113,6 +113,39 @@ npm run build    # outputs dist/
 npm run preview  # http://localhost:4190
 ```
 
-## Deploy
+## Tests and checks
 
-Pushes to `main` run `.github/workflows/pages.yml` (`npm ci`, `npm run build`) and deploy `dist/` to GitHub Pages. Vite uses `base: './'`, so assets resolve under `/tiny-planet/`.
+```bash
+npm run lint         # ESLint (light: undefined names, hook rules, JSX)
+npm run test:unit    # node --test tests/unit: save format migrations (v1 fixture)
+npx playwright install chromium   # once
+npm run build && npm run test:smoke   # Playwright smoke suite on the built game (starts vite preview on :4173)
+npm run perf:budget -- http://localhost:4173/   # startup chunk + draw calls / triangles per view vs tests/perf/budget.json
+```
+
+The smoke suite (`tests/smoke/`) covers load and the title card, walking, gathering, crafting at the bench, sleep → reload → save
+check, migrating an old v1 save, indoor controls and the door, facing the direction of travel, and the touch stick and pads on an
+iPhone 13 profile. Everything runs in headless Chromium on SwiftShader (software GL), so it is slow but needs no GPU.
+`BASE_URL=http://host:port/` points it at an already-served build.
+
+The perf gate fails a PR when the startup chunk is over 80 KB gz (warns over 70) or a key view goes over its draw-call or triangle
+cap from `budget.md` (with a few % tolerance for run-to-run drift; known pre-existing overs are listed as overrides in
+`tests/perf/budget.json`). FPS and JS ms per frame are reported but never fail the build, since they are noise on software GL.
+
+## Code layout
+
+`src/App.jsx` is being split into modules (Stage A, behaviour unchanged):
+- `src/time/clock.js`: the planet clock (`rot.a` sun phase, `?t=`/`?phase=` presets, day length, restoring from the save)
+- `src/save/schema.js`: save version, migrations, defaults (pure, unit-tested)
+- `src/world/village.js`: village, mills and house positions, the first bridge's set-piece spots
+- `src/npc/routines.js`: townsfolk and the villagers' day plans
+- `src/world/sky.jsx`: sky dome, sun and moon lights, clouds, birds, fireflies
+- `src/debug/`: dev-only views (`?view=charstudio`, `?view=lineup`), lazy chunks
+- Studio's areas stay as they were: `src/pets/`, `src/home/`, `src/talk/`, characters.
+
+New systems should be lazy-loaded (`React.lazy` / dynamic `import()`) so the startup chunk stays at or under 70 KB gz.
+
+## CI and deploy
+
+- Pull requests run `.github/workflows/ci.yml`: lint, unit tests, build, the perf budget gate and the smoke suite. The perf table lands in the job summary; reports are uploaded as artifacts.
+- Pushes to `main` run `.github/workflows/pages.yml` (`npm ci`, `npm run build`) and deploy `dist/` to GitHub Pages. Vite uses `base: './'`, so assets resolve under `/tiny-planet/`.
