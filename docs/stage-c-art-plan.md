@@ -1,5 +1,5 @@
 # Stage C — Studio art + audio plan (input for stage-c-contract.md)
-Base: main cee1c89 (worktree /workspace/tiny-planet-artc, branch art-c). Same rules as Stage B: Studio modules are
+Base: stage-c 835ebc1 (worktree /workspace/tiny-planet-artc, branch art-c; rebased). Same rules as Stage B: Studio modules are
 prop/getter-driven and stateless; Codor owns state, saves, rules, App/zones wiring, tests, CI. Everything lazy, 0 bytes
 added to the startup chunk (index ~70 KB gz, cap 80). The player is "her"; pets are Pip (Shiba) and Mochi (cat).
 
@@ -56,6 +56,40 @@ Everything below is lazy: nothing new is imported by the startup chunk (only `re
 ### Chunk sizes (gzip -9) — startup index: 69,160 B (cee1c89) → 69,176 B (art-c), budget 70 KB target / 80 KB ceiling
 Lazy chunks when imported via `lazy()/import()` (measured with a temp entry): TutorialNote 2.5 KB (+css 1.4), CatchCard 1.6 KB (+css 1.2; pulls fish icons 2.8, itemsC 1.0, fishTable 0.9), FishModel 5.6 KB (+fish art 0.7), PhotoMode 4.0 KB (+css 2.0; pulls herPoses 1.1, petPoses 0.9). SettingsPanel chunk 1,968 → 2,092 B.
 
+## BUILT on art-c (items 4–5): seasons + rain / puddles / rain audio
+Hooks come from Codor's `systems/weather.js` (`applyTo(T, phase)` every clock tick via liveC): `T.season`, `T.seasonW` = **four** weights `[sp,su,au,wi]` (sum 1; last day of a season cross-fades), `T.kind` `'clear'|'rain'`, `T.rain`, `T.wet`. Art reads them defensively in `art/season/hooks.js` (`readWeather` / `hookWeights`; also accepts a legacy scalar `seasonW`).
+
+### 4. Seasons — `src/art/season/`, `src/game/forageTable.js`, `src/art/forage/`, `src/game/itemsC.js`
+- `patchSeason(mat, kind, {cap?, wet?})` / `patchWet(mat)` / `patchSurface` — chains existing `onBeforeCompile` (paint/ink/wind/foliage). Cap = snow on upward normals (`#define S_CAP`); default `cap = !isTouchTier()`. Key tag `|s:<kind>[c][w]`.
+- Kinds: `ground, grass, leaf, ever, flower, stem, roof, cap`. `classify(mesh)` maps by existing shader keys (no startup tags). `seasonizeScene(root,{gl,camera,cap,wet})` → `{patched, rescan(), restore()}`; warm-compiles via `gl.compileAsync` with a 1×1 linear RT bound; rescan every 2 s for Cull remounts.
+- Shared uniforms `SU` (`uSeason` vec4, `uSnow`, `uWet`, `uRain`, `uSunV`, `uSky`, `uSDay`, `uNight`); `tickWeather(camera,dt)` once per frame.
+- `<Drift get count box/>` — 1 draw call, GPU-animated petals / summer pollen+fireflies / autumn leaves / winter snow (density ↑ with rain in winter). Hidden indoors / orbit (`defaultAnchor`).
+- `<SeasonLayer cap wet drift rain puddles spots get onReady/>` — mounts inside the planet group; seasonizes + Drift/Rain/Puddles.
+- Forage ids = Codor contract (`systems/collection.js FORAGE`): spring `sakura, bamboo_shoot`; summer `cicada_shell, sunflower`; autumn `maple_leaf, chestnut, persimmon`; winter `yuzu, snowdrop`. `forageTable.js` adds zones/counts + `forageSpawns(season, wet)`. Cozy text in `FORAGE_RELIC_TEXT` (itemsC); SVG icons + `<ForageProp item s/>` (lazy). Preview `?m=forage`.
+
+### 5. Rain — `src/art/weather/`, `src/audio/{engine,ambient,zones}.js`
+- `<Rain get count box/>` — 1 draw call, billboarded streaks, colour × sky; fades with winter weight (Drift carries the snow). Default 2000 / 900 touch.
+- `<Puddles spots get/>` — 1 draw call instanced quads: sky fresnel, soaked rim, ink lip, 4 ripple rings × `uRain`; spots from `puddleSpots({count,near})` (path-side, flat, not water/bridge, lift = dip rim).
+- `patchWet` darkens + glosses ground/grass/roof (`S_WET_COLOR` / `S_WET_SHEEN`). Soft Ghibli rain, not gloomy.
+- Audio: engine `rain` bus (hiss / body / brown wash) + `roof` bus (skips muffle); `mixFor` adds `rain` / `roof`, hush birds × dry factor; `zones.js` reads `L.rain ?? T.rain`. Indoor roof patter when `L.inside`.
+
+### Perf (items 4–5)
+- Startup index gz: **69,688 B** (art-c) vs **69,693 B** (stage-c 835ebc1) — **0 bytes added**.
+- Extra programs: **+2** season variants (within Codor's ≤3) + **3** ShaderMaterials (Drift/Rain/Puddles) = **+5** total vs unpatched scene. Cap gated off on touch tier by default.
+- Extra draw calls (exact layer on/off, walk village rain): **+3** (Drift + Rain + Puddles); orbit / indoors hide Drift+Rain via `defaultAnchor` → **+1** (puddles). Tris ≈ **+4 k** for the three quads/points.
+- Lazy gz (multi-entry measure): season index ~3.8 KB, Rain 1.5, Puddles 2.5, Drift 0.4, hooks 1.1, forage icons ~3.8, itemsC 1.7, ambient (+rain) ~5.0 (was ~4.5 on stage-c).
+
+### Screenshots / audio (tiny-planet-perf/art-c/)
+`season-{spring,summer,autumn,winter}.png`, `winter-snowcaps.png`, `rain-{day,dusk}.png`, `puddles-close.png`, `forage-items.png`, `rain-preview.ogg` (24 s: clear → rain → indoors roof → drizzle).
+
+### Wiring for Codor
+1. Lazy-mount `<SeasonLayer/>` inside the planet group (GameSlot / World3D).
+2. Keep writing the weather hooks (`liveC` already calls `W.applyTo(T, rotA)`).
+3. Spawns: `forageSpawns(T.season, T.wet)` + `<ForageProp>` as World.jsx Prop default; `registerForageIcons` on import.
+4. Audio needs no extra wiring beyond `T.rain` (zones already reads it); roof patter follows `L.inside`.
+
+---
+
 ## What main already has (survey)
 - Fishing: `G.ui.fish` + `<Fishing>` bar minigame (game/UI.jsx:95), spots from recipes.js (`['lake','fish',3,'water']`, harbour),
   generic item `fish`, `grilledfish`/`onigiri` recipes, villagers fisherman/angler fishing at pier/dock. No species.
@@ -110,14 +144,14 @@ Needs from Codor: `Fish { id, name, rarity, size:[min,max] cm, habitat:'lake'|'r
 Filters are CSS `filter` on the canvas element (compositor, no composer pass, 0 draw calls); PNG bakes via 2D-canvas `ctx.filter`.
 Codor: free camera + clamp, hide HUD, `capture(): Promise<HTMLCanvasElement>` (render+read in the same frame; no preserveDrawingBuffer),
 download/share, freeze pet brains into a 'photo' state and write `goal` from PET_POSES, `ACT.kind = 'photo_'+pose` with lock.
-### 4. Seasons (palette + items)
+### 4. Seasons (palette + items) — BUILT (see top)
 `src/art/season/palettes.js` `PALETTES[id] = { grass:[3], leaf:[3], flower:[4], terrainTint, skyTint, sunTint }`, `seasonUniforms`
 `{ uSeasonW: vec4 weights, uSnow }`, `SEASON_GLSL` chunk + `patchSeason(material)` (onBeforeCompile, tints by vertex colour hue).
 `src/art/season/Petals.jsx` `<Drift kind={'sakura'|'leaves'|'snow'|null} density quality />` (1 draw call, vertex-shader motion, camera-local box).
 `src/art/season/Forage.jsx` `<SeasonForage spots={{id,itemId,n}[]} quality />` instanced pickups + icons for the 9 seasonal items.
 Codor: `window.__T.season` (id) + `__T.seasonW` blend (cross-fade over the last in-game day), call `patchSeason` on Ground/grass/leaf/flower
 materials (App.jsx), forage spawn tables, item ids/recipes. Audio: Studio maps season → bird/insect density (summer cicadas, winter quiet) in mixFor.
-### 5. Weather: rain, puddles, wet ground, rain audio
+### 5. Weather: rain, puddles, wet ground, rain audio — BUILT (see top)
 `src/art/weather/Rain.jsx` `<Rain get={() => T.rain} quality />` — camera-local streak volume, 1 draw call, GPU motion, 0 JS/frame beyond 1 uniform.
 `src/art/weather/Puddles.jsx` `<Puddles spots={n[]} get={() => T.wet} quality />` instanced decals with procedural ripples (no textures).
 `src/art/weather/wet.js` `WET_GLSL` + `patchWet(material)` (darken + gloss terrain/paths/roofs by `uWet`); sky/cloud grey via existing uniforms.
