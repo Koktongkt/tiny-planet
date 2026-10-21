@@ -69,12 +69,12 @@
 .tp-chip-alt{font-size:12.5px;min-height:28px;opacity:.92;padding:2px 9px 2px 3px}
 .tp-chip-alt .key{font-size:10px;min-width:16px;height:16px;line-height:16px}
 /* Stage B: food-buff chips, gift reaction anchor, text size (settings: --tpts on <html>) */
-.tp-buffs{position:absolute;left:22px;top:20px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.tp-buffs{position:absolute;right:22px;top:92px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none}
 .tp-buff{display:flex;align-items:center;gap:6px;padding:4px 14px 4px 6px;font-size:14px;animation:tp-in .25s ease-out}
 .tp-buff b{display:block;font-weight:600;line-height:1.05}.tp-buff small{font-size:12px;opacity:.75}
 .tp-buff.b-swift{background:radial-gradient(120% 90% at 20% 10%,#fffaf0 0,#eef4e2 60%,#d9e8c6 100%)}
 .tp-buff.b-cozy{background:radial-gradient(120% 90% at 20% 10%,#fffaf0 0,#fdeee0 60%,#f6d6c0 100%)}
 .tp-buff.b-lucky{background:radial-gradient(120% 90% at 20% 10%,#fffaf0 0,#fff4d0 60%,#f4e0a0 100%)}
-html.tp-touch .tp-buffs{left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px)}
+html.tp-touch .tp-buffs{right:auto;align-items:flex-start;left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px)}
 .tp-react{position:absolute;left:50%;top:38%;width:0;height:0;pointer-events:none;z-index:30}
 .tp-panel,.tp-prompt,.tp-chips,.tp-toast,.tp-clock,.tp-btns,.tp-buffs,.tp-fish,.tp-placebar,.tk-box,.tpx-panel,.tpe-board{zoom:var(--tpts,1)}
