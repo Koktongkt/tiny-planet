@@ -39,23 +39,24 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
 
   // ---- wind: brown noise, slow gusts (two incommensurate LFOs on gain), a wandering lowpass and a faint whistle ----
   steps.push(() => {
-  windLP = F('lowpass', 520, 0.6); const gust = G(0.55), wPan = pan(0)
-  chain(noise(N.brown), windLP, gust, wPan, wind); lfo(0.047, 0.3, gust.gain); lfo(0.131, 0.14, gust.gain); lfo(0.071, 260, windLP.frequency)
+  windLP = F('lowpass', 680, 0.6); const gust = G(0.55), wPan = pan(0), air = F('bandpass', 850, 0.8), airG = G(0.22)
+  chain(noise(N.brown), windLP, gust, wPan, wind); chain(noise(N.white), air, airG, gust); lfo(0.053, 220, air.frequency); lfo(0.047, 0.3, gust.gain); lfo(0.131, 0.14, gust.gain); lfo(0.071, 260, windLP.frequency)
   if (wPan.pan) lfo(0.023, 0.45, wPan.pan)
   const whistle = G(0.035), wBP = F('bandpass', 1150, 9); chain(noise(N.white), wBP, whistle, wind); lfo(0.09, 0.03, whistle.gain); lfo(0.031, 320, wBP.frequency)
   })
 
   // ---- water: river burble (band noise with fast irregular AM + glints) and lake lapping (low swells) ----
   steps.push(() => {
-  const rBody = F('bandpass', 1300, 0.45), rAM = G(0.5); chain(noise(N.white), rBody, rAM, river)
+  const rOut = F('lowpass', 4200, 0.5); rOut.connect(river)
+  const rBody = F('bandpass', 1300, 0.45), rAM = G(0.5); chain(noise(N.white), rBody, rAM, rOut)
   lfo(4.3, 0.12, rAM.gain); lfo(6.9, 0.08, rAM.gain); lfo(0.63, 0.14, rAM.gain); lfo(0.37, 280, rBody.frequency)
-  const glint = G(0.16), gBP = F('bandpass', 3100, 1.6); chain(noise(N.white), gBP, glint, river); lfo(2.7, 650, gBP.frequency); lfo(1.9, 0.09, glint.gain)
-  const rLow = G(0.5), rLP = F('lowpass', 320, 0.5); chain(noise(N.brown), rLP, rLow, river)
+  const glint = G(0.16), gBP = F('bandpass', 3100, 1.6); chain(noise(N.white), gBP, glint, rOut); lfo(2.7, 650, gBP.frequency); lfo(1.9, 0.09, glint.gain)
+  const rLow = G(0.5), rLP = F('lowpass', 320, 0.5); chain(noise(N.brown), rLP, rLow, rOut)
   })
   steps.push(() => {
   const mkLap = (hz, p, f) => { const g = G(0.45), lp = F('lowpass', f, 0.6); chain(noise(N.brown), lp, g, pan(p), lake); lfo(hz, 0.42, g.gain); lfo(hz * 0.5, 120, lp.frequency) }
   mkLap(0.12, -0.5, 480); mkLap(0.173, 0.5, 620)
-  const hiss = G(0.05), hHP = F('highpass', 2500, 0.5); chain(noise(N.white), hHP, hiss, lake); lfo(0.12, 0.04, hiss.gain)
+  const hiss = G(0.018), hHP = F('bandpass', 2600, 0.6); chain(noise(N.white), hHP, hiss, lake); lfo(0.12, 0.014, hiss.gain)
   })
 
   // ---- night insects: two crickets (sine carrier x pulse train x chirp gate) + a soft shimmering chorus ----
@@ -64,7 +65,7 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     const o = ctx.createOscillator(); o.frequency.value = f; o.start(t0); nodes.push(o)
     const a = G(0), b = G(0), out = G(v), ca = ctx.createConstantSource ? ctx.createConstantSource() : null
     if (ca) { ca.offset.value = 0.5; ca.connect(a.gain); ca.connect(b.gain); ca.start(t0); nodes.push(ca) } else { a.gain.value = 0.5; b.gain.value = 0.5 }
-    lfo(pulse, 0.5, a.gain, 'square'); lfo(chirp, 0.5, b.gain, 'square'); lfo(0.05 + Math.random() * 0.04, v * 0.5, out.gain)
+    lfo(pulse, 0.5, a.gain); { const o2 = ctx.createOscillator(), sm = F('lowpass', 22, 0.5), g2 = G(0.5); o2.type = 'square'; o2.frequency.value = chirp; chain(o2, sm, g2, b.gain); o2.start(t0); nodes.push(o2) } lfo(0.05 + Math.random() * 0.04, v * 0.5, out.gain)
     chain(o, a, b, pan(p), out, insects)
   }
   cricket(4420, 31, 1.55, -0.45, 0.07); cricket(3910, 27, 2.25, 0.5, 0.055); cricket(4780, 36, 0.9, 0.05, 0.03)
