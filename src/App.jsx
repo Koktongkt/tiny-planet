@@ -384,7 +384,7 @@ function stepPlayer(dt) {
   }
   P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
   _prevN.copy(P.n)
-  P.n.addScaledVector(P.fwd, go * (run ? 1.51 : 0.88) / R * dt).normalize() // round6: outdoor stroll another ~10% slower (0.975/1.68 -> 0.88/1.51)
+  P.n.addScaledVector(P.fwd, go * (run ? 1.51 : 0.88) * (P.spd || 1) / R * dt).normalize() // round6: outdoor stroll another ~10% slower (0.975/1.68 -> 0.88/1.51)
   // round6: the river, lake and harbour are impassable on foot. Airborne (a jump) she may cross; landing in water
   // puts her back on the bank she jumped from. On foot, slide along the bank instead of stepping in.
   const air = P.h - floorLift(P.n) > 0.012

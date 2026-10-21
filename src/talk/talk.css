@@ -24,3 +24,7 @@
 html.tp-touch .tk-box{bottom:calc(env(safe-area-inset-bottom,0px) + 14px);padding:24px 20px 12px}
 html.tp-touch .tk-box p{font-size:20px}
 @media (prefers-reduced-motion:reduce){.tk-bubble span,.tk-box,.tk-box p{animation:none}}
+/* Stage B: hearts on the name plate + gift button */
+.tk-hearts{margin-left:10px;vertical-align:middle}
+.tk-gift{position:absolute;right:48px;top:8px;height:32px;padding:0 14px;border:2px solid #3b2f22;border-radius:16px 18px 15px 19px;background:#fde8ea;color:#3b2f22;font:italic 600 16px/1 TPSerif,"Cormorant Garamond",Georgia,serif;cursor:pointer;pointer-events:auto}
+.tk-gift:hover{background:#fbd4da}

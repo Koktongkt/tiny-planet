@@ -12,7 +12,9 @@ const rows = [], fails = [], warns = []
 // 1. startup chunk
 const dist = path.resolve('dist/assets')
 if (fs.existsSync(dist)) {
-  const f = fs.readdirSync(dist).find(n => /^index-.*\.js$/.test(n))
+  // the entry chunk is the module script index.html loads (a lazy chunk could also be called index-*.js)
+  const html = fs.existsSync(path.join(dist, '../index.html')) ? fs.readFileSync(path.join(dist, '../index.html'), 'utf8') : ''
+  const f = (/assets\/(index-[\w-]+\.js)/.exec(html) || [])[1] || fs.readdirSync(dist).find(n => /^index-.*\.js$/.test(n))
   const kb = zlib.gzipSync(fs.readFileSync(path.join(dist, f)), { level: 9 }).length / 1024
   rows.push(`| startup chunk ${f} | ${kb.toFixed(2)} KB gz | target ≤ ${B.startup.targetKB}, fail > ${B.startup.failKB} | ${kb > B.startup.failKB ? 'FAIL' : kb > B.startup.targetKB ? 'warn' : 'ok'} |`)
   if (kb > B.startup.failKB) fails.push(`startup chunk ${kb.toFixed(2)} KB gz > ${B.startup.failKB}`); else if (kb > B.startup.targetKB) warns.push(`startup chunk ${kb.toFixed(2)} KB gz > target ${B.startup.targetKB}`)
