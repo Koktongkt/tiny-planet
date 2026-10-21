@@ -12,7 +12,7 @@ export async function mountTrainDev(scene, { stations = true, skin = true } = {}
   const touch = isTouchTier(), parent = planetRef.current || scene, out = { info: {} }
   let st = null, sk = null
   if (stations) { st = createStations(TRAIN_STOPS, (window.__sc && window.__sc.platformN) || fallbackPlatformN, stationMaterials(), { touch }); parent.add(st); out.info.stationTris = st.userData.tris }
-  if (skin) { for (let i = 0; i < 50 && !(TRAIN.cars && TRAIN.cars.every(Boolean)); i++) await new Promise(r => setTimeout(r, 100)); sk = applyTrainSkin(TRAIN.cars, carMaterials(), { touch }); out.info.skin = { tris: sk.tris, calls: sk.calls } }
+  if (skin) { for (let i = 0; i < 50 && !(TRAIN.cars && TRAIN.cars.every(Boolean)); i++) await new Promise(r => setTimeout(r, 100)); sk = applyTrainSkin(TRAIN.cars, carMaterials(), { touch }); out.info.skin = { tris: sk.tris, calls: sk.calls, oldCalls: sk.oldCalls, oldTris: sk.oldTris } }
   out.enable = (b) => { if (st) st.visible = b; if (sk) { if (b && !sk.on) { sk = applyTrainSkin(TRAIN.cars, carMaterials(), { touch }); sk.on = true } else if (!b) { sk.restore(); sk.on = false } } }
   if (sk) sk.on = true
   return out

@@ -50,5 +50,7 @@ export function applyTrainSkin(cars, M, { touch = false } = {}) {
     for (const c of g.children) if (c.visible && !c.userData.artC) { c.visible = false; hidden.push(c) }
     const geo = k === RIDE_SEAT.car ? open : coach
     for (const [gg, m] of [[geo.body, M.body], [geo.hull, M.hull], [geo.glow, M.glow]]) if (gg) { const me = new THREE.Mesh(gg, m); me.userData.artC = true; g.add(me); added.push(me); t += tris(gg); calls++ } }
-  return { tris: t, calls, restore() { for (const m of added) m.removeFromParent(); for (const c of hidden) c.visible = true } }
+  let oldCalls = 0, oldTris = 0 // what the hidden coaches cost (each visible mesh = 1 call; tris from its geometry)
+  for (const h of hidden) h.traverse(o => { if ((o.isMesh || o.isLine) && (o === h || o.visible !== false) && o.geometry) { oldCalls++; oldTris += tris(o.geometry) * (o.count || 1) } })
+  return { tris: t, calls, oldCalls, oldTris, restore() { for (const m of added) m.removeFromParent(); for (const c of hidden) c.visible = true } }
 }
