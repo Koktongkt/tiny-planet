@@ -49,13 +49,14 @@ const KEY_KIND = [
   [/^foliage0\.08_0\.4/, 'leaf'], [/^foliage1\.5_0\.02/, 'leaf'], [/^foliage0\.06_0\.3/, 'ever'], [/^wind0\.0[24]_-0\.3/, 'ever'],
   [/^paint0\.1true6$/, 'roof'], [/^paint0\.14true5$/, 'roof'], [/^paint0\.14true14$/, 'cap'], [/^paint0\.12true14$/, 'cap'], [/^paint0\.16true8$/, 'cap'],
 ]
+const WET_KINDS = new Set(['grass', 'roof']) // rain darkens + glosses these with the ground (same program count)
 const keyOf = (m) => { try { return m.customProgramCacheKey && m.customProgramCacheKey !== protoKey ? String(m.customProgramCacheKey()) : '' } catch (e) { return '' } }
 /** which patch a mesh's material should get, or null. Exported for tests / Codor's own wiring */
 export function classify(o) {
   const m = o.material; if (!m || Array.isArray(m) || !m.isMeshToonMaterial || ORIG.has(m)) return null
   const k = keyOf(m), g = o.geometry, p = g && g.parameters
   if (!o.isInstancedMesh && g && g.type === 'IcosahedronGeometry' && p && Math.abs(p.radius - R) < 0.01 && k.startsWith('paint')) return { kind: 'ground', wet: true }
-  for (const [re, kind] of KEY_KIND) if (re.test(k)) return { kind }
+  for (const [re, kind] of KEY_KIND) if (re.test(k)) return WET_KINDS.has(kind) ? { kind, wet: true } : { kind }
   if (o.isInstancedMesh && !k && !m.vertexColors && g && g.type === 'IcosahedronGeometry' && p && p.radius <= 0.04 && !(p.detail === 0 && Math.abs(p.radius - 0.035) < 1e-4)) return { kind: 'flower' }
   return null
 }

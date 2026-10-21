@@ -12,18 +12,18 @@ void main(){
   float speed = 6.5 + 2.5 * h2, len = .2 + .14 * h2;
   vec3 p = aSeed.xyz * uBox + dir * uTime * speed;
   p -= uOff; p = mod(p, uBox) - uBox * .5; p.y += uBox.y * .25;
-  vec3 q = p / uBox; float edge = smoothstep(.5, .34, max(abs(q.x), abs(q.z))) * smoothstep(.5, .38, abs(q.y - .25));
+  vec3 q = p / uBox; float edge = (1. - smoothstep(.34, .5, max(abs(q.x), abs(q.z)))) * (1. - smoothstep(.38, .5, abs(q.y - .25)));
   vec4 c = modelViewMatrix * vec4(p, 1.);
   vec3 ax = normalize(mat3(modelViewMatrix) * dir), side = normalize(cross(ax, normalize(-c.xyz)));
   float w = .006 + .004 * h2;
   c.xyz += side * aQ.x * w + ax * aQ.y * len;
   gl_Position = projectionMatrix * c;
-  vQ = aQ; float near = smoothstep(.35, 1.4, -c.z), far = smoothstep(14., 7., -c.z);
+  vQ = aQ; float near = smoothstep(.35, 1.4, -c.z), far = (1. - smoothstep(7., 14., -c.z));
   vA = edge * near * far * uRain * (1. - uSnowW) * (.5 + .35 * h2);
   vC = mix(vec3(.9, .95, 1.), uSky, .35) + vec3(1., .92, .78) * .25 * max(0., uSunV.y);
 }`
 const FS = `varying vec2 vQ; varying float vA; varying vec3 vC;
-void main(){ float a = (1. - abs(vQ.x)) * smoothstep(0., .25, vQ.y) * smoothstep(1., .6, vQ.y); gl_FragColor = vec4(vC, vA * a); }`
+void main(){ float a = (1. - abs(vQ.x)) * smoothstep(0., .25, vQ.y) * (1. - smoothstep(.6, 1., vQ.y)); gl_FragColor = vec4(vC, vA * a); }`
 /** createRain({ count, box }) -> { object, material, update(anchor, camera, renderer) } */
 export function createRain({ count = 1400, box = [9, 6, 9] } = {}) {
   const g = new THREE.InstancedBufferGeometry()

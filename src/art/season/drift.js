@@ -22,7 +22,7 @@ void main(){
   if (type > .5 && type < 1.5) p += vec3(sin(uTime * .9 + h * 17.), sin(uTime * 1.3 + h * 9.) * .6, cos(uTime * .8 + h * 23.)) * .25;
   p -= uOff;
   p = mod(p, uBox) - uBox * .5; p.y += uBox.y * .3;
-  vec3 q = p / uBox; float edge = smoothstep(.5, .36, max(abs(q.x), abs(q.z))) * smoothstep(.5, .4, abs(q.y - .3));
+  vec3 q = p / uBox; float edge = (1. - smoothstep(.36, .5, max(abs(q.x), abs(q.z)))) * (1. - smoothstep(.4, .5, abs(q.y - .3)));
   vec4 mv = modelViewMatrix * vec4(p, 1.);
   float size = type < .5 ? .1 : type < 1.5 ? mix(.03, .06, uNight) : type < 2.5 ? .12 : mix(.05, .075, h2);
   gl_PointSize = size * uPx / max(.2, -mv.z) * on;
@@ -44,14 +44,14 @@ void main(){
   vec2 q = gl_PointCoord - .5; float c = cos(vRot.x), s = sin(vRot.x); q = mat2(c, -s, s, c) * q; q.x /= vRot.y;
   float a;
   if (vType < .5) { // petal: rounded teardrop with a little notch
-    vec2 p = q * vec2(2.4, 2.); float d = length(vec2(p.x, p.y * (p.y > 0. ? 1.25 : .9))); a = smoothstep(.62, .5, d) * (1. - smoothstep(.06, 0., abs(p.x)) * step(.42, p.y));
+    vec2 p = q * vec2(2.4, 2.); float d = length(vec2(p.x, p.y * (p.y > 0. ? 1.25 : .9))); a = (1. - smoothstep(.5, .62, d)) * (1. - (1. - smoothstep(0., .06, abs(p.x))) * step(.42, p.y));
     gl_FragColor = vec4(mix(vCol.rgb, vCol.rgb * vec3(.78, .6, .66), smoothstep(.3, .55, d)), vCol.a * a); if (a < .02) discard; return;
-  } else if (vType < 1.5) { float d = length(q); a = smoothstep(.5, .0, d); a *= a; }
+  } else if (vType < 1.5) { float d = length(q); a = (1. - smoothstep(.0, .5, d)); a *= a; }
   else if (vType < 2.5) { // leaf: pointed vesica + a darker vein
-    vec2 p = q * 2.2; float d = abs(p.x) + p.y * p.y * .9; a = smoothstep(.62, .5, d + abs(p.y) * .35);
+    vec2 p = q * 2.2; float d = abs(p.x) + p.y * p.y * .9; a = (1. - smoothstep(.5, .62, d + abs(p.y) * .35));
     if (abs(p.x) < .045 && abs(p.y) < .5) { gl_FragColor = vec4(vCol.rgb * .7, vCol.a * a); return; }
     gl_FragColor = vec4(mix(vCol.rgb, vCol.rgb * .7, smoothstep(.35, .58, d + abs(p.y) * .35)), vCol.a * a); if (a < .02) discard; return;
-  } else { float d = length(q); a = smoothstep(.5, .4, d); gl_FragColor = vec4(mix(vec3(1.), vec3(.72, .78, .9), smoothstep(.22, .46, d)), vCol.a * a); if (a < .02) discard; return; }
+  } else { float d = length(q); a = (1. - smoothstep(.4, .5, d)); gl_FragColor = vec4(mix(vec3(1.), vec3(.72, .78, .9), smoothstep(.22, .46, d)), vCol.a * a); if (a < .02) discard; return; }
   if (a < .02) discard;
   gl_FragColor = vec4(vCol.rgb, vCol.a * a);
 }`
