@@ -14,7 +14,8 @@ import * as Tu from './tutorial.js'
 import * as Ph from './photo.js'
 import { WEATHER, periodAt, TALK } from '../talk/state.js'
 import { TRAIN, TRAIN_STOPS } from '../world/village.js'
-import { T, CAMX } from '../common.jsx'
+import { T } from '../common.jsx'
+import { HOME } from '../home/state.js'
 import { CAM } from '../touch.jsx'
 import { wind, R, TRAIN_LAT, dir, height } from '../world.js'
 import { SB } from './live.js'
@@ -33,7 +34,7 @@ TRAIN.fn = (t) => Tr.trainState(SCH, t + SC.toff, TS).lon // toff: test / debug 
 export const STOP_NAME = { village: 'Lakeside (village)', forest: 'Forest Edge (ruins)' }
 // platform: a step north of the rails (toward the lake / ruins paths)
 export const platformN = (id) => { const s = TRAIN_STOPS.find(x => x.id === id); return dir(TRAIN_LAT + 0.3 / R, s.lon) }
-export const RIDE = { riding: false, from: null, to: null, progress: 0, car: 3, seat: 0.09 }
+export const RIDE = { riding: false, from: null, to: null, progress: 0, car: 3, seat: 0.09, pin: null }
 window.__scRide = RIDE
 const nextArrival = (id) => { const t = wind.time.value + SC.toff; for (let k = 0; k < SCH.period; k += 0.5) { if (Tr.trainState(SCH, t + k, _ns).stop === id) return k } return SCH.period }
 const _ns = {}
@@ -50,10 +51,11 @@ export function board(id) {
   if (f.cost) take('coin', f.cost)
   S().train.rides++; Object.assign(RIDE, { riding: true, from: id, to: TRAIN_STOPS.find(s => s.id !== id).id, progress: 0 })
   G.ui.lock = 'ride'; const P = window.__player; if (P) P.target = null
-  CAMX.pin = pinRide; toast(f.cost ? 'All aboard! (1 coin)' : 'All aboard! Your first ride is on the house.', 'coin', 3000); emit(); return true
+  RIDE.pin = pinRide; toast(f.cost ? 'All aboard! (1 coin)' : 'All aboard! Your first ride is on the house.', 'coin', 3000); emit(); return true
 }
 const _f = new THREE.Vector3(), _u = new THREE.Vector3()
-function pinRide(obj) {
+// runs from WorldC's frame callback, after her own (Traveller) pose for the frame
+export function pinRide(obj) {
   const P = window.__player, car = TRAIN.cars && TRAIN.cars[RIDE.car]; if (!P || !car) return
   _u.copy(car.position).normalize(); P.n.copy(_u); P.h = 0; P.target = null
   _f.set(0, 0, 1).applyQuaternion(car.quaternion); P.fwd.copy(_f); P.face && P.face.copy(_f)
@@ -62,7 +64,7 @@ function pinRide(obj) {
   if (TS.stop === RIDE.to) alight()
 }
 export function alight() {
-  const P = window.__player; CAMX.pin = null; G.ui.lock = null
+  const P = window.__player; RIDE.pin = null; G.ui.lock = null
   if (P) { P.n.copy(platformN(RIDE.to)); P.h = 0; P.target = null }
   toast(`${STOP_NAME[RIDE.to]}. Mind the step!`, 'leaf', 3000); Object.assign(RIDE, { riding: false, from: null, to: null, progress: 0 }); emit()
 }
@@ -122,8 +124,8 @@ const wheelPH = (e) => { if (PH.on) PH.dist *= e.deltaY > 0 ? 1.08 : 0.93 }
 export function photo(on = !PH.on) {
   if (on === PH.on) return; if (on && (G.ui.panel || G.ui.fish || G.ui.lock)) return
   PH.on = on; document.documentElement.classList.toggle('tp-photo', on)
-  if (on) { PH.yaw = 0.5; PH.pitch = 0.35; PH.dist = 2.4 * (CAM.zoom || 1); G.ui.lock = 'photo'; CAMX.f = photoCam; addEventListener('keydown', keyPH, true); addEventListener('wheel', wheelPH, { passive: true }) }
-  else { G.ui.lock = null; CAMX.f = null; removeEventListener('keydown', keyPH, true); removeEventListener('wheel', wheelPH) }
+  if (on) { PH.yaw = 0.5; PH.pitch = 0.35; PH.dist = 2.4 * (CAM.zoom || 1); G.ui.lock = 'photo'; PH.prevCam = HOME.camera; HOME.camera = (c, g, dt) => photoCam(c) || PH.prevCam(c, g, dt); addEventListener('keydown', keyPH, true); addEventListener('wheel', wheelPH, { passive: true }) }
+  else { G.ui.lock = null; if (PH.prevCam) { HOME.camera = PH.prevCam; PH.prevCam = null } removeEventListener('keydown', keyPH, true); removeEventListener('wheel', wheelPH) }
   emit()
 }
 // one rendered frame -> 2D canvas, read in the same task as the render (WorldC useFrame after the composer); no preserveDrawingBuffer

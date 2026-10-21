@@ -28,7 +28,7 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
-import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q, CAMX } from './common.jsx'
+import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
@@ -436,7 +436,7 @@ function Traveller() {
     else { stepPlayer(dt)
     faceStep(dt); const side = _wx.crossVectors(P.n, P.face)
     ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.face))
-    ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h); CAMX.pin && CAMX.pin(ref.current, dt) }
+    ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
     tickAct(PST); PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
@@ -464,7 +464,7 @@ function Rig() {
     g.rotation.y = spin.a; g.updateMatrixWorld()
     P.wPos.copy(P.n).multiplyScalar(R + height(P.n) + P.h).applyMatrix4(g.matrixWorld)
     P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld)
-    if (HOME.camera(camera, g, dt) || (CAMX.f && CAMX.f(camera, g, dt))) return // interior camera while she's inside; Stage C photo cam
+    if (HOME.camera(camera, g, dt)) return // interior camera while she's inside
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 2.2)) // polish: softer follow lag
     if (VIEW.mode === 'follow') {
       const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))

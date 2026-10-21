@@ -7,7 +7,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { R, height, around } from '../world.js'
 import { G, setPanel, subscribe } from '../game/store.js'
 import { TRAIN_STOPS } from '../world/village.js'
-import { SC, PH } from './liveC.js'
+import { SC, PH, RIDE } from './liveC.js'
+import { HOME } from '../home/state.js'
 const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n) + lift)
 export function layoutStageC(GAME) {
   const ruins = GAME.Zc && GAME.Zc.ruins
@@ -33,6 +34,8 @@ function PhotoCapture() {
   useEffect(() => { let was = PH.on; return subscribe(() => { if (was !== PH.on) { was = PH.on; force() } }) }, [])
   return PH.on ? <Capture /> : null
 }
+// train ride: after Traveller's frame (this lazy subscriber runs later at the same priority), sit her in the carriage
+function RidePin() { useFrame(() => { if (RIDE.pin && HOME.playerObj) RIDE.pin(HOME.playerObj) }); return null }
 export function StageCWorld({ GAME }) {
   useEffect(() => {
     LC = window.__scLayout = layoutStageC(GAME)
@@ -44,6 +47,6 @@ export function StageCWorld({ GAME }) {
       if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', icon: 'book', verb: 'Visit', name: 'the ruins museum', act: () => setPanel('museum') }, d, 0.5) }
     })
   }, [])
-  return <PhotoCapture />
+  return <><PhotoCapture /><RidePin /></>
 }
 export default StageCWorld
