@@ -49,7 +49,7 @@ function PhotoBar() {
     <div className="tpc-pbar paper">
       <div className="tpc-filters">{ids.map(id => <button key={id} className={PH.filter === id ? 'on' : ''} onClick={() => { PH.filter = id; emit() }}>{id}</button>)}</div>
       <button className="tpc-shutter" onClick={() => SC.shutter()} aria-label="Take photo"><i /></button>
-      <button className="tpc-close" onClick={() => SC.photo(false)}>Done <span className="key">Esc</span></button>
+      <button className="tpc-close" onClick={() => SC.photo(false)}>Done{!TOUCH && <> <span className="key">Esc</span></>}</button>
       <small>{TOUCH ? 'Drag to orbit · pinch to zoom' : 'Drag / A D to orbit · W S tilt · Q E or wheel zoom · R F height · Space to shoot'}</small>
     </div></div>
 }
