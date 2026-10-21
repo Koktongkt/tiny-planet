@@ -17,7 +17,7 @@ export const FISH = [
   { id: 'ayu', rarity: 'common', size: [12, 26], spots: ['river'], season: ['spring', 'summer'], time: ['morning', 'day'], weather: 'any' },
   { id: 'char', rarity: 'uncommon', size: [18, 36], spots: ['river'], season: ['autumn', 'winter'], time: ['morning'], weather: 'clear' },
   { id: 'loach', rarity: 'common', size: [8, 16], spots: ['river', 'lake'], season: ['spring', 'summer', 'autumn'], time: 'any', weather: 'rain' },
-  { id: 'mackerel', rarity: 'common', size: [25, 42], spots: ['harbour'], season: 'any', time: ['morning', 'day', 'evening'], weather: 'any' },
+  { id: 'mackerel', rarity: 'common', size: [25, 42], spots: ['harbour'], season: 'any', time: 'any', weather: 'any' },
   { id: 'sea_bream', rarity: 'rare', size: [30, 56], spots: ['harbour'], season: ['spring', 'summer'], time: ['morning'], weather: 'clear' },
   { id: 'flounder', rarity: 'uncommon', size: [24, 46], spots: ['harbour'], season: ['autumn', 'winter'], time: ['day', 'evening'], weather: 'any' },
   { id: 'pufferfish', rarity: 'uncommon', size: [10, 26], spots: ['harbour'], season: ['summer', 'autumn'], time: ['evening', 'night'], weather: 'clear' },
@@ -36,7 +36,7 @@ export function rollFish(ctx, rnd = Math.random) {
   const list = fishFor(ctx); if (!list.length) return null
   const w = list.map(f => RARITY[f.rarity] * (f.weather === 'rain' ? 1.5 : 1)), tot = w.reduce((a, b) => a + b, 0)
   let r = rnd() * tot, k = 0; while (k < list.length - 1 && (r -= w[k]) > 0) k++
-  const f = list[k], t = rnd(), size = Math.round(f.size[0] + (f.size[1] - f.size[0]) * (1 - Math.sqrt(1 - t)) * 10) / 10 // big ones rarer
+  const f = list[k], t = rnd(), size = Math.round((f.size[0] + (f.size[1] - f.size[0]) * (1 - Math.sqrt(1 - t))) * 10) / 10 // big ones rarer
   return { fishId: f.id, size }
 }
 export const weatherKind = (w) => w === 'drizzle' || w === 'rain' ? 'rain' : 'clear'
