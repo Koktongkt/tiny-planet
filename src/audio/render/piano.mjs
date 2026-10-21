@@ -1,6 +1,7 @@
 // Offline renderer for the Tiny Planet piano loop (original composition, additive piano synth + Freeverb).
 // node src/audio/render/piano.mjs out.wav   -> 48 kHz stereo 16-bit WAV, seamless loop (reverb tail folded into the start)
 // Then: ffmpeg -i out.wav -c:a libopus -b:a 40k public/audio/piano-loop.ogg ; ffmpeg -i out.wav -c:a aac -b:a 48k public/audio/piano-loop.m4a
+/* global Buffer, process, console */ // Node-only offline tool (not bundled)
 import fs from 'fs'
 const SR = 48000, BPM = 60, BEAT = 60 / BPM, BEATS = 64, LOOP = BEATS * BEAT, TAIL = 7
 const N = Math.round((LOOP + TAIL) * SR), L = new Float32Array(N), Rr = new Float32Array(N)
