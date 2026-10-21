@@ -3,6 +3,9 @@
 import * as THREE from 'three'
 import { R, dir, place, BRIDGES, waterAt, onBridge } from '../world.js'
 export const VILLAGE = dir(1.05, 0.2)
+// for other systems (e.g. Studio's audio zones): the village square centre, planet-local unit vector (lat 1.05, lon 0.2).
+// Surface point: VILLAGE_POS.clone().multiplyScalar(R + height(VILLAGE_POS)); world space: .applyMatrix4(planetRef.current.matrixWorld)
+export const VILLAGE_POS = VILLAGE
 export const MILLS = [dir(0.25, 1.4), dir(0.45, 1.75)]
 export const HOUSES = [[0.9, -0.15], [1.18, 0.55], [0.92, 0.78], [1.3, -0.3], [1.0, 0.95], [0.3, -0.6], [0.75, 2.2], [0.5, 2.55], [0.92, 2.6], [0.35, 2.25], [0.7, 2.85]].map(([la, lo]) => dir(la, lo))
 // the first bridge and helpers to place things relative to it

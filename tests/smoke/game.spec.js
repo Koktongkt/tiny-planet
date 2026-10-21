@@ -95,8 +95,11 @@ test('indoor controls: walk, turn, go out of the door', async ({ page }) => {
 
 test('faces the direction of travel (outdoors and indoors)', async ({ page }) => {
   const w = watchErrors(page); await boot(page, OUT)
+  await page.evaluate(() => { const P = window.__player; window.__start = { n: P.n.clone(), fwd: P.fwd.clone() } })
   for (const keys of [['w'], ['s'], ['w', 'a'], ['s', 'd']]) {
-    await startFacingSampler(page); await hold(page, keys, 5000); await page.waitForTimeout(500)
+    // back to the same open spot each time so a wall or the river can't stop her
+    await page.evaluate(() => { const P = window.__player; P.n.copy(window.__start.n); P.fwd.copy(window.__start.fwd); P.target = null; window.__snap = 1 }); await page.waitForTimeout(1500)
+    await startFacingSampler(page); await hold(page, keys, 8000); await page.waitForTimeout(500) // long enough that the 180° turn-in is a small share at SwiftShader frame rates
     const r = await facingStats(page); expect(r.n, keys.join('+')).toBeGreaterThan(3)
     expect(r.med, keys.join('+') + ' median deg').toBeLessThan(25); expect(r.p90, keys.join('+') + ' p90 deg').toBeLessThan(45)
   }
