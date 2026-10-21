@@ -70,10 +70,11 @@ test('train: board at the village stop (free), ride, alight at the forest stop; 
   await page.waitForFunction(() => !window.__scRide.riding && !window.__game.G.ui.lock, null, { timeout: 90_000, polling: 250 })
   const end = await page.evaluate(() => { const P = window.__player, n = window.__sc.platformN('forest'); return { d: P.n.distanceTo(n), rides: window.__game.G.s.train.rides } })
   expect(end.d).toBeLessThan(0.01); expect(end.rides).toBe(1)
+  // the train still dwells here: the ride back now costs 1 coin, and she has none
   const p2 = await page.evaluate(() => window.__sc.stationPrompt('forest'))
-  expect(p2.verb).toBe('Station:') // the train just left: the next one is announced
-  const fare = await page.evaluate(() => window.__sc.Tr.fare(window.__game.G.s.train.rides, window.__game.G.s.inv.coin || 0))
-  expect(fare).toEqual({ ok: false, cost: 1 })
+  expect(p2.verb).toBe('Board the train to'); expect(p2.name).toContain('1 coin')
+  expect(await page.evaluate(() => window.__sc.board('forest'))).toBe(false)
+  expect(await page.evaluate(() => window.__scRide.riding)).toBe(false)
   w.check()
 })
 
