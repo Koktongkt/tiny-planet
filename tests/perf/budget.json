@@ -1,0 +1,16 @@
+{
+  "_doc": "Per-view caps from tiny-planet-perf/budget.md. Draw calls and triangles are hardware-independent, but villagers/pets move so a view drifts run to run on SwiftShader: a view fails only above cap * (1 + tolerance). Overrides are known, pre-existing overs (tracked, not to grow).",
+  "startup": { "targetKB": 70, "failKB": 80 },
+  "tolerance": { "calls": 0.03, "tris": 0.05 },
+  "caps": {
+    "desktop": { "walk": { "calls": 500, "tris": 600000 }, "orbit": { "calls": 900, "tris": 900000 } },
+    "mobile": { "walk": { "calls": 350, "tris": 350000 }, "orbit": { "calls": 600, "tris": 500000 } }
+  },
+  "overrides": {
+    "mobile.forest": { "calls": 400, "note": "pre-existing since round6 (388 at 3d49c4e); forest instancing on touch is a Stage B item" }
+  },
+  "views": {
+    "desktop": { "house": "?enter&nosave&t=day", "home": "?enter&nosave&t=day&out&at=home", "forest": "?enter&nosave&t=day&out&at=forest", "village": "?enter&nosave&t=day&out&at=village", "orbit": "?enter&nosave&t=day&view=orbit&nogame" },
+    "mobile": { "house": "?enter&nosave&t=day", "home": "?enter&nosave&t=day&out&at=home", "forest": "?enter&nosave&t=day&out&at=forest", "village": "?enter&nosave&t=day&out&at=village" }
+  }
+}
