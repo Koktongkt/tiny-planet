@@ -1,6 +1,6 @@
 // 3D side of Gather & Craft: gatherable props, sheep, fireflies, the Home bench + sign, placed decor + ghost preview,
 // the rope bridge + cliff-top reward, the player's lantern, and the proximity/interaction loop.
-import { onTap } from '../touch.jsx'
+import { onTap, TOUCH } from '../touch.jsx'
 import { startAct, ACT, FREEZE } from '../act.js'
 import * as THREE from 'three'
 import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
@@ -295,8 +295,8 @@ export function GameWorld() {
         g.scale.setScalar((1 + 0.35 * Math.sin(Math.min(1, k / 0.35) * Math.PI)) * Math.max(0.05, 1 - Math.max(0, (k - 0.5) / 0.5)))
         g.rotation.y = k * 8; g.visible = true; continue
       }
-      g.visible = live && dc < (sp.item === 'glowmoss' && G.s.tools.lantern ? 14 : sp.forage !== undefined ? 4 : 10) // forage props are small (and not instanced yet: ~14 calls each):
-      if (g.visible && sp.forage !== undefined && ++forageShown > 2) g.visible = false //   a short draw range and at most 2 on screen
+      g.visible = live && dc < (sp.item === 'glowmoss' && G.s.tools.lantern ? 14 : sp.forage !== undefined ? (TOUCH ? 3 : 4) : 10) // forage props are small (and not instanced yet: ~14 calls each):
+      if (g.visible && sp.forage !== undefined && ++forageShown > (TOUCH ? 1 : 2)) g.visible = false //   a short draw range, at most 2 on screen (1 on touch: mobile.village sits at its 350k cap)
       if (g.visible) {
         g.position.copy(sp.pos); g.scale.setScalar(1)
         if (sp.item === 'firefly') g.position.addScaledVector(sp.n, Math.sin(performance.now() / 600 + sp.spin) * 0.05)
