@@ -20,9 +20,9 @@ void main(){
   float rim = (1. - smoothstep(edge, edge + .12, r)) * (1. - inside); // soaked ground ring
   if (inside + rim < .01) discard;
   vec3 V = normalize(vV), N = normalize(vN); float ndv = clamp(dot(N, V), 0., 1.);
-  float fr = .18 + .6 * pow(1. - ndv, 2.);
-  vec3 deep = mix(vec3(.3, .35, .42), vec3(.1, .12, .2), uNight);
-  vec3 sky = uSky * 1.06;
+  float fr = .5 + .5 * pow(1. - ndv, 2.); // a puddle is mostly a sky mirror, even from above
+  vec3 deep = mix(vec3(.42, .52, .62), vec3(.1, .12, .2), uNight);
+  vec3 sky = mix(uSky * 1.1, vec3(.78, .9, 1.), .25 * (1. - uNight));
   float cloud = smoothstep(.35, .8, sin(u.x * 2.3 + u.y * 1.1 + sd) * .5 + .5) * .16; // soft reflected cloud band
   vec3 col = mix(deep, sky + cloud * (1. - uNight), fr);
   float sp = pow(max(dot(reflect(-V, N), normalize(uSunV)), 0.), 160.) * uSDay; col += vec3(1., .95, .82) * sp * 1.4;
@@ -33,10 +33,10 @@ void main(){
     float d = length(u - c); rip += (1. - smoothstep(0., .04, abs(d - f * .5))) * (1. - f) * step(h1(id + fk * 7.), .35 + .65 * uRain); }
   col = mix(col, vec3(.97, .98, 1.), clamp(rip, 0., 1.) * .7 * uRain);
   float lip = smoothstep(edge - .13, edge - .07, r) * (1. - smoothstep(edge - .07, edge - .04, r)); // bright inner lip
-  float ink = smoothstep(edge - .05, edge - .015, r) * inside; // warm-ink outline like the toon hulls
+  float ink = smoothstep(edge - .07, edge - .02, r) * inside; // warm-ink outline like the toon hulls
   col = mix(col, vec3(.96, .97, 1.), lip * .35);
-  col = mix(col, vec3(.29, .23, .21), ink * .6);
-  float a = inside * .9 + rim * .4;
+  col = mix(col, vec3(.29, .23, .21), ink * .8);
+  float a = inside * .96 + rim * .45;
   vec3 outc = mix(vec3(.2, .16, .13), col, inside);
   gl_FragColor = vec4(outc, a * smoothstep(0., .08, uWet));
 }`
