@@ -10,16 +10,14 @@ const rnd = (a, b) => a + Math.random() * (b - a)
 
 /** 2 s of white + brown noise, filled in chunks (each well under 1 ms); sources loop it from different offsets */
 function noiseBuffers(ctx) {
-  const n = Math.round(ctx.sampleRate * 2), w = ctx.createBuffer(1, n, ctx.sampleRate), b = ctx.createBuffer(1, n, ctx.sampleRate)
-  const W = w.getChannelData(0), B = b.getChannelData(0), CH = 12000, steps = []; let last = 0
-  for (let i0 = 0; i0 < n; i0 += CH) steps.push(() => { for (let i = i0, e = Math.min(n, i0 + CH); i < e; i++) { const r = Math.random() * 2 - 1; W[i] = r; last = (last + 0.02 * r) / 1.02; B[i] = last * 3.5 } })
+  const n = Math.round(ctx.sampleRate * 2), CH = 6000, N = { white: null, brown: null, steps: [] }; let W, B, last = 0
+  N.steps.push(() => { N.white = ctx.createBuffer(1, n, ctx.sampleRate); N.brown = ctx.createBuffer(1, n, ctx.sampleRate); W = N.white.getChannelData(0); B = N.brown.getChannelData(0) })
+  for (let i0 = 0; i0 < n; i0 += CH) N.steps.push(() => { for (let i = i0, e = Math.min(n, i0 + CH); i < e; i++) { const r = Math.random() * 2 - 1; W[i] = r; last = (last + 0.02 * r) / 1.02; B[i] = last * 3.5 } })
   // brown noise drifts: crossfade the last 2000 samples into the start so the loop seam is continuous
-  steps.push(() => { for (let i = 0, m = 2000; i < m; i++) { const k = i / m; B[n - m + i] = B[n - m + i] * (1 - k) + B[i] * k } })
-  return { white: w, brown: b, steps }
+  N.steps.push(() => { for (let i = 0, m = 2000; i < m; i++) { const k = i / m; B[n - m + i] = B[n - m + i] * (1 - k) + B[i] * k } })
+  return N
 }
 
-/** staged: build in small tasks (<= ~2 ms each, setTimeout between) so the main thread never sees a long task.
- *  Layer buses exist immediately, so setMix()/schedule() are safe before `ready` resolves. */
 export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   const t0 = ctx.currentTime, N = noiseBuffers(ctx), nodes = []
   const G = (v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g }
@@ -40,9 +38,9 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   // ---- wind: brown noise, slow gusts (two incommensurate LFOs on gain), a wandering lowpass and a faint whistle ----
   steps.push(() => {
   windLP = F('lowpass', 680, 0.6); const gust = G(0.55), wPan = pan(0), air = F('bandpass', 850, 0.8), airG = G(0.22)
-  chain(noise(N.brown), windLP, gust, wPan, wind); chain(noise(N.white), air, airG, gust); lfo(0.053, 220, air.frequency); lfo(0.047, 0.3, gust.gain); lfo(0.131, 0.14, gust.gain); lfo(0.071, 260, windLP.frequency)
+  chain(noise(N.brown), windLP, gust, wPan, wind); steps.push(() => { chain(noise(N.white), air, airG, gust); lfo(0.053, 220, air.frequency) }); lfo(0.047, 0.3, gust.gain); lfo(0.131, 0.14, gust.gain); lfo(0.071, 260, windLP.frequency)
   if (wPan.pan) lfo(0.023, 0.45, wPan.pan)
-  const whistle = G(0.035), wBP = F('bandpass', 1150, 9); chain(noise(N.white), wBP, whistle, wind); lfo(0.09, 0.03, whistle.gain); lfo(0.031, 320, wBP.frequency)
+  steps.push(() => { const whistle = G(0.035), wBP = F('bandpass', 1150, 9); chain(noise(N.white), wBP, whistle, wind); lfo(0.09, 0.03, whistle.gain); lfo(0.031, 320, wBP.frequency) })
   })
 
   // ---- water: river burble (band noise with fast irregular AM + glints) and lake lapping (low swells) ----
@@ -50,7 +48,7 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   const rOut = F('lowpass', 4200, 0.5); rOut.connect(river)
   const rBody = F('bandpass', 1300, 0.45), rAM = G(0.5); chain(noise(N.white), rBody, rAM, rOut)
   lfo(4.3, 0.12, rAM.gain); lfo(6.9, 0.08, rAM.gain); lfo(0.63, 0.14, rAM.gain); lfo(0.37, 280, rBody.frequency)
-  const glint = G(0.16), gBP = F('bandpass', 3100, 1.6); chain(noise(N.white), gBP, glint, rOut); lfo(2.7, 650, gBP.frequency); lfo(1.9, 0.09, glint.gain)
+  steps.push(() => { const glint = G(0.16), gBP = F('bandpass', 3100, 1.6); chain(noise(N.white), gBP, glint, rOut); lfo(2.7, 650, gBP.frequency); lfo(1.9, 0.09, glint.gain) })
   const rLow = G(0.5), rLP = F('lowpass', 320, 0.5); chain(noise(N.brown), rLP, rLow, rOut)
   })
   steps.push(() => {
@@ -68,7 +66,7 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     lfo(pulse, 0.5, a.gain); { const o2 = ctx.createOscillator(), sm = F('lowpass', 22, 0.5), g2 = G(0.5); o2.type = 'square'; o2.frequency.value = chirp; chain(o2, sm, g2, b.gain); o2.start(t0); nodes.push(o2) } lfo(0.05 + Math.random() * 0.04, v * 0.5, out.gain)
     chain(o, a, b, pan(p), out, insects)
   }
-  cricket(4420, 31, 1.55, -0.45, 0.07); cricket(3910, 27, 2.25, 0.5, 0.055); cricket(4780, 36, 0.9, 0.05, 0.03)
+  steps.push(() => cricket(4420, 31, 1.55, -0.45, 0.07), () => cricket(3910, 27, 2.25, 0.5, 0.055), () => cricket(4780, 36, 0.9, 0.05, 0.03))
   const chorus = G(0.06), cBP = F('bandpass', 5400, 7); chain(noise(N.white), cBP, chorus, insects); lfo(0.31, 0.04, chorus.gain); lfo(0.07, 500, cBP.frequency)
   })
 
@@ -109,7 +107,7 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   }
   function dispose() { for (const n of nodes) try { n.stop() } catch (e) {} try { master.disconnect(); limiter.disconnect() } catch (e) {} }
   let ready; const stats = { steps: steps.length, tasks: 0, maxTaskMs: 0 }
-  if (!staged) { steps.forEach(f => f()); ready = Promise.resolve() }
-  else ready = new Promise(res => { let i = 0; const go = () => { const s = performance.now(); while (i < steps.length && performance.now() - s < 1.5) steps[i++](); stats.tasks++; stats.maxTaskMs = Math.max(stats.maxTaskMs, performance.now() - s); if (i < steps.length) setTimeout(go, 0); else res() }; go() })
+  if (!staged) { for (let i = 0; i < steps.length; i++) steps[i](); stats.steps = steps.length; ready = Promise.resolve() }
+  else ready = new Promise(res => { let i = 0; const go = () => { const s = performance.now(); while (i < steps.length && performance.now() - s < 0.8) steps[i++](); stats.tasks++; stats.maxTaskMs = Math.max(stats.maxTaskMs, performance.now() - s); if (i < steps.length) setTimeout(go, 0); else { stats.steps = steps.length; res() } }; go() })
   return { ctx, master, amb, music, sfx, setMix, schedule, dispose, S, ready, stats }
 }
