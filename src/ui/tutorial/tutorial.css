@@ -1,0 +1,46 @@
+/* First-day note (art-c): a little letter from Grandma Fuku pinned to the corner of the screen. Uses parchment.css (.tpx). */
+.tpt{position:fixed;right:18px;top:84px;z-index:12;pointer-events:auto}
+.tpt-note{width:min(350px,92vw);padding:20px 22px 14px 24px;transform:rotate(1.2deg);transform-origin:70% 0;animation:tpt-in .5s cubic-bezier(.3,1.3,.5,1)}
+.tpt-note::before{content:'';position:absolute;left:50%;top:-11px;width:84px;height:24px;margin-left:-42px;transform:rotate(-4deg);
+  background:repeating-linear-gradient(90deg,#e8a6a0cc 0 6px,#f2c2bccc 6px 12px);box-shadow:0 1px 2px #2a1e1440;border-radius:2px;clip-path:polygon(3% 0,97% 4%,100% 50%,96% 100%,2% 96%,0 52%)}
+.tpt-head{display:flex;align-items:flex-start;gap:8px;margin:2px 0 6px}
+.tpt-head h3{flex:1;margin:0;font:italic 600 27px/1.05 TPSerif,"Cormorant Garamond",Georgia,serif}
+.tpt-head small{display:block;font-size:16px;font-weight:500;opacity:.7;margin-top:3px}
+.tpt-sprig{width:44px;height:44px;flex:none;margin:-4px -2px 0 -6px}
+.tpt-x{width:40px;height:40px;margin:-8px -10px 0 0}
+.tpt ol{list-style:none;margin:0;padding:0}
+.tpt li{position:relative;display:grid;grid-template-columns:30px 26px 1fr;align-items:start;gap:6px;padding:5px 0 6px;font-size:18px;line-height:1.18}
+.tpt li+li{border-top:1px dashed #3b2f2226}
+.tpt li .box{width:26px;height:26px;margin-top:1px}
+.tpt li .doodle{width:26px;height:26px;opacity:.85;margin-top:1px}
+.tpt li .t{position:relative}
+.tpt li.done .t{opacity:.55}
+.tpt li .strike{position:absolute;left:-2px;right:-2px;top:.55em;height:10px;overflow:visible;pointer-events:none}
+.tpt li .strike path{stroke-dasharray:400;stroke-dashoffset:400}
+.tpt li.done .strike path{animation:tpt-draw .7s .25s ease-out forwards}
+.tpt li .tick{stroke-dasharray:40;stroke-dashoffset:40}
+.tpt li.done .tick{animation:tpt-draw .45s ease-out forwards}
+.tpt li.next .t{font-weight:600}
+.tpt li.next::before{content:'';position:absolute;left:-14px;top:13px;width:8px;height:8px;border-radius:50%;background:#d9655b;box-shadow:0 0 0 2px #f6eddb,0 0 0 3.4px #3b2f22aa}
+.tpt-foot{display:flex;align-items:flex-end;gap:10px;margin-top:8px}
+.tpt-stitch{flex:1;height:22px}
+.tpt-sign{font:italic 600 21px/1 TPSerif,"Cormorant Garamond",Georgia,serif;white-space:nowrap;transform:rotate(-3deg);margin-bottom:2px}
+.tpt-sign small{display:block;font-size:13px;font-weight:500;opacity:.6;text-align:right;margin-top:2px}
+.tpt-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.tpt-btns .tpx-btn{min-height:40px;font-size:17px!important;padding:4px 14px 6px}
+/* folded: a small pinned slip */
+.tpt-slip{display:flex;align-items:center;gap:8px;padding:8px 14px 9px 12px;border:0;transform:rotate(-2deg);animation:tpt-in .35s ease-out}
+.tpt-slip .pin{width:22px;height:22px;flex:none}
+.tpt-slip b{font:italic 600 19px/1 TPSerif,"Cormorant Garamond",Georgia,serif}
+.tpt-slip .tpx-num{opacity:.75}
+.tpt-slip:hover{transform:rotate(0deg) translateY(-1px)}
+@keyframes tpt-draw{to{stroke-dashoffset:0}}
+@keyframes tpt-in{from{opacity:0;transform:translateY(-14px) rotate(4deg)}}
+/* mobile: top centre, clear of the stick (bottom-left) and buttons (bottom-right) */
+@media (max-width:640px){
+  .tpt{left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 62px);display:flex;justify-content:center}
+  .tpt-note{width:min(360px,94vw);padding:16px 16px 12px 20px;transform:rotate(.6deg)}
+  .tpt-head h3{font-size:24px}
+  .tpt li{font-size:17px;padding:4px 0 5px}
+}
+@media (prefers-reduced-motion:reduce){.tpt-note,.tpt-slip{animation:none}.tpt li.done .tick,.tpt li.done .strike path{animation:none;stroke-dashoffset:0}}
