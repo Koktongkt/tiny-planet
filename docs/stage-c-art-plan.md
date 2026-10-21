@@ -101,6 +101,34 @@ Hooks come from Codor's `systems/weather.js` (`applyTo(T, phase)` every clock ti
 
 ---
 
+## BUILT on art-c (item 7): journal, ruins museum interior, Professor Hoshino
+Built against stage-c `collection.js` (RELICS / NEW_RELICS / DONATABLE / entries / progress / HOSHINO='scholar'), `liveC` (journal(tab), donatable, donate), `PanelsC` placeholders and stage-c-contract.md. All lazy; startup chunk unchanged (69,583 → 69,586 B gz vs stage-c a27ead2, raw identical 200,255 B).
+
+- `src/art/museum/` (lazy chunk `MuseumInterior` 12.2 KB gz + kit 1.2 KB):
+  - `layout.js` — `MUSEUM {x0,x1,z0,z1,h,S:1.25}` (room units, same scale as Home), `MDOOR` (back wall), `DESK`, `TANK`, `SLOTS` (8 relic plinths + 3 fish slots = DONATABLE), `SLOT_IDS`, `MBLOCKS` (collision boxes), `slotNear(x,z,r)`.
+  - `hall.js` — `hallGeometry({touch})` → `{one, glow, tris}` (≈3.5k tris, 1 toon+ink call + 1 glow call); `buildTank()` → `{glass, water}`.
+  - `relics.js` — 3D kit models for all 8 relics, `relicGeometry(id)`, `chalkOutline(id,…)` (chalk outline + "?" for empty slots).
+  - `plaques.js` — canvas atlas `plaqueTexture`, `plaquesGeometry(donated)` (1 call).
+  - `MuseumInterior.jsx` — `<MuseumInterior donated onInspect layer touch hoshino highlight/>`; fish swim in the tank via existing `FishInstances` (GPU wiggle; one group transform per species on CPU; minnows always present).
+  - `Hoshino.jsx` — `HOSHINO_LOOK` (scholar cfg + scarf/vest colours), `attachNotebook(root)` (notebook + pencil parented to forearm bones at runtime — GhibliPerson `Prop` untouched), `<Hoshino scale pose='write'/>`.
+  - `portrait.jsx` — `<HoshinoPortrait size mood='happy'|'curious'/>` SVG bust for Talk/Donate.
+  - `icons.jsx` — `RELIC_ICONS` + `registerRelicIcons()` for relic_tile/bell/lens/mask/bowl.
+- `src/ui/journal/` — `<Journal tab onTab entries progress onClose touch/>` spiral notebook, washi tabs (fish/forage/relics/photos), silhouettes + "? ? ?" for unseen, museum stamp for donated, polaroids for photos; `text.js` (`JOURNAL_TABS`, `entryName`, `entryBlurb`, `entryNote`, `tabCount`). Chunk 3.6 KB js + 1.8 KB css gz (+ shared text 1.6 KB). DOM only, 0 draw calls, ~530 nodes.
+- `src/ui/museum/` — `<DonateCard itemId onDonate onClose mode='donate'|'inspect' donatedDay have line/>`; 2.3 KB js + 0.8 KB css gz.
+- `itemsC.js` — cozy `FORAGE_RELIC_TEXT` for the 5 new relics, `PLAQUE_TEXT` (11), `HOSHINO_LINES {donate, empty, full}`.
+
+Perf (preview, SwiftShader; Home house for comparison: desktop 218–260 calls / 125–137k tris, mobile 191–193 / 121k):
+
+| view | calls | tris |
+|---|---|---|
+| museum + her + Hoshino, desktop, empty / half / full | 58 / 61 / 65 | 92.8k / 94.6k / 96.7k |
+| same, mobile (touch), empty / half | 56 / 57 | 64.8k / 65.7k |
+| museum + Hoshino only, empty / full | 28 / 35 | 35.5k / 39.4k |
+Programs: 16 for the whole preview. Well under the interior budget.
+
+Shots: /workspace/tiny-planet-perf/art-c/museum-{empty,half,full}.png, museum-{empty,half}-mobile.png, journal-{fish,forage,relics,photos}(-mobile).png, donate-card(-mobile|-thanks).png, hoshino.png.
+Tests: tests/unit/stagec-art-museum.test.mjs (7).
+
 ## BUILT on art-c (item 6): train stations, carriages, ride pose, ride overlay, train audio
 Base: stage-c 8fffbb3 (built against `TRAIN_STOPS`, `systems/train.js`, liveC `SCH`/`TS`/`RIDE`/`platformN`/`board`/`alight`; nothing reinvented).
 All lazy; startup chunk unchanged (69,599 B gz vs stage-c 69,591 B: +8 B is only the export-name order of the shared
@@ -235,7 +263,7 @@ wet lags rain and dries over ~3 h), put on `window.__T.rain/.wet`, puddle spot l
 Audio: `train` layer (clack rhythm tied to speed, brake hiss, whistle on depart) via `L.onTrain` + `trainSpeed`.
 Codor: stops/dwell + speed curve in Train(), boarding prompt, parenting her to the car, ride camera (Studio gives `RIDE_CAM` offsets),
 station placement on the ring, a walk route from the village to the nearest station, alight logic.
-### 7. Journal + ruins museum + Professor Hoshino
+### 7. Journal + ruins museum + Professor Hoshino — BUILT (see top)
 `src/ui/journal/Journal.jsx` `<Journal tab={'fish'|'relics'|'forage'|'photos'} entries={Entry[]} onTab onClose />` (parchment book, sketch
 silhouettes for unseen). Entry `{ id, kind:'fish'|'relic'|'forage', seen, count, best?:cm, firstDay?, donated }`.
 `src/art/museum/MuseumExterior.jsx` `<Museum n spin quality />` (small hall beside the ruins). `src/art/museum/MuseumInterior.jsx`
