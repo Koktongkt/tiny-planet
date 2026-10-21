@@ -1,7 +1,7 @@
 // Desktop smoke: load, enter, walk, gather, craft, sleep + reload (save), v1 save migration, indoor controls, facing.
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
-import { watchErrors, boot, hold, playerN, angDeg, startFacingSampler, facingStats } from './helpers.js'
+import { watchErrors, boot, hold, holdFrames, playerN, angDeg, startFacingSampler, facingStats } from './helpers.js'
 const OUT = '?enter&nosave&t=day&out&at=village'
 
 test('loads, title card enters, no errors', async ({ page }) => {
@@ -46,6 +46,7 @@ test('crafts at the bench', async ({ page }) => {
 })
 
 test('sleep advances the day and the day survives a reload', async ({ page }) => {
+  test.setTimeout(720_000) // three boots + two sleeps; CI runners are ~3x slower than a dev box
   const w = watchErrors(page); await boot(page, '?enter&reset')
   await boot(page, '?enter') // clean save from here; no ?reset on the reload below
   expect(await page.evaluate(() => window.__game.G.s.day)).toBe(0)
@@ -76,6 +77,7 @@ test('an old v1 save loads and migrates', async ({ page }) => {
 })
 
 test('indoor controls: walk, turn, go out of the door', async ({ page }) => {
+  test.setTimeout(480_000)
   const w = watchErrors(page); await boot(page)
   const h0 = await page.evaluate(() => ({ ...window.__home.hp, inside: window.__home.inside }))
   expect(h0.inside).toBe(true)
@@ -94,18 +96,19 @@ test('indoor controls: walk, turn, go out of the door', async ({ page }) => {
 })
 
 test('faces the direction of travel (outdoors and indoors)', async ({ page }) => {
+  test.setTimeout(900_000)
   const w = watchErrors(page); await boot(page, OUT)
   await page.evaluate(() => { const P = window.__player; window.__start = { n: P.n.clone(), fwd: P.fwd.clone() } })
   for (const keys of [['w'], ['s'], ['w', 'a'], ['s', 'd']]) {
     // back to the same open spot each time so a wall or the river can't stop her
     await page.evaluate(() => { const P = window.__player; P.n.copy(window.__start.n); P.fwd.copy(window.__start.fwd); P.target = null; window.__snap = 1 }); await page.waitForTimeout(1500)
-    await startFacingSampler(page); await hold(page, keys, 8000); await page.waitForTimeout(500) // long enough that the 180° turn-in is a small share at SwiftShader frame rates
+    await startFacingSampler(page); await holdFrames(page, keys, 50); await page.waitForTimeout(300)
     const r = await facingStats(page); expect(r.n, keys.join('+')).toBeGreaterThan(3)
     expect(r.med, keys.join('+') + ' median deg').toBeLessThan(25); expect(r.p90, keys.join('+') + ' p90 deg').toBeLessThan(45)
   }
   await boot(page)
   for (const keys of [['w'], ['s']]) {
-    await startFacingSampler(page); await hold(page, keys, 3000)
+    await startFacingSampler(page); await holdFrames(page, keys, 40, 90_000)
     const r = await facingStats(page); if (r.n > 3) expect(r.med, 'indoor ' + keys).toBeLessThan(25)
   }
   w.check()

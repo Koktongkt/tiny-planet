@@ -27,9 +27,17 @@ export const startFacingSampler = (page) => page.evaluate(() => { window.__fs = 
       if (vl > 1e-4) window.__fs.push({ ang: Math.acos(Math.max(-1, Math.min(1, (v.x * f.x + v.y * f.y + v.z * f.z) / (vl * fl)))) * 57.3, vl }) }
     last = pos }
   requestAnimationFrame(loop) })
-export async function facingStats(page) {
+// hold keys for a number of rendered frames, not seconds: the game clamps dt to 50 ms, so on a slow software-GL runner
+// (~1 fps) a turn takes many more wall-clock seconds. Needs startFacingSampler running (counts moving frames).
+export async function holdFrames(page, keys, frames, maxMs = 150_000) {
+  for (const k of keys) await page.keyboard.down(k)
+  await page.waitForFunction((n) => (window.__fs?.length || 0) >= n, frames, { timeout: maxMs, polling: 250 }).catch(() => {})
+  for (const k of [...keys].reverse()) await page.keyboard.up(k)
+}
+export async function facingStats(page, skip = 20) {
   const arr = await page.evaluate(() => { window.__fsI++; return window.__fs })
-  const tail = arr.slice(Math.max(3, Math.floor(arr.length * 0.25))), vm = tail.map(s => s.vl).sort((a, b) => a - b)[tail.length >> 1] || 0
+  // skip the turn-in (20 frames = 1 s of game time)
+  const tail = arr.slice(Math.min(skip, Math.floor(arr.length / 2))), vm = tail.map(s => s.vl).sort((a, b) => a - b)[tail.length >> 1] || 0
   const a = tail.filter(s => s.vl > vm * 0.4).map(s => s.ang).sort((x, y) => x - y)
   return { n: a.length, med: a.length ? a[a.length >> 1] : null, p90: a.length ? a[Math.floor(a.length * 0.9)] : null }
 }
