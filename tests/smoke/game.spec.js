@@ -47,7 +47,7 @@ test('crafts at the bench', async ({ page }) => {
 
 test('sleep advances the day and the day survives a reload', async ({ page }) => {
   const w = watchErrors(page); await boot(page, '?enter&reset')
-  await page.goto('?enter'); await boot(page, '?enter') // clean save, no ?reset on the reload below
+  await boot(page, '?enter') // clean save from here; no ?reset on the reload below
   expect(await page.evaluate(() => window.__game.G.s.day)).toBe(0)
   await page.evaluate(() => { window.__game.G.s.taken['smoke-spot'] = 0; window.__homeAct.sleep() })
   await page.waitForFunction(() => window.__game.G.s.day === 1 && !window.__home.busy, null, { timeout: 60_000 })
