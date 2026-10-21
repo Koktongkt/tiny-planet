@@ -50,8 +50,8 @@ const MIX = [['skyseed', 'ripe', 1], ['turnip', 'mature', 1], ['carrot', 'ripe',
 const mixPlots = () => MIX.map(([c, st, w], k) => ({ id: 'p' + k, pos: onTop(((k % 3) - 1) * 0.34, (Math.floor(k / 3) - 1.5) * 0.34), cropId: c, stage: st, watered: !!w, plantedDay: 0 }))
 function Tufts() { // a little meadow around the garden (preview set dressing only)
   const ref = useRef(), N = 260
-  const geo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.05, 0); g.scale(1, 0.55, 1); return g }, []), mat = useMemo(() => toon('#8cc46a'), [])
-  useEffect(() => { const o = new THREE.Object3D(), c = new THREE.Color(); let k = 0; for (let i = 0; i < N; i++) { const a = i * 2.39996, r = 0.75 + Math.sqrt(i / N) * 2.6, x = Math.cos(a) * r, z = Math.sin(a) * r; const p = new THREE.Vector3(x, R, z).normalize(); o.position.copy(p).multiplyScalar(R); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p); o.scale.setScalar(0.6 + (i % 7) / 7); o.updateMatrix(); ref.current.setMatrixAt(k, o.matrix); ref.current.setColorAt(k++, c.set(['#8cc46a', '#9fd17a', '#7fbf6a', '#b2d888'][i % 4])) } ref.current.instanceMatrix.needsUpdate = true; ref.current.instanceColor.needsUpdate = true }, [])
+  const geo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.06, 1); g.scale(1, 0.6, 1); return g }, []), mat = useMemo(() => toon('#ffffff'), [])
+  useEffect(() => { const o = new THREE.Object3D(), c = new THREE.Color(); let k = 0; for (let i = 0; i < N; i++) { const a = i * 2.39996, r = 0.75 + Math.sqrt(i / N) * 2.6, x = Math.cos(a) * r, z = Math.sin(a) * r; const p = new THREE.Vector3(x, R, z).normalize(); o.position.copy(p).multiplyScalar(R); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p); o.scale.setScalar(0.6 + (i % 7) / 7); o.updateMatrix(); ref.current.setMatrixAt(k, o.matrix); ref.current.setColorAt(k++, c.set(['#6fae55', '#7fbf6a', '#5f9e4a', '#8cc46a'][i % 4])) } ref.current.instanceMatrix.needsUpdate = true; ref.current.instanceColor.needsUpdate = true }, [])
   return <instancedMesh ref={ref} args={[geo, mat, N]} raycast={() => null} />
 }
 function WorldScene() {
