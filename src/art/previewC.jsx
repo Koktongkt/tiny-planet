@@ -111,6 +111,39 @@ function MuseumPv() {
     </Canvas><div className="pc-hud" id="pc-hud" /></div>
 }
 function Progs() { const gl = useThree(s => s.gl); useFrame(() => { window.__progs = gl.info.programs ? gl.info.programs.length : 0; const h = document.getElementById('pc-hud'); if (h) h.textContent = `${window.__calls} calls · ${window.__tris} tris · ${window.__progs} programs` }); return null }
+// ---------------- journal / donate / hoshino (item 7) ----------------
+const JnPv = React.lazy(() => import('../ui/journal/Journal.jsx')), DnPv = React.lazy(() => import('../ui/museum/DonateCard.jsx'))
+function mockState(C) {
+  const s = { fish: {}, journal: C.freshJournal(), museum: { donated: {} }, seen: {} }
+  ;[['minnow', 6, 7.5, 0], ['crucian', 3, 21, 1], ['koi', 1, 54, 3], ['ayu', 2, 19, 4], ['catfish', 1, 48, 6], ['mackerel', 4, 31, 2]].forEach(([id, count, best, firstDay]) => { s.fish[id] = { count, best, firstDay } })
+  ;[['sakura', 4, 0], ['bamboo_shoot', 1, 2], ['maple_leaf', 2, 9], ['yuzu', 1, 14]].forEach(([id, count, firstDay]) => { s.journal.forage[id] = { count, firstDay } })
+  ;[['shard', 5, 1], ['coin', 3, 1], ['crystal', 1, 4], ['relic_bell', 1, 5], ['relic_mask', 1, 8]].forEach(([id, count, firstDay]) => { s.journal.relics[id] = { count, firstDay } })
+  for (const id of ['shard', 'coin', 'relic_bell', 'koi']) s.museum.donated[id] = 6
+  return s
+}
+function mockPhotos() { const hues = [[200, 60], [30, 70], [120, 50], [330, 60], [45, 80]]; return hues.map(([h, l], i) => { const c = document.createElement('canvas'); c.width = 160; c.height = 120; const x = c.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 120); g.addColorStop(0, `hsl(${h},55%,${l + 10}%)`); g.addColorStop(0.6, `hsl(${h + 20},45%,${l}%)`); g.addColorStop(1, `hsl(${100 + i * 10},40%,40%)`); x.fillStyle = g; x.fillRect(0, 0, 160, 120); x.fillStyle = '#fff8'; x.beginPath(); x.arc(40 + i * 20, 34, 12, 0, 7); x.fill(); x.fillStyle = '#3a5a3a'; x.beginPath(); x.moveTo(0, 120); x.quadraticCurveTo(80, 60 + i * 6, 160, 120); x.fill(); return { id: 'p' + i, day: i * 3 + 1, src: c.toDataURL('image/jpeg', 0.7) } }) }
+function JournalPv() {
+  useCss(); const [C, setC] = useState(null), [tab, setTab] = useState(q.get('tab') || 'fish')
+  useEffect(() => { import('../systems/collection.js').then(m => { setC(m); setTimeout(ready, 600) }) }, [])
+  const st = useMemo(() => C && mockState(C), [C]), photos = useMemo(() => (q.get('photos') === '0' ? [] : mockPhotos()), [])
+  if (!C) return null
+  const list = tab === 'photos' ? photos : C.entries(tab, st)
+  return <div className="pc-game"><Suspense fallback={null}><JnPv tab={tab} onTab={setTab} entries={list} progress={C.progress(st)} onClose={() => {}} touch={q.has('touch') || matchMedia('(pointer:coarse)').matches} /></Suspense></div>
+}
+function DonatePv() {
+  useCss(); useEffect(() => { setTimeout(ready, 600) }, [])
+  return <div className="pc-game"><Suspense fallback={null}><DnPv itemId={q.get('id') || 'relic_mask'} have={2} mode={q.get('mode') || 'donate'} donatedDay={5} onDonate={() => true} onClose={() => {}} /></Suspense></div>
+}
+function HoshinoPv() {
+  useCss(); const [m, setM] = useState(null)
+  useEffect(() => { import('./museum/index.js').then(M => { setM(M); setTimeout(ready, 1500) }) }, [])
+  if (!m) return null
+  return <div className="pc-wrap" style={{ background: 'radial-gradient(120% 90% at 30% 20%,#f3e6cc,#e2cfa8)' }}><IconDefs /><div className="pc-sec">Professor Hoshino · museum look + dialogue portrait</div>
+    <div className="pc-row"><div style={{ width: 560, height: 560, borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 0 0 1.6px #3b2f2250', background: 'linear-gradient(#f6ecd8,#e8d6b4)' }}>
+      <Canvas dpr={1} camera={{ fov: 24, near: 0.01, far: 20 }} gl={{ antialias: true, alpha: true }}><Tick /><Stats /><Lights /><Cam pos={[0.35, 0.42, 1.35]} look={[0, 0.2, 0]} />
+        <m.Hoshino scale={0.8} /><mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.5, 32]} /><meshToonMaterial color="#c99a6a" /></mesh></Canvas></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}><m.HoshinoPortrait size={240} /><div className="pc-row"><m.HoshinoPortrait size={110} mood="curious" /><m.HoshinoPortrait size={64} /></div></div></div></div>
+}
 const MODE = q.get('m')
 const PhotoPv = React.lazy(() => import('./previewPhoto.jsx'))
 export default function PreviewC({ mode }) {
@@ -121,6 +154,9 @@ export default function PreviewC({ mode }) {
   if (mode === 'photo') return <Suspense fallback={null}><PhotoPv /></Suspense>
   if (mode === 'forage') return <Forage />
   if (mode === 'museum') return <MuseumPv />
+  if (mode === 'journal') return <JournalPv />
+  if (mode === 'donate') return <DonatePv />
+  if (mode === 'hoshino') return <HoshinoPv />
   return <div>unknown mode</div>
 }
 export const C_MODES = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo', 'forage', 'museum', 'journal', 'donate', 'hoshino']

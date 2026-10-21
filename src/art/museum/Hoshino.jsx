@@ -27,7 +27,7 @@ export function attachNotebook(root, cfg = HOSHINO_LOOK) {
   const S = spec(cfg.body), g = notebookGeo(), out = []
   for (const k of ['L', 'R']) { const fo = root.getObjectByName('fo' + k); if (!fo) continue
     const hand = new THREE.Group(); hand.position.copy(S['hd' + k].clone().sub(S['el' + k])); fo.add(hand); out.push(hand)
-    const m = new THREE.Mesh(k === 'L' ? g.book : g.pencil, g.m); if (k === 'L') { m.rotation.set(0.9, 0.35, 0.2); m.position.set(0.01, 0.006, 0.02) } else { m.rotation.set(1.1, 0, 0.5); m.position.set(0, 0.004, 0.008) }
+    const m = new THREE.Mesh(k === 'L' ? g.book : g.pencil, g.m); if (k === 'L') { m.rotation.set(0.35, 0.9, 0.1); m.position.set(0.012, 0.0, 0.03) } else { m.rotation.set(1.1, 0, 0.5); m.position.set(0, 0.004, 0.008) }
     m.traverse(o => { o.layers.mask = root.layers.mask }); hand.add(m) }
   return () => out.forEach(h => h.removeFromParent())
 }
@@ -38,9 +38,9 @@ export function Hoshino({ scale = 0.8, pose = 'write', res = 44, ...props }) {
     return () => { clearInterval(iv); off && off() } }, [])
   useFrame((_, dt) => { st.t += Math.min(dt, 0.05); const B = bones.current; if (!B || pose !== 'write') return
     const t = st.t, look = Math.sin(t * 0.35) > 0.6 // looks up from his notes now and then
-    B.upL.rotation.set(-0.55, 0, 0.28); B.foL.rotation.set(-1.35, 0, 0)
-    B.upR.rotation.set(-0.5, 0, -0.32); B.foR.rotation.set(-1.25 + Math.sin(t * 9) * (look ? 0 : 0.05), Math.sin(t * 4.3) * (look ? 0 : 0.08), 0)
-    if (B.head) B.head.rotation.x = look ? -0.04 : 0.34 })
+    B.upL.rotation.set(-0.15, 0, 0); B.foL.rotation.set(-1.2, 0, 0)
+    B.upR.rotation.set(-0.15, 0, 0); B.foR.rotation.set(-1.1 + Math.sin(t * 9) * (look ? 0 : 0.05), Math.sin(t * 4.3) * (look ? 0 : 0.08), 0)
+    if (B.head) B.head.rotation.x = look ? -0.04 : 0.18 })
   return <group ref={g} {...props}><Character cfg={HOSHINO_LOOK} st={st} res={res} scale={scale} /></group>
 }
 export default Hoshino
