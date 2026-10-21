@@ -21,8 +21,8 @@ const uvOf = (id) => { const i = PLAQUE_CELLS.indexOf(id), rows = Math.ceil(PLAQ
 /** all plaques, one geometry: relic plaques lean on the plinth fronts (+z), fish plaques sit on the tank cabinet (+x) */
 export function plaquesGeometry(donated = {}) {
   const pos = [], uv = [], nrm = [], m = new THREE.Matrix4(), v = new THREE.Vector3(), n = new THREE.Vector3()
-  for (const s of SLOTS) { const has = donated[s.id] !== undefined, [u0, v0, u1, v1] = uvOf(has ? s.id : '?'), w = 0.15, h = 0.056
-    if (s.kind === 'relic') m.makeRotationX(-0.35).setPosition(s.x, 0.27, s.z + 0.103); else m.makeRotationY(Math.PI / 2).setPosition(-1.36 + 0.19 + 0.031, 0.24, s.z)
+  for (const s of SLOTS) { const has = donated[s.id] !== undefined, [u0, v0, u1, v1] = uvOf(has ? s.id : '?'), w = 0.13, h = 0.048
+    if (s.kind === 'relic') m.makeRotationX(-0.35).setPosition(s.x, 0.115, s.z + 0.088); else m.makeRotationY(Math.PI / 2).setPosition(-1.36 + 0.19 + 0.031, 0.13, s.z)
     const q = [[-w / 2, -h / 2, u0, v0], [w / 2, -h / 2, u1, v0], [w / 2, h / 2, u1, v1], [-w / 2, -h / 2, u0, v0], [w / 2, h / 2, u1, v1], [-w / 2, h / 2, u0, v1]]
     n.set(0, 0, 1).transformDirection(m)
     for (const [x, y, a, b] of q) { v.set(x, y, 0).applyMatrix4(m); pos.push(v.x, v.y, v.z); uv.push(a, b); nrm.push(n.x, n.y, n.z) } }

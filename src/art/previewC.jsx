@@ -94,6 +94,23 @@ function Forage() {
         {cells.map((c, i) => <group key={c.id} position={c.p} rotation={[0, 0.5 + i * 0.3, 0]}><m.F.ForageProp item={c.id} s={2.5} /></group>)}</Canvas></div>
     <div className="pc-row">{m.F.FORAGE.map(f => <Icon key={f.id} id={f.id} size={44} />)}</div></div>
 }
+// ---------------- museum (item 7): ?m=museum&fill=empty|half|full[&touch][&her=0] ----------------
+const FILLS = { empty: [], half: ['shard', 'coin', 'relic_bell', 'relic_mask', 'koi'], full: null }
+function MuseumPv() {
+  useCss(); const [m, setM] = useState(null), touch = q.has('touch')
+  useEffect(() => { Promise.all([import('./museum/index.js'), import('../GhibliPerson.jsx')]).then(([M, P]) => { setM({ M, P }); setTimeout(ready, 1500) }) }, [])
+  if (!m) return null
+  const fill = q.get('fill') || 'half', ids = FILLS[fill] ?? m.M.SLOT_IDS, donated = Object.fromEntries(ids.map(id => [id, 3]))
+  const st = { move: 0, phase: 0, t: 0, force: true }
+  return <div className="pc-scene" style={{ background: '#2e2420' }}>
+    <Canvas dpr={1} camera={{ fov: 56, near: 0.02, far: 20 }} gl={{ antialias: true }}><Tick /><Stats /><Progs />
+      <hemisphereLight args={['#fff1d8', '#8a6a4a', 0.9]} /><directionalLight position={[1.5, 3, 2.5]} intensity={1.6} color="#fff0d8" /><pointLight position={[0, 1.1, 0.2]} color="#ffc98a" intensity={1.2} distance={3.5} decay={1.4} />
+      <Cam pos={q.has('cam') ? q.get('cam').split(',').map(Number) : [0.2, 0.95, 1.75]} look={[-0.15, 0.22, -0.3]} />
+      <group scale={1}><m.M.MuseumInterior donated={donated} touch={touch} onInspect={(id) => { window.__inspected = id }} />
+        {q.get('her') !== '0' && <group position={[0.45, 0, 0.62]} rotation={[0, Math.PI + 0.5, 0]}><m.P.Character cfg={m.P.TRAVELLER} st={st} res={touch ? 36 : 84} scale={0.8} /></group>}</group>
+    </Canvas><div className="pc-hud" id="pc-hud" /></div>
+}
+function Progs() { const gl = useThree(s => s.gl); useFrame(() => { window.__progs = gl.info.programs ? gl.info.programs.length : 0; const h = document.getElementById('pc-hud'); if (h) h.textContent = `${window.__calls} calls · ${window.__tris} tris · ${window.__progs} programs` }); return null }
 const MODE = q.get('m')
 const PhotoPv = React.lazy(() => import('./previewPhoto.jsx'))
 export default function PreviewC({ mode }) {
@@ -103,6 +120,7 @@ export default function PreviewC({ mode }) {
   if (mode === 'fish' || mode === 'school') return <Scene3D />
   if (mode === 'photo') return <Suspense fallback={null}><PhotoPv /></Suspense>
   if (mode === 'forage') return <Forage />
+  if (mode === 'museum') return <MuseumPv />
   return <div>unknown mode</div>
 }
-export const C_MODES = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo', 'forage']
+export const C_MODES = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo', 'forage', 'museum', 'journal', 'donate', 'hoshino']

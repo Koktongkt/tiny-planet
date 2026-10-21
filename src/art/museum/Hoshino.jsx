@@ -32,7 +32,7 @@ export function attachNotebook(root, cfg = HOSHINO_LOOK) {
   return () => out.forEach(h => h.removeFromParent())
 }
 /** <Hoshino pose='write'|'idle' scale /> — museum figure (writing in his notebook, glancing up now and then) */
-export function Hoshino({ scale = 0.64, pose = 'write', res = 44, ...props }) {
+export function Hoshino({ scale = 0.8, pose = 'write', res = 44, ...props }) {
   const g = useRef(), st = useMemo(() => ({ move: 0, phase: 0, t: 0, force: true }), []), bones = useRef(null)
   useEffect(() => { let off = null, n = 0; const iv = setInterval(() => { const r = g.current; if (r && r.getObjectByName('foL')) { off = attachNotebook(r); bones.current = { upL: r.getObjectByName('upL'), foL: r.getObjectByName('foL'), upR: r.getObjectByName('upR'), foR: r.getObjectByName('foR'), head: r.getObjectByName('head') }; clearInterval(iv) } else if (++n > 50) clearInterval(iv) }, 100)
     return () => { clearInterval(iv); off && off() } }, [])
