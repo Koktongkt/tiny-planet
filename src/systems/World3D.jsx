@@ -7,20 +7,18 @@ import { R, height, place, around } from '../world.js'
 import { startAct } from '../act.js'
 import { TOUCH } from '../touch.jsx'
 import { G, emit, subscribe, setPanel } from '../game/store.js'
-import { VILLAGE_POS } from '../world/village.js'
+import { VILLAGE_POS, gardenBedNs } from '../world/village.js'
 import { SB } from './live.js'
 const GardenPlots = lazy(() => import('../art/garden/GardenPlots.jsx')) // (not index.js: an "index-*" chunk name would look like the startup chunk)
 const NoticeBoard = lazy(() => import('../ui/errands/NoticeBoard.jsx'))
 const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n) + lift)
-// 2 x 3 beds left of the Home sign (home frame: +x right, +z out of the door), 0.36 apart
-const BEDS = [[-0.84, 0.3], [-1.2, 0.3], [-0.84, 0.66], [-1.2, 0.66], [-0.84, 1.02], [-1.2, 1.02]]
 const _z = new THREE.Vector3(), _x = new THREE.Vector3(), _f = new THREE.Vector3()
 // yaw so a frame built like art/garden plotMatrix (forward = world +Z on the tangent plane) faces `fwd`
 function yawFor(u, fwd) { _z.set(0, 0, 1); if (Math.abs(u.z) > 0.95) _z.set(1, 0, 0); _z.addScaledVector(u, -_z.dot(u)).normalize(); _x.crossVectors(u, _z); _f.copy(fwd).addScaledVector(u, -fwd.dot(u)).normalize(); return Math.atan2(_f.dot(_x), _f.dot(_z)) }
 function spinToward(n, target) { const q0 = place(n, 0, 0).q, z = new THREE.Vector3(0, 0, 1).applyQuaternion(q0), x = new THREE.Vector3(1, 0, 0).applyQuaternion(q0), d = target.clone().sub(n); d.addScaledVector(n, -d.dot(n)); return Math.atan2(d.dot(x), d.dot(z)) }
 export function layoutStageB(L, blocked) {
-  const hp = place(L.homeN, 0, 0), hpos = posOf(L.homeN), fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(hp.q)
-  const plots = BEDS.map(([x, z], i) => { const n = hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize(); return { id: 'plot-' + i, n, pos: posOf(n).toArray().map(v => +v.toFixed(4)), yaw: +yawFor(n, fwd).toFixed(4) } })
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(place(L.homeN, 0, 0).q)
+  const plots = gardenBedNs(L.homeN, height).map((n, i) => { return { id: 'plot-' + i, n, pos: posOf(n).toArray().map(v => +v.toFixed(4)), yaw: +yawFor(n, fwd).toFixed(4) } })
   // notice board: at the edge of the village square, facing its centre; the first free bearing wins
   let bn = null
   for (const b of [4.2, 3.6, 4.8, 3.0, 5.4, 2.4]) { const n = around(VILLAGE_POS, 0.078, b); if (!blocked(n)) { bn = n; break } }

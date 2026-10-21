@@ -31,7 +31,7 @@ import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
-import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY } from './world/village.js'
+import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
 
@@ -209,7 +209,9 @@ function Vegetation() {
       for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (streamDist(n) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
       if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
     }
-    return { grass, flowers }
+    // stage-b: no lawn tufts / flowers under the garden beds (hidden there anyway; filtered after generation so the seeded layout elsewhere is unchanged)
+    const beds = gardenBedNs(HOUSES[0], height), clear = (it) => { _t.copy(it.pos).normalize(); return !beds.some(b => b.angleTo(_t) < 0.2 / R) }
+    return { grass: grass.filter(clear), flowers: flowers.filter(clear) }
   }, [])
   const geos = useMemo(() => {
     const tuft = new THREE.SphereGeometry(0.07, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2); tuft.scale(1, 0.75, 1)
@@ -264,6 +266,9 @@ function Lamp({ n, i = 0 }) {
       <mesh position={[0, -0.042, 0]} material={MAT.wood}><coneGeometry args={[0.04, 0.025, 6]} /></mesh></group>
   </Surface>
 }
+// stage-b trim: the four sails (+ their ink) and the four spars are one merged mesh each: 12 -> 3 draw calls per mill, same shapes
+let BLADES = null
+const bladeGeos = () => BLADES || (BLADES = (() => { const s = [], w = [], r = new THREE.Matrix4(); for (let k = 0; k < 4; k++) { r.makeRotationZ(k * Math.PI / 2); s.push(new THREE.BoxGeometry(0.13, 0.6, 0.015).translate(0, 0.38, 0).applyMatrix4(r)); w.push(new THREE.BoxGeometry(0.025, 0.72, 0.02).translate(0, 0.38, -0.01).applyMatrix4(r)) } return { sail: mergeGeometries(s), spar: mergeGeometries(w) } })())
 function Windmill({ n, i }) {
   const blades = useRef(); useFrame((_, dt) => { blades.current.rotation.z += dt * (0.8 + i * 0.3) })
   return <Surface n={n} lift={-0.05} spin={-0.4 + i}>
@@ -271,7 +276,7 @@ function Windmill({ n, i }) {
     <mesh position={[0, 1.22, 0]} material={MAT.roofs[i % 4]}><coneGeometry args={[0.22, 0.32, 8]} /><Outlines thickness={0.02} color={INK} /></mesh>
     <mesh position={[0, 0.6, 0.235]} material={MAT.win}><planeGeometry args={[0.08, 0.1]} /></mesh>
     <group ref={blades} position={[0, 1.0, 0.26]}>
-      {[0, 1, 2, 3].map(k => <group key={k} rotation={[0, 0, k * Math.PI / 2]}><mesh position={[0, 0.38, 0]} material={MAT.sail}><boxGeometry args={[0.13, 0.6, 0.015]} /><Outlines thickness={0.015} color={INK} /></mesh><mesh position={[0, 0.38, -0.01]} material={MAT.wood}><boxGeometry args={[0.025, 0.72, 0.02]} /></mesh></group>)}
+      <mesh geometry={bladeGeos().sail} material={MAT.sail}><Outlines thickness={0.015} color={INK} /></mesh><mesh geometry={bladeGeos().spar} material={MAT.wood} />
       <mesh material={MAT.wood}><sphereGeometry args={[0.05, 8, 6]} /></mesh>
     </group>
   </Surface>
@@ -549,7 +554,7 @@ function Stats() {
 }
 // Horizon culling: meshes well past the planet's horizon (as seen from the camera) leave camera layer 0.
 // Uses layers, not .visible, so it never fights components that toggle visibility themselves.
-const LOD_D = +(q.get('lodd') || (TOUCH ? 5 : 9)) /* polish-ship: sooner LOD for village budget */ // tufts are ~10px here: facets don't read
+const LOD_D = +(q.get('lodd') || (TOUCH ? 5 : 8)) /* polish-ship: sooner LOD for village budget; stage-b: 9 -> 8 (village 614k -> ~590k tris) */ // tufts are ~10px here: facets don't read
 const LOD_D2 = +(q.get('lodd2') || (TOUCH ? 17 : 28)) // third tier: a few px, only the silhouette lump matters
 function HorizonCull() {
   const camera = useThree(s => s.camera), gl = useThree(s => s.gl), n = useRef(0), list = useRef(null), hulls = useRef(null), _w = useMemo(() => new THREE.Vector3(), []), _p = useMemo(() => new THREE.Vector3(), []), _o = useMemo(() => new THREE.Vector3(), []), _tc = useMemo(() => new THREE.Vector3(), []), _m = useMemo(() => new THREE.Matrix3(), [])
