@@ -63,7 +63,7 @@ export function layout(Zc, village, homeN, blocked) {
   // up to the rain-boosted count; which ones show follows forageSpawns(T.season, T.wet) (see FORAGE_N)
   { let fs = 9173; const fr = () => (fs = (fs * 16807) % 2147483647) / 2147483647
     for (const f of FORAGE) { const max = Math.ceil(f.n * (f.rain || 1)), c = zc(f.zone), r = zr(f.zone)
-      for (let i = 0, tries = 0; i < max && tries < 200; tries++) { const pn = around(c, Math.sqrt(fr()) * r * 0.85, fr() * 6.283); if (blocked(pn) && tries < 150) continue
+      for (let i = 0, tries = 0; i < max && tries < 200; tries++) { const pn = f.zone === 'village' ? around(c, r * (1.6 + fr() * 0.8), fr() * 6.283) : around(c, Math.sqrt(fr()) * r * 0.85, fr() * 6.283) // village: the outskirts, clear of the board / stalls / villagers; if (blocked(pn) && tries < 150) continue
         const pos = posOf(pn); spots.push({ id: `${f.id}-${f.zone}-${i}`, item: f.id, zone: f.zone, n: pn, stand: pn, pos, standPos: pos, forage: i, spin: fr() * 6.28, s: 1.35 + fr() * 0.35 }); i++ } } }
   G.benchPos = posOf(benchN); LAYOUT = window.__layout = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
   void out
