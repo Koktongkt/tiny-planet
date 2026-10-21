@@ -12,7 +12,7 @@ import { G, emit, add, markTaken, available, toast, count, take } from './store.
 import { ITEMS, DECOR } from './items.js'
 import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
-const ForageProp = lazy(() => import('../art/forage/ForageProp.jsx')) // Stage C seasonal forage props (Studio)
+const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
 let seed = 4242; const rr = () => (seed = (seed * 16807) % 2147483647) / 2147483647
