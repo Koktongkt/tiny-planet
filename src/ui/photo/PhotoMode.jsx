@@ -33,9 +33,9 @@ const Doodle = ({ k }) => <svg className="tpp-dd" viewBox="0 0 32 32" aria-hidde
   pair: <><circle cx="11" cy="15" r="7" {...ink} fill="#d9772f" /><circle cx="21" cy="17" r="6" {...ink} fill="#f2a65e" /><path d="M14 6 q2 -3 4 0 q2 -3 4 0 q0 3 -4 5 q-4 -2 -4 -5Z" {...ink} fill="#e98a86" strokeWidth="1.4" /></>,
 }[k]}</svg>
 function Chip({ on, children, onClick, disabled, title }) { return <button className={'tpp-chip' + (on ? ' on' : '')} onClick={onClick} disabled={disabled} title={title} aria-pressed={!!on}>{children}</button> }
-export function PhotoMode({ value = PHOTO_DEFAULT, onChange, onShutter, onClose, touch = false, pets = { pip: true, mochi: true }, lastShot = null }) {
+export function PhotoMode({ value = PHOTO_DEFAULT, onChange, onShutter, onClose, touch = false, pets = { pip: true, mochi: true }, lastShot = null, defaultTab = 'filters' }) {
   const v = { ...PHOTO_DEFAULT, ...value, petPose: { ...PHOTO_DEFAULT.petPose, ...(value.petPose || {}) } }
-  const [tab, setTab] = useState('filters'), [flash, setFlash] = useState(0)
+  const [tab, setTab] = useState(defaultTab), [flash, setFlash] = useState(0)
   const set = (patch) => onChange && onChange({ ...v, ...patch })
   const shoot = () => { setFlash(f => f + 1); onShutter && onShutter() }
   const setPair = (id) => { const P = PAIR_POSES[id]; if (!P) return set({ pair: null }); set({ pair: id, pose: P.her, petPose: { pip: pets.pip ? P.pip.pose : null, mochi: pets.mochi ? P.mochi.pose : null } }) }
