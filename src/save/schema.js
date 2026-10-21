@@ -1,7 +1,7 @@
 // Save schema + ordered migrations. Pure (no DOM), so node unit tests can import it.
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4
 export const TAU = Math.PI * 2
 // clock phase (rot.a) the game starts at: 0 = noon, so 0.4 is early afternoon
 export const START_PHASE = 0.4
@@ -12,7 +12,10 @@ export const dayFromPhase = (a) => Math.max(0, Math.floor((a + Math.PI / 2) / TA
 // them (src/systems) are lazy; here only the shape lives. `day` in garden/friends/errands = the last in-game day applied.
 const SET = () => ({ volume: 0.8, music: 0.7, muted: false, textScale: 1 })
 const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [] }, buffs: [], settings: SET() })
-export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3() })
+// v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
+// tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.
+const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0 }, dig: { taken: {} } })
+export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4() })
 
 // each step takes a save of version `from` and returns one of version `from + 1`
 export const MIGRATIONS = [
@@ -23,6 +26,8 @@ export const MIGRATIONS = [
   } },
   // v3: Stage B daily loop. Old saves start them empty on the day they're on (no catch-up growth, errands roll today)
   { from: 2, up: (s) => ({ ...B3(Number.isFinite(s.day) && s.day > 0 ? Math.floor(s.day) : 0), ...s }) },
+  // v4: Stage C collections start empty; a save already past day 0 skips the first-day tutorial note
+  { from: 3, up: (s) => ({ ...C4(Number.isFinite(s.day) && s.day > 0 ? Math.floor(s.day) : 0), ...s }) },
 ]
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)
@@ -48,6 +53,14 @@ export function normalize(s) {
   for (const k of ['garden', 'friends', 'errands']) { const x = o[k], l = k === 'garden' ? 'plots' : 'list'
     o[k] = isObj(x) && Number.isFinite(x.day) && (k === 'friends' ? isObj(x[l]) : Array.isArray(x[l])) ? x : b[k] }
   if (!Array.isArray(o.buffs)) o.buffs = []
+  const c = C4(o.day)
+  for (const k of ['fish', 'museum', 'photos', 'train', 'tutorial', 'dig', 'journal']) if (!isObj(o[k])) o[k] = c[k]
+  if (!isObj(o.journal.forage) || !isObj(o.journal.relics)) o.journal = { forage: isObj(o.journal.forage) ? o.journal.forage : {}, relics: isObj(o.journal.relics) ? o.journal.relics : {} }
+  if (!isObj(o.museum.donated)) o.museum = { donated: {} }
+  if (!Array.isArray(o.photos.list)) o.photos = { list: [] }
+  if (!Number.isFinite(o.train.rides)) o.train = { rides: 0 }
+  if (!isObj(o.tutorial.done)) o.tutorial = { ...c.tutorial, dismissed: !!o.tutorial.dismissed }
+  if (!isObj(o.dig.taken)) o.dig = { taken: {} }
   o.settings = { ...b.settings, ...(isObj(o.settings) ? o.settings : {}) }
   if (!isObj(o.clock) || !Number.isFinite(o.clock.a)) o.clock = { a: START_PHASE + o.day * TAU }
   // the clock must never sit on an earlier day than the counter (would stall regrowth): move it forward whole days
