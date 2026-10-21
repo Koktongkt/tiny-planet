@@ -99,7 +99,7 @@ const GE = (() => {
 })()
 // in-season forage counts, refreshed when the season or the wet level (0.1 steps) changes; empty until liveC sets __T.season
 const FORAGE_N = {}, FORAGE_SET = new Set(FORAGE.map(f => f.id)); let forageKey = ''
-function forageTick() { const k = T.season ? T.season + ((T.wet || 0) * 10 | 0) : ''; if (k === forageKey) return; forageKey = k
+function forageTick(onChange) { const k = T.season ? T.season + ((T.wet || 0) * 10 | 0) : ''; if (k === forageKey) return; forageKey = k; if (onChange) setTimeout(onChange, 0)
   for (const id in FORAGE_N) FORAGE_N[id] = 0; if (k) for (const [, id, n] of forageSpawns(T.season, T.wet || 0)) FORAGE_N[id] = n }
 function Prop({ item, s = 1 }) {
   const t = (k, c) => m(k, c)
@@ -281,7 +281,7 @@ export function GameWorld() {
     let best = null, bd = 1e9
     const H = GAME.H, inside = !!(H && (H.inside || H.alt)) // H.alt: the Stage C museum interior
     const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
-    forageTick(); let forageShown = 0
+    forageTick(force); let forageShown = 0
     for (const sp of L.spots) {
       const g = refs.current[sp.id]; if (!g) continue
       const live = available(sp.id) && (!sp.night || night) && (sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0))
@@ -327,7 +327,7 @@ export function GameWorld() {
   if (!L) return null
   return <group>
     {L.spots.map(sp => <group key={sp.id} ref={el => { if (el) refs.current[sp.id] = el }} position={sp.pos} quaternion={place(sp.water ? sp.n : sp.n, 0, sp.spin).q}
-      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}><Prop item={sp.item} s={sp.s} /></group>)}
+      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <Prop item={sp.item} s={sp.s} />}</group>)}
     <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
