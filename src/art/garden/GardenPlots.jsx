@@ -7,13 +7,15 @@
 import * as THREE from 'three'
 import React, { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { toon, paint } from '../../common.jsx'
+import { toon, paint, T } from '../../common.jsx'
 import { wind } from '../../world.js'
 import { inkMaterial, hullGeometry, SWAY_GLSL } from '../ink.js'
 import { plantParts, stakeParts, sparkleSpots, emitParts, buildGeometry, bedGeometry, SLOTS, PLOT_SIZE, rnd } from './parts.js'
 export { PLOT_SIZE, STAGES, CROPS } from './parts.js'
 const SWAY = 0.012 // tip displacement (world units) at full weight
 const NEAR = 5.5
+// contract v2: the herb crop id is 'herb' (it yields the existing 'herbs' item); accept 'herbs' too, defensively
+const CROP_ALIAS = { herbs: 'herb' }
 const PLANT_S = 1.5 // plant scale inside a bed // ink hulls on within this camera distance (world units)
 const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) % 2147483646 + 1 }
 // plot frame: up = normalize(pos), forward = world +Z projected on the tangent plane (X near the poles), turned by plot.yaw
@@ -24,29 +26,50 @@ export function plotMatrix(plot, out = new THREE.Matrix4(), sink = 0.006) {
   if (plot.yaw) _mb.multiply(new THREE.Matrix4().makeRotationY(plot.yaw))
   return out.copy(_mb).setPosition(_s.fromArray(plot.pos).addScaledVector(_u, -sink))
 }
+// Time-of-day: the scene's own sun/moon/hemisphere lights do the shading; these uniforms only add small painted
+// touches on top (no lights, no extra draw calls). Read from the game's day clock (T + window.__rot) each frame.
+export const GU = { uNight: { value: 0 }, uDusk: { value: 0 }, uDawn: { value: 0 } }
+export function syncDayUniforms() { const a = window.__rot ? window.__rot.a : 0.4, rising = Math.sin(a) < 0
+  GU.uNight.value = T.night; GU.uDusk.value = T.dusk; GU.uDawn.value = rising ? T.dusk : 0 }
+const TOD_FRAG = (soil) => `{ vec3 Vd = normalize(vViewPosition); float ndv = clamp(abs(dot(normalize(normal), Vd)), 0., 1.); float rim = pow(1. - ndv, 2.2);
+    float eve = uDusk * (1. - uDawn);
+    gl_FragColor.rgb += vec3(1., .56, .3) * rim * eve * ${soil ? '.35' : '.8'} + vec3(.06, .025, 0.) * eve;                                  // warm rim at dusk
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * vec3(.9, .97, 1.08) + vec3(.015, .025, .045), uDawn); // cool dewy morning
+    float dew = step(${soil ? '.96' : '.93'}, pn3(vPO * ${soil ? '300.' : '520.'}));
+    gl_FragColor.rgb += vec3(.85, .95, 1.) * dew * uDawn * (.5 + .5 * rim) * ${soil ? '.7' : '1.3'};          // dew glints
+    gl_FragColor.rgb += vec3(.02, .03, .075) * uNight * (.4 + rim * ${soil ? '.5' : '1.4'}); }                  // moonlit edge
+  #include <dithering_fragment>`
+function todPass(sh, soil) { Object.assign(sh.uniforms, GU)
+  sh.fragmentShader = 'uniform float uNight, uDusk, uDawn;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', TOD_FRAG(soil)) }
 let MATS = null
 function mats() {
   if (MATS) return MATS
   const crop = paint(toon('#ffffff', { vertexColors: true }), 0.1, true, 60)
   const pc = crop.onBeforeCompile
   crop.onBeforeCompile = (sh, r) => { pc(sh, r)
-    sh.vertexShader = 'uniform float uTime;\n' + SWAY_GLSL + '\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n transformed = swayOf(transformed, ${SWAY.toFixed(4)});`) }
+    sh.vertexShader = 'uniform float uTime;\n' + SWAY_GLSL + '\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n transformed = swayOf(transformed, ${SWAY.toFixed(4)});`); todPass(sh, false) }
   crop.customProgramCacheKey = () => 'tp-garden-crop'
   const bed = paint(toon('#ffffff', { vertexColors: true }), 0.18, true, 34)
   const pb = bed.onBeforeCompile
   bed.onBeforeCompile = (sh, r) => { pb(sh, r)
     sh.vertexShader = 'attribute float aSoil; attribute float aWet;\n' + sh.vertexShader.replace('#include <color_vertex>', `#include <color_vertex>
-      vColor.rgb *= mix(vec3(1.), vec3(.6, .55, .6), aWet * aSoil);`) }
+      vColor.rgb *= mix(vec3(1.), vec3(.6, .55, .6), aWet * aSoil);`); todPass(sh, true) }
   bed.customProgramCacheKey = () => 'tp-garden-bed'
+  // ripe sparkle: crisp twinkling stars by day; soft, slow, firefly-like glow at night (bloom picks it up)
   const spark = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
-    uniforms: { uTime: wind.time, uSize: { value: 70 } },
-    vertexShader: `uniform float uTime, uSize; attribute float aPh; attribute vec3 color; varying vec3 vC; varying float vA;
-      void main() { vec3 p = position; float t = uTime * .9 + aPh * 6.283; p += normalize(position) * (.012 * sin(t * .7));
+    uniforms: { uTime: wind.time, uSize: { value: 70 }, ...GU },
+    vertexShader: `uniform float uTime, uSize, uNight; attribute float aPh; attribute vec3 color; varying vec3 vC; varying float vA;
+      void main() { vec3 p = position; float t = uTime * mix(.9, .45, uNight) + aPh * 6.283; vec3 up = normalize(position);
+        vec3 t1 = normalize(cross(up, vec3(0., 0., 1.))), t2 = cross(up, t1);
+        p += up * ((.012 + .02 * uNight) * sin(t * .7)) + (t1 * sin(t * .53 + aPh * 9.) + t2 * cos(t * .41 + aPh * 5.)) * .018 * uNight; // fireflies drift
         vec4 mv = modelViewMatrix * vec4(p, 1.); gl_Position = projectionMatrix * mv;
-        vA = pow(max(0., sin(t)), 3.); vC = color; gl_PointSize = uSize * (0.35 + .65 * vA) / max(.2, -mv.z); }`,
-    fragmentShader: `varying vec3 vC; varying float vA; void main() { vec2 d = gl_PointCoord - .5; float r = length(d);
+        float tw = pow(max(0., sin(t)), 3.), glow = .55 + .45 * sin(t * .8);
+        vA = mix(tw, glow, uNight); vC = mix(color, vec3(.86, 1., .58), uNight * .85);
+        gl_PointSize = uSize * mix(.35 + .65 * vA, .7 + .5 * vA, uNight) / max(.2, -mv.z); }`,
+    fragmentShader: `uniform float uNight; varying vec3 vC; varying float vA; void main() { vec2 d = gl_PointCoord - .5; float r = length(d);
         float star = max(0., 1. - abs(d.x) * 9.) * max(0., 1. - abs(d.y) * 2.2) + max(0., 1. - abs(d.y) * 9.) * max(0., 1. - abs(d.x) * 2.2);
-        float a = (smoothstep(.5, .0, r) * .5 + star) * vA; if (a < .01) discard; gl_FragColor = vec4(vC * a * 1.6, a); }` })
+        float soft = smoothstep(.5, .0, r); soft *= soft;
+        float a = mix(soft * .5 + star, soft * 1.25 + smoothstep(.12, .0, r) * .8, uNight) * vA; if (a < .01) discard; gl_FragColor = vec4(vC * a * mix(1.6, 2.2, uNight), a); }` })
   MATS = { crop, bed, spark, inkPlant: inkMaterial(0.0016, SWAY), inkBed: inkMaterial(0.0022, 0) }
   return MATS
 }
@@ -55,8 +78,9 @@ const bedGeo = () => BED || (BED = (() => { const g = bedGeometry(); return { g,
 function buildPlants(plots, lo) {
   const out = { pos: [], nor: [], col: [], base: [], w: [], ink: [] }, sp = [], spc = [], ph = []
   const M = new THREE.Matrix4(), pm = new THREE.Matrix4(), base = new THREE.Vector3(), tmp = new THREE.Vector3()
-  for (const pl of plots) {
-    if (!pl.cropId) continue
+  for (const pl0 of plots) {
+    if (!pl0.cropId) continue
+    const pl = CROP_ALIAS[pl0.cropId] ? { ...pl0, cropId: CROP_ALIAS[pl0.cropId] } : pl0
     plotMatrix(pl, M); const r = rnd(hash(pl.id + pl.cropId))
     if (pl.stage !== 'withered') emitParts(stakeParts(pl.cropId), M, base.setFromMatrixPosition(M), out)
     SLOTS.forEach(([x, z], k) => {
@@ -87,7 +111,7 @@ export function GardenPlots({ plots = [], onInteract, quality = 'hi' }) {
   useEffect(() => { plots.forEach((p, i) => { wet.array[i] = p.watered ? 1 : 0 }); wet.needsUpdate = true })
   // near-camera ink: hulls only when close (and 'hi'); checked every 8 frames
   const _w = useMemo(() => new THREE.Vector3(), [])
-  useFrame(({ camera }) => { if (n.current++ % 8) return; const near = !lo && grp.current && _w.copy(centre).applyMatrix4(grp.current.matrixWorld).distanceTo(camera.position) < NEAR
+  useFrame(({ camera }) => { syncDayUniforms(); if (n.current++ % 8) return; const near = !lo && grp.current && _w.copy(centre).applyMatrix4(grp.current.matrixWorld).distanceTo(camera.position) < NEAR
     if (bedInk.current) bedInk.current.visible = near; if (plantInk.current) plantInk.current.visible = near })
   const tap = onInteract ? (e) => { if (e.instanceId == null || !plots[e.instanceId]) return; e.stopPropagation(); onInteract(plots[e.instanceId].id) } : undefined
   const hover = onInteract ? (on) => () => { document.body.style.cursor = on ? 'pointer' : '' } : undefined

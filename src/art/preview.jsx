@@ -7,9 +7,14 @@ import * as THREE from 'three'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import '@fontsource/fredoka/latin-500.css'
 import { R, wind } from '../world.js'
-import { toon, paint, INK } from '../common.jsx'
+import { toon, paint, INK, T, ss, CC } from '../common.jsx'
 const q = new URLSearchParams(location.search), MODE = q.get('m') || 'grid'
 window.__artReady = false
+// time of day with the game's own formulas (App.jsx Clock + Lights): ?t=day|dawn|dusk|night (or ?phase=)
+const TOD = { day: 0.35, dusk: 1.72, night: 3.0, dawn: Math.PI * 2 - 1.72 }, TOD_K = q.get('t') || 'day'
+{ const p = q.has('phase') ? +q.get('phase') : TOD[TOD_K] ?? 0.35, e = Math.cos(p); window.__rot = { a: p, v: 0 }
+  T.sun.set(Math.sin(p) * 0.9, e, 0.55).normalize(); T.day = ss(-0.15, 0.45, e); T.night = 1 - ss(-0.35, 0.05, e); T.dusk = Math.max(0, 1 - Math.abs(e - 0.05) / 0.4) }
+const MOON_OFF = new THREE.Vector3(6, 0, 8)
 const CROPS = ['skyseed', 'turnip', 'carrot', 'herb'], STAGES = ['seed', 'sprout', 'young', 'mature', 'ripe', 'withered']
 const onTop = (x, z) => new THREE.Vector3(x, R, z).normalize().multiplyScalar(R).toArray()
 const upQ = (p) => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...p).normalize()).toArray()
@@ -21,8 +26,13 @@ function Stats() {
   useFrame(() => { window.__calls = gl.info.render.calls; window.__tris = gl.info.render.triangles; gl.info.reset(); if (++n.current > 20) window.__artReady = true }, -100)
   return null
 }
-function Lights({ sun = [0.5, 1, 0.65] }) { const p = new THREE.Vector3(...sun).normalize().multiplyScalar(20); p.y += R
-  return <><directionalLight position={p.toArray()} color="#fff3dc" intensity={2.6} /><hemisphereLight color="#cfe6ff" groundColor="#b9d48c" intensity={0.9} /></> }
+function Lights({ sun }) { // same colours/intensities as App.jsx Lights, driven by T (sun optional override for daytime framing)
+  const sunL = useRef(), moon = useRef(), hemi = useRef()
+  useEffect(() => { const dir = sun && TOD_K === 'day' ? new THREE.Vector3(...sun).normalize() : T.sun
+    sunL.current.position.copy(dir).multiplyScalar(20); sunL.current.color.set('#fff3dc').lerp(CC('#ffa070'), T.dusk); sunL.current.intensity = 2.6 * ss(-0.2, 0.2, dir.y)
+    moon.current.position.copy(T.sun).multiplyScalar(-20).add(MOON_OFF); moon.current.intensity = 1.1 * T.night
+    hemi.current.color.set('#cfe6ff').lerp(CC('#ffb59a'), T.dusk).lerp(CC('#4a5fa0'), T.night); hemi.current.groundColor.set('#b9d48c').lerp(CC('#2a2f55'), T.night); hemi.current.intensity = 0.9 + 0.25 * T.dusk - 0.3 * T.night }, [])
+  return <><directionalLight ref={sunL} /><directionalLight ref={moon} color="#9db4ff" /><hemisphereLight ref={hemi} /></> }
 function Ground() { const m = useMemo(() => paint(toon('#9fd17a'), 0.14, false, 3), []); return <mesh material={m} raycast={() => null}><sphereGeometry args={[R - 0.002, 160, 80, 0, Math.PI * 2, 0, 0.5]} /></mesh> }
 function Cam({ pos, look }) { const cam = useThree(s => s.camera); useEffect(() => { cam.position.set(...pos); cam.lookAt(...look); cam.updateProjectionMatrix() }, []); return null }
 // DOM labels that follow 3D points
@@ -72,11 +82,15 @@ function BoardScene() { return <><Cam pos={[0.9, R + 0.75, 1.5]} look={[0, R + 0
 // ---------- DOM bits (lazy) ----------
 const DomPreview = React.lazy(() => import('./previewDom.jsx'))
 const is3D = ['grid', 'world', 'measure', 'board3d'].includes(MODE)
-document.body.classList.add('pv-' + MODE)
+document.body.classList.add('pv-' + MODE, 'tod-' + TOD_K)
 const css = document.createElement('style'); css.textContent = `
 .pv-labels{position:fixed;inset:0;pointer-events:none;z-index:3}
 .pv-lab{position:absolute;left:0;top:0;font:italic 600 20px/1 TPSerif,Georgia,serif;color:#3b2f22;background:#fbf3e2d8;padding:2px 10px 4px;border-radius:10px;box-shadow:inset 0 0 0 1.5px #3b2f22aa;white-space:nowrap}
 .pv-lab.row{font-size:19px}.pv-lab.small{font-size:15px;padding:1px 8px 3px}
-body.pv-grid,body.pv-world,body.pv-board3d,body.pv-measure{background:linear-gradient(#8ec5e8 0,#bfe0ef 45%,#fdf3d8 100%)}`
+body.pv-grid,body.pv-world,body.pv-board3d,body.pv-measure{background:linear-gradient(#8ec5e8 0,#bfe0ef 45%,#fdf3d8 100%)}
+body.tod-dusk{background:linear-gradient(#6b6fa8 0,#c97f9a 40%,#f78fa0 62%,#ffb38a 100%)!important}
+body.tod-dawn{background:linear-gradient(#8e9ccf 0,#d8b4c4 45%,#f6c9b0 70%,#fde3c4 100%)!important}
+body.tod-night{background:linear-gradient(#0e1330 0,#141a3a 45%,#2e3c6e 100%)!important}
+body.tod-night .pv-lab{background:#2e3c6ed0;color:#f3e6c8;box-shadow:inset 0 0 0 1.5px #f3e6c8aa}`
 document.head.appendChild(css)
 createRoot(document.getElementById('root')).render(is3D ? <Scene3D /> : <Suspense fallback={null}><DomPreview mode={MODE} /></Suspense>)

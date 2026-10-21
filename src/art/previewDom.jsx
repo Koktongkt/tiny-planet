@@ -24,8 +24,8 @@ const css = `html,body{background:radial-gradient(120% 90% at 30% 20%,#cfe6c0,#a
 .pv-ic code{font:11px monospace;opacity:.55}.pv-ic.new{background:#fff6d8;box-shadow:inset 0 0 0 2.2px #3b2f22}
 .pv-sec{font:italic 600 24px TPSerif,Georgia,serif;align-self:flex-start;margin:6px 0 -6px max(0px,calc(50% - 590px))}
 @media (max-width:640px){.pv-stage{grid-template-columns:1fr 1fr}.pv-wrap{padding:14px}.pv-hrow code{min-width:0;font-size:11px}}`
-const BAG = [['berries', 6], ['flower', 9], ['skyberry', 2], ['fish', 1], ['acorn_cookie', 1], ['shell', 4], ['turnip', 3], ['crystal', 1], ['wool_scarf', 1], ['herb_soup', 2], ['clay', 5], ['carrot', 4]].map(([id, count]) => ({ id, count }))
-const PREFS = { fish: 'love', acorn_cookie: 'like', flower: 'neutral', clay: 'dislike', herb_soup: 'like' }
+const BAG = [['berries', 6], ['flower', 9], ['skyberry', 2], ['fish', 1], ['acorn_cookie', 1], ['shell', 4], ['turnip', 3], ['crystal', 1], ['wool_scarf', 1], ['soup', 2], ['clay', 5], ['carrot', 4]].map(([id, count]) => ({ id, count }))
+const PREFS = { fish: 'love', acorn_cookie: 'like', flower: 'neutral', clay: 'dislike', soup: 'like' }
 function Hearts() { return <div className="pv-wrap"><div className="tpx tpx-paper pv-card"><h3>Hearts meter</h3>
   {[[0], [1], [2.4, 1], [3], [4.7, 1], [5]].map(([h, p], i) => <div key={i} className="pv-hrow"><code>hearts={h}{p ? ' showProgress' : ''}</code><HeartsBadge hearts={h} showProgress={!!p} size={30} /></div>)}
   <div className="pv-hrow"><code>size=20 (nameplate)</code><span className="pv-plate">Gonta <HeartsBadge hearts={3} size={20} /></span></div>
@@ -36,10 +36,10 @@ function Reactions() {
     <div key={k} className="tpx tpx-paper pv-vill" style={{ '--fz': fz }}><div className="pv-bean"><div className="pv-anchor"><GiftReaction kind={k} /></div></div><div className="who">{n}<small>kind="{k}"</small></div></div>)}</div></div>
 }
 const ERRANDS = [
-  { id: 'e1', npcId: 'baker', wants: [{ itemId: 'berries', count: 4 }, { itemId: 'acorn', count: 2 }], reward: { itemId: 'berry_jam', coins: 30 }, day: 4, done: false },
-  { id: 'e2', npcId: 'fisherman', wants: [{ itemId: 'skyberry', count: 3 }], reward: { coins: 45, hearts: 1 }, day: 4, done: false },
-  { id: 'e3', npcId: 'farmer', wants: [{ itemId: 'turnip', count: 2 }], reward: { itemId: 'seedpack', hearts: 1 }, day: 4, done: true },
-  { id: 'e4', npcId: 'grandma', wants: [{ itemId: 'wool', count: 3 }], reward: { itemId: 'wool_scarf' }, day: 4, done: false },
+  { id: 'e1', npcId: 'baker', wants: [{ itemId: 'berries', count: 4 }, { itemId: 'acorn', count: 2 }], reward: { itemId: 'jam', coins: 30 }, day: 4, accepted: true, done: false },
+  { id: 'e2', npcId: 'fisherman', wants: [{ itemId: 'skyberry', count: 3 }], reward: { coins: 45, hearts: 1 }, day: 4, accepted: true, done: false },
+  { id: 'e3', npcId: 'farmer', wants: [{ itemId: 'turnip', count: 2 }], reward: { itemId: 'seedpack', hearts: 1 }, day: 4, accepted: true, done: true },
+  { id: 'e4', npcId: 'grandma', wants: [{ itemId: 'wool', count: 3 }], reward: { itemId: 'wool_scarf' }, day: 4, accepted: true, done: false },
 ]
 const INV = { berries: 6, acorn: 2, skyberry: 1, turnip: 0, wool: 1 }
 function Board() { const [es, setEs] = useState(q.get('empty') ? [] : ERRANDS), acc = q.has('accept')

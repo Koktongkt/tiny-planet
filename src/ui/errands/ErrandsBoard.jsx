@@ -2,8 +2,9 @@
 // A Ghibli notice board: a wooden board with a little roof, paper notes pinned or taped at slight angles, each with
 // hand-drawn icons of what's wanted (have/need), the reward, and the giver's signature. States per note:
 //   open (not enough yet) -> ready ("Hand over" button glows) -> done (faded + red "Thank you" stamp).
-// Optional (not in the contract): names ({npcId: 'Gonta'}; default: talk/profiles.js), onAccept(errandId) + errand.accepted
-// (shows a "Take it" step before delivering), day (header "Day 4").
+// Contract v2: Errand.accepted + onAccept(errandId): an errand with accepted=false shows "Take it" first (only when
+// onAccept is passed; without it, notes go straight to delivery). npcId = talk/profiles.js key (e.g. 'fisherman') and
+// the signature reads PROFILES[npcId].name + role. Optional extras: names ({npcId: 'Gonta'} override), day (header).
 import React, { useEffect } from 'react'
 import { Icon, IconDefs } from '../../game/icons.jsx'
 import { itemName } from '../../game/items.js'
