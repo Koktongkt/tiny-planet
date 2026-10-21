@@ -34,6 +34,8 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   for (const x of [wind, river, lake, insects, birds, bubbles, rain]) x.connect(amb)
   // Stage C: roof patter is what you hear INSIDE, so it skips the indoor muffle and goes straight to the master
   const roof = G(0), roofLP = F('lowpass', 3800, 0.5); chain(roof, roofLP, master)
+  // Stage C: the little train — its own bus (rumble, wheel roll, scheduled rail clacks, whistle, brake hiss)
+  const train = G(0); train.connect(amb)
   const steps = [...N.steps]
   let windLP = null
 
@@ -83,6 +85,11 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     const rumble = G(0.35), rbLP = F('lowpass', 220, 0.6); chain(noise(N.brown), rbLP, rumble, roof) })
   })
 
+  // ---- train (Stage C): a low wooden rumble + soft wheel roll, both scaled by speed (setMix) ----
+  const tRumble = G(0), tRoll = G(0)
+  steps.push(() => { const lp = F('lowpass', 160, 0.8); chain(noise(N.brown), lp, tRumble, train); lfo(7.5, 0.05, tRumble.gain)
+    const bp = F('bandpass', 900, 0.6), lp2 = F('lowpass', 2400, 0.5); chain(noise(N.white), bp, lp2, tRoll, train) })
+
   // ---- birds (and river bubbles): short scheduled voices, created ahead of time by schedule() ----
   const voice = (bus, t, f0, f1, d, v, p, type = 'sine') => {
     const o = ctx.createOscillator(), g = G(0), s = pan(p); o.type = type
@@ -90,13 +97,34 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + Math.min(0.012, d * 0.3)); g.gain.exponentialRampToValueAtTime(0.0005, t + d)
     chain(o, g, s, bus); o.start(t); o.stop(t + d + 0.02); o.onended = () => { o.disconnect(); g.disconnect(); s.disconnect() }
   }
+  /** filtered noise burst (train clacks, brake hiss): white noise through `type` filter at f, envelope a -> decay d */
+  const burst = (bus, t, type, f, Q, d, v, p = 0, a = 0.004) => {
+    if (!N.white) return
+    const s = ctx.createBufferSource(), fl = F(type, f, Q), g = G(0), pn = pan(p); s.buffer = N.white
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0005, t + a + d)
+    chain(s, fl, g, pn, bus); s.start(t, Math.random() * 1.5); s.stop(t + a + d + 0.05); s.onended = () => { s.disconnect(); fl.disconnect(); g.disconnect(); pn.disconnect() }
+  }
+  /** soft steam whistle: a warm three-note chord (triangles, lowpassed) with a little vibrato and breath; n toots */
+  const whistle = (t, v = 0.05, toots = [[0, 0.9]]) => {
+    for (const [dt, len] of toots) { const t1 = t + dt, out = G(0), lp = F('lowpass', 2200, 0.6); chain(out, lp, train)
+      out.gain.setValueAtTime(0, t1); out.gain.linearRampToValueAtTime(v, t1 + 0.14); out.gain.setValueAtTime(v, t1 + len - 0.2); out.gain.exponentialRampToValueAtTime(0.0005, t1 + len + 0.35)
+      for (const f of [587.3, 740, 880]) { const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(f * 0.97, t1); o.frequency.exponentialRampToValueAtTime(f, t1 + 0.12)
+        const vib = ctx.createOscillator(), vg = G(f * 0.006); vib.frequency.value = 5.2; chain(vib, vg, o.frequency); o.connect(out)
+        o.start(t1); vib.start(t1); o.stop(t1 + len + 0.4); vib.stop(t1 + len + 0.4); o.onended = () => { o.disconnect(); vib.disconnect(); vg.disconnect(); if (f === 880) { out.disconnect(); lp.disconnect() } } }
+      burst(train, t1, 'bandpass', 1500, 1.2, len + 0.2, v * 0.35, 0, 0.12)
+    }
+  }
+  /** brake hiss: a long airy highpassed sigh with a faint wheel squeal */
+  const brake = (t, v = 0.06) => { burst(train, t, 'highpass', 2600, 0.5, 1.4, v, 0, 0.08); burst(train, t + 0.05, 'bandpass', 5200, 2, 0.9, v * 0.4, 0.2, 0.2); voice(train, t + 0.1, 2950, 2700, 0.7, v * 0.12, 0) }
+  const TRAIN_FX = { whistle, brake }
+
   const SONGS = {
     tit(t, p, v) { const n = 2 + (Math.random() * 2 | 0); for (let i = 0; i < n; i++) { voice(birds, t + i * 0.32, 4300, 3500, 0.1, v, p); voice(birds, t + i * 0.32 + 0.14, 3300, 3150, 0.11, v * 0.8, p) } return n * 0.32 },
     trill(t, p, v) { const n = 7 + (Math.random() * 6 | 0), f = rnd(3200, 4600); for (let i = 0; i < n; i++) voice(birds, t + i * 0.055, f * (1 - i * 0.012) * rnd(0.97, 1.04), f * 0.92, 0.04, v * (0.7 + 0.3 * Math.sin(i)), p); return n * 0.055 },
     whistle(t, p, v) { const f = rnd(1900, 2500); voice(birds, t, f, f * 1.55, 0.26, v, p); if (Math.random() < 0.6) voice(birds, t + 0.36, f * 1.5, f * 1.1, 0.2, v * 0.8, p); return 0.6 },
     coo(t, p, v) { for (let i = 0; i < 3; i++) voice(birds, t + i * 0.55, i === 1 ? 560 : 520, 470, i === 1 ? 0.42 : 0.3, v * 1.4, p, 'triangle'); return 1.7 },
   }
-  const S = { mix: { wind: 0, river: 0, lake: 0, insects: 0, birds: 0, bubbles: 0, muffle: 1, windTone: 0.5, rain: 0, roof: 0 }, nextBird: t0 + 0.6, nextBubble: t0, nextDrop: t0, nextTick: t0 }
+  const S = { mix: { wind: 0, river: 0, lake: 0, insects: 0, birds: 0, bubbles: 0, muffle: 1, windTone: 0.5, rain: 0, roof: 0, train: 0, trainSpeed: 0, riding: 0 }, nextBird: t0 + 0.6, nextBubble: t0, nextDrop: t0, nextTick: t0, nextClack: t0, trainV: 0, trainEv: [] }
   /** schedule voices up to `until` (ctx seconds); called ~10 Hz live, once offline */
   function schedule(until) {
     const m = S.mix
@@ -114,6 +142,15 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
       const t = S.nextDrop
       if (m.rain > 0.03) { const f = rnd(900, 2400); voice(rain, t, f, f * rnd(1.6, 2.4), rnd(0.018, 0.04), rnd(0.008, 0.028), rnd(-0.85, 0.85)); S.nextDrop = t + rnd(0.02, 0.22) / m.rain } else S.nextDrop = t + 0.4
     }
+    // train: rail-joint clack pairs (bandpassed knock + a low thump), quicker as she speeds up; whistle / brake events
+    while (S.nextClack < until) {
+      const t = S.nextClack, sp = m.trainSpeed || 0
+      if ((m.train || 0) > 0.02 && sp > 0.06) { const v = 0.05 + 0.07 * sp, gap = 0.11 - 0.04 * sp
+        for (const k of [0, 1]) { burst(train, t + k * gap, 'bandpass', rnd(1400, 1900), 2.2, 0.035, v, rnd(-0.2, 0.2)); voice(train, t + k * gap, 140, 70, 0.07, v * 0.9, 0) }
+        S.nextClack = t + 1.15 / (0.3 + sp) * rnd(0.92, 1.08) } else S.nextClack = t + 0.3
+    }
+    for (const ev of S.trainEv.splice(0)) if ((m.train || 0) > 0.02) { const v = 0.035 + 0.035 * Math.min(1, m.train)
+      if (ev.k === 'depart') whistle(ev.t, v, [[0, 0.35], [0.5, 1.0]]); else if (ev.k === 'arrive') whistle(ev.t, v * 0.8, [[0, 1.1]]); else brake(ev.t, v * 1.4) }
     // roof (indoors): woody ticks on the tiles + now and then a slow drip from the eaves
     while (S.nextTick < until) {
       const t = S.nextTick
@@ -130,10 +167,18 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     insects.gain.setTargetAtTime(0.6 * m.insects, t, tc * 3); birds.gain.setTargetAtTime(2.5 * m.birds, t, tc * 3); bubbles.gain.setTargetAtTime(0.5 * m.bubbles, t, tc)
     rain.gain.setTargetAtTime(0.42 * (m.rain || 0), t, tc * 2); roof.gain.setTargetAtTime(0.5 * (m.roof || 0), t, tc * 2)
     muffle.frequency.setTargetAtTime(500 + 17500 * m.muffle * m.muffle, t, tc)
+    // train: bus = proximity (riding = close), rumble/roll follow speed; edges of speed fire the whistle + brake once
+    const sp = m.trainSpeed || 0, tr = Math.min(1, (m.train || 0) * (1 + 0.6 * (m.riding || 0)))
+    train.gain.setTargetAtTime(0.9 * tr, t, tc * 2); tRumble.gain.setTargetAtTime(0.25 + 0.55 * sp, t, tc); tRoll.gain.setTargetAtTime(0.12 * sp * sp, t, tc)
+    const pv = S.trainV
+    if (pv <= 0.02 && sp > 0.02) S.trainEv.push({ k: 'depart', t: t + 0.05 })
+    if (pv >= 0.6 && sp < 0.6 && sp < pv) S.trainEv.push({ k: 'arrive', t: t + 0.05 })
+    if (pv >= 0.3 && sp < 0.3 && sp < pv) S.trainEv.push({ k: 'brake', t: t + 0.05 })
+    S.trainV = sp
   }
   function dispose() { for (const n of nodes) try { n.stop() } catch (e) {} try { master.disconnect(); limiter.disconnect() } catch (e) {} }
   let ready; const stats = { steps: steps.length, tasks: 0, maxTaskMs: 0 }
   if (!staged) { for (let i = 0; i < steps.length; i++) steps[i](); stats.steps = steps.length; ready = Promise.resolve() }
   else ready = new Promise(res => { let i = 0; const go = () => { const s = performance.now(); while (i < steps.length && performance.now() - s < 0.8) steps[i++](); stats.tasks++; stats.maxTaskMs = Math.max(stats.maxTaskMs, performance.now() - s); if (i < steps.length) setTimeout(go, 0); else { stats.steps = steps.length; res() } }; go() })
-  return { ctx, master, amb, music, sfx, setMix, schedule, dispose, S, ready, stats }
+  return { ctx, master, amb, music, sfx, setMix, schedule, dispose, S, ready, stats, TRAIN_FX }
 }
