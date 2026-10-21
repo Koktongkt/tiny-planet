@@ -75,6 +75,7 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
 - **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a piano loop, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
+- **Relaxing + world (Stage C):** a calmer fishing reel with 12 species and a catch card, seasons every 7 in-game days and seeded rain days, train rides between two stations, photo mode (free camera, filters, PNG + journal album), a collection journal, ruins dig spots and Professor Hoshino's museum, and Grandma's first-day note.
 - **Day cycle and saves:** items respawn each in-game sunrise (one day is one real hour); progress, including the time of day, saves to localStorage and carries over across reloads. Reset from the Bag or with `?reset`.
 
 ## Home & pets
@@ -118,7 +119,7 @@ npm run preview  # http://localhost:4190
 
 ```bash
 npm run lint         # ESLint (light: undefined names, hook rules, JSX)
-npm run test:unit    # node --test tests/unit: save format migrations (v1 fixture)
+npm run test:unit    # node --test tests/unit: save migrations (v1 fixture -> v4), Stage B + Stage C systems
 npx playwright install chromium   # once
 npm run build && npm run test:smoke   # Playwright smoke suite on the built game (starts vite preview on :4173)
 npm run perf:budget -- http://localhost:4173/   # startup chunk + draw calls / triangles per view vs tests/perf/budget.json
@@ -126,7 +127,7 @@ npm run perf:budget -- http://localhost:4173/   # startup chunk + draw calls / t
 
 The smoke suite (`tests/smoke/`) covers load and the title card, walking, gathering, crafting at the bench, sleep → reload → save
 check, migrating an old v1 save, indoor controls and the door, facing the direction of travel, and the touch stick and pads on an
-iPhone 13 profile. Everything runs in headless Chromium on SwiftShader (software GL), so it is slow but needs no GPU.
+iPhone 13 profile, plus the Stage B loop and Stage C (fishing reel + species, photo mode capture, a train ride, ruins dig + museum + journal, the tutorial note, and the touch versions). Everything runs in headless Chromium on SwiftShader (software GL), so it is slow but needs no GPU.
 `BASE_URL=http://host:port/` points it at an already-served build.
 
 The perf gate fails a PR when the startup chunk is over 80 KB gz (warns over 70) or a key view goes over its draw-call or triangle
@@ -143,6 +144,7 @@ cap from `budget.md` (with a few % tolerance for run-to-run drift; known pre-exi
 - `src/world/sky.jsx`: sky dome, sun and moon lights, clouds, birds, fireflies
 - `src/debug/`: dev-only views (`?view=charstudio`, `?view=lineup`), lazy chunks
 - `src/systems/`: Stage B rules (pure, unit-tested: `garden.js`, `friendship.js`, `errands.js`, `buffs.js`). `live.js` applies them to the save, and `World3D.jsx` and `Panels.jsx` mount Studio's art and UI. These are all lazy chunks, loaded in an idle slot after the game UI.
+- `src/systems/` Stage C: `weather.js` (seasons + rain), `fish.js` (balance over Studio's `game/fishTable.js`, rolls, the reel stepper), `train.js` (schedule + fares), `collection.js` (journal, museum, dig), `tutorial.js`, `photo.js` (album); `liveC.js` applies them, `WorldC.jsx` (prompts, capture, ride pin) and `PanelsC.jsx` (journal, museum, photo bar, ride chip, Studio's note + catch card). Loaded one idle step after `live.js`.
 - `src/game/recipes.js`, `craft.js`, `itemsB.js`: recipes, spawns, crafting and the Stage B item names, kept out of the startup chunk. `items.js` keeps only ids, names, tools and decor.
 - Studio's areas: `src/art/`, `src/ui/{gifts,errands,settings}/`, `src/audio/` (armed from `game/UI.jsx`, starts on the first gesture), and their earlier areas stay as they were: `src/pets/`, `src/home/`, `src/talk/`, characters.
 
