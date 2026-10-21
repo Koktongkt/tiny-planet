@@ -70,3 +70,23 @@ export const SPAWNS = [
   ['meadow', 'firefly', 5, 'night'], ['village', 'firefly', 4, 'night'], ['lake', 'firefly', 4, 'night'],
 ]
 export const NEEDS_TOOL = { fish: 'rod', water: 'can' }
+// Stage B display names for the proposed ids (art-b-ui). Codor owns the ids, categories and recipe data: merge these
+// into ITEMS when the ids are final. Kept separate so the "things discovered" total and ?give=all don't change yet.
+export const ITEM_LABELS = {
+  skyseed: { name: 'Sky Seed', desc: 'Plant it and see what the sky sends back.' },
+  skyberry: { name: 'Skyberry', desc: 'Tastes a little like a cloud.' },
+  turnip: { name: 'Turnip', desc: 'Round, white and proudly purple on top.' },
+  carrot: { name: 'Carrot', desc: 'Pulled with a satisfying pop.' },
+  herb: { name: 'Garden Herb', desc: 'A sprig of basil from your own patch.' },
+  wateringcan: { name: 'Watering Can', desc: 'For thirsty seedlings.' },
+  seedpack: { name: 'Seed Packet', desc: 'Something will sprout from these.' },
+  acorn_cookie: { name: 'Acorn Cookie', desc: 'Nutty, crumbly and still warm.' },
+  pine_tea: { name: 'Pine Needle Tea', desc: 'Smells like the forest after rain.' },
+  fluff_pillow: { name: 'Fluff Pillow', desc: 'Stuffed with a hundred wishes.' },
+  wool_scarf: { name: 'Wool Scarf', desc: 'Striped, soft and a little long.' },
+  crystal_lamp: { name: 'Crystal Lamp', desc: 'Hums with a gentle lilac light.' },
+  shard_charm: { name: 'Shard Charm', desc: 'An old blue line, worn on a cord.' },
+  herb_soup: { name: 'Herb Soup', desc: 'Green, bright and good for you.' },
+  berry_jam: { name: 'Berry Jam', desc: 'Sealed under a gingham cap.' },
+}
+export const itemName = (id) => (ITEMS[id] && ITEMS[id].name) || (ITEM_LABELS[id] && ITEM_LABELS[id].name) || id

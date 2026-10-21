@@ -1,0 +1,49 @@
+.tpg-defs{position:absolute;width:0;height:0;overflow:hidden}
+.tpg-hearts{display:inline-flex;align-items:center;gap:1px;vertical-align:middle;line-height:0}
+.tpg-hl{font:italic 600 16px/1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#3b2f22;margin-right:6px}
+.tpg-heart{flex:none;overflow:visible;filter:drop-shadow(0 1.5px 0 #3b2f2226)}
+.tpg-heart .lvl{transition:y .9s cubic-bezier(.3,1.2,.5,1),height .9s cubic-bezier(.3,1.2,.5,1)}
+.tpg-heart.pulse{animation:tpg-pulse .7s cubic-bezier(.3,1.8,.5,1)}
+@keyframes tpg-pulse{30%{transform:scale(1.35) rotate(-8deg)}}
+/* picker */
+.tpg-picker .tpx-head h3 small{font-size:16px}
+.tpg-bow{flex:none;margin:-4px 0 -4px -4px}
+.tpg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;padding:4px 2px}
+.tpg-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:104px;padding:8px 4px 8px;border:0;border-radius:14px 12px 15px 11px;
+  background:radial-gradient(70% 60% at 34% 28%,#fffaf0e8,#fbf1dcd0);box-shadow:inset 0 0 0 1.8px #3b2f2260,0 2px 0 #3b2f2218;transition:transform .12s,box-shadow .12s,background .12s}
+.tpg-item:hover{transform:translateY(-2px) rotate(-1.2deg)}
+.tpg-item.on{background:radial-gradient(70% 60% at 34% 28%,#fffaf0,#fde6e6);box-shadow:inset 0 0 0 2.4px #3b2f22,0 0 0 4px #ec6f8040,0 3px 0 #3b2f2240;transform:translateY(-2px) rotate(-1.5deg)}
+.tpg-item .nm{font-size:16px;line-height:1.05;text-align:center;font-weight:600}
+.tpg-item .ct{position:absolute;top:6px;right:8px;color:#8a5a3c}
+.tpg-item .pref{position:absolute;top:4px;left:6px;font:600 13px/1 Fredoka,sans-serif;font-style:normal;padding:3px 6px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 1.4px #3b2f22}
+.tpg-item.p-love .pref{background:#ec6f80;color:#fff}.tpg-item.p-like .pref{background:#ffd0d6;color:#a8344a}
+.tpg-item.p-neutral .pref{background:#efe4cc}.tpg-item.p-dislike .pref{background:#c8d8e6;color:#3f5a78}
+.tpg-empty{font-size:20px;text-align:center;opacity:.75;padding:26px 10px}
+.tpg-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding-top:10px;border-top:1.6px solid #3b2f2226}
+.tpg-sel{display:flex;align-items:center;gap:6px;font-size:19px;min-width:0}
+.tpg-sel em{font-size:15px;margin-left:4px;padding:1px 8px;border-radius:10px;background:#fbe0e4}.tpg-sel em.p-dislike{background:#dbe6f0}.tpg-sel em.p-neutral{background:#efe4cc}
+.tpg-sel .dim{opacity:.6}
+@media (max-width:640px){.tpg-grid{grid-template-columns:repeat(3,1fr);gap:8px}.tpg-item{min-height:98px}.tpg-foot .tpx-btn{min-width:120px;min-height:50px}}
+/* reaction popup: 0x0 anchor = just above the villager's head; text bubble sits right above it, effects above that */
+.tpg-react{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:8}
+.tpg-fx{position:absolute;left:0;top:0}
+.tpg-fx>*{position:absolute;left:0;top:0}
+.tpg-big{width:44px;margin:-92px 0 0 -22px;animation:tpg-pop 1.8s cubic-bezier(.3,1.6,.5,1) forwards;filter:drop-shadow(0 3px 3px #3a2a2030)}
+.tpg-react.k-like .tpg-big{width:34px;margin:-84px 0 0 -17px}
+@keyframes tpg-pop{0%{transform:scale(0)}18%{transform:scale(1.25) rotate(-8deg)}30%{transform:scale(1) rotate(4deg)}75%{transform:translateY(-14px) scale(1);opacity:1}100%{transform:translateY(-26px) scale(.8);opacity:0}}
+.tpg-fly{width:22px;margin:-72px 0 0 -11px;opacity:0;animation:tpg-fly 1.4s cubic-bezier(.2,.8,.4,1) var(--d) forwards}
+@keyframes tpg-fly{0%{opacity:0;transform:translate(0,-12px) scale(.2)}20%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),calc(var(--dy) - 30px)) scale(var(--s)) rotate(12deg)}}
+.tpg-ring{width:84px;height:84px;margin:-112px 0 0 -42px;border-radius:50%;border:3px solid #ec6f80;opacity:0;animation:tpg-ring .9s ease-out .05s forwards}
+@keyframes tpg-ring{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(1.3)}}
+.tpg-dots{width:54px;margin:-70px 0 0 -27px;animation:tpg-fadeout 1.8s ease forwards}.tpg-dots circle{animation:tpg-dot .9s ease-in-out infinite alternate}
+@keyframes tpg-dot{to{transform:translateY(-4px)}}
+.tpg-sweat{width:22px;margin:-86px 0 0 18px;transform-origin:50% 0;animation:tpg-sweat 1.8s ease-in forwards}
+@keyframes tpg-sweat{0%{opacity:0;transform:translateY(-6px) scale(.5)}15%{opacity:1;transform:none}70%{opacity:1;transform:translateY(10px)}100%{opacity:0;transform:translateY(22px) scale(.9)}}
+.tpg-squig{width:36px;margin:-72px 0 0 -44px;animation:tpg-fadeout 1.8s ease forwards}
+@keyframes tpg-fadeout{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+.tpg-say{position:absolute;left:0;top:0;transform:translate(-50%,-40px);white-space:nowrap;padding:3px 14px 6px;font:italic 600 20px/1.1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#3b2f22;
+  background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#f4ead2 70%,#ead9b3 100%);border-radius:48% 52% 46% 54%/56% 50% 50% 44%;box-shadow:inset 0 0 0 1.8px #3b2f22d0,0 3px 8px #2a1e1430;animation:tpg-say 1.8s ease forwards}
+.tpg-react.k-love .tpg-say{background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#fde2e6 70%,#f6c4cc 100%)}
+.tpg-react.k-dislike .tpg-say{background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#e8eef2 70%,#d4dfe8 100%)}
+@keyframes tpg-say{0%{opacity:0;transform:translate(-50%,-32px)}14%{opacity:1;transform:translate(-50%,-40px)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-46px)}}
+@media (prefers-reduced-motion:reduce){.tpg-react *{animation-duration:.01s!important}.tpg-heart .lvl{transition:none}}
