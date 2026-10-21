@@ -10,7 +10,7 @@ import { R, wind } from '../world.js'
 import { toon, paint, INK, T, ss, CC } from '../common.jsx'
 const q = new URLSearchParams(location.search), MODE = q.get('m') || 'grid'
 window.__artReady = false
-// time of day with the game's own formulas (App.jsx Clock + Lights): ?t=day|dawn|dusk|night (or ?phase=)
+// time of day with the game's own formulas (time/clock.js + world/sky.jsx Lights): ?t=day|dawn|dusk|night (or ?phase=)
 const TOD = { day: 0.35, dusk: 1.72, night: 3.0, dawn: Math.PI * 2 - 1.72 }, TOD_K = q.get('t') || 'day'
 { const p = q.has('phase') ? +q.get('phase') : TOD[TOD_K] ?? 0.35, e = Math.cos(p); window.__rot = { a: p, v: 0 }
   T.sun.set(Math.sin(p) * 0.9, e, 0.55).normalize(); T.day = ss(-0.15, 0.45, e); T.night = 1 - ss(-0.35, 0.05, e); T.dusk = Math.max(0, 1 - Math.abs(e - 0.05) / 0.4) }
@@ -26,7 +26,7 @@ function Stats() {
   useFrame(() => { window.__calls = gl.info.render.calls; window.__tris = gl.info.render.triangles; gl.info.reset(); if (++n.current > 20) window.__artReady = true }, -100)
   return null
 }
-function Lights({ sun }) { // same colours/intensities as App.jsx Lights, driven by T (sun optional override for daytime framing)
+function Lights({ sun }) { // same colours/intensities as world/sky.jsx Lights, driven by T (sun optional override for daytime framing)
   const sunL = useRef(), moon = useRef(), hemi = useRef()
   useEffect(() => { const dir = sun && TOD_K === 'day' ? new THREE.Vector3(...sun).normalize() : T.sun
     sunL.current.position.copy(dir).multiplyScalar(20); sunL.current.color.set('#fff3dc').lerp(CC('#ffa070'), T.dusk); sunL.current.intensity = 2.6 * ss(-0.2, 0.2, dir.y)
