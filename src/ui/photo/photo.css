@@ -1,0 +1,59 @@
+/* Photo mode (art-c): viewfinder overlays + a parchment tray. Everything is pointer-events:none except the controls. */
+.tpp{position:fixed;inset:0;z-index:18;pointer-events:none}
+.tpp button{pointer-events:auto}
+.tpp-layers,.tpp-layers>i{position:absolute;inset:0;display:block}
+.tpp-grid{position:absolute;inset:0;width:100%;height:100%}.tpp-grid path{fill:none;stroke:#fffaf0b0;stroke-width:1.4;vector-effect:non-scaling-stroke;stroke-dasharray:6 6}
+.tpp-mat{position:absolute;inset:0;box-shadow:inset 0 0 0 3.2vmin #f6eddb,inset 0 0 0 calc(3.2vmin + 2px) #3b2f2280;border-bottom:7vmin solid #f6eddb}
+.tpp-corners{position:absolute;inset:14px;width:calc(100% - 28px);height:calc(100% - 28px)}.tpp-corners path{fill:none;stroke:#fffaf0d0;stroke-width:3;vector-effect:non-scaling-stroke;stroke-linecap:round}
+.tpp-flash{position:absolute;inset:0;background:#fffdf6;animation:tpp-flash .55s ease-out forwards}
+@keyframes tpp-flash{from{opacity:.95}to{opacity:0}}
+.tpp-top{position:absolute;left:16px;right:16px;top:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.tpp-tag{display:flex;align-items:center;gap:8px;padding:6px 16px 8px 10px;pointer-events:auto;transform:rotate(-1.2deg)}
+.tpp-tag b{font:italic 600 24px/1 TPSerif,"Cormorant Garamond",Georgia,serif}.tpp-tag small{font-size:15px;opacity:.7;margin-left:4px}
+.tpp-dd{width:30px;height:30px;flex:none}
+.tpp-tbtns{display:flex;gap:8px}
+.tpp-ib{width:48px;height:48px;border:0;display:grid;place-items:center;border-radius:14px 12px 15px 11px!important;padding:0}
+.tpp-ib.on{background:radial-gradient(70% 60% at 34% 28%,#f6fbe9 0,#d3e6bd 55%,#a9c58f 100%)}
+.tpp-close svg{width:20px;height:20px;stroke:#3b2f22;stroke-width:2.6;stroke-linecap:round}
+.tpp-show{position:absolute;right:14px;top:14px;width:46px;height:46px;border:0;display:grid;place-items:center;opacity:.55}.tpp-show:hover{opacity:1}
+.tpp-bottom{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;align-items:flex-end;gap:16px;padding:0 16px}
+.tpp-tray{pointer-events:auto;width:min(820px,calc(100vw - 140px));padding:8px 16px 12px;animation:tpp-up .3s cubic-bezier(.2,.9,.3,1.1)}
+.tpp-tabs{display:flex;gap:4px;border-bottom:1.6px solid #3b2f2230;margin-bottom:8px}
+.tpp-tab{display:flex;align-items:center;gap:6px;border:0;background:none;padding:4px 12px 6px;font-size:19px!important;opacity:.6;border-radius:10px 10px 0 0}
+.tpp-tab .tpp-dd{width:24px;height:24px}.tpp-tab.on{opacity:1;font-weight:600!important;background:#fffaf080;box-shadow:inset 0 -3px 0 #d9655b}
+.tpp-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}.tpp-row::-webkit-scrollbar{display:none}
+.tpp-row.chips{flex-wrap:wrap}
+.tpp-flt{flex:none;width:96px;border:0;background:none;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:14px}
+.tpp-flt b{font-size:16px;font-weight:600}.tpp-flt small{font-size:12.5px;opacity:.65;line-height:1}
+.tpp-flt.on{background:#fffaf0a0;box-shadow:inset 0 0 0 2px #3b2f22}
+.tpp-sw{position:relative;display:block;width:58px;height:58px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px #3b2f22,0 2px 0 3px #3b2f2230;isolation:isolate}
+.tpp-sw svg{display:block;width:100%;height:100%}.tpp-sw i{position:absolute;inset:0}
+.tpp-flt.on .tpp-sw{box-shadow:0 0 0 2.5px #3b2f22,0 0 0 6px #f2c94c}
+.tpp-chip{flex:none;min-height:40px;border:0;padding:4px 14px 6px;border-radius:14px 12px 15px 11px;background:#fffaf0b0;box-shadow:inset 0 0 0 1.6px #3b2f2280;font-size:17px!important}
+.tpp-chip.on{background:radial-gradient(70% 60% at 34% 28%,#fffaf0 0,#f7e6bd 60%,#ecc98a 100%);box-shadow:inset 0 0 0 2px #3b2f22,0 2px 0 #3b2f22aa;font-weight:600!important}
+.tpp-chip:disabled{opacity:.4}
+.tpp-pets{display:flex;flex-direction:column;gap:4px}
+.tpp-prow{display:grid;grid-template-columns:118px 1fr;align-items:center;gap:6px}.tpp-prow+.tpp-prow{border-top:1px dashed #3b2f2226;padding-top:4px}
+.tpp-who{display:flex;align-items:center;gap:6px;font-weight:600;font-size:18px}
+.tpp-away{font-size:16px;opacity:.65}
+.tpp-shutter{flex:none;width:84px;height:84px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#fffaf0,#f0dfbd 70%,#d9c08e);box-shadow:inset 0 0 0 2.4px #3b2f22,0 4px 0 #3b2f22aa,0 8px 20px #2a1e1440;margin-bottom:6px}
+.tpp-shutter span{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f2908a,#d9655b 60%,#b0453a);box-shadow:inset 0 0 0 2.2px #3b2f22,inset 0 -4px 0 #0002}
+.tpp-shutter:active{transform:translateY(3px)}.tpp-shutter:active span{transform:scale(.94)}
+.tpp-last{position:absolute;right:22px;bottom:150px;width:150px;padding:8px 8px 6px;background:#fbf4e4;box-shadow:0 0 0 1.5px #3b2f2280,0 10px 24px #2a1e1450;transform:rotate(4deg);animation:tpp-last 3.6s ease-out forwards;text-align:center}
+.tpp-last img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;box-shadow:0 0 0 1px #3b2f2260}
+.tpp-last span{display:block;margin-top:4px;font-size:15px}
+@keyframes tpp-last{0%{opacity:0;transform:translate(-30vw,-30vh) rotate(-8deg) scale(1.6)}14%{opacity:1;transform:rotate(4deg)}85%{opacity:1;transform:rotate(4deg)}100%{opacity:0;transform:translateY(20px) rotate(6deg)}}
+@keyframes tpp-up{from{opacity:0;transform:translateY(20px)}}
+@media (max-width:640px){
+  .tpp-top{left:10px;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px)}
+  .tpp-tag small{display:none}.tpp-tag b{font-size:20px}
+  .tpp-ib{width:42px;height:42px}.tpp-tbtns{gap:5px}
+  .tpp-bottom{flex-direction:column;align-items:center;gap:8px;bottom:0;padding:0}
+  .tpp-shutter{width:72px;height:72px;margin:0;order:-1}.tpp-shutter span{width:48px;height:48px}
+  .tpp-tray{width:100vw;border-radius:22px 26px 0 0/20px 24px 0 0;padding:6px 10px calc(env(safe-area-inset-bottom,0px) + 10px)}
+  .tpp-tab{font-size:16px!important;padding:4px 8px 6px}
+  .tpp-flt{width:80px}.tpp-sw{width:50px;height:50px}
+  .tpp-prow{grid-template-columns:1fr}.tpp-row.chips{flex-wrap:nowrap}
+  .tpp-last{bottom:auto;top:70px;right:12px;width:120px}
+}
+@media (prefers-reduced-motion:reduce){.tpp-flash,.tpp-tray,.tpp-last{animation-duration:.01s}}
