@@ -74,6 +74,7 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Fishing minigame:** stop the marker in the green zone (3 tries).
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
+- **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a piano loop, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
 - **Day cycle and saves:** items respawn each in-game sunrise (one day is one real hour); progress, including the time of day, saves to localStorage and carries over across reloads. Reset from the Bag or with `?reset`.
 
 ## Home & pets
@@ -141,7 +142,9 @@ cap from `budget.md` (with a few % tolerance for run-to-run drift; known pre-exi
 - `src/npc/routines.js`: townsfolk and the villagers' day plans
 - `src/world/sky.jsx`: sky dome, sun and moon lights, clouds, birds, fireflies
 - `src/debug/`: dev-only views (`?view=charstudio`, `?view=lineup`), lazy chunks
-- Studio's areas stay as they were: `src/pets/`, `src/home/`, `src/talk/`, characters.
+- `src/systems/`: Stage B rules (pure, unit-tested: `garden.js`, `friendship.js`, `errands.js`, `buffs.js`). `live.js` applies them to the save, and `World3D.jsx` and `Panels.jsx` mount Studio's art and UI. These are all lazy chunks, loaded in an idle slot after the game UI.
+- `src/game/recipes.js`, `craft.js`, `itemsB.js`: recipes, spawns, crafting and the Stage B item names, kept out of the startup chunk. `items.js` keeps only ids, names, tools and decor.
+- Studio's areas: `src/art/`, `src/ui/{gifts,errands,settings}/`, `src/audio/` (armed from `game/UI.jsx`, starts on the first gesture), and their earlier areas stay as they were: `src/pets/`, `src/home/`, `src/talk/`, characters.
 
 New systems should be lazy-loaded (`React.lazy` / dynamic `import()`) so the startup chunk stays at or under 70 KB gz.
 

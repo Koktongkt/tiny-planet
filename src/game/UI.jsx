@@ -1,11 +1,20 @@
 // DOM side of Gather & Craft: HUD, prompt, bag, recipe book / bench, toasts, fly-to-bag, fishing minigame, placement bar.
 import { TOUCH } from '../touch.jsx'
-import React, { useEffect, useReducer, useRef, useState } from 'react'
-import { G, subscribe, emit, setPanel, count, haveFor, known, owned, canCraft, craft, reset, ITEMS, RECIPES } from './store.js'
-import { TOOLS, DECOR, NEEDS_TOOL } from './items.js'
+import React, { Suspense, lazy, useEffect, useReducer, useRef, useState } from 'react'
+import { G, subscribe, emit, setPanel, count, reset } from './store.js'
+import { haveFor, known, owned, canCraft, craft, ITEMS, RECIPES } from './craft.js'
+import { TOOLS, DECOR } from './items.js'
+import { NEEDS_TOOL } from './recipes.js'
 import { Icon, IconDefs } from './icons.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
+import { armAudio } from '../audio/arm.js'
+// Stage B: garden / gifts / errands / buffs / settings. The rules + state wiring (systems/live.js) and the panels load as
+// their own chunks a moment after the game UI, so the first game frame doesn't wait for them.
+const SBM = { m: null }
+const StageBPanels = lazy(() => import('../systems/Panels.jsx'))
+const idle = (f, t = 1200) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: t }) : setTimeout(f, 200))
+idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady = true; emit() }))
 const q = new URLSearchParams(location.search)
 const useGame = () => { const [, f] = useReducer(x => x + 1, 0); useEffect(() => subscribe(f), []) }
 const isModal = () => !!(G.ui.panel || G.ui.fish)
@@ -51,14 +60,14 @@ function Bag() {
   return <Panel title="Bag" icon="bag" onClose={() => setPanel(null)}>
     <h4>Tools</h4><div className="tp-row">{TOOLS.map(t => G.s.tools[t] ? <Slot key={t} id={t} tag="owned" /> : <div key={t} className="tp-slot ghost"><Icon id={t} size={52} dim /><span className="nm">{ITEMS[t].name}</span><span className="tag dim">not yet</span></div>)}</div>
     <h4>Gathered</h4>{mats.length ? <div className="tp-grid">{mats.map(([k, n]) => <Slot key={k} id={k} n={n} />)}</div> : <p className="tp-empty">Nothing yet — wander the forest and press E near things that shimmer.</p>}
-    {!!food.length && <><h4>Food</h4><div className="tp-grid">{food.map(([k, n]) => <Slot key={k} id={k} n={n} />)}</div></>}
+    {!!food.length && <><h4>Food <small>tap to eat — some give a little boost</small></h4><div className="tp-grid">{food.map(([k, n]) => { const b = SBM.m && SBM.m.buffFor(k); return <Slot key={k} id={k} n={n} onClick={b ? () => SBM.m.eatFood(k) : undefined} tag={b ? 'eat · ' + b : undefined} /> })}</div></>}
     {!!decor.length && <><h4>Decor <small>tap to place near Home</small></h4><div className="tp-grid">{decor.map(([k, n]) => <Slot key={k} id={k} n={n} onClick={() => startPlace(k)} tag="place" />)}</div></>}
     <div className="tp-foot"><span>{Object.keys(G.s.seen).length} / {Object.keys(ITEMS).length} things discovered</span><button className="tp-link" onClick={() => { if (q.has('ui') || confirm('Start over? Your bag, tools, decor and the bridge will be reset.')) { reset(); setPanel(null) } }}>Reset save</button></div>
   </Panel>
 }
 function Recipes() {
   const bench = G.ui.atBench && G.near?.kind === 'bench' || q.get('ui') === 'craft'
-  const cats = ['Tools', 'Food', 'Decor', 'Unlock']
+  const cats = ['Tools', 'Food', 'Garden', 'Keepsakes', 'Decor', 'Unlock']
   return <Panel title={bench ? 'Crafting Bench' : 'Recipe Book'} icon="book" onClose={() => { setPanel(null); G.ui.atBench = false }} wide>
     {!bench && <p className="tp-sub">Craft at the bench beside your <b>Home</b>.</p>}
     {cats.map(c => <React.Fragment key={c}><h4>{c}</h4><div className="tp-recipes">{RECIPES.filter(r => r.cat === c).map(r => {
@@ -128,8 +137,13 @@ export function GameUI() {
     <IconDefs />
     <Clock />
     <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{Object.values(G.s.inv).reduce((a, b) => a + b, 0) > 0 && <i>{Object.values(G.s.inv).reduce((a, b) => a + b, 0)}</i>}</button>
-      <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button></div>
+      <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button>
+      <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button></div>
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
     {panel === 'bag' && <Bag />}{panel === 'recipes' && <Recipes />}
+    {SBM.m && <Suspense fallback={null}><StageBPanels /></Suspense>}
   </div>
 }
+// Stage B ambient audio + piano loop (src/audio): arms now, starts on the first gesture via startAudio({ getListener, getZones })
+// with Studio's defaults (zones.js). The SettingsPanel replaces the built-in speaker chip.
+armAudio({ chip: false })

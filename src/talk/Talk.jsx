@@ -9,7 +9,8 @@ import { G, subscribe } from '../game/store.js'
 import { HOME } from '../home/state.js'
 import { PADUI } from '../touch.jsx'
 import { NPCS, TALK, weatherFor, noteActivity, recentActivity, periodAt } from './state.js'
-import { buildLines } from './profiles.js'
+import { buildLines, PROFILES } from './profiles.js'
+import { HeartsBadge } from '../ui/gifts/Hearts.jsx'
 import './talk.css'
 
 const NEAR = 0.62, _w = new THREE.Vector3(), _h = new THREE.Vector3(), _up = new THREE.Vector3()
@@ -18,8 +19,16 @@ function close() { if (!TALK.open) return; TALK.open.w.talking = false; TALK.ope
 function open(npc) {
   const rot = window.__rot || { a: 0.4 }
   const L = buildLines(npc.key, { period: periodAt(rot.a), weather: weatherFor(G.s.day || 0), recent: recentActivity(), stage: npc.stage })
+  // Stage B: a friendship line (unlocked by hearts) after the greeting
+  const sb = window.__sb, hl = sb && sb.Fr.heartLine(G.s.friends.list[npc.key]); if (hl) L.pages.splice(1, 0, hl)
   TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; PADUI.hideStick = true; TALK.onOpen && TALK.onOpen(); bump()
 }
+// Stage B gifts: G near a villager or the Gift button in the dialogue opens Studio's GiftPicker (systems/Panels.jsx)
+function gift(npc) { if (!npc || !window.__sb) return; close(); window.__sb.openGift(npc.key) }
+// after a gift she answers in the dialogue box (one page)
+if (typeof window !== 'undefined') window.__sbSay = (key, r) => { const npc = NPCS.find(c => c.key === key); if (!npc) return
+  const p = PROFILES[key] || {}, say = { love: `Oh! For me? I love this!`, like: `How thoughtful. Thank you!`, neutral: `Oh… thank you, I suppose.`, dislike: `Hmm. That's… not really for me.` }[r.kind]
+  TALK.open = npc; TALK.lines = { name: p.name || 'Villager', role: p.role || '', pages: [say] }; TALK.page = 0; npc.w.talking = true; PADUI.hideStick = true; bump() }
 function advance() { if (!TALK.open) return; if (TALK.page < TALK.lines.pages.length - 1) { TALK.page++; bump() } else close() }
 if (typeof window !== 'undefined') window.__openTalk = () => { const n = TALK.near || (window.__npcs || []).find(c => c.ready && c.obj); if (n) open(n) }
 const subs = new Set(); function bump() { for (const f of subs) f() }
@@ -33,10 +42,12 @@ export function Talk({ P }) {
       if (TALK.open) {
         if (e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); advance(); return }
         if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); return }
+        if (e.code === 'KeyG') { e.preventDefault(); e.stopImmediatePropagation(); gift(TALK.open); return }
         if (!e.metaKey && !e.ctrlKey && e.code !== 'KeyV') { e.preventDefault(); e.stopImmediatePropagation() } // freeze her while talking
         return
       }
       if (e.code === 'KeyE' && TALK.near && !(G.near && TALK.nearD > 0.4) && !modal() && !HOME.inside && VIEW.mode === 'follow') { e.preventDefault(); e.stopImmediatePropagation(); open(TALK.near) }
+      if (e.code === 'KeyG' && TALK.near && !modal() && !HOME.inside && VIEW.mode === 'follow') { e.preventDefault(); e.stopImmediatePropagation(); gift(TALK.near) }
     }
     addEventListener('keydown', key, true)
     // recent activity from the game's own toasts (gathers, crafts, pets) — no hooks into game code needed
@@ -73,7 +84,8 @@ export function TalkOverlay() {
   return <>
     <div className="tk-bubble" ref={el => BUBBLE.el = el} aria-hidden="true"><span>…</span></div>
     {L && <div className="tk-box" role="dialog" aria-label={`Talking with ${L.name}`} onPointerDown={e => { e.stopPropagation(); e.preventDefault(); advance() }}>
-      <div className="tk-plate"><b>{L.name}</b><i>{L.role}</i></div>
+      <div className="tk-plate"><b>{L.name}</b><i>{L.role}</i>{window.__sb && TALK.open && <HeartsBadge hearts={window.__sb.friend(TALK.open.key).hearts} size={18} className="tk-hearts" />}</div>
+      {window.__sb && TALK.open && <button className="tk-gift" aria-label="Give a gift" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); gift(TALK.open) }}>♥ Gift{TOUCHY ? '' : ' (G)'}</button>}
       <button className="tk-x" aria-label="Close" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); close() }}>✕</button>
       <p key={pg}>{L.pages[pg]}</p>
       <div className="tk-more">{pg < L.pages.length - 1 ? <>{'❧'} <small>{TOUCHY ? 'tap' : 'E'} to continue</small></> : <small>{TOUCHY ? 'tap' : 'E'} to say goodbye</small>}</div>

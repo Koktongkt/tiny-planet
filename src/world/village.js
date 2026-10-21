@@ -18,3 +18,11 @@ export const SPOTS = { shrine: dir(0.12, -1.05), bus: dir(0.52, 1.2), cat: bl(B0
 for (const k of ['cat', 'laundryA', 'laundryB', 'view1', 'view2']) { let g = 0; while (g++ < 40 && (waterAt(SPOTS[k], -0.12) || onBridge(SPOTS[k]))) SPOTS[k].addScaledVector(B0.tan, -0.05 / R).normalize() }
 window.__spots = { SPOTS, B0 }
 export const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c)]
+// Stage B garden beds beside Home (HOUSES[0]): 2 x 3 beds left of the Home sign, 0.36 apart, in the house frame
+// (+x right, +z out of the door). Shared by the lazy garden (systems/World3D.jsx) and the lawn, which keeps tufts out
+// from under the beds.
+export const GARDEN_BEDS = [[-0.84, 0.3], [-1.2, 0.3], [-0.84, 0.66], [-1.2, 0.66], [-0.84, 1.02], [-1.2, 1.02]]
+export function gardenBedNs(homeN, height) {
+  const hp = place(homeN, 0, 0), hpos = homeN.clone().normalize().multiplyScalar(R + height(homeN))
+  return GARDEN_BEDS.map(([x, z]) => hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize())
+}

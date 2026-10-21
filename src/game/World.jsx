@@ -3,12 +3,14 @@
 import { onTap } from '../touch.jsx'
 import { startAct, ACT, FREEZE } from '../act.js'
 import * as THREE from 'three'
-import React, { useMemo, useRef, useEffect } from 'react'
+import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
+const StageBWorld = lazy(() => import('../systems/World3D.jsx')) // Stage B garden + errands board (lazy)
 import { useFrame, useThree } from '@react-three/fiber'
 import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H } from '../world.js'
 import { T, C, toon, glow, planetRef } from '../common.jsx'
 import { G, emit, add, markTaken, available, toast, count, take } from './store.js'
-import { SPAWNS, NEEDS_TOOL, ITEMS, DECOR } from './items.js'
+import { ITEMS, DECOR } from './items.js'
+import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 
 const q = new URLSearchParams(location.search)
 let seed = 4242; const rr = () => (seed = (seed * 16807) % 2147483647) / 2147483647
@@ -258,7 +260,7 @@ export function GameWorld() {
     G.ui.fly = [...G.ui.fly, { id: sp.id + performance.now(), item: sp.item, x: (_w.x * 0.5 + 0.5) * innerWidth, y: (-_w.y * 0.5 + 0.5) * innerHeight }]; emit()
     const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { dur: isWater ? 1.0 : 0.85, spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
     anim.current[sp.id] = { t0: performance.now() + 280 }
-    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); delete anim.current[sp.id]; force() }, 980)
+    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); G.onGather && G.onGather(sp.item); delete anim.current[sp.id]; force() }, 980)
   }
   useFrame(() => {
     const P = GAME.P; if (!P || !L) return
@@ -319,7 +321,14 @@ export function GameWorld() {
     {G.s.placed.filter(p => !p.in).map(p => <SurfaceGroup key={p.uid} n={new THREE.Vector3(...p.n)} spin={p.rot}><Decor item={p.item} /></SurfaceGroup>)}
     <group ref={el => { if (el) refs.current.__ghost = el }} visible={false}><GhostDecor /></group>
     {G.s.unlocked.bridge && <><RopeBridge br={L.bridge} /><Reward br={L.bridge} /></>}
+    <StageBSlot L={L} />
   </group>
+}
+// mounts once the Stage B systems chunk is in (UI.jsx loads it in an idle slot), so the garden never delays the first frame
+function StageBSlot({ L }) {
+  const [on, setOn] = useState(!!window.__sbReady)
+  useEffect(() => { if (on) return; const i = setInterval(() => { if (window.__sbReady) { setOn(true); clearInterval(i) } }, 250); return () => clearInterval(i) }, [on])
+  return on ? <Suspense fallback={null}><StageBWorld L={L} GAME={GAME} /></Suspense> : null
 }
 const GHOST = new THREE.MeshBasicMaterial({ color: '#bff0c8', transparent: true, opacity: 0.55, depthWrite: false })
 function GhostDecor() {
