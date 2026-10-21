@@ -34,7 +34,7 @@ TRAIN.fn = (t) => Tr.trainState(SCH, t + SC.toff, TS).lon // toff: test / debug 
 export const STOP_NAME = { village: 'Lakeside (village)', forest: 'Forest Edge (ruins)' }
 // platform: a step north of the rails (toward the lake / ruins paths)
 export const platformN = (id) => { const s = TRAIN_STOPS.find(x => x.id === id); return dir(TRAIN_LAT + 0.3 / R, s.lon) }
-export const RIDE = { riding: false, from: null, to: null, progress: 0, car: 3, seat: 0.09, pin: null }
+export const RIDE = { riding: false, from: null, to: null, progress: 0, cost: 0, car: 3, seat: 0.09, pin: null } // car/seat: TrainC sets Studio's RIDE_SEAT
 window.__scRide = RIDE
 const nextArrival = (id) => { const t = wind.time.value + SC.toff; for (let k = 0; k < SCH.period; k += 0.5) { if (Tr.trainState(SCH, t + k, _ns).stop === id) return k } return SCH.period }
 const _ns = {}
@@ -49,7 +49,7 @@ export function board(id) {
   const f = Tr.fare(S().train.rides, count('coin'))
   if (!f.ok) { toast('A ride costs 1 coin. Errands on the village board pay in coins.', 'coin', 3400); return false }
   if (f.cost) take('coin', f.cost)
-  S().train.rides++; Object.assign(RIDE, { riding: true, from: id, to: TRAIN_STOPS.find(s => s.id !== id).id, progress: 0 })
+  S().train.rides++; Object.assign(RIDE, { riding: true, from: id, to: TRAIN_STOPS.find(s => s.id !== id).id, progress: 0, cost: f.cost })
   G.ui.lock = 'ride'; const P = window.__player; if (P) P.target = null
   RIDE.pin = pinRide; toast(f.cost ? 'All aboard! (1 coin)' : 'All aboard! Your first ride is on the house.', 'coin', 3000); emit(); return true
 }
@@ -63,10 +63,11 @@ export function pinRide(obj) {
   RIDE.progress = TS.stop ? (TS.stop === RIDE.to ? 1 : 0) : TS.progress
   if (TS.stop === RIDE.to) alight()
 }
-export function alight() {
-  const P = window.__player; RIDE.pin = null; G.ui.lock = null
-  if (P) { P.n.copy(platformN(RIDE.to)); P.h = 0; P.target = null }
-  toast(`${STOP_NAME[RIDE.to]}. Mind the step!`, 'leaf', 3000); Object.assign(RIDE, { riding: false, from: null, to: null, progress: 0 }); emit()
+// at = the stop she steps off at (default the destination; the overlay's Alight button uses the stop the train is dwelling at)
+export function alight(at = RIDE.to) {
+  if (!RIDE.riding || !at) return; const P = window.__player; RIDE.pin = null; G.ui.lock = null
+  if (P) { P.n.copy(platformN(at)); P.h = 0; P.target = null }
+  toast(`${STOP_NAME[at]}. Mind the step!`, 'leaf', 3000); Object.assign(RIDE, { riding: false, from: null, to: null, progress: 0, cost: 0 }); emit()
 }
 
 // ---------- fishing ----------

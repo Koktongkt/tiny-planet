@@ -15,6 +15,7 @@ import './panelsC.css'
 const TutorialNote = lazy(() => import('../ui/tutorial/TutorialNote.jsx'))
 const CatchCard = lazy(() => import('../ui/fish/CatchCard.jsx'))
 const PhotoMode = lazy(() => import('../ui/photo/PhotoMode.jsx'))
+const RideOverlay = lazy(() => import('../ui/ride/RideOverlay.jsx'))
 registerFishIcons() // species icons for the journal (Studio, art/fish/icons.jsx)
 const close = () => { G.ui.panel = null; emit() }
 const label = (e) => e.kind === 'fish' ? FISH_TEXT[e.id]?.name : ITEMS[e.id]?.name
@@ -51,7 +52,8 @@ function Ride() {
   const [, f] = useState(0)
   useEffect(() => { if (!RIDE.riding) return; const i = setInterval(() => f(x => x + 1), 500); return () => clearInterval(i) }, [RIDE.riding])
   if (!RIDE.riding) return null
-  return <div className="tpc-ride paper"><Icon id="coin" size={30} /><span>{STOP_NAME[RIDE.from]} → <b>{STOP_NAME[RIDE.to]}</b></span><i><b style={{ width: Math.round(RIDE.progress * 100) + '%' }} /></i></div>
+  const at = SC.TS.stop // dwelling at a platform: she may step off there
+  return <Suspense fallback={null}><RideOverlay from={RIDE.from} to={RIDE.to} progress={RIDE.progress} cost={RIDE.cost} dwelling={!!at} canAlight={!!at} onAlight={() => SC.alight(at)} /></Suspense>
 }
 function Tutorial() {
   if (!SC.tutorialVisible() || G.ui.panel || PH.on || RIDE.riding) return null

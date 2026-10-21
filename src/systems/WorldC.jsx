@@ -38,6 +38,7 @@ function PhotoCapture() {
 // Studio's seasons + weather look (season tint / wet patch on the scene's materials, Drift, Rain, Puddles), its own lazy chunk;
 // everything reads the __T hooks liveC writes. Drift uses driftAnchor (off in the desktop forest), touch winter is tint-only.
 const SeasonLayer = lazy(() => import('../art/season/SeasonLayer.jsx'))
+const TrainC = lazy(() => import('./TrainC.jsx')) // Studio stations + carriages + ride pose
 function RidePin() { useFrame(() => { if (RIDE.pin && HOME.playerObj) RIDE.pin(HOME.playerObj) }); return null }
 export function StageCWorld({ GAME }) {
   useEffect(() => {
@@ -50,6 +51,6 @@ export function StageCWorld({ GAME }) {
       if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', icon: 'book', verb: 'Visit', name: 'the ruins museum', act: () => setPanel('museum') }, d, 0.5) }
     })
   }, [])
-  return <><PhotoCapture /><RidePin /><Suspense fallback={null}><SeasonLayer /></Suspense></>
+  return <><PhotoCapture /><RidePin /><Suspense fallback={null}><SeasonLayer /></Suspense><Suspense fallback={null}><TrainC riding={RIDE.riding} /></Suspense></>
 }
 export default StageCWorld
