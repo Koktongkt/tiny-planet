@@ -1,8 +1,8 @@
 // Where is she, acoustically? Reads existing world data (src/world.js) + globals the game already exposes
-// (window.__player, window.__home, T/VIEW from common.jsx). No App.jsx changes needed.
-import { ZONES, R, height, streamNear, dir } from '../world.js'
+// (window.__player, window.__home, T/VIEW from common.jsx, VILLAGE_POS from world/village.js).
+import { ZONES, R, height, streamNear } from '../world.js'
 import { T, VIEW } from '../common.jsx'
-const VILLAGE = dir(1.05, 0.2) // mirrors App.jsx's VILLAGE square
+import { VILLAGE_POS as VILLAGE } from '../world/village.js'
 const c = (x) => x < 0 ? 0 : x > 1 ? 1 : x
 const ang = (n, z) => Math.acos(Math.max(-1, Math.min(1, n.x * z.x + n.y * z.y + n.z * z.z)))
 const near = (n, z, r, fall) => c(1 - Math.max(0, ang(n, z) - r) * R / fall) // 1 inside the zone, fading over `fall` world units
