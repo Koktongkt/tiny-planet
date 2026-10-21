@@ -19,8 +19,9 @@ import { HOME } from '../home/state.js'
 import { CAM } from '../touch.jsx'
 import { wind, R, TRAIN_LAT, dir, height } from '../world.js'
 import { SB } from './live.js'
-import { registerRelicIcons } from '../art/museum/icons.jsx'
-registerRelicIcons() // the 5 new relics' bag / journal icons (Studio)
+// the new relics' bag icons (Studio): loaded on first use — once she owns a relic (save or a dig); journal / museum register their own
+let relicIcons = null
+const needRelicIcons = () => relicIcons || (relicIcons = import('../art/museum/icons.jsx').then(m => { m.registerRelicIcons(); emit() }))
 const S = () => G.s
 const rotA = () => (window.__rot ? window.__rot.a : 0.4)
 const nm = (id) => (ITEMS[id] && ITEMS[id].name) || id
@@ -95,6 +96,7 @@ export function donate(id) {
   SB.Fr.addHearts(S().friends, C.HOSHINO, 0.5); toast(`Professor Hoshino: "Splendid! The ${nm(id)} goes on display."`, id, 3600); emit(); return true
 }
 export function digAt(spot) {
+  needRelicIcons()
   const f = C.dig(S().dig, spot, S().day); if (!f) { toast('Already dug here today.', 'leaf'); return null }
   add(f, 1, true); C.note(S().journal, f, S().day); toast(`You dug up ${ITEMS[f] ? nm(f) : f}!`, f, 3200); emit(); return f
 }
@@ -198,3 +200,5 @@ setInterval(tickWeather, 100); setInterval(tickTutorial, 500)
 export const SC = { itemName: nm, toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
 window.__sc = SC
 emit()
+// a save that already holds one of the new relics gets their icons straight away
+if (Object.keys(G.s.inv || {}).some(k => k.startsWith('relic_') && G.s.inv[k] > 0)) needRelicIcons()
