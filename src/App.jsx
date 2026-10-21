@@ -27,21 +27,16 @@ import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
-import { dayFromPhase } from './save/schema.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
+import { dayFromPhase } from './save/schema.js'
+import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
+import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY } from './world/village.js'
+import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
+import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
 
-const PRESET = { day: 0.35, dusk: 1.72, night: 3.0 }
-const fixed = q.has('t') || q.has('phase')
-const rot = { a: q.has('phase') ? +q.get('phase') : PRESET[q.get('t')] ?? 0.4, v: 0 }
-window.__rot = rot
-window.__setPhase = (p) => { rot.a = typeof p === 'string' ? PRESET[p] : p; rot.v = 0 }
-
-const spin = { a: -0.8 * rot.a + 0.25, v: 0 }
-// stage-a: the clock phase lives in the save, so the day (and regrowth, sleep) continues across reloads
-if (!fixed && Number.isFinite(G.s.clock?.a)) rot.a = G.s.clock.a
+const spin = { a: -0.8 * ROT_A0 + 0.25, v: 0 }
 const _v = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _s = new THREE.Vector3()
-export const DAY_SEC = q.has('daylen') ? Math.max(10, +q.get('daylen') || 3600) : 3600
 function Clock() {
   const camera = useThree(s => s.camera)
   useFrame((_, dt) => {
@@ -61,39 +56,7 @@ function Clock() {
   return null
 }
 
-function Sky() {
-  const mat = useMemo(() => new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, uniforms: { uSun: { value: T.sun }, uDay: { value: 1 }, uDusk: { value: 0 }, uNight: { value: 0 }, uTime: wind.time }, vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-    fragmentShader: `varying vec3 vP; uniform vec3 uSun; uniform float uDay,uDusk,uNight,uTime;
-    float h(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
-    float n(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z); }
-    float fbm(vec3 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*n(p); p*=2.03; a*=.5; } return s; }
-    void main(){ float y = vP.y*.5+.5;
-      vec3 dT=vec3(.56,.77,.91), dH=vec3(.99,.95,.85); vec3 kT=vec3(.42,.44,.66), kH=vec3(1.,.66,.52), kR=vec3(.97,.56,.63); vec3 nT=vec3(.06,.08,.2), nH=vec3(.18,.24,.43);
-      vec3 day = mix(dH,dT,smoothstep(.35,.9,y)); vec3 dusk = mix(mix(kH,kR,smoothstep(.3,.55,y)),kT,smoothstep(.5,.95,y)); vec3 night = mix(nH,nT,smoothstep(.3,.85,y));
-      vec3 c = night; c = mix(c, dusk, clamp(uDusk*1.2,0.,1.)); c = mix(c, day, uDay*(1.-uDusk*.7));
-      float wash = fbm(vP*3.+vec3(uTime*.01,0,0)); c *= .92 + .16*wash; // watercolour blotches
-      float sd = max(dot(vP, uSun),0.); c += vec3(1.,.8,.55)*pow(sd,8.)*(.25+uDusk*.6)*(1.-uNight);
-      c += vec3(1.,.95,.8)*smoothstep(.9985,.9992,sd)*(1.-uNight);
-      vec3 mp = -uSun; c += vec3(.9,.93,1.)*smoothstep(.9986,.9991,dot(vP,normalize(mp+vec3(.3,0,0))))*uNight;
-      float st = step(.9965, h(floor(vP*220.)))*(.6+.4*sin(uTime*3.+h(floor(vP*220.))*40.)); c += st*uNight*vec3(1.,.97,.85);
-      gl_FragColor = vec4(c,1.); }` }), [])
-  useFrame(() => { mat.uniforms.uDay.value = T.day; mat.uniforms.uDusk.value = T.dusk; mat.uniforms.uNight.value = T.night })
-  return <mesh material={mat} renderOrder={-1}><sphereGeometry args={[80 * WS, 48, 32]} /></mesh>
-}
-
-const MOON_OFF = new THREE.Vector3(6, 0, 8), _wx = new THREE.Vector3(), _wy = new THREE.Vector3(), _wz = new THREE.Vector3(), _wm = new THREE.Matrix4(), _wn = new THREE.Vector3(), _wf = new THREE.Vector3()
-function Lights() {
-  const sun = useRef(), hemi = useRef(), moon = useRef()
-  const cDay = C('#fff3dc'), cDusk = C('#ffa070'), tmp = new THREE.Color()
-  useFrame(() => {
-    sun.current.position.copy(T.sun).multiplyScalar(20)
-    sun.current.color.copy(cDay).lerp(cDusk, T.dusk); sun.current.intensity = 2.6 * ss(-0.2, 0.2, T.sun.y)
-    moon.current.position.copy(T.sun).multiplyScalar(-20).add(MOON_OFF); moon.current.intensity = 1.1 * T.night
-    hemi.current.color.copy(tmp.set('#cfe6ff').lerp(CC('#ffb59a'), T.dusk).lerp(CC('#4a5fa0'), T.night))
-    hemi.current.groundColor.set('#b9d48c').lerp(CC('#2a2f55'), T.night); hemi.current.intensity = 0.9 + 0.25 * T.dusk - 0.3 * T.night
-  })
-  return <><directionalLight ref={sun} castShadow={false} /><directionalLight ref={moon} color="#9db4ff" /><hemisphereLight ref={hemi} /></>
-}
+const _wx = new THREE.Vector3(), _wy = new THREE.Vector3(), _wz = new THREE.Vector3(), _wm = new THREE.Matrix4(), _wn = new THREE.Vector3(), _wf = new THREE.Vector3()
 
 // worn footpaths: each village door to the nearest point of the main path, plus the tamped earth of the square.
 // Baked into the terrain's vertex colours (no extra geometry); noisy edges so they read as trodden, not drawn.
@@ -136,22 +99,7 @@ function Ground() {
 const PathLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Path }))), StreamLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Stream })))
 const RiverStonesLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.RiverStones })))
 
-const VILLAGE = dir(1.05, 0.2)
-const MILLS = [dir(0.25, 1.4), dir(0.45, 1.75)]
-const HOUSES = [[0.9, -0.15], [1.18, 0.55], [0.92, 0.78], [1.3, -0.3], [1.0, 0.95], [0.3, -0.6], [0.75, 2.2], [0.5, 2.55], [0.92, 2.6], [0.35, 2.25], [0.7, 2.85]].map(([la, lo]) => dir(la, lo))
-// ---------- painted shading: hand-painted noise + drifting cloud shadows ----------
-
-// ---------- bridges where the path crosses the stream ----------
-const B0 = BRIDGES[0]
-const bl = (b, along, side) => b.c.clone().addScaledVector(b.tan, along / R).addScaledVector(b.side, side / R).normalize()
 const floorLift = (n) => bridgeLift(n) + ropeLift(n)
-const HB = (i) => place(HOUSES[i], 0, i * 1.3)
-const onHouse = (i, x, z) => { const p = HB(i); return p.pos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(p.q)).normalize() }
-const SPOTS = { shrine: dir(0.12, -1.05), bus: dir(0.52, 1.2), cat: bl(B0, -0.55, 0.32), laundryA: bl(B0, -1.45, 0.05), laundryB: bl(B0, -0.8, -0.3), view1: bl(B0, -1.2, 1.0), view2: bl(B0, -0.3, 0.55) }
-// round6: the wider river reaches a couple of the old spots near the first bridge; walk them back onto dry bank
-for (const k of ['cat', 'laundryA', 'laundryB', 'view1', 'view2']) { let g = 0; while (g++ < 40 && (waterAt(SPOTS[k], -0.12) || onBridge(SPOTS[k]))) SPOTS[k].addScaledVector(B0.tan, -0.05 / R).normalize() }
-window.__spots = { SPOTS, B0 }
-const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c)]
 
 const DM = { plank: paint(toon('#b07a4f'), 0.18, true, 12), rail: toon('#8a5a3c'), cloth: ['#ffffff', '#f59ab0', '#8fc3e8', '#ffd36e'].map(c => toon(c, { side: THREE.DoubleSide })), rope: toon('#e8dcc0'), red: toon('#d9534f'), soil: paint(toon('#8a6248'), 0.2, true, 14), cabbage: toon('#8fcf6a'), carrot: toon('#ef8a3c'), fence: toon('#f3e6cc'), stone: paint(toon('#c9c0b2'), 0.15, true, 15), moss: toon('#7fae5f'), cat: toon('#f2a65a'), catW: toon('#fff4e6'), dark: toon('#3a2e2a'), sign: toon('#ffd36e'), curtains: ['#f59ab0', '#8fc3e8', '#fff1c9', '#b8e0a8'].map(c => toon(c)), smoke: toon('#f4f1ee', { transparent: true, opacity: 0.85 }), wing: ['#ffd36e', '#ffffff', '#f59ab0', '#a8d8ff'].map(c => toon(c, { side: THREE.DoubleSide })) }
 
@@ -329,77 +277,9 @@ function Windmill({ n, i }) {
   </Surface>
 }
 
-const SHIRTS = ['#e86f5a', '#5f8fc4', '#f2b84b', '#8cc084', '#c97b9a', '#f6ead2']
-// townsfolk: path walkers, pacers and idlers built from the procedural Person
-const tangentAt = (n, b = 0) => { const e1 = new THREE.Vector3(0, 1, 0).cross(n).normalize(); const e2 = new THREE.Vector3().crossVectors(n, e1); return e1.multiplyScalar(Math.cos(b)).addScaledVector(e2, Math.sin(b)) }
-const WALKERS = (() => {
-  const W = [], P_ = PEOPLE
-  const pathers = [1, 2, 3, 6, 7, 10, 4, 9, 5, 11]
-  pathers.forEach((k, i) => W.push({ cfg: P_[k], mode: 'path', t0: (i / pathers.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (P_[k].elder ? 0.6 : 1), off: (rnd() - 0.5) * 0.1 }))
-  const sq = around(VILLAGE, 0.0, 0)
-  ;[2, 7, 5].forEach((k, j) => { const n = around(sq, 0.22 / R, j * 2.1); W.push({ cfg: P_[k], mode: 'idle', n, fwd: sq.clone().sub(n), wave: j === 1 }) })
-  const pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
-  W.push({ cfg: P_[8], mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.25 })
-  W.push({ cfg: P_[10], mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2 })
-  W.push({ cfg: { ...P_[8], top: '#d9655b', hat: 'straw', hatC: '#e2c27a', name: 'angler' }, mode: 'idle', n: (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })(), fwd: Zc.lake.clone(), lift: () => 0, dock: true })
-  W.push({ cfg: P_[3], mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18 })
-  W.push({ cfg: { ...P_[4], name: 'planter' }, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12 })
-  W.push({ cfg: P_[9], mode: 'idle', n: around(Zc.ruins, 0.25 / R, 4.0), fwd: Zc.ruins.clone(), look: -0.35 })
-  W.push({ cfg: P_[6], mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35 })
-  W.push({ cfg: P_[1], mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3 })
-  W.push({ cfg: P_[11], mode: 'pace', n: around(Zc.giant, 1.75 / R, 0.8), tan: tangentAt(Zc.giant, 2.0), range: 0.4, w: 0.3 })
-  return W
-})()
-// Villager life: each walker has a schedule by time of day (morning / day / evening / night). A plan entry picks
-// how they move (route speed, pacing, or going to an anchor spot) and what they do there (st.act: sit, stretch,
-// hoe, sweep, fish, chat, look, carry). Path walkers stroll at different speeds by period and stop now and then
-// to look around or stretch. While she talks to one, they stop and turn to her.
-const SQ = around(VILLAGE, 0.0, 0)
-const sqSpot = (d, b) => around(SQ, d / R, b)
-const BENCH = { n: sqSpot(0.42, 0.55), fwd: null }; BENCH.fwd = SQ.clone().sub(BENCH.n)
-const benchSeat = (x) => { const nn = BENCH.n.clone().normalize(), f = BENCH.fwd.clone().addScaledVector(nn, -BENCH.fwd.dot(nn)).normalize(), side = new THREE.Vector3().crossVectors(nn, f); return nn.addScaledVector(side, x / R).addScaledVector(f, 0.005 / R).normalize() }
-const CHAT_A = sqSpot(0.2, 2.6), CHAT_B = CHAT_A.clone().addScaledVector(tangentAt(CHAT_A, 0.3), 0.34 / R).normalize()
-const SWEEP = sqSpot(0.55, 3.9)
-// fwd: a unit tangent direction, or {at: point} to face a point
-const A = (n, at, act, extra) => ({ n, at, act, ...extra })
-const NEW_WALKERS = (() => {
-  const W = [], by = z => VILLAGERS.filter(v => v.zone === z)
-  const SPEEDS = { morning: 1.15, day: 1, evening: 0.72, night: 0.5 }
-  const STALL2 = sqSpot(0.62, 1.1), SWEEP2 = sqSpot(0.7, 1.4)
-  const cook = VILLAGERS.find(v => v.name === 'cook')
-  if (cook) W.push({ cfg: { ...cook, hold: { R: 'broom' } }, key: cook.name, mode: 'anchor', plan: { morning: [A(SWEEP2, SQ, 'sweep', { drift: 0.16, dur: 22, stage: 'sweep' }), A(STALL2, SQ, 'sell', { dur: 18, stage: 'sell' })], day: [A(STALL2, SQ, 'sell', { dur: 26, stage: 'sell' }), A(STALL2, SQ, 'eat', { dur: 10, stage: 'eat' })], evening: [A(SWEEP2, SQ, 'sweep', { drift: 0.16, dur: 18, stage: 'sweep' }), A(STALL2, SQ, 'sell', { dur: 14, stage: 'sell' })], night: A(STALL2, SQ, 'sit', { stage: 'rest' }) } })
-  by('path').filter(c => c.name !== 'cook').forEach((cfg, i, a) => W.push({ cfg, key: cfg.name, mode: 'path', t0: (i / a.length) * Math.PI * 2 + rnd() * 0.3, sp: (0.045 + rnd() * 0.025) * (i % 2 ? -1 : 1) * (cfg.age === 'elder' ? 0.55 : cfg.age === 'kid' ? 1.25 : 1), off: (rnd() - 0.5) * 0.1,
-    speeds: SPEEDS, pause: { every: 22 + i * 4.3, len: 4.5 + (i % 3), act: i % 3 === 1 ? 'stretch' : 'look' } }))
-  const [gma, gpa, bak] = by('square')
-  const front = BENCH.n.clone().addScaledVector(BENCH.fwd, 1).normalize() // a point in front of the bench
-  const seat = (x, extra) => A(benchSeat(x), front, 'sit', extra)
-  W.push({ cfg: gma, key: gma.name, mode: 'anchor', plan: { morning: seat(-0.09, { stage: 'rest' }), day: [seat(-0.09, { dur: 20, stage: 'rest' }), A(benchSeat(-0.09), front, 'eat', { dur: 14, stage: 'eat' })], evening: seat(-0.09, { sitTalk: 0.45, stage: 'chat' }), night: seat(-0.09, { stage: 'rest' }) } })
-  W.push({ cfg: gpa, key: gpa.name, mode: 'anchor', plan: { morning: A(sqSpot(0.3, 1.6), SQ, 'stretch'), day: A(CHAT_B, CHAT_A, 'chat', { seed: 1.7 }), evening: seat(0.09, { sitTalk: -0.45 }), night: seat(0.09) } })
-  const OVEN = sqSpot(0.5, 3.3), STALL = sqSpot(0.3, 2.9)
-  W.push({ cfg: bak, key: bak.name, mode: 'anchor', plan: { morning: [A(OVEN, SQ, 'knead', { dur: 26, stage: 'knead' }), A(STALL, SQ, 'sell', { dur: 18, stage: 'sell' })], day: [A(STALL, SQ, 'sell', { dur: 24, stage: 'sell' }), A(CHAT_A, CHAT_B, 'chat', { seed: 0, dur: 12, stage: 'chat' })], evening: [A(STALL, SQ, 'sell', { dur: 12, stage: 'sell' }), A(benchSeat(0.0).clone().addScaledVector(tangentAt(SQ, 1.2), 0.2 / R).normalize(), SQ, 'eat', { dur: 18, stage: 'eat' })], night: A(sqSpot(0.25, 3.3), SQ, 'look', { stage: 'rest' }) } })
-  const [fm, fw, sg, db] = by('harbour'), pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
-  const pierEnd = pier.clone().addScaledVector(tangentAt(pier, 0.4), 0.7 / R).normalize(), pierSeat = pier.clone().addScaledVector(tangentAt(pier, 0.4), -0.5 / R).normalize(), sea = pier.clone().addScaledVector(tangentAt(pier, 0.4 + 1.57), 1 / R).normalize()
-  W.push({ cfg: { ...fm, hold: { R: 'rod' } }, key: fm.name, mode: 'anchor', plan: { morning: A(pierEnd, sea, 'fish', { stage: 'fish' }), day: [A(pierEnd, sea, 'fish', { dur: 26, stage: 'fish' }), A(pierSeat, sea, 'eat', { dur: 14, stage: 'eat' })], evening: [A(pierSeat, sea, 'look', { dur: 18, stage: 'mend' }), A(pierEnd, sea, 'fish', { dur: 14, stage: 'fish' })], night: A(pierSeat, sea, 'sit', { stage: 'rest' }) } })
-  W.push({ cfg: fw, key: fw.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.2, 2.3), tan: tangentAt(Zc.harbour, 2.3), range: 0.5, w: 0.16, carry: true, work: { act: 'chat', on: 6, off: 9, periods: ['day', 'evening'] } })
-  W.push({ cfg: sg, key: sg.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2, work: { act: 'look', on: 6, off: 10, periods: ['evening', 'night'] } })
-  W.push({ cfg: db, key: db.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45, speeds: { morning: 1.3, day: 1.15, evening: 0.9, night: 0.5 }, carry: true, work: { act: 'play', on: 5, off: 11, periods: ['morning', 'day', 'evening'] } })
-  const ang = by('lake')[0], dockN = (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })()
-  W.push({ cfg: ang, key: ang.name, mode: 'anchor', dock: true, plan: { morning: A(dockN, Zc.lake, 'fish'), day: A(dockN, Zc.lake, 'fish'), evening: A(dockN, Zc.lake, 'fish'), night: A(dockN, Zc.lake, 'look') } })
-  const [fa, fwf] = by('terraces')
-  const rowA = around(Zc.terraces, 0.07, 0.5), rowB = around(Zc.terraces, 0.1, 1.4), hut = around(Zc.terraces, 0.13, 3.3)
-  W.push({ cfg: { ...fa, hold: { R: 'hoe' } }, key: fa.name, mode: 'anchor', plan: { morning: [A(rowA, Zc.terraces, 'hoe', { dur: 22, stage: 'tend' }), A(rowB, Zc.terraces, 'hoe', { dur: 22, stage: 'tend' })], day: [A(rowB, Zc.terraces, 'hoe', { dur: 20, stage: 'tend' }), A(hut, Zc.terraces, 'eat', { dur: 16, stage: 'eat' })], evening: [A(rowA, Zc.terraces, 'look', { dur: 18, stage: 'survey' }), A(hut, Zc.terraces, 'sit', { dur: 14, stage: 'rest' })], night: A(hut, Zc.terraces, 'sit', { stage: 'rest' }) } })
-  W.push({ cfg: fwf, key: fwf.name, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12, work: { act: 'hoe', on: 7, off: 5, periods: ['morning', 'day'] } })
-  const sch = by('ruins')[0], rs = around(Zc.ruins, 0.25 / R, 4.0); W.push({ cfg: sch, key: sch.name, mode: 'anchor', plan: { morning: A(rs, Zc.ruins, 'stretch'), day: A(around(Zc.ruins, 0.32 / R, 3.2), Zc.ruins, 'look'), evening: A(rs, Zc.ruins, 'look'), night: A(rs, Zc.ruins, 'look') } })
-  const mg = by('mills')[0]; W.push({ cfg: mg, key: mg.name, mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35, speeds: { morning: 1.2, day: 1, evening: 0.8, night: 0.4 }, carry: true, work: { act: 'stretch', on: 4, off: 12, periods: ['evening'] } })
-  const [bs, td] = by('giant')
-  W.push({ cfg: bs, key: bs.name, mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3, work: { act: 'look', on: 5, off: 8, periods: ['morning', 'day', 'evening', 'night'] } })
-  const play1 = around(Zc.giant, 1.75 / R, 0.8), play2 = around(Zc.giant, 1.95 / R, 1.3), napN = around(Zc.giant, 1.45 / R, 0.4)
-  W.push({ cfg: td, key: td.name, mode: 'anchor', plan: { morning: [A(play1, Zc.giant, 'play', { dur: 14, stage: 'play' }), A(play2, Zc.giant, 'play', { dur: 12, stage: 'play' })], day: [A(play2, Zc.giant, 'play', { dur: 14, stage: 'play' }), A(napN, Zc.giant, 'nap', { dur: 24, stage: 'nap' })], evening: [A(play1, Zc.giant, 'play', { dur: 12, stage: 'play' }), A(napN, Zc.giant, 'eat', { dur: 12, stage: 'eat' })], night: A(napN, Zc.giant, 'nap', { stage: 'nap' }) } })
-  return W
-})()
+const WALKERS = buildWalkers()
+const NEW_WALKERS = buildNewWalkers()
 const _c0 = new THREE.Vector3(), _tw = new THREE.Vector3()
-const RATE = { toddler: 12, kid: 10.5, teen: 9, adult: 8, elder: 6 }
-const STATIC_ACTS = new Set(['sit', 'stretch', 'hoe', 'sweep', 'fish', 'chat', 'look', 'knead', 'sell', 'eat', 'nap', 'play', 'wave'])
 function Walker({ w, i }) {
   const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0, act: null, actW: 0, talkSeed: i * 1.3 }), [])
   const camera = useThree(s => s.camera)
@@ -463,41 +343,8 @@ function Bench() {
   return <Basis n={BENCH.n} fwd={BENCH.fwd}><mesh geometry={geo} material={useMemo(() => paint(toon('#ffffff', { vertexColors: true }), 0.15, false, 9), [])}><Outlines thickness={0.006} color={INK} /></mesh></Basis>
 }
 const BENCH_Y = 0.104
-const LINEUP = around(Zc.meadow, 0.1, 2.4)
-function Lineup() {
-  const LIST = NEWCHAR ? VILLAGERS : PEOPLE
-  const sts = useMemo(() => LIST.map((_, i) => ({ phase: i * 0.7, move: NEWCHAR ? (q.has('walk') ? 1 : 0) : i % 3 === 0 ? 0 : 1, t: 0, wave: i % 3 === 0 })), [])
-  useFrame((_, dt) => { sts.forEach((st, i) => { st.t = wind.time.value; st.phase += dt * 8 * st.move }) })
-  const f = tangentAt(LINEUP, 0), side = new THREE.Vector3().crossVectors(LINEUP, f)
-  if (NEWCHAR) return LIST.map((cfg, i) => { const row = Math.floor(i / 8), k = i % 8, nr = row < 2 ? 8 : LIST.length - 16; const n = LINEUP.clone().addScaledVector(side, (k - (nr - 1) / 2) * 0.24 / R + (row % 2) * 0.1 / R).addScaledVector(f, -row * 0.4 / R).normalize(); return <Basis key={i} n={n} fwd={f}><Character cfg={cfg} st={sts[i]} res={56} scale={0.8} /></Basis> })
-  return PEOPLE.map((cfg, i) => { const n = LINEUP.clone().addScaledVector(side, (i - (PEOPLE.length - 1) / 2) * 0.17 / R).addScaledVector(f, (i % 2) * 0.12 / R).normalize(); return <Basis key={i} n={n} fwd={f}><Person cfg={cfg} st={sts[i]} seed={i} /></Basis> })
-}
-
-function Clouds() {
-  const cl = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ axis: new THREE.Vector3(rnd() - 0.5, 1, rnd() - 0.5).normalize(), off: rnd() * 6, r: (11.5 + rnd() * 2.5) * WS, y: (i % 2 ? -1 : 1) * (4.2 + rnd() * 3.5) * WS, puffs: Array.from({ length: 4 + (i % 3) }, (_, k) => [k * 0.65 - 1.1, rnd() * 0.35, rnd() * 0.4, 0.5 + rnd() * 0.45]) })), [])
-  const refs = useRef([]); const mat = useMemo(() => toon('#ffffff'), [])
-  useFrame(() => { const t = wind.time.value; mat.emissive.set('#000000').lerp(CC('#ff9f80'), T.dusk * 0.35).lerp(CC('#2a3170'), T.night * 0.5); mat.color.set('#ffffff').lerp(CC('#ffd2c0'), T.dusk * 0.7).lerp(CC('#8a94c4'), T.night * 0.7); cl.forEach((c, i) => { const a = c.off + t * 0.03; const g = refs.current[i]; g.position.set(Math.cos(a) * c.r, c.y, Math.sin(a) * c.r); g.lookAt(0, c.y, 0) }) })
-  // each cloud's puffs merged into one mesh (+1 hull): 12+12 draw calls instead of ~120
-  const geos = useMemo(() => cl.map(c => mergeGeometries(c.puffs.map(p => new THREE.IcosahedronGeometry(1, 2).scale(p[3], p[3], p[3]).translate(p[0], p[1], p[2])))), [])
-  return cl.map((c, i) => <group key={i} ref={el => refs.current[i] = el}><mesh geometry={geos[i]} material={mat}><Outlines thickness={0.025} color="#8a8fb0" /></mesh></group>)
-}
-function Birds() {
-  const birds = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ f: Math.floor(i / 4), k: i % 4 })), []); const refs = useRef([]); const mat = useMemo(() => toon('#3f3a4a', { side: THREE.DoubleSide }), [])
-  useFrame(() => { const t = wind.time.value; birds.forEach((b, i) => { const g = refs.current[i]; const a = t * 0.25 + b.f * 2.1 - b.k * 0.05, r = (10.5 + b.f * 0.6) * WS, y = (3.4 + b.f * 1.6) * WS - Math.abs(b.k - 1.5) * 0.15 + Math.sin(t + b.f) * 0.3; g.position.set(Math.cos(a) * r + (b.k % 2) * 0.2, y, Math.sin(a) * r); g.lookAt(Math.cos(a + 0.1) * r, y, Math.sin(a + 0.1) * r); const fl = Math.sin(t * 10 + i) * 0.6; g.children[0].rotation.z = fl; g.children[1].rotation.z = -fl }) })
-  return birds.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.6}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.12, 0, 0]} material={mat}><boxGeometry args={[0.24, 0.01, 0.07]} /></mesh></group>)}</group>)
-}
-function Fireflies() {
-  const { geo, mat } = useMemo(() => {
-    const HAM = dir(0.6, 2.45); const N = 520, p = [], s = []; for (let i = 0; i < N; i++) { const n = i < 90 ? VILLAGE.clone().add(randDir().multiplyScalar(0.4)).normalize() : i < 200 ? HAM.clone().add(randDir().multiplyScalar(0.4)).normalize() : randDir(); p.push(...n.multiplyScalar(R + 0.15 + rnd() * 0.6).toArray()); s.push(rnd() * 6) }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); geo.setAttribute('seed', new THREE.Float32BufferAttribute(s, 1))
-    const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, uniforms: { uTime: wind.time, uN: { value: 0 } },
-      vertexShader: `attribute float seed; uniform float uTime; varying float vA; void main(){ vec3 p = position + vec3(sin(uTime*.7+seed*3.),cos(uTime*.9+seed*5.),sin(uTime*.5+seed))*.12; vA = .5+.5*sin(uTime*2.5+seed*7.); vec4 mv = modelViewMatrix*vec4(p,1.); gl_PointSize = 150./-mv.z; gl_Position = projectionMatrix*mv; }`,
-      fragmentShader: `uniform float uN; varying float vA; void main(){ float d = length(gl_PointCoord-.5); float a = smoothstep(.5,0.,d); gl_FragColor = vec4(vec3(.9,1.,.55)*3.*a*vA*uN, a*vA*uN); }` })
-    return { geo, mat }
-  }, [])
-  useFrame(() => { mat.uniforms.uN.value = T.night })
-  return <points geometry={geo} material={mat} />
-}
+// ?view=lineup: every villager in a row (dev view), lazy chunk
+const LineupLazy = lazy(() => import('./debug/Lineup.jsx'))
 
 // ---------- traveller ----------
 const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
@@ -684,7 +531,7 @@ function Planet() {
     {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
     {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {k >= 3 && NEWCHAR && <Bench />}
-    {VIEW.mode === 'lineup' && <Lineup />}
+    {VIEW.mode === 'lineup' && <Suspense fallback={null}><LineupLazy /></Suspense>}
     <DeferredZones />
     {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
     {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
@@ -758,33 +605,8 @@ function Drag() {
 }
 
 // ---------- character studio (?view=charstudio) ----------
-const ANGLES = { front: 0, three: 0.75, side: Math.PI / 2, back: Math.PI }
-function Studio() {
-  const camera = useThree(s => s.camera), scene = useThree(s => s.scene)
-  const compare = q.has('compare'), walk = q.get('pose') === 'walk', ang = ANGLES[q.get('angle')] ?? 0.4
-  const stOld = useMemo(() => ({ phase: 0, move: walk ? 1 : 0, t: 0 }), []), stNew = useMemo(() => ({ phase: 0, move: walk ? 1 : 0, t: 0, turn: 0, dist: 0 }), [])
-  const bg = useMemo(() => new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`, fragmentShader: `varying vec3 vP; void main(){ float y = vP.y*.5+.5; vec3 c = mix(vec3(.98,.93,.86), vec3(.78,.88,.95), smoothstep(.45,.85,y)); gl_FragColor = vec4(c,1.);
-    #include <colorspace_fragment>
-  }` }), [])
-  useFrame((_, dt) => {
-    dt = Math.min(dt, 0.05); wind.time.value += dt
-    T.sun.set(0.55, 0.75, 0.6).normalize(); T.day = 1; T.dusk = 0; T.night = 0
-    for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * 9 * st.move; st.dist += dt * 0.27 * st.move }
-    if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
-    if (q.has('act')) { stNew.act = q.get('act'); stNew.actW = 1; stNew.move = 0 }
-    const d = compare ? 1.35 : 0.95, cx = 0
-    camera.position.set(cx + Math.sin(ang) * d, 0.3, Math.cos(ang) * d); camera.up.set(0, 1, 0); camera.lookAt(cx, 0.2, 0)
-  })
-  return <>
-    <mesh material={bg}><sphereGeometry args={[30, 32, 16]} /></mesh>
-    <directionalLight position={[3, 4, 3.5]} intensity={2.4} color="#fff3dc" /><hemisphereLight args={['#cfe6ff', '#e8d8b8', 0.9]} />
-    <mesh rotation={[-Math.PI / 2, 0, 0]} material={useMemo(() => toon('#efe6d2'), [])}><circleGeometry args={[1.6, 48]} /></mesh>
-    {(compare ? (SPRITE ? [[-0.25, 'new'], [0.25, 'sprite']] : [[-0.25, 'old'], [0.25, 'new']]) : [[0, q.has('old') ? 'old' : SPRITE ? 'sprite' : 'new']]).map(([x, k]) => <group key={k} position={[x, 0.001, 0]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
-      {k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : <GhibliPerson st={stNew} />}
-    </group>)}
-  </>
-}
+// ?view=charstudio: the character turntable is a dev tool, fetched on demand (src/debug/Studio.jsx)
+const StudioScene = lazy(() => import('./debug/Studio.jsx'))
 
 // Runs once the scene graph is committed: bake the traveller, precompile every shader in batches
 // (so the loader can show real progress), then start the render loop.
@@ -849,7 +671,7 @@ export default function App() {
   const [dpr, setDpr] = useState(Math.min(DPR_MAX, typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1))
   if (VIEW.mode === 'charstudio') return <>
     <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
-      <Boot player={false} onLive={() => setLive(true)} /><Studio />
+      <Suspense fallback={null}><StudioScene Boot={Boot} onLive={() => setLive(true)} /></Suspense>
       <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
     </Canvas>
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
