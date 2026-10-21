@@ -17,7 +17,9 @@ const StageBPanels = lazy(() => import('../systems/Panels.jsx'))
 const idle = (f, t = 1200) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: t }) : setTimeout(f, 200))
 idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady = true; emit()
   // Stage C (fishing species, train, photo mode, journal + museum, seasons/weather hooks, tutorial): one more lazy step
-  idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit() }))
+  // waits for the first scene frame + 4 s so it never competes with the boot on slow phones
+  const afterFrame = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit() }), 3000), 4000) : setTimeout(afterFrame, 250))
+  afterFrame()
 }))
 const SCM = { m: null }
 const StageCPanels = lazy(() => import('../systems/PanelsC.jsx'))
