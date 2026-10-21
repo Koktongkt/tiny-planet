@@ -78,3 +78,7 @@
 html.tp-touch .tp-buffs{right:auto;align-items:flex-start;left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px)}
 .tp-react{position:absolute;left:50%;top:38%;width:0;height:0;pointer-events:none;z-index:30}
 .tp-panel,.tp-prompt,.tp-chips,.tp-toast,.tp-clock,.tp-btns,.tp-buffs,.tp-fish,.tp-placebar,.tk-box,.tpx-panel,.tpe-board{zoom:var(--tpts,1)}
+/* zoomed panels still fit the screen (zoom scales the box too), and the minimap steps aside while a panel is open */
+.tp-panel,.tpx-panel,.tpe-board{max-width:calc((100vw - 16px) / var(--tpts,1))!important;max-height:calc((100dvh - 16px) / var(--tpts,1))!important}
+.tk-box{max-width:calc((100vw - 16px) / var(--tpts,1))}
+html:has(.tpx-veil) .mm-wrap,html:has(.tp-veil) .mm-wrap{opacity:0!important;transition:none!important}
