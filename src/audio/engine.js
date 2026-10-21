@@ -30,8 +30,10 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   const limiter = ctx.createDynamicsCompressor(); limiter.threshold.value = -10; limiter.ratio.value = 6; limiter.attack.value = 0.01; limiter.release.value = 0.3
   const master = G(0), amb = G(1), muffle = F('lowpass', 18000, 0.5), music = G(0), sfx = G(1)
   chain(amb, muffle, master); music.connect(master); sfx.connect(master); chain(master, limiter, dest)
-  const wind = G(0), river = G(0), lake = G(0), insects = G(0), birds = G(0), bubbles = G(0)
-  for (const x of [wind, river, lake, insects, birds, bubbles]) x.connect(amb)
+  const wind = G(0), river = G(0), lake = G(0), insects = G(0), birds = G(0), bubbles = G(0), rain = G(0)
+  for (const x of [wind, river, lake, insects, birds, bubbles, rain]) x.connect(amb)
+  // Stage C: roof patter is what you hear INSIDE, so it skips the indoor muffle and goes straight to the master
+  const roof = G(0), roofLP = F('lowpass', 3800, 0.5); chain(roof, roofLP, master)
   const steps = [...N.steps]
   let windLP = null
 
@@ -70,6 +72,17 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
   const chorus = G(0.06), cBP = F('bandpass', 5400, 7); chain(noise(N.white), cBP, chorus, insects); lfo(0.31, 0.04, chorus.gain); lfo(0.07, 500, cBP.frequency)
   })
 
+  // ---- rain (Stage C): a soft high hiss of fine drops, a mid 'patter' body with fast irregular AM, a low wash; and
+  // indoors a roof drum (band noise, ticks scheduled below). Soft and close, never a grey roar. ----
+  steps.push(() => {
+  const rOut = F('lowpass', 7500, 0.5); rOut.connect(rain)
+  const hiss = G(0.3), hHP = F('highpass', 2600, 0.5), hLP = F('lowpass', 9500, 0.4); chain(noise(N.white), hHP, hLP, hiss, rOut); lfo(0.11, 0.06, hiss.gain)
+  const body = G(0.42), bBP = F('bandpass', 1250, 0.55); chain(noise(N.white), bBP, body, rOut); lfo(5.3, 0.1, body.gain); lfo(8.7, 0.08, body.gain); lfo(0.19, 0.1, body.gain); lfo(0.07, 260, bBP.frequency)
+  steps.push(() => { const wash = G(0.55), wLP = F('lowpass', 380, 0.5); chain(noise(N.brown), wLP, wash, pan(0.2), rOut); lfo(0.05, 0.16, wash.gain) })
+  steps.push(() => { const drum = G(0.3), dBP = F('bandpass', 1700, 0.9), dLP = F('lowpass', 2600, 0.5); chain(noise(N.white), dBP, dLP, drum, roof); lfo(3.1, 0.08, drum.gain); lfo(0.13, 0.08, drum.gain)
+    const rumble = G(0.35), rbLP = F('lowpass', 220, 0.6); chain(noise(N.brown), rbLP, rumble, roof) })
+  })
+
   // ---- birds (and river bubbles): short scheduled voices, created ahead of time by schedule() ----
   const voice = (bus, t, f0, f1, d, v, p, type = 'sine') => {
     const o = ctx.createOscillator(), g = G(0), s = pan(p); o.type = type
@@ -83,7 +96,7 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     whistle(t, p, v) { const f = rnd(1900, 2500); voice(birds, t, f, f * 1.55, 0.26, v, p); if (Math.random() < 0.6) voice(birds, t + 0.36, f * 1.5, f * 1.1, 0.2, v * 0.8, p); return 0.6 },
     coo(t, p, v) { for (let i = 0; i < 3; i++) voice(birds, t + i * 0.55, i === 1 ? 560 : 520, 470, i === 1 ? 0.42 : 0.3, v * 1.4, p, 'triangle'); return 1.7 },
   }
-  const S = { mix: { wind: 0, river: 0, lake: 0, insects: 0, birds: 0, bubbles: 0, muffle: 1, windTone: 0.5 }, nextBird: t0 + 0.6, nextBubble: t0 }
+  const S = { mix: { wind: 0, river: 0, lake: 0, insects: 0, birds: 0, bubbles: 0, muffle: 1, windTone: 0.5, rain: 0, roof: 0 }, nextBird: t0 + 0.6, nextBubble: t0, nextDrop: t0, nextTick: t0 }
   /** schedule voices up to `until` (ctx seconds); called ~10 Hz live, once offline */
   function schedule(until) {
     const m = S.mix
@@ -96,6 +109,18 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
       const t = S.nextBubble
       if (m.bubbles > 0.03) { const f = rnd(500, 1500); voice(bubbles, t, f, f * rnd(1.2, 1.6), rnd(0.025, 0.05), rnd(0.015, 0.04), rnd(-0.6, 0.6)); S.nextBubble = t + rnd(0.05, 0.4) / m.bubbles } else S.nextBubble = t + 0.4
     }
+    // rain: drops landing on leaves and puddles — quick upward 'plink' sweeps (the classic water-drop shape), soft and sparse
+    while (S.nextDrop < until) {
+      const t = S.nextDrop
+      if (m.rain > 0.03) { const f = rnd(900, 2400); voice(rain, t, f, f * rnd(1.6, 2.4), rnd(0.018, 0.04), rnd(0.008, 0.028), rnd(-0.85, 0.85)); S.nextDrop = t + rnd(0.02, 0.22) / m.rain } else S.nextDrop = t + 0.4
+    }
+    // roof (indoors): woody ticks on the tiles + now and then a slow drip from the eaves
+    while (S.nextTick < until) {
+      const t = S.nextTick
+      if (m.roof > 0.03) { const f = rnd(700, 1500); voice(roof, t, f, f * 0.8, rnd(0.01, 0.022), rnd(0.02, 0.05), rnd(-0.7, 0.7), 'triangle')
+        if (Math.random() < 0.06) { const g = rnd(1100, 1600); voice(roof, t + 0.05, g, g * 1.9, 0.05, 0.05, rnd(-0.4, 0.4)) }
+        S.nextTick = t + rnd(0.015, 0.12) / m.roof } else S.nextTick = t + 0.4
+    }
   }
   /** set the layer mix (0..1 each); ramps over `tc` seconds so 10 Hz updates sound continuous */
   function setMix(mx, tc = 0.35) {
@@ -103,6 +128,7 @@ export function buildGraph(ctx, dest = ctx.destination, staged = false) {
     wind.gain.setTargetAtTime(0.9 * m.wind, t, tc); windLP && windLP.Q.setTargetAtTime(0.5 + m.windTone * 1.2, t, tc)
     river.gain.setTargetAtTime(0.28 * m.river, t, tc); lake.gain.setTargetAtTime(0.35 * m.lake, t, tc)
     insects.gain.setTargetAtTime(0.6 * m.insects, t, tc * 3); birds.gain.setTargetAtTime(2.5 * m.birds, t, tc * 3); bubbles.gain.setTargetAtTime(0.5 * m.bubbles, t, tc)
+    rain.gain.setTargetAtTime(0.42 * (m.rain || 0), t, tc * 2); roof.gain.setTargetAtTime(0.5 * (m.roof || 0), t, tc * 2)
     muffle.frequency.setTargetAtTime(500 + 17500 * m.muffle * m.muffle, t, tc)
   }
   function dispose() { for (const n of nodes) try { n.stop() } catch (e) {} try { master.disconnect(); limiter.disconnect() } catch (e) {} }

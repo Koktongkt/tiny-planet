@@ -76,12 +76,14 @@ export function startAudio(opts = {}) {
 /** listener + zones -> layer mix (0..1). Exported for previews/tests. */
 export function mixFor(L, Z) {
   const night = Z.night, day = 1 - night, inside = L.inside ? 1 : 0, orbit = L.mode === 'orbit' ? 1 : 0, out = (1 - inside) * (1 - orbit)
+  const rain = Z.rain || 0, dry = 1 - 0.85 * rain // Stage C: birds shelter and crickets hush while it rains
   return {
-    wind: orbit ? 0.75 : inside ? 0.22 : 0.32 + 0.55 * Z.hill + 0.12 * Z.lake,
+    wind: (orbit ? 0.75 : inside ? 0.22 : 0.32 + 0.55 * Z.hill + 0.12 * Z.lake) * (1 + 0.25 * rain),
     windTone: orbit ? 0.9 : Z.hill,
-    birds: day * (inside ? 0.35 : out) * (0.25 + 0.75 * Math.max(Z.forest, 0.55 * Z.village, 0.6 * Z.meadow)),
+    birds: dry * day * (inside ? 0.35 : out) * (0.25 + 0.75 * Math.max(Z.forest, 0.55 * Z.village, 0.6 * Z.meadow)),
     coo: Z.meadow > 0.4 || Z.village > 0.4,
-    insects: night * (inside ? 0.4 : out) * (0.55 + 0.45 * Math.max(Z.meadow, Z.forest, 0.6)),
+    insects: (1 - 0.7 * rain) * night * (inside ? 0.4 : out) * (0.55 + 0.45 * Math.max(Z.meadow, Z.forest, 0.6)),
+    rain: rain * (orbit ? 0.35 : inside ? 0.5 : 1), roof: rain * inside,
     river: out * Z.river, bubbles: out * Z.river * 0.9, lake: out * Z.lake,
     muffle: inside ? 0.12 : 1,
   }

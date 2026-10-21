@@ -22,5 +22,7 @@ export function zonesAt(L) {
   const forest = Math.max(near(u, ZONES.forest, ZONES.forest.r, 2.5), near(u, ZONES.giant, ZONES.giant.r, 2))
   const village = near(u, VILLAGE, 0.1, 3), meadow = Math.max(near(u, ZONES.meadow, ZONES.meadow.r, 2.5), 0.7 * near(u, ZONES.terraces, ZONES.terraces.r, 2))
   const hill = c((height(u) - 0.12) / 0.7)
-  return { river, lake, forest, village, meadow, hill, night: c(L.night ?? T.night) }
+  // Stage C: rain 0..1 from the weather hooks (__T.kind / __T.rain; Codor), read defensively
+  const rain = L.rain ?? (typeof T.rain === 'number' ? T.rain : T.kind === 'rain' ? 1 : 0)
+  return { river, lake, forest, village, meadow, hill, night: c(L.night ?? T.night), rain: c(rain) }
 }
