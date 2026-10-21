@@ -29,13 +29,14 @@ tickWeather()
 
 // ---------- train ----------
 export const SCH = Tr.buildSchedule(TRAIN_STOPS), TS = { lon: 0, stop: null }
-TRAIN.fn = (t) => Tr.trainState(SCH, t, TS).lon
+TRAIN.fn = (t) => Tr.trainState(SCH, t + SC.toff, TS).lon // toff: test / debug time shift
 export const STOP_NAME = { village: 'Lakeside (village)', forest: 'Forest Edge (ruins)' }
 // platform: a step north of the rails (toward the lake / ruins paths)
 export const platformN = (id) => { const s = TRAIN_STOPS.find(x => x.id === id); return dir(TRAIN_LAT + 0.3 / R, s.lon) }
 export const RIDE = { riding: false, from: null, to: null, progress: 0, car: 3, seat: 0.09 }
 window.__scRide = RIDE
-const nextArrival = (id) => { const t = wind.time.value; for (let k = 0; k < SCH.period; k += 0.5) { const s = Tr.trainState(SCH, t + k); if (s.stop === id) return k } return SCH.period }
+const nextArrival = (id) => { const t = wind.time.value + SC.toff; for (let k = 0; k < SCH.period; k += 0.5) { if (Tr.trainState(SCH, t + k, _ns).stop === id) return k } return SCH.period }
+const _ns = {}
 export function stationPrompt(id) {
   const here = TS.stop === id && !RIDE.riding, to = TRAIN_STOPS.find(s => s.id !== id).id
   if (!here) { const k = Math.ceil(nextArrival(id)); return { icon: 'unknown', verb: 'Station:', name: `${STOP_NAME[id]} — next train in ${k > 60 ? Math.floor(k / 60) + 'm ' + (k % 60) + 's' : k + 's'}`, act: () => toast(`Next train in about ${k} s. Wait on the platform.`, 'unknown'), ready: false } }
@@ -161,6 +162,6 @@ DAY_HOOKS.push(() => tut('sleep'))
 
 // ---------- boot ----------
 setInterval(tickWeather, 100); setInterval(tickTutorial, 500)
-export const SC = { W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, capture, shutter, tutorial, tutorialSteps, tutorialVisible, FILTER_CSS, height }
+export const SC = { toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, capture, shutter, tutorial, tutorialSteps, tutorialVisible, FILTER_CSS, height }
 window.__sc = SC
 emit()

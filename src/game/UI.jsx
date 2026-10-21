@@ -105,7 +105,7 @@ function Fishing() {
   useEffect(() => {
     if (!f) return; let raf, last = performance.now(), done = false
     roll.current = SCM.m ? SCM.m.rollFor(f.spot) : { fishId: f.spot && f.spot.includes('harbour') ? 'mackerel' : 'minnow', size: 12 }
-    const s = st.current = newReel(roll.current.fishId, Math.floor(Math.random() * 1e6)); s.state = 'wait'
+    const s = st.current = window.__fishSt = newReel(roll.current.fishId, Math.floor(Math.random() * 1e6)); s.state = 'wait'
     if (q.has('fish')) { s.wait = 0.2; s.prog = +q.get('fish') || 0.6 } // screenshots: skip the wait, freeze the bar
     setPhase('wait')
     const loop = (t) => { const dt = Math.min(0.05, (t - last) / 1000); last = t; const was = s.state
