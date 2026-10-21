@@ -47,8 +47,8 @@ export function Talk({ P }) {
         if (!e.metaKey && !e.ctrlKey && e.code !== 'KeyV') { e.preventDefault(); e.stopImmediatePropagation() } // freeze her while talking
         return
       }
-      if (e.code === 'KeyE' && TALK.near && !(G.near && TALK.nearD > 0.4) && !modal() && !HOME.inside && VIEW.mode === 'follow') { e.preventDefault(); e.stopImmediatePropagation(); open(TALK.near) }
-      if (e.code === 'KeyG' && TALK.near && !modal() && !HOME.inside && VIEW.mode === 'follow') { e.preventDefault(); e.stopImmediatePropagation(); gift(TALK.near) }
+      if (e.code === 'KeyE' && TALK.near && !(G.near && TALK.nearD > 0.4) && !modal() && !HOME.inside && !HOME.alt && VIEW.mode === 'follow') { e.preventDefault(); e.stopImmediatePropagation(); open(TALK.near) }
+      if (e.code === 'KeyG' && TALK.near && !modal() && !HOME.inside && !HOME.alt && VIEW.mode === 'follow') { e.preventDefault(); e.stopImmediatePropagation(); gift(TALK.near) }
     }
     addEventListener('keydown', key, true)
     // recent activity from the game's own toasts (gathers, crafts, pets) — no hooks into game code needed
@@ -65,8 +65,8 @@ export function Talk({ P }) {
     if (HOME.inside !== TALK.lastInside) { if (TALK.lastInside && !HOME.inside) noteActivity('indoors'); TALK.lastInside = HOME.inside }
     if (n.current++ % 3) return place()
     let best = null, bd = NEAR
-    if (VIEW.mode === 'follow' && !HOME.inside && !modal()) for (const c of NPCS) { if (!c.obj || !c.obj.visible || !c.ready) continue; c.obj.getWorldPosition(_w); const d = _w.distanceTo(P.wPos); if (d < bd) { bd = d; best = c } }
-    if (TALK.open && (HOME.inside || VIEW.mode !== 'follow')) close()
+    if (VIEW.mode === 'follow' && !HOME.inside && !HOME.alt && !modal()) for (const c of NPCS) { if (!c.obj || !c.obj.visible || !c.ready) continue; c.obj.getWorldPosition(_w); const d = _w.distanceTo(P.wPos); if (d < bd) { bd = d; best = c } }
+    if (TALK.open && (HOME.inside || HOME.alt || VIEW.mode !== 'follow')) close()
     TALK.nearD = bd; if (best !== TALK.near) { TALK.near = best; bump() }
     place()
   })
