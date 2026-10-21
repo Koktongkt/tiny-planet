@@ -82,3 +82,13 @@ html.tp-touch .tp-buffs{right:auto;align-items:flex-start;left:calc(env(safe-are
 .tp-panel,.tpx-panel,.tpe-board{max-width:calc((100vw - 16px) / var(--tpts,1))!important;max-height:calc((100dvh - 16px) / var(--tpts,1))!important}
 .tk-box{max-width:calc((100vw - 16px) / var(--tpts,1))}
 html:has(.tpx-veil) .mm-wrap,html:has(.tp-veil) .mm-wrap{opacity:0!important;transition:none!important}
+/* Stage C: calmer fishing (net + progress) */
+.tp-bar .net{position:absolute;top:4px;bottom:4px;border:2.4px solid var(--ink);border-radius:22px;background:#fff6;transition:background .2s}
+.tp-bar .net.on{background:#b8ff9aaa}
+.tp-reel{height:12px;margin:2px 10px 6px;border:2.2px solid var(--ink);border-radius:8px;background:#fff8;overflow:hidden}
+.tp-reel i{display:block;height:100%;width:30%;background:linear-gradient(90deg,#f4c95d,#e8a24a)}
+.tp-fish-c:not(.ph-reel) .tp-reel{opacity:.35}
+.tp-fish-c.ph-bite .tp-bar{animation:tpBite .5s ease-in-out infinite alternate}
+@keyframes tpBite{to{transform:translateY(-3px)}}
+/* Stage C photo mode: hide the HUD (the photo bar lives in systems/PanelsC.jsx) */
+html.tp-photo .tp-ui > :not(.tpc-photo):not(.tp-toasts), html.tp-photo .tp-title, html.tp-photo .tp-pad, html.tp-photo .mm-wrap, html.tp-photo .tk-bubble{display:none!important}

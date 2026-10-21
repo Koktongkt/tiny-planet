@@ -433,6 +433,7 @@ function Traveller() {
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); HOME.playerObj = ref.current
     if (HOME.inside) { HOME.stepInside(dt, KEYS, P, ref.current); faceInside(dt, ref.current) } // inside her house
+    else if (HOME.alt) HOME.alt(dt, KEYS, P, ref.current) // Stage C museum interior (lazy) moves her
     else { stepPlayer(dt)
     faceStep(dt); const side = _wx.crossVectors(P.n, P.face)
     ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.face))

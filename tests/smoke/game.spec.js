@@ -56,7 +56,7 @@ test('sleep advances the day and the day survives a reload', async ({ page }) =>
   await page.waitForTimeout(1200) // debounced save
   await page.reload(); await page.waitForFunction(() => window.__loadMarks?.game && !document.getElementById('ld') && window.__game?.L, null, { timeout: 200_000, polling: 500 })
   const s = await page.evaluate(() => { const raw = JSON.parse(localStorage.getItem('tinyplanet.save.v1')); return { day: window.__game.G.s.day, a: window.__rot.a, v: raw.v, rawDay: raw.day, clock: document.querySelector('.tp-clock small')?.textContent, taken: window.__game.G.s.taken['smoke-spot'] } })
-  expect(s.v).toBe(3); expect(s.day).toBe(1); expect(s.rawDay).toBe(1); expect(s.clock).toBe('Day 2')
+  expect(s.v).toBe(4); expect(s.day).toBe(1); expect(s.rawDay).toBe(1); expect(s.clock).toBe('Day 2')
   expect(Math.floor((s.a + Math.PI / 2) / (Math.PI * 2))).toBe(1) // the sun is still on day 1
   expect(Math.abs(s.a - a0)).toBeLessThan(0.3) // time of day carried over (not reset to the start phase)
   expect(s.taken).toBe(0) // yesterday's pick: available again today
@@ -71,7 +71,7 @@ test('an old v1 save loads and migrates', async ({ page }) => {
   await page.addInitScript((v1) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', 1); localStorage.setItem('tinyplanet.save.v1', v1) } }, v1)
   const w = watchErrors(page); await boot(page, '?enter')
   const s = await page.evaluate(() => ({ day: window.__game.G.s.day, v: window.__game.G.s.v, wood: window.__game.G.s.inv.wood, rod: window.__game.G.s.tools.rod, a: window.__rot.a, clock: document.querySelector('.tp-clock small')?.textContent }))
-  expect(s).toMatchObject({ day: 3, v: 3, wood: 4, rod: true, clock: 'Day 4' })
+  expect(s).toMatchObject({ day: 3, v: 4, wood: 4, rod: true, clock: 'Day 4' })
   expect(Math.floor((s.a + Math.PI / 2) / (Math.PI * 2))).toBe(3)
   w.check()
 })

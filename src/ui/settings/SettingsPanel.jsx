@@ -1,6 +1,7 @@
 // <SettingsPanel value={{volume,music,muted,textScale}} onChange onClose /> (Stage B contract) — presentational only.
 // onChange(next) receives the whole next value object ({...value, [key]: v}). Volumes are 0..1, textScale ~0.9..1.3.
 // Optional keys are drawn only when present in `value`: sfx, ambience (0..1 sliders), minimap, reduceMotion (toggles).
+// Stage C (art-c): optional onTutorial() draws a "Read Grandma's note again" row (reopens <TutorialNote>).
 import React, { useEffect } from 'react'
 import { Icon, IconDefs } from '../../game/icons.jsx'
 import '../../art/parchment.css'
@@ -16,6 +17,7 @@ function Ico({ k }) { // tiny hand-inked glyphs
     muted: <><path d="M5 12 H10 L17 6 V26 L10 20 H5Z" {...p} fill="#f4ead2" /><path d="M21 12 L28 20 M28 12 L21 20" {...p} stroke="#c0503f" /></>,
     text: <><text x="4" y="25" fontFamily="TPSerif,Georgia,serif" fontStyle="italic" fontSize="22" fill="#3b2f22">A</text><text x="17" y="25" fontFamily="TPSerif,Georgia,serif" fontStyle="italic" fontSize="14" fill="#3b2f22">a</text></>,
     minimap: <><circle cx="16" cy="16" r="11" {...p} fill="#f1e2bf" /><path d="M8 18 Q14 12 18 17 T25 13" {...p} stroke="#5f8fc4" /><path d="M16 9 L19 16 L16 14 L13 16Z" {...p} fill="#d9655b" strokeWidth="1.6" /></>,
+    note: <><path d="M8 5 H22 L26 9 V27 H8Z" {...p} fill="#fbf3e2" /><path d="M12 13 H22 M12 17 H22 M12 21 H18" {...p} strokeWidth="1.6" /><circle cx="15" cy="5" r="2.4" {...p} fill="#d9655b" strokeWidth="1.4" /></>,
     reduceMotion: <><path d="M6 16 Q11 10 16 16 T26 16" {...p} /><circle cx="26" cy="16" r="2.4" fill="#3b2f22" /></>,
   }[k]}</svg>
 }
@@ -29,7 +31,7 @@ function Toggle({ k, v, set }) {
   return <div className="tps-row"><Ico k={k} /><span className="tps-l">{LBL[k]}</span>
     <button className={'tps-sw' + (v ? ' on' : '')} role="switch" aria-checked={!!v} aria-label={LBL[k]} onClick={() => set(k, !v)}><span className="knob" /><span className="t">{v ? 'On' : 'Off'}</span></button></div>
 }
-export function SettingsPanel({ value = {}, onChange, onClose }) {
+export function SettingsPanel({ value = {}, onChange, onClose, onTutorial }) {
   useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose && onClose() }; addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [onClose])
   const set = (k, v) => onChange && onChange({ ...value, [k]: v }), muted = !!value.muted, has = (k) => value[k] !== undefined
   return <div className="tpx tpx-veil" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose && onClose() }}>
@@ -50,6 +52,7 @@ export function SettingsPanel({ value = {}, onChange, onClose }) {
         <p className="tps-sample" style={{ fontSize: 20 * (value.textScale ?? 1) + 'px' }}>“The wind smells of rain and warm bread.”</p>
         {has('minimap') && <Toggle k="minimap" v={value.minimap} set={set} />}
         {has('reduceMotion') && <Toggle k="reduceMotion" v={value.reduceMotion} set={set} />}
+        {onTutorial && <div className="tps-row"><Ico k="note" /><span className="tps-l">Grandma's welcome note</span><button className="tpx-btn tps-note" onClick={onTutorial}>Read again</button></div>}
       </div>
       <div className="tps-foot"><button className="tpx-btn go" onClick={onClose}>Done</button></div>
     </div>

@@ -46,6 +46,7 @@ export function Cat() {
   }
   useFrame((_, dt) => {
     st.frozen = !HOME.inside; if (st.frozen) return // he lives indoors: nothing to simulate while she's out
+    if (c.photo) { c.photo(st, null); return } // Stage C photo mode: brain frozen, pose held
     dt = Math.min(dt, 0.05); c.t += dt; c.clock = (c.clock || 0) + dt; c.ignoreCD -= dt; c.approachCD -= dt
     const g = st.goal, hp = HOME.hp, dHer = Math.hypot(hp.x - c.x, hp.z - c.z), onFloor = c.y < 0.01
     Object.assign(g, POSE0); g.tailUp = 0.45; g.tailWag = 0.12; g.tailSpeed = 2.2

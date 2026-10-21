@@ -4,7 +4,8 @@ export const TALK = { near: null, open: null, page: 0, lines: null, onOpen: null
 // simple weather: one kind per in-game day (deterministic), only light touches (dialogue + cloud tint); there was none before
 const KINDS = ['clear', 'breezy', 'clear', 'cloudy', 'breezy', 'drizzle', 'clear']
 export const WEATHER = { kind: 'clear', day: -1 }
-export function weatherFor(day) { if (day !== WEATHER.day) { WEATHER.day = day; WEATHER.kind = KINDS[((day * 5 + 3) % KINDS.length + KINDS.length) % KINDS.length] } return WEATHER.kind }
+// Stage C: WEATHER.rain(day) (lazy systems/weather.js isRainDay) makes seeded rain days say 'rain'
+export function weatherFor(day) { if (day !== WEATHER.day || WEATHER.r !== !!WEATHER.rain) { WEATHER.day = day; WEATHER.r = !!WEATHER.rain; WEATHER.kind = WEATHER.rain && WEATHER.rain(day) ? 'rain' : KINDS[((day * 5 + 3) % KINDS.length + KINDS.length) % KINDS.length] } return WEATHER.kind }
 // recent activity: newest first, capped
 export function noteActivity(kind, what) { TALK.recent.unshift({ kind, what, t: performance.now() }); TALK.recent.length = Math.min(TALK.recent.length, 6) }
 export const recentActivity = () => TALK.recent.find(a => performance.now() - a.t < 180000) || null

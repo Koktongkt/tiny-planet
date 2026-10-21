@@ -22,15 +22,16 @@ test('touch pads, stick walk + facing, no overlaps', async ({ page, context }) =
   w.check()
 })
 
-// Stage B on touch: the HUD buttons (Bag / Recipes / Settings) don't cover the pads or the clock, the garden prompt shows
+// Stage B/C on touch: the HUD buttons (Bag / Recipes / Settings / Journal / Photo) don't cover the pads or the clock, the garden prompt shows
 // on the Action chip, and the settings panel opens with a tap and fits the screen.
 test('stage B on touch: settings panel, garden prompt, no overlaps', async ({ page }) => {
   test.setTimeout(300_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home')
-  await page.waitForFunction(() => window.__sbReady && window.__sbLayout, null, { timeout: 120_000, polling: 250 })
+  await page.waitForFunction(() => window.__sbReady && window.__sbLayout && window.__scReady, null, { timeout: 150_000, polling: 250 })
+  await page.waitForSelector('.tp-cambtn')
   const boxes = (sel) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map(e => { const b = e.getBoundingClientRect(); return { cls: e.className, b: [b.x, b.y, b.right, b.bottom] } }), sel)
   const hud = await boxes('.tp-btns > .tp-btn'), rest = await boxes('.tp-stick, .tp-acts button, .tp-clock')
-  expect(hud.length).toBe(3)
+  expect(hud.length).toBe(5) // Bag, Recipes, Settings + Stage C Journal, Photo
   for (const h of hud) { expect(h.b[2]).toBeLessThanOrEqual(390.5); for (const r of rest) expect(overlap([h.b[0], h.b[1], h.b[2], h.b[3]], r.b), h.cls + ' vs ' + r.cls).toBeFalsy() }
   await page.evaluate(() => { const P = window.__player; P.n.copy(window.__sbLayout.plots[0].n); P.target = null; window.__snap = 1 })
   await page.waitForFunction(() => /^plot-0:Plant/.test(window.__game.G.near?.id || ''), null, { timeout: 30_000 })

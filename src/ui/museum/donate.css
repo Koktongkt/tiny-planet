@@ -1,0 +1,22 @@
+/* Hoshino's catalogue card (art-c item 7) */
+.dn-veil{z-index:24}
+.dn-card{width:min(600px,94vw);display:flex;gap:16px;padding:18px 20px 16px;animation:tpx-pop .28s cubic-bezier(.3,1.4,.6,1)}
+.dn-x{position:absolute;top:8px;right:8px}
+.dn-who{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:15px;opacity:.9}
+.dn-who svg{filter:drop-shadow(0 2px 0 #3b2f2230);border-radius:50%;box-shadow:0 0 0 2px var(--ink)}
+.dn-main{flex:1;min-width:0}
+.dn-item{display:flex;align-items:center;gap:10px;padding-right:36px}
+.dn-ic{flex:none;transform:rotate(-4deg)}
+.dn-item h3{margin:0;font:italic 600 30px/1 TPSerif,Georgia,serif}
+.dn-item small{font:500 13px Fredoka,sans-serif;font-style:normal;opacity:.6}
+.dn-blurb{margin:8px 0 10px;font-size:18px}
+.dn-plaque{position:relative;padding:9px 12px 10px 16px;border-radius:6px;background:linear-gradient(#f6ecd4,#efe0c0);box-shadow:inset 0 0 0 2px #b07a2a,inset 0 0 0 4px #f6ecd4,inset 0 0 0 5.4px #6a4a1a88;font-size:17px;line-height:1.3}
+.dn-plaque small{opacity:.65}
+.dn-say{margin:10px 0 4px;font-size:18px;color:#5a4030}
+.dn-btns{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+@media (max-width:640px){
+  .dn-card{width:100vw;flex-direction:column;gap:6px;border-radius:22px 26px 0 0/20px 24px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px)}
+  .dn-who{flex-direction:row;gap:10px}.dn-who svg{width:64px;height:64px}
+  .dn-item h3{font-size:25px}.dn-btns .tpx-btn{flex:1}
+}
+@media (prefers-reduced-motion:reduce){.dn-card{animation:none}}

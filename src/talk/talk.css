@@ -14,6 +14,7 @@
   background:linear-gradient(#e7f0d8,#cfe0b6);box-shadow:inset 0 0 0 2px #3b2f22,0 3px 6px #2a1e1430;font-family:TPSerif,"Cormorant Garamond",Georgia,serif}
 .tk-plate b{font:italic 600 20px/1 TPSerif,"Cormorant Garamond",Georgia,serif}
 .tk-plate i{font-size:14px;opacity:.7}
+.tk-plate .tk-portrait{align-self:center;margin:-16px -2px -12px -10px;flex:none}
 .tk-box p{margin:4px 0 6px;font:italic 500 23px/1.38 TPSerif,"Cormorant Garamond",Georgia,serif;animation:tk-ink .45s ease-out}
 .tk-more{text-align:right;font:italic 500 18px/1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#5f8a4d}
 .tk-more small{font-size:14px;color:#3b2f22;opacity:.6;letter-spacing:.04em}

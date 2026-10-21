@@ -123,6 +123,7 @@ export function Dog() {
     D.playWin -= dt; D.playRoll -= dt; if (D.playRoll < 0) { D.playRoll = 40 + Math.random() * 30; if (Math.random() < 0.4) D.playWin = 30 + Math.random() * 20 } // playful moods come and go
     D.ex = Math.max(0, D.ex + (D.speed > 1.8 ? dt : -dt * 0.25)) // exertion -> panting
     const g = st.goal; Object.assign(g, POSE0); bub.current.visible = false
+    if (D.photo) { D.photo(st, D); D.speed = 0; root.current.position.copy(surf(D.n, _a)); root.current.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(D.n, D.f), D.n, D.f)); return } // Stage C photo mode: brain frozen, pose held
     const dHer = angTo(D.n, P.n) * R, herMoving = P.move > 0.2, sN = streamNear(D.n, _sn3), sGap = sN.d - sN.half, wet = height(D.n) < LAKE_W - 0.03 || (sGap < -0.02 && !onBridgeDeck(D.n))
     if (wet) D.wetT += dt; else if (D.wetT > 0.6 && !FETCHING.has(D.state) && D.state !== 'splash' && D.state !== 'shake' && D.state !== 'wait' && D.state !== 'toDoor') { D.wasWet = true; D.wetT = 0; go('shake', 1.1) } else if (!wet) D.wetT = 0
     g.tailUp = 0.6 + 0.6 * D.mood; g.tailWag = 0.25 + 0.75 * D.mood; g.tailSpeed = 8 + 8 * D.mood; g.tongue = D.speed > 1 || D.ex > 1.2 ? 1 : 0.4 * D.mood; g.mouth = g.tongue * 0.25; if (D.ex > 1.2 && D.speed < 0.6) { g.pant = Math.min(1, D.ex / 3); g.mouth = 0.55 }

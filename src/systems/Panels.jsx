@@ -24,7 +24,7 @@ export function StageBPanels() {
   const p = G.ui.panel
   return <Suspense fallback={null}>
     <Buffs /><Reaction />
-    {p === 'settings' && <SettingsPanel value={G.s.settings} onChange={(v) => SB.applySettings(v)} onClose={close} />}
+    {p === 'settings' && <SettingsPanel value={G.s.settings} onChange={(v) => SB.applySettings(v)} onClose={close} onTutorial={window.__sc ? () => { close(); window.__sc.tutorial(true) } : undefined} />}
     {p === 'errands' && <ErrandsBoard errands={G.s.errands.list} inventory={G.s.inv} day={G.s.day + 1} onAccept={SB.acceptErrand} onDeliver={SB.deliverErrand} onClose={close} />}
     {p === 'gift' && G.ui.gift && <GiftPicker items={SB.giftable()} npcName={PROFILES[G.ui.gift]?.name} hearts={SB.friend(G.ui.gift).hearts} prefs={SB.prefsSeen(G.ui.gift)} giftedToday={SB.friend(G.ui.gift).giftedToday}
       onClose={close} onPick={(id) => { const who = G.ui.gift, r = SB.giveGift(who, id); close(); if (r) { window.__sbReact && window.__sbReact(r.kind); window.__sbSay && window.__sbSay(who, r) } }} />}

@@ -11,6 +11,7 @@ import { VILLAGE_POS, gardenBedNs } from '../world/village.js'
 import { SB } from './live.js'
 const GardenPlots = lazy(() => import('../art/garden/GardenPlots.jsx')) // (not index.js: an "index-*" chunk name would look like the startup chunk)
 const NoticeBoard = lazy(() => import('../ui/errands/NoticeBoard.jsx'))
+const StageCWorld = lazy(() => import('./WorldC.jsx')) // Stage C stations, dig spots, museum door, photo capture (lazy)
 const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n) + lift)
 const _z = new THREE.Vector3(), _x = new THREE.Vector3(), _f = new THREE.Vector3()
 // yaw so a frame built like art/garden plotMatrix (forward = world +Z on the tangent plane) faces `fwd`
@@ -48,6 +49,7 @@ export function StageBWorld({ L, GAME }) {
   const q = TOUCH ? 'lo' : 'hi'
   return <Suspense fallback={null}>
     <GardenPlots plots={G.s.garden.plots.slice()} quality={q} onInteract={tapPlot} />
+    {window.__scReady && <Suspense fallback={null}><StageCWorld GAME={GAME} /></Suspense>}
     <NoticeBoard n={lay.board.n.toArray()} spin={lay.board.spin} notes={Math.min(4, notes)} quality={q} onInteract={() => { if (GAME.P) GAME.P.target = lay.board.n.clone() }} />
   </Suspense>
 }

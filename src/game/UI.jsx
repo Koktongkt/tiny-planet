@@ -9,15 +9,23 @@ import { Icon, IconDefs } from './icons.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
 import { armAudio } from '../audio/arm.js'
+import { newReel, fishStep, REEL } from '../systems/fish.js'
 // Stage B: garden / gifts / errands / buffs / settings. The rules + state wiring (systems/live.js) and the panels load as
 // their own chunks a moment after the game UI, so the first game frame doesn't wait for them.
 const SBM = { m: null }
 const StageBPanels = lazy(() => import('../systems/Panels.jsx'))
 const idle = (f, t = 1200) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: t }) : setTimeout(f, 200))
-idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady = true; emit() }))
+idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady = true; emit()
+  // Stage C (fishing species, train, photo mode, journal + museum, seasons/weather hooks, tutorial): one more lazy step
+  // waits for the first scene frame + 4 s so it never competes with the boot on slow phones
+  const afterFrame = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit() }), 3000), 4000) : setTimeout(afterFrame, 250))
+  afterFrame()
+}))
+const SCM = { m: null }
+const StageCPanels = lazy(() => import('../systems/PanelsC.jsx'))
 const q = new URLSearchParams(location.search)
 const useGame = () => { const [, f] = useReducer(x => x + 1, 0); useEffect(() => subscribe(f), []) }
-const isModal = () => !!(G.ui.panel || G.ui.fish)
+const isModal = () => !!(G.ui.panel || G.ui.fish || G.ui.lock) // lock: Stage C train ride / photo mode
 export const gameBlocksKeys = () => isModal() || !!G.ui.place
 
 function Clock() {
@@ -29,7 +37,7 @@ function Clock() {
   return <div className="tp-clock paper"><Icon id={ic} size={34} /><div><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b><small>Day {G.s.day + 1}</small></div></div>
 }
 function Prompt() {
-  const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place) return null
+  const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock) return null
   let icon = 'hand', verb, name
   if (n.kind === 'ext') { icon = n.icon; verb = n.verb; name = n.name }
   else if (n.kind === 'bench') { icon = 'book'; verb = 'Craft at'; name = 'the bench' }
@@ -91,23 +99,39 @@ function Panel({ title, icon, children, onClose, wide }) {
     <div className="tp-head"><Icon id={icon} size={44} /><h3>{title}</h3><button className="tp-x" onClick={onClose} aria-label="close"><Icon id="close" size={32} wash={false} /></button></div>
     <div className="tp-scroll">{children}</div></div></div>
 }
-// fishing: a marker swings across the bar; press in the hit zone
+// fishing (Stage C, calmer): wait for a bite, then hold E / Space / the bar to lift the net and keep it on the fish.
+// Progress fills while it's on the fish and drains slowly off it; nothing snaps, it only slips away after a long miss.
+const STATE_MSG = { cast: 'Casting…', wait: 'Waiting for a bite…', bite: 'A bite! Hold to start reeling', caught: 'Got it!', slipped: 'It slipped away…' }
 function Fishing() {
-  const f = G.ui.fish, bar = useRef(), mk = useRef(), [msg, setMsg] = useState(null), st = useRef({ x: 0, v: 1 })
+  const f = G.ui.fish, fishEl = useRef(), barEl = useRef(), progEl = useRef(), [phase, setPhase] = useState('wait'), st = useRef(null), hold = useRef(false), roll = useRef(null)
   useEffect(() => {
-    if (!f) return; let raf, last = performance.now(), fixed = q.has('fish') ? 0.46 : null
-    const loop = (t) => { const s = st.current, dt = Math.min(0.05, (t - last) / 1000); last = t; s.x += s.v * dt * 0.9; if (s.x > 1) { s.x = 1; s.v = -1 } if (s.x < 0) { s.x = 0; s.v = 1 } if (fixed != null) s.x = fixed; if (mk.current) mk.current.style.left = (s.x * 100) + '%'; raf = requestAnimationFrame(loop) }
+    if (!f) return; let raf, last = performance.now(), done = false
+    roll.current = SCM.m ? SCM.m.rollFor(f.spot) : { fishId: f.spot && f.spot.includes('harbour') ? 'mackerel' : 'minnow', size: 12 }
+    const s = st.current = window.__fishSt = newReel(roll.current.fishId, Math.floor(Math.random() * 1e6)); s.state = 'wait'
+    if (q.has('fish')) { s.wait = 0.2; s.prog = +q.get('fish') || 0.6 } // screenshots: skip the wait, freeze the bar
+    setPhase('wait')
+    const loop = (t) => { const dt = Math.min(0.05, (t - last) / 1000); last = t; const was = s.state
+      if (!q.has('fish') || s.state !== 'reel') fishStep(s, dt, hold.current)
+      if (fishEl.current) fishEl.current.style.left = (s.fx * 100) + '%'
+      if (barEl.current) { barEl.current.style.left = ((s.bar - REEL.barW / 2) * 100) + '%'; barEl.current.classList.toggle('on', Math.abs(s.fx - s.bar) < REEL.barW / 2) }
+      if (progEl.current) progEl.current.style.width = (s.prog * 100) + '%'
+      if (s.state !== was) setPhase(s.state)
+      if (!done && (s.state === 'caught' || s.state === 'slipped')) { done = true; const ok = s.state === 'caught'
+        setTimeout(() => { GAME.actions.fishResult(ok); if (ok && SCM.m) SCM.m.onCatch(roll.current) }, 600) }
+      raf = requestAnimationFrame(loop) }
     raf = requestAnimationFrame(loop)
-    const key = (e) => { if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); reel() } if (e.code === 'Escape') { G.ui.fish = null; emit() } }
-    addEventListener('keydown', key, true); return () => { cancelAnimationFrame(raf); removeEventListener('keydown', key, true) }
-  }, [f?.spot])
+    const key = (e) => { if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); hold.current = e.type === 'keydown' } if (e.code === 'Escape' && e.type === 'keydown') { G.ui.fish = null; emit() } }
+    const up = () => { hold.current = false }
+    addEventListener('keydown', key, true); addEventListener('keyup', key, true); addEventListener('pointerup', up); addEventListener('pointercancel', up)
+    return () => { cancelAnimationFrame(raf); removeEventListener('keydown', key, true); removeEventListener('keyup', key, true); removeEventListener('pointerup', up); removeEventListener('pointercancel', up) }
+  }, [f?.spot, f?.t0])
   if (!f) return null
-  const w = 0.18
-  function reel() { const x = st.current.x; if (Math.abs(x - f.zone) < w / 2) { setMsg('Got one!'); setTimeout(() => { setMsg(null); GAME.actions.fishResult(true) }, 600) } else { f.tries--; if (f.tries <= 0) GAME.actions.fishResult(false); else { setMsg(x < f.zone ? 'Too early…' : 'Too late…'); setTimeout(() => setMsg(null), 700); emit() } } }
-  return <div className="tp-fish paper" onPointerDown={e => { e.preventDefault(); reel() }}>
-    <div className="tp-head small"><Icon id="rod" size={38} /><h3>Something's biting!</h3><span className="tries">{[0, 1, 2].map(i => <Icon key={i} id="fish" size={24} dim={i >= f.tries} />)}</span></div>
-    <div className="tp-bar" ref={bar}><div className="zone" style={{ left: (f.zone - w / 2) * 100 + '%', width: w * 100 + '%' }} /><div className="mk" ref={mk}><Icon id="fish" size={34} wash={false} /></div><svg className="waves" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 6 Q5 2 10 6 T20 6 T30 6 T40 6 T50 6 T60 6 T70 6 T80 6 T90 6 T100 6" fill="none" stroke="#fff" strokeOpacity=".6" strokeWidth=".8" /></svg></div>
-    <p>{msg || (TOUCH ? <>Tap the bar or ✋ Action when the fish is in the green</> : <>Press <span className="key">E</span> / <span className="key">Space</span> or tap when the fish is in the green</>)}</p>
+  const reeling = phase === 'reel'
+  return <div className={'tp-fish tp-fish-c paper ph-' + phase} onPointerDown={e => { e.preventDefault(); hold.current = true }}>
+    <div className="tp-head small"><Icon id="rod" size={38} /><h3>{reeling ? 'Reel it in, gently…' : STATE_MSG[phase] || 'Fishing'}</h3></div>
+    <div className="tp-bar">{reeling && <div className="net" ref={barEl} style={{ width: REEL.barW * 100 + '%' }} />}<div className="mk" ref={fishEl}><Icon id="fish" size={34} wash={false} /></div><svg className="waves" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 6 Q5 2 10 6 T20 6 T30 6 T40 6 T50 6 T60 6 T70 6 T80 6 T90 6 T100 6" fill="none" stroke="#fff" strokeOpacity=".6" strokeWidth="1.2" /></svg></div>
+    <div className="tp-reel"><i ref={progEl} /></div>
+    <p>{reeling ? (TOUCH ? <>Hold the bar to lift the net, let go to lower it. Keep it on the fish.</> : <>Hold <span className="key">E</span> / <span className="key">Space</span> to lift the net, let go to lower it. Keep it on the fish.</>) : phase === 'bite' ? (TOUCH ? 'Tap and hold!' : <>Hold <span className="key">E</span> to start reeling</>) : <>Relax… <span className="key">Esc</span> to stop</>}</p>
   </div>
 }
 function PlaceBar() {
@@ -122,11 +146,13 @@ export function GameUI() {
   useEffect(() => {
     const k = (e) => {
       if (e.repeat) return
-      if (G.ui.fish) return
+      if (G.ui.fish || G.ui.lock) return
       if (G.ui.place) { if (e.code === 'KeyR') { G.ui.place.rot += Math.PI / 4; emit() } else if (e.code === 'KeyE' || e.code === 'Enter') confirmPlace(); else if (e.code === 'Escape') { G.ui.place = null; emit() } return }
       if (e.code === 'Escape') { setPanel(null); G.ui.atBench = false }
       else if (e.code === 'KeyB' || e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); setPanel('bag') }
       else if (e.code === 'KeyC') setPanel('recipes')
+      else if (e.code === 'KeyJ' && SCM.m) setPanel('journal')
+      else if (e.code === 'KeyP' && SCM.m && !G.ui.panel) SCM.m.photo(true)
       else if (e.code === 'KeyE' && !G.ui.panel) GAME.actions.act?.()
       else if (e.code === 'KeyF' && !G.ui.panel && G.near?.alt) G.near.alt.act()
     }
@@ -138,10 +164,13 @@ export function GameUI() {
     <Clock />
     <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{Object.values(G.s.inv).reduce((a, b) => a + b, 0) > 0 && <i>{Object.values(G.s.inv).reduce((a, b) => a + b, 0)}</i>}</button>
       <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button>
-      <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button></div>
+      <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button>
+      {SCM.m && <><button className="tp-btn paper tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal"><Icon id="book" size={46} /><span>Journal</span></button>
+      <button className="tp-btn paper tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode"><Icon id="sun" size={46} /><span>Photo</span></button></>}</div>
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
     {panel === 'bag' && <Bag />}{panel === 'recipes' && <Recipes />}
     {SBM.m && <Suspense fallback={null}><StageBPanels /></Suspense>}
+    {SCM.m && <Suspense fallback={null}><StageCPanels /></Suspense>}
   </div>
 }
 // Stage B ambient audio + piano loop (src/audio): arms now, starts on the first gesture via startAudio({ getListener, getZones })
