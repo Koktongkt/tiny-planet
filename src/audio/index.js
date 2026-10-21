@@ -20,7 +20,7 @@ export function startAudio(opts = {}) {
   let ctx = opts.ctx
   if (!ctx) try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch (e) { return (API = { setVolume() {}, setMusic() {}, mute() {}, dispose() {} }) }
   const E = buildGraph(ctx), getL = opts.getListener || defaultListener, getZ = opts.getZones || zonesAt
-  const D = window.__audio = { ctx, E, ticks: 0, tickMs: 0, buildMs: 0, mix: null, music: null }
+  const D = window.__audio = { ctx, E, ticks: 0, tickMs: 0, tickMax: 0, buildMs: 0, mix: null, music: null }
   // share with the SFX blips (src/act.js) if it opts in: window.__tpAudio.{ctx, sfx}
   window.__tpAudio = { ctx, sfx: E.sfx }
 
@@ -53,7 +53,7 @@ export function startAudio(opts = {}) {
       const L = getL(), Z = getZ(L), mix = mixFor(L, Z)
       E.setMix(mix); E.schedule(ctx.currentTime + 0.6); D.mix = mix
     }
-    D.ticks++; D.tickMs = performance.now() - s
+    D.ticks++; D.tickMs = performance.now() - s; if (D.ticks > 1 && D.tickMs > D.tickMax) D.tickMax = D.tickMs
   }
   const iv = setInterval(tick, TICK_MS)
   const vis = () => applyMaster(0.15)
