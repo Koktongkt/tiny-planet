@@ -82,7 +82,7 @@ function Scene3D() {
 function BoardScene() { return <><Cam pos={[0.9, R + 0.75, 1.5]} look={[0, R + 0.32, 0]} /><Lights sun={[0.7, 0.8, 0.9]} /><Ground /><Board3D position={[0, R, 0]} notes={+(q.get('notes') ?? 3)} /><Post /></> }
 // ---------- DOM bits (lazy) ----------
 const DomPreview = React.lazy(() => import('./previewDom.jsx'))
-const PreviewC = React.lazy(() => import('./previewC.jsx')), IS_C = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo', 'forage'].includes(MODE)
+const PreviewC = React.lazy(() => import('./previewC.jsx')), IS_C = ['tutorial', 'fishicons', 'catch', 'fish', 'school', 'photo', 'forage', 'museum', 'journal', 'donate', 'hoshino'].includes(MODE)
 const is3D = ['grid', 'world', 'measure', 'board3d'].includes(MODE)
 document.body.classList.add('pv-' + MODE, 'tod-' + TOD_K)
 const css = document.createElement('style'); css.textContent = `
