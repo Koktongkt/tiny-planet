@@ -1,0 +1,31 @@
+/* Ride card (Stage C, art-c) on the shared parchment skin */
+.rd-wrap{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:14;pointer-events:none;animation:tpx-fade .3s ease-out}
+.rd-card{pointer-events:auto;width:min(540px,92vw);padding:12px 18px 12px;animation:rd-in .45s cubic-bezier(.3,1.3,.6,1)}
+.rd-row{display:flex;align-items:center;gap:12px}
+.rd-stop{flex:none;min-width:92px;text-align:center;padding:4px 8px 5px;border-radius:10px 12px 9px 13px;box-shadow:inset 0 0 0 1.6px #3b2f2266;background:#fffaf080;transform:rotate(-1.5deg)}
+.rd-stop:last-child{transform:rotate(1.5deg)}
+.rd-stop b{display:block;font-size:20px;line-height:1.05;font-weight:600}
+.rd-stop small{display:block;font:500 12px/1.2 Fredoka,sans-serif;font-style:normal;opacity:.6;letter-spacing:.06em;text-transform:uppercase}
+.rd-stop.here{background:#f7e2b0;box-shadow:inset 0 0 0 2px var(--ink)}
+.rd-line{position:relative;flex:1;height:34px}
+.rd-dots,.rd-done{position:absolute;left:0;top:23px;height:0;border-top:2.4px dotted #3b2f2288}
+.rd-dots{right:0}
+.rd-done{border-top:2.6px solid var(--ink);transition:width .4s linear}
+.rd-train{position:absolute;top:2px;width:40px;margin-left:-20px;transition:left .4s linear;animation:rd-bob .5s ease-in-out infinite alternate}
+.rd-train svg{width:40px;height:22px;fill:#f6eddb;stroke:var(--ink);stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.rd-train svg .w{fill:#ffd79a}.rd-train svg circle{fill:#4a3a35}.rd-train svg .s{fill:none;opacity:.6}
+.rd-foot{display:flex;align-items:center;gap:12px;margin-top:6px}
+.rd-fare{display:inline-flex;align-items:center;gap:6px;font-size:17px}
+.rd-coin{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe7a0,#e2a93f 60%,#b07a22);box-shadow:inset 0 0 0 1.4px #6a4a1a}
+.rd-stat{flex:1;font-size:16px;opacity:.7;text-align:right}
+.rd-btn{min-width:108px}
+@keyframes rd-in{from{opacity:0;transform:translateY(-14px) rotate(-.6deg)}}
+@keyframes rd-bob{to{transform:translateY(-1.5px)}}
+@media (max-width:640px){
+  .rd-wrap{top:auto;bottom:0;left:0;right:0;transform:none}
+  .rd-card{width:100vw;border-radius:22px 26px 0 0/20px 24px 0 0;padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .rd-stop{min-width:74px;padding:3px 6px}.rd-stop b{font-size:17px}
+  .rd-foot{flex-wrap:wrap}.rd-stat{order:3;flex-basis:100%;text-align:left;font-size:15px}
+  .rd-btn{margin-left:auto;min-width:96px}
+}
+@media (prefers-reduced-motion:reduce){.rd-wrap,.rd-card,.rd-train{animation:none}.rd-train,.rd-done{transition:none}}

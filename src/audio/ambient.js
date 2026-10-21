@@ -86,5 +86,7 @@ export function mixFor(L, Z) {
     rain: rain * (orbit ? 0.35 : inside ? 0.5 : 1), roof: rain * inside,
     river: out * Z.river, bubbles: out * Z.river * 0.9, lake: out * Z.lake,
     muffle: inside ? 0.12 : 1,
+    // Stage C train: proximity (orbit = distant toy, indoors = faint), speed 0..1, riding = she's aboard (closer, louder)
+    train: (Z.riding ? 1 : (Z.train || 0)) * (orbit ? 0.3 : inside ? 0.25 : 1), trainSpeed: Z.trainSpeed || 0, riding: Z.riding ? 1 : 0,
   }
 }

@@ -101,6 +101,65 @@ Hooks come from Codor's `systems/weather.js` (`applyTo(T, phase)` every clock ti
 
 ---
 
+## BUILT on art-c (item 6): train stations, carriages, ride pose, ride overlay, train audio
+Base: stage-c 8fffbb3 (built against `TRAIN_STOPS`, `systems/train.js`, liveC `SCH`/`TS`/`RIDE`/`platformN`/`board`/`alight`; nothing reinvented).
+All lazy; startup chunk unchanged (69,599 B gz vs stage-c 69,591 B: +8 B is only the export-name order of the shared
+chunk, raw size identical 200,255 B; a probe build with the art mounted in WorldC measured 67.91 KB gz).
+
+### Stations: `src/art/train/` (index.js re-exports)
+- `<Stations stops?={TRAIN_STOPS} platformN?={liveC.platformN} />` (default export). Mount inside the planet group. One group per stop at
+  `platformN(id)`, oriented along the ring (`platformFrame(n, lon)`: local -z faces the rails).
+- Each station has a plank deck with a cream safety edge, 4 posts, a teal gabled roof, a back panel, a bench, a planter
+  (desktop only), a lamp post whose bulb is a `glow()` (lit by the existing night pass at dusk/night), a sign
+  ("Lakeside" / "Forest Edge" with an arrow to the other stop) and a timetable ("every few minutes · first ride free · then 1 coin" plus a train doodle).
+- The sign and timetable come from a 1024×576 canvas atlas built once on mount.
+- **2 draw calls per station**: one toon mesh holding body, ink hull and boards (`kit.combine`: the hull winding is flipped, so a single FrontSide material draws the outline), plus the glow. Tris: 536 desktop, 464 touch.
+  Each station is its own mesh, so the far one is frustum-culled.
+- `createStations(stops, platformN, stationMaterials(), {touch})`: the non-React builder.
+
+### Carriages: `applyTrainSkin(TRAIN.cars, carMaterials(), {touch})` / `<TrainSkin riding? />`
+- Hides Codor's coach meshes on cars 1..3 and adds new ones as children (they follow the car transforms); `restore()` undoes it. The engine is untouched.
+- Coaches 1–2: maroon lower body, cream upper, brass belt, curved roof, doors, and 6 side + 2 end windows as `glow()` (warm at night).
+- Car 3 is an open observation car: plank deck, low sides with a cream rail, a forward-facing bench, and two rear lanterns (glow). This is her seat; she is too tall for a toy-scale closed coach.
+- **2 calls per car, 6 in total, versus 39 before (13 per coach).** Tris 1,204 desktop / 1,044 touch, versus 756.
+- `RIDE_SEAT = { car: 3, lift: 0.075, z: -0.012 }`: set `RIDE.car = RIDE_SEAT.car; RIDE.seat = RIDE_SEAT.lift` (calibrated in shots; liveC's default .09 floats her above the bench). `z` is an optional forward nudge that pinRide doesn't use yet.
+
+### Her pose
+- `POSES.ride_sit` is registered on import of `ridePose.js`. It is seated with knees up and hands on her lap, rocks gently with the carriage, and now and then she glances out at the view.
+- `holdRidePose()` / `releaseRidePose()` keep `ACT` on it (same pattern as photo poses). `<TrainSkin riding={RIDE.riding}/>` does this for you.
+
+### Ride overlay: `src/ui/ride/` 
+- `<RideOverlay from to progress onAlight cost? canAlight? dwelling? />` (default export, plus ride.css on parchment.css).
+- From/to station stamps; a dotted line that inks in as `progress` goes 0→1, with a bobbing train icon; the fare line (`fareText(cost)`: "First ride on the house" / "Fare: 1 coin"); a status line (`rideStatus`); and an Alight button.
+- Non-blocking: only the card takes pointer events. Desktop: a top-centre ticket. Mobile (≤640px): a bottom sheet.
+- It replaces PanelsC `Ride()` (`.tpc-ride`).
+
+### Train audio (`src/audio/engine.js`, `ambient.js`, `zones.js`; lazy audio chunk +1.0 KB gz)
+- engine: a `train` bus into amb, carrying:
+  - a brown-noise rumble (lowpass 160) plus a wheel roll, both scaled by speed;
+  - scheduled rail-joint clack pairs (bandpassed knock + low thump) that speed up with the train;
+  - a soft three-note whistle (D–F#–A triangles, vibrato, breath): two toots on departure, one long one on arrival;
+  - a brake hiss with a faint squeal when speed drops below 0.3.
+  Events fire from speed edges in `setMix`. `TRAIN_FX` is exported for previews.
+- `mixFor` gets `train` (proximity; 1 while riding; ×0.3 in orbit, ×0.25 indoors), `trainSpeed` and `riding` (riding makes it 1.6× louder).
+- `zonesAt` gets `trainNear(u, L)`: distance to the nearest `TRAIN.cars` car (full within 0.6 units, fading over 4), speed from `window.__sc.TS.speed`, and riding from `window.__scRide.riding`. Override with `L.train`, `L.trainSpeed` or `L.riding`.
+
+### Perf (SwiftShader; exact on/off toggles in the same page, central differences)
+| view | desktop Δ calls / Δ tris | mobile Δ calls / Δ tris | after |
+|---|---|---|---|
+| walk, village platform, train dwelling | −20 / +830 | −2 / +650 | desktop 301 calls, 414k tris |
+| walk, budget village (`at=village`) | 0 / 0 (not in view) | 0 / 0 | probe build: mobile 281 calls / 350.0k tris vs stage-c 280–282 / 347.3–350.5k (pre-existing drift) |
+| walk, budget forest (forest station in view) | +2 / +536 | +2…3 / +464 | desktop 499/500 · mobile 391/400 (override) |
+| orbit (both stations + train) | −29 / +1.5k | −28…−30 / +1.4k | desktop 778 / 713k; mobile 526 / 477k |
+
+Programs: +1 measured at the platform with the train away (62 → 63, the station's vertex-colour toon with map and paint); at most +2 once the carriages are in view (vertex-colour toon). Glow reuses the existing basic program.
+Note: the production `?view=orbit&nogame` budget view doesn't mount the game layer (WorldC), so it is unchanged (777/621k in both builds). The orbit row above is the in-game orbit, mounted directly.
+
+### Shots / audio (tiny-planet-perf/art-c)
+- Shots: `station-village-day.png`, `station-village-dusk.png`, `train-at-platform.png`, `train-night-windows.png`, `ride-desktop.png`, `ride-desktop-close.png`, `ride-mobile.png`.
+- Audio: `train-preview.ogg` (26 s: arrival, brake hiss and whistle, dwell, boarding and departure whistle, cruising clacks, arrival at Forest Edge).
+- Harnesses: `tr.mjs`, `budget6.sh`, `train-audio.mjs`.
+
 ## What main already has (survey)
 - Fishing: `G.ui.fish` + `<Fishing>` bar minigame (game/UI.jsx:95), spots from recipes.js (`['lake','fish',3,'water']`, harbour),
   generic item `fish`, `grilledfish`/`onigiri` recipes, villagers fisherman/angler fishing at pier/dock. No species.
@@ -169,7 +228,7 @@ materials (App.jsx), forage spawn tables, item ids/recipes. Audio: Studio maps s
 Audio: engine layer `rain` (filtered noise patter + roof drips when inside via muffle) driven by `Z.rain`; thunder: no (keep it gentle).
 Codor: weather state `{ kind, rain:0..1, wet:0..1 }` per day (extend weatherFor with 'rain'; rain ramps in/out over ~1 in-game hour,
 wet lags rain and dries over ~3 h), put on `window.__T.rain/.wet`, puddle spot list (paths/village, ~150), fish weather rolls, NPC umbrellas (later).
-### 6. Train boarding + ride (visuals)
+### 6. Train boarding + ride (visuals) — BUILT (see top)
 `src/art/train/Stations.jsx` `<Stations stations={{id,n,spin}[]} quality />` (platform, roof, bench, lantern, name board; merged, 1–2 calls).
 `src/art/train/Carriage.jsx` replaces car geometry with an open-sided carriage + seat anchor `SEAT = {pos, quat}`; her `POSES['ride_sit']`.
 `src/ui/train/RideOverlay.jsx` `<RideOverlay from to progress={0..1} onAlight />` (ticket stub + next-station board), `<StationSign id />`.
