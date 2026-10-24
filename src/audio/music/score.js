@@ -33,7 +33,7 @@ export const OUTDOOR = parse({ id: 'outdoor', meter: 3, bpm: 138, send: 0.3,
   melody: 'C5 F5 G5 | A5:2 G5 | F5 D5 F5 | E5:3 | C5 F5 G5 | A5 C6 A5 | G5 Bb5 A5:.5 G5:.5 | G5:3 |' +
     'C5 F5 G5 | A5:2 G5 | F5 E5 D5 | Db5:2 C5 | C5 A4 C5 | A5 G5 E5 | F5:3 | r:1.5 C5:.5 E5:.5 G5:.5 |' +
     'A5:1.5 G5:.5 F5 | D5:2 F5 | E5 G5 C6 | A5:3 | A5:1.5 Bb5:.5 A5 | G5 D5 G5 | E5 A5 C#6 | A5:3 |' +
-    'D6 C6 Bb5 | C6:2 G5 | C6 A5 E5 | F5:2 A5 | Bb5 A5 G5 | E5 F5 G5 | F5:3 | r:2 A4:.5 Bb4:.5' })
+    'D6 C6 Bb5 | C6:2 G5 | C6 A5 E5 | F5:2 A5 | Bb5 A5 G5 | G5 F5 E5 | F5:3 | r:2 A4:.5 Bb4:.5' })
 // Her house: 'Lamplight' — slow music box + nylon guitar, lydian #11 on IV, a borrowed Fm6 sigh. C major, 72 bpm, 16 bars.
 export const HOUSE = parse({ id: 'house', meter: 4, bpm: 72, send: 0.26,
   chords: 'Cmaj7 | Am7 | Fmaj7 | G7sus G7 | Em7 | A7 | Dm7 | G7 | Fmaj7 | Em7 | Dm7 | Cmaj7 | Fm6 | Em7 A7 | Dm7 G7 | C',

@@ -11,7 +11,7 @@ const XF = 2.2 // crossfade seconds between places
 const PAN = { piano: 0, celesta: 0.28, pizz: -0.3, harpsi: -0.22, guitar: 0.32, flute: 0.12, ocarina: 0.12, clarinet: -0.12, accordion: -0.25, strings: 0, wood: 0.35, tri: -0.4, shaker: 0.42, bells: 0.3 }
 const MAXV = 72 // simultaneous notes, all decks together (a note is ~2-5 nodes)
 
-export function createMusic(ctx, out, { staged = true } = {}) {
+export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   const G = (v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g }
   const F = (type, f, Q = 0.7) => { const x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = Q; return x }
   const tone = F('lowpass', 16000, 0.5), duck = G(1); tone.connect(duck); duck.connect(out)
@@ -19,7 +19,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
   const R = rng(20261024), rand = () => 0.5 + 0.5 * R()
   const BUF = {}, Q = [], WAVE = {}, decks = [], stats = { voices: 0, peakVoices: 0, renderMs: 0, rendered: 0, skipped: 0, bars: 0 }
   const scene = { loc: 'outdoor', period: 'day', season: 'spring', rain: 0, orbit: 0 }
-  let cur = null, voices = 0, pumping = 0, disposed = false
+  let cur = null, voices = 0, pumping = 0, disposed = false, PART = '', CPC = null // PART / CPC: what's playing + its chord (for the note log in tests)
   const nb = ctx.createBuffer(1, SR / 2, SR); { const d = nb.getChannelData(0), r = rng(3); for (let i = 0; i < d.length; i++) d[i] = r() }
 
   // ---- samples: rendered once per root, current piece's instruments first, in ≤ 6 ms slices ----
@@ -60,6 +60,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
   function play(d, k, t, m, dur, v) {
     if (v <= 0.004) return
     if (voices >= MAXV) { stats.skipped++; return }
+    if (log) log.push({ t, k, m, dur, part: PART, pcs: CPC, deck: d.id })
     if (LIVE[k]) return live(d, k, t, m, dur, v)
     const S = SAMPLED[k], set = BUF[k]; if (!S || !set) return
     let best = null, bd = 99; for (const r of S.roots) if (set[r] && Math.abs(m - r) < bd) { bd = Math.abs(m - r); best = r }
@@ -84,7 +85,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
   // ---- harmony helpers ----
   const pcs = (c, tr) => { const s = []; for (const i of c.iv) { const p = (c.root + i + tr + 120) % 12; if (!s.includes(p)) s.push(p) } return s }
   const place = (p, lo) => lo + ((p - lo) % 12 + 12) % 12
-  const voicing = (c, tr, lo = 55, n = 4) => { let s = pcs(c, tr); if (s.length > n) s = s.filter((_, i) => i !== 2); return s.map(p => place(p, lo)).sort((a, b) => a - b) }
+  const voicing = (c, tr, lo = 55, n = 4) => { let s = CPC = pcs(c, tr); if (s.length > n) s = s.filter((_, i) => i !== 2); return s.map(p => place(p, lo)).sort((a, b) => a - b) }
   const bassOf = (c, tr, lo = 40) => place((c.bass + tr + 120) % 12, lo)
   const chordAt = (bar, b) => bar.ch.find(c => b >= c.at - 1e-6 && b < c.at + c.len - 1e-6) || bar.ch[0]
 
@@ -97,7 +98,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
     const next = th.bars[(d.bar + 1) % th.bars.length]
     stats.bars++
     for (const p of A.parts) { if (!p) continue
-      const v = p.v
+      const v = p.v; PART = p.k; CPC = null
       if (p.k === 'mel' || p.k === 'dbl') for (const [b, m, dur] of bar.mel) play(d, p.i, T(b), m + tr + (p.o || 0), dur * spb * 0.96, v * (1 + (b === 0 ? 0.12 : 0) + 0.05 * Math.min(dur, 2)) * (0.92 + 0.1 * rand()))
       else if (p.k === 'ctr') { let up = d.bar % 2 === 0
         for (const [b, m, dur] of bar.mel) { if (dur < 2) continue
