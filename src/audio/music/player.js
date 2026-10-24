@@ -9,13 +9,15 @@ import { THEMES, arrange } from './score.js'
 import { mtof, rng } from '../dsp.js'
 const XF = 2.2 // crossfade seconds between places
 const PAN = { piano: 0, celesta: 0.28, pizz: -0.3, harpsi: -0.22, guitar: 0.32, flute: 0.12, ocarina: 0.12, clarinet: -0.12, accordion: -0.25, strings: 0, wood: 0.35, tri: -0.4, shaker: 0.42, bells: 0.3 }
-const MAXV = 72 // simultaneous notes, all decks together (a note is ~2-5 nodes)
+// touch devices: a shorter room (the convolver is the biggest audio-thread cost) and a lower note cap
+const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches
+const MAXV = TOUCH ? 48 : 72 // notes scheduled at once, all decks together (a note is ~2-5 nodes)
 
 export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   const G = (v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g }
   const F = (type, f, Q = 0.7) => { const x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = Q; return x }
   const tone = F('lowpass', 16000, 0.5), duck = G(1); tone.connect(duck); duck.connect(out)
-  const verb = ctx.createConvolver(); verb.buffer = impulse(ctx, 2.4); verb.connect(tone)
+  const verb = ctx.createConvolver(); verb.buffer = impulse(ctx, TOUCH ? 1.5 : 2.4); verb.connect(tone)
   const R = rng(20261024), rand = () => 0.5 + 0.5 * R()
   const BUF = {}, Q = [], WAVE = {}, decks = [], stats = { voices: 0, peakVoices: 0, renderMs: 0, rendered: 0, skipped: 0, bars: 0 }
   const scene = { loc: 'outdoor', period: 'day', season: 'spring', rain: 0, orbit: 0 }
@@ -28,7 +30,7 @@ export function createMusic(ctx, out, { staged = true, log = null } = {}) {
     if (front) Q.unshift(...add); else Q.push(...add)
     if (!staged) pump(1e9); else if (!pumping && Q.length) { pumping = 1; setTimeout(step, 0) }
   }
-  function pump(ms) { const s = performance.now(); while (Q.length && performance.now() - s < ms) { const [i, r] = Q.shift(), x = SAMPLED[i].render(r), b = ctx.createBuffer(1, x.length, SR); b.getChannelData(0).set(x); BUF[i][r] = b; stats.rendered++ } stats.renderMs += performance.now() - s }
+  function pump(ms) { const s = performance.now(); while (Q.length && performance.now() - s < ms) { const [i, r] = Q.shift(), x = SAMPLED[i].render(r), b = ctx.createBuffer(1, x.length, SR); b.getChannelData(0).set(x); BUF[i][r] = b; stats.rendered++ } const dt = performance.now() - s; stats.renderMs += dt; if (ms < 1e9) stats.maxSliceMs = Math.max(stats.maxSliceMs || 0, dt) }
   function step() { if (disposed) return; pump(6); if (Q.length) setTimeout(step, 4); else pumping = 0 }
   const instsOf = (arr) => arr.parts.filter(Boolean).flatMap(p => [p.i, p.bass, p.stab]).filter(Boolean)
   const TI = {}, instsFor = (id) => TI[id] || (TI[id] = [...new Set([0, 1, 2].flatMap(c => instsOf(arrange(id, scene, c, c))))])
