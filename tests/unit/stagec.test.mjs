@@ -10,12 +10,12 @@ import { mark, visible, allDone, STEP_IDS, freshTutorial, steps } from '../../sr
 import { addPhoto, removePhoto, reconcile, MAX, thumbSize } from '../../src/systems/photo.js'
 
 const seq = (xs) => { let i = 0; return () => xs[i++ % xs.length] }
-// ---- save v4 ----
-test('save is v4; a v3 save migrates and keeps Stage B state', () => {
-  assert.equal(SAVE_VERSION, 4)
+// ---- save v4 (Stage C fields; the format has since moved on, see stagee.test.mjs) ----
+test('a v3 save migrates to the current version and keeps Stage B state', () => {
+  assert.ok(SAVE_VERSION >= 5)
   const v3 = { v: 3, day: 4, inv: { fish: 2 }, seen: {}, tools: { rod: true }, garden: { day: 4, plots: [{ id: 'plot-0', cropId: 'turnip', stage: 'young', watered: true, plantedDay: 2 }] }, friends: { day: 4, list: { baker: { npcId: 'baker', hearts: 2 } } }, errands: { day: 4, list: [] }, buffs: [], settings: { volume: 0.5 }, clock: { a: START_PHASE + 4 * TAU } }
   const s = migrate(v3)
-  assert.equal(s.v, 4); assert.equal(s.inv.fish, 2); assert.equal(s.garden.plots[0].stage, 'young'); assert.equal(s.friends.list.baker.hearts, 2); assert.equal(s.settings.volume, 0.5)
+  assert.equal(s.v, SAVE_VERSION); assert.equal(s.inv.fish, 2); assert.equal(s.garden.plots[0].stage, 'young'); assert.equal(s.friends.list.baker.hearts, 2); assert.equal(s.settings.volume, 0.5)
   assert.deepEqual(s.fish, {}); assert.deepEqual(s.museum.donated, {}); assert.deepEqual(s.photos.list, []); assert.equal(s.train.rides, 0)
   assert.equal(s.tutorial.dismissed, true, 'a save past day 0 skips the first-day note')
   assert.deepEqual(s.journal, { forage: {}, relics: {} }); assert.deepEqual(s.dig.taken, {})
@@ -28,7 +28,7 @@ test('fresh v4 save shows the tutorial; broken Stage C parts fall back', () => {
   assert.equal(migrate({ ...fresh(), tutorial: { done: {}, dismissed: false, open: false } }).tutorial.open, false, 'folded note stays folded')
   const again = migrate(JSON.parse(JSON.stringify(s))); assert.deepEqual(again, s)
 })
-test('v1 save goes all the way to v4', () => { const s = migrate({ day: 2, inv: { wood: 3 } }); assert.equal(s.v, 4); assert.equal(s.inv.wood, 3); assert.ok(s.fish && s.garden) })
+test('v1 save goes all the way to the current version', () => { const s = migrate({ day: 2, inv: { wood: 3 } }); assert.equal(s.v, SAVE_VERSION); assert.equal(s.inv.wood, 3); assert.ok(s.fish && s.garden) })
 // ---- seasons + weather ----
 test('seasons change every 7 days, day 0 = spring, wrap after winter', () => {
   assert.equal(SEASON_DAYS, 7)
