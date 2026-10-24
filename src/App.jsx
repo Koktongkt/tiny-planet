@@ -389,7 +389,8 @@ function stepPlayer(dt) {
   }
   P.move += ((Math.abs(go) > 0 ? Math.max(0.35, Math.min(1, Math.abs(go))) : 0) - P.move) * Math.min(1, dt * 8)
   _prevN.copy(P.n)
-  P.n.addScaledVector(P.fwd, go * (run ? 1.51 : 0.88) * (P.spd || 1) / R * dt).normalize() // round6: outdoor stroll another ~10% slower (0.975/1.68 -> 0.88/1.51)
+  const mul = window.__moveMul ? window.__moveMul() : (P.spd || 1) // Stage E: energy, swift and the bicycle (walking itself stays free)
+  P.n.addScaledVector(P.fwd, go * (run ? 1.51 : 0.88) * mul / R * dt).normalize() // round6: outdoor stroll another ~10% slower (0.975/1.68 -> 0.88/1.51)
   // round6: the river, lake and harbour are impassable on foot. Airborne (a jump) she may cross; landing in water
   // puts her back on the bank she jumped from. On foot, slide along the bank instead of stepping in.
   const air = P.h - floorLift(P.n) > 0.012
@@ -442,7 +443,7 @@ function Traveller() {
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
-  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{GM.W && <GM.W.PlayerLantern />}</group>
+  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{GM.W && <GM.W.PlayerLantern />}{GM.W && <GM.W.PlayerBike />}</group>
 }
 const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
 const ZVIEWS = {

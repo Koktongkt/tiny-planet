@@ -1,5 +1,6 @@
 // Recipes + spawn table (lazy: only the game chunks import this). Stage B recipes use the contract v2 item ids.
 // any: [ids] means any combination of those items counts toward n
+import { RECIPE as BIKE_RECIPE } from '../systems/bike.js'
 export const RECIPES = [
   { id: 'rod', cat: 'Tools', makes: 'rod', needs: [['wood', 2], ['reed', 3]] },
   { id: 'can', cat: 'Tools', makes: 'can', needs: [['clay', 3]] },
@@ -24,6 +25,8 @@ export const RECIPES = [
   { id: 'crystal_lamp', cat: 'Keepsakes', makes: 'crystal_lamp', needs: [['crystal', 2], ['clay', 1]] },
   { id: 'shard_charm', cat: 'Keepsakes', makes: 'shard_charm', needs: [['shard', 2], ['reed', 1]] },
   { id: 'bridge', cat: 'Unlock', makes: 'bridgekit', needs: [['wood', 6], ['reed', 6], ['stone', 4]] },
+  // Stage E: one bicycle. Coin is not an alternate — `any` cannot say "2 coins or 1 shard".
+  BIKE_RECIPE,
 ]
 // spawn table: zone -> [item, count, placement] ; placement keys are interpreted in World.jsx
 export const SPAWNS = [

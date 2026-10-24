@@ -29,7 +29,8 @@ function step(dt, KEYS, P, obj) {
   if (MU.busy || G.ui.panel || actLocked()) f = turn = 0
   const run = KEYS.shift || (PAD.active && PAD.run)
   mp.yaw += turn * 2.0 * dt
-  const sp = f * (run ? 0.81 : 0.52) / MUSEUM.S * 1.15 * dt; mp.x += Math.sin(mp.yaw) * sp; mp.z += Math.cos(mp.yaw) * sp; resolveM(mp)
+  const eMul = window.__energyMul ? window.__energyMul() : 1
+  const sp = f * (run ? 0.81 : 0.52) / MUSEUM.S * 1.15 * dt * eMul; mp.x += Math.sin(mp.yaw) * sp; mp.z += Math.cos(mp.yaw) * sp; resolveM(mp)
   P.move += ((f ? Math.max(0.35, Math.abs(f)) : 0) - P.move) * Math.min(1, dt * 8); P.phase += dt * (run ? 11 : 8.2) * P.move; P.h = 0; P.vy = 0
   obj.position.set(mp.x * MUSEUM.S, 0, mp.z * MUSEUM.S); obj.quaternion.setFromAxisAngle(UP, mp.yaw)
 }

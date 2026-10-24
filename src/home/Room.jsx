@@ -54,7 +54,8 @@ HOME.stepInside = (dt, KEYS, P, obj) => {
   if (HOME.busy || (G.ui.panel) || actLocked()) f = turn = 0
   const run = KEYS.shift || (PAD.active && PAD.run)
   hp.yaw += turn * 2.0 * dt // polish: softer indoor turn
-  const sp = f * (run ? 0.81 : 0.52) / ROOM.S * 1.15 * dt; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09) // polish: ~22% slower indoors
+  const eMul = window.__energyMul ? window.__energyMul() : 1 // Stage E: low energy slows her indoors too; the bicycle cannot be ridden inside
+  const sp = f * (run ? 0.81 : 0.52) / ROOM.S * 1.15 * dt * eMul; hp.x += Math.sin(hp.yaw) * sp; hp.z += Math.cos(hp.yaw) * sp; resolve(hp, 0.09) // polish: ~22% slower indoors
   P.move += ((f ? Math.max(0.35, Math.abs(f)) : 0) - P.move) * Math.min(1, dt * 8); P.phase += dt * (run ? 11 : 8.2) * P.move; P.h = 0; P.vy = 0
   obj.position.set(hp.x * ROOM.S, ROOM.y, hp.z * ROOM.S); obj.quaternion.setFromAxisAngle(UP, hp.yaw)
   const ps = HOME.pose; if (ps && ps.k > 0.001) { // round7: home activities place her (bed / tub / chair), eased by ps.k

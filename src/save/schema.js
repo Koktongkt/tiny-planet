@@ -1,7 +1,7 @@
 // Save schema + ordered migrations. Pure (no DOM), so node unit tests can import it.
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 5
 export const TAU = Math.PI * 2
 // clock phase (rot.a) the game starts at: 0 = noon, so 0.4 is early afternoon
 export const START_PHASE = 0.4
@@ -15,7 +15,9 @@ const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} 
 // v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
 // tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.
 const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0, open: null }, dig: { taken: {} } })
-export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4() })
+// v5 (Stage E): energy 0–100. The bicycle, once crafted, lives in tools.bike (no extra field).
+const E5 = () => ({ energy: 100 })
+export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4(), ...E5() })
 
 // each step takes a save of version `from` and returns one of version `from + 1`
 export const MIGRATIONS = [
@@ -28,6 +30,8 @@ export const MIGRATIONS = [
   { from: 2, up: (s) => ({ ...B3(Number.isFinite(s.day) && s.day > 0 ? Math.floor(s.day) : 0), ...s }) },
   // v4: Stage C collections start empty; a save already past day 0 skips the first-day tutorial note
   { from: 3, up: (s) => ({ ...C4(Number.isFinite(s.day) && s.day > 0 ? Math.floor(s.day) : 0), ...s }) },
+  // v5: Stage E energy. A value already on the blob (a newer field written early) is kept, then clamped below.
+  { from: 4, up: (s) => ({ ...s, energy: Number.isFinite(s.energy) ? s.energy : 100 }) },
 ]
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)
@@ -63,6 +67,7 @@ export function normalize(s) {
   if (typeof o.tutorial.open !== 'boolean') o.tutorial.open = null // null = device default (open on desktop, folded slip on touch)
   if (!isObj(o.dig.taken)) o.dig = { taken: {} }
   o.settings = { ...b.settings, ...(isObj(o.settings) ? o.settings : {}) }
+  o.energy = Math.max(0, Math.min(100, Number.isFinite(o.energy) ? o.energy : 100))
   if (!isObj(o.clock) || !Number.isFinite(o.clock.a)) o.clock = { a: START_PHASE + o.day * TAU }
   // the clock must never sit on an earlier day than the counter (would stall regrowth): move it forward whole days
   const lag = o.day - dayFromPhase(o.clock.a); if (lag > 0) o.clock = { a: o.clock.a + lag * TAU }

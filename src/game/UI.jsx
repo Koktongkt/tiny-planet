@@ -13,9 +13,11 @@ import { newReel, fishStep, REEL } from '../systems/fish.js'
 // Stage B: garden / gifts / errands / buffs / settings. The rules + state wiring (systems/live.js) and the panels load as
 // their own chunks a moment after the game UI, so the first game frame doesn't wait for them.
 const SBM = { m: null }
+const SEM = { m: null }
 const StageBPanels = lazy(() => import('../systems/Panels.jsx'))
 const idle = (f, t = 1200) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: t }) : setTimeout(f, 200))
 idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady = true; emit()
+  import('../systems/liveE.js').then(e => { SEM.m = e; window.__seReady = true; emit() })
   // Stage C (fishing species, train, photo mode, journal + museum, seasons/weather hooks, tutorial): one more lazy step
   // waits for the first scene frame + 4 s so it never competes with the boot on slow phones
   const afterFrame = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit() }), 3000), 4000) : setTimeout(afterFrame, 250))
@@ -30,11 +32,17 @@ export const gameBlocksKeys = () => isModal() || !!G.ui.place
 
 function Clock() {
   const [, setT] = useState('') // re-render only when the shown minute / icon / day changes (it used to re-render twice a second)
-  useEffect(() => { const k = () => { const a = ((window.__rot?.a ?? 0) % 6.283185307 + 6.283185307) % 6.283185307, h = (12 + a / 6.283185307 * 24) % 24; return Math.floor(h * 6) + ':' + G.s.day }; const i = setInterval(() => setT(k()), 500); return () => clearInterval(i) }, [])
+  useEffect(() => { const k = () => { const a = ((window.__rot?.a ?? 0) % 6.283185307 + 6.283185307) % 6.283185307, h = (12 + a / 6.283185307 * 24) % 24; return Math.floor(h * 6) + ':' + G.s.day + ':' + Math.round(G.s.energy ?? 100) }; const i = setInterval(() => setT(k()), 500); return () => clearInterval(i) }, [])
   const a = ((window.__rot?.a ?? 0) % 6.283185307 + 6.283185307) % 6.283185307, hour = (12 + a / 6.283185307 * 24) % 24
   const ic = hour >= 6.5 && hour < 17.5 ? 'sun' : hour >= 17.5 && hour < 19.5 || hour >= 5 && hour < 6.5 ? 'dusk' : 'moon'
   const hh = Math.floor(hour), mm = Math.floor((hour - hh) * 6) * 10
-  return <div className="tp-clock paper"><Icon id={ic} size={34} /><div><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b><small>Day {G.s.day + 1}</small></div></div>
+  const e = Math.max(0, Math.min(100, Number.isFinite(G.s.energy) ? G.s.energy : 100))
+  return <div className="tp-clock paper"><Icon id={ic} size={34} /><div><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b><small>Day {G.s.day + 1}</small><span className={'tp-nrg' + (e <= 25 ? ' low' : '') + (e <= 0 ? ' empty' : '')} role="meter" aria-valuenow={Math.round(e)} aria-valuemin={0} aria-valuemax={100} aria-label={'Energy ' + Math.round(e)} title={'Energy ' + Math.round(e)}><i style={{ width: e + '%' }} /></span></div></div>
+}
+function RideChip() {
+  const m = SEM.m; if (!m) return null
+  const mode = m.hudPrompt(); if (!mode) return null
+  return <button className="tp-ride paper" onClick={() => m.toggle()}><span className="key">R</span><Icon id="bike" size={26} /><span>{mode === 'off' ? 'Hop off' : 'Ride'}</span></button>
 }
 function Prompt() {
   const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock) return null
@@ -155,13 +163,14 @@ export function GameUI() {
       else if (e.code === 'KeyP' && SCM.m && !G.ui.panel) SCM.m.photo(true)
       else if (e.code === 'KeyE' && !G.ui.panel) GAME.actions.act?.()
       else if (e.code === 'KeyF' && !G.ui.panel && G.near?.alt) G.near.alt.act()
+      else if (e.code === 'KeyR' && SEM.m && !G.ui.panel) { e.preventDefault(); SEM.m.toggle() }
     }
     addEventListener('keydown', k); return () => removeEventListener('keydown', k)
   }, [])
   const panel = G.ui.panel === 'craft' ? 'recipes' : G.ui.panel
   return <div className="tp-ui">
     <IconDefs />
-    <Clock />
+    <Clock /><RideChip />
     <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{Object.values(G.s.inv).reduce((a, b) => a + b, 0) > 0 && <i>{Object.values(G.s.inv).reduce((a, b) => a + b, 0)}</i>}</button>
       <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button>
       <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button>

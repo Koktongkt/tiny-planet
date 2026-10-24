@@ -9,6 +9,7 @@ import * as Gd from './garden.js'
 import * as Fr from './friendship.js'
 import * as Er from './errands.js'
 import * as Bf from './buffs.js'
+import { eatRestore } from './energy.js'
 import { PROFILES } from '../talk/profiles.js'
 const nm = (id) => (ITEMS[id] && ITEMS[id].name) || id
 const who = (npcId) => (PROFILES[npcId] && PROFILES[npcId].name) || npcId
@@ -50,19 +51,19 @@ export function plantAt(id, seed) {
   const p = plotOf(id); if (!p || p.cropId || count(seed) < 1) return false
   const i = S().garden.plots.indexOf(p), cropId = seed === 'skyseed' ? 'skyseed' : Gd.packCrop(i, S().day)
   if (!Gd.plant(p, cropId, S().day)) return false
-  take(seed, 1); window.__sbAct && window.__sbAct('place', p)
+  take(seed, 1); window.__sbAct && window.__sbAct('place', p); G.onActivity && G.onActivity('plant')
   toast(seed === 'skyseed' ? 'You planted the Sky Seed. Water it every day…' : `Planted ${nm(cropId === 'herb' ? 'herbs' : cropId)} seeds. Water them every day.`, seed); emit(); return true
 }
 export function waterAt(id) {
   const p = plotOf(id); if (!p) return false
   if (!S().tools.can) { toast('You need a Watering Can for that. Craft one from clay at the bench.', 'can', 3200); return false }
   if (!Gd.water(p)) return false
-  window.__sbAct && window.__sbAct('water', p); toast('Watered. It will grow overnight.', 'can'); emit(); return true
+  window.__sbAct && window.__sbAct('water', p); G.onActivity && G.onActivity('garden'); toast('Watered. It will grow overnight.', 'can'); emit(); return true
 }
 export function harvestAt(id) {
   const p = plotOf(id); if (!p) return null
   const out = Gd.harvest(p); if (!out) return null
-  window.__sbAct && window.__sbAct('pick', p)
+  window.__sbAct && window.__sbAct('pick', p); G.onActivity && G.onActivity('harvest')
   for (const [k, n] of out) add(k, n, true)
   toast('Harvested ' + out.map(([k, n]) => `${n} ${nm(k)}`).join(' + ') + '!', out[0][0], 3200); emit(); return out
 }
@@ -95,7 +96,8 @@ export const buffFor = (itemId) => Bf.FOOD[itemId] ? Bf.FOOD[itemId][0] : null
 export function eatFood(itemId) {
   if (count(itemId) < 1 || !Bf.FOOD[itemId]) return null
   const id = Bf.eat(S().buffs, itemId, now()); take(itemId, 1); const b = S().buffs.find(x => x.id === id); b.src = itemId
-  window.__sbAct && window.__sbAct('feed'); toast(`Yum, ${nm(itemId)}! You feel ${Bf.BUFFS[id].name.toLowerCase()}: ${Bf.BUFFS[id].desc}.`, itemId, 3600); applyBuffs(); emit(); return id
+  const before = S().energy, next = eatRestore(before, itemId); S().energy = next; const gain = Math.round(next - before)
+  window.__sbAct && window.__sbAct('feed'); toast(`Yum, ${nm(itemId)}!${gain > 0 ? ` +${gain} energy.` : ''} You feel ${Bf.BUFFS[id].name.toLowerCase()}: ${Bf.BUFFS[id].desc}.`, itemId, 3600); applyBuffs(); emit(); return id
 }
 export const activeBuffs = () => Bf.active(S().buffs, now()).map(b => ({ ...b, ...Bf.BUFFS[b.id], left: Math.max(0, Math.round(b.endsAt - now())) }))
 let lastSig = ''

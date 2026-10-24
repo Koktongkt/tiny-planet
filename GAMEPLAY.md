@@ -4,6 +4,7 @@
 | Action | Keyboard | Touch |
 |---|---|---|
 | Walk | WASD / arrow keys | Tap the ground |
+| Ride (once you own the bicycle) | R | Ride button |
 | Jump | Space | |
 | Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
 | Bag | B / I / Tab | Bag button |
@@ -73,10 +74,11 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 
 ## Persistence
 - Saved to localStorage under `tinyplanet.save.v1` (the key keeps its historic name): inventory, discoveries, tools, placements, unlocks, taken spots, the day counter, the chest, Studio's plant waterings, and the **clock**.
-- Every save carries an explicit format version `v` (currently **4**). On load the save runs through an ordered migration chain in `src/save/schema.js` (v1 → v2 → v3 → v4), then missing or broken fields are filled from the defaults. A save without `v` is treated as v1. A save from a newer build still loads (fields it understands are kept).
+- Every save carries an explicit format version `v` (currently **5**). On load the save runs through an ordered migration chain in `src/save/schema.js` (v1 → v2 → v3 → v4 → v5), then missing or broken fields are filled from the defaults. A save without `v` is treated as v1. A save from a newer build still loads (fields it understands are kept).
 - **Time of day carries over.** The sun phase (`clock.a`) is saved every 15 s and when the tab is hidden or closed, so after a reload the day continues where it was: regrowth keeps going and the clock shows the right day. One in-game day is one real hour (`?daylen=<seconds>` to change it).
 - Save v3 adds `garden` (plots), `friends` (hearts, gifted today), `errands` (today's notes), `buffs` and `settings`. Old saves start with these empty on the day they're on.
 - Save v4 adds `fish` (species log), `journal` (forage + relics), `museum` (donations), `photos` (album metadata; thumbnails in `tinyplanet.photos`), `train` (rides), `tutorial` and `dig`. A save already past day 1 skips the first-day note. Seasons and weather come from the clock, so they need no fields.
+- Save v5 adds `energy` (0–100, a new game starts full). The bicycle is just `tools.bike`. Numbers, the recipe and the mount rules are in `docs/stage-e-contract.md`.
 - Items respawn at each in-game sunrise (a spot taken on day *d* is back on day *d*+1).
 - **Sleep** in the bed skips to the next morning and advances the day (Day *n* → *n*+1), also after a reload. A nap skips two hours.
 - Old v1 saves (day counter, no clock) resume on their saved day at the default early-afternoon time.
