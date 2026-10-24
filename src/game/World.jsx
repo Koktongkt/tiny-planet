@@ -260,7 +260,7 @@ export function GameWorld() {
       if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
       const sp = nr.spot, need = NEEDS_TOOL[sp.item]
       if (need && !G.s.tools[need]) { toast(`You need a ${ITEMS[need].name} for that.`, need); return }
-      if (sp.item === 'fish') { startAct('cast', { dur: 1.0 }); setTimeout(() => { G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit() }, 650); return }
+      if (sp.item === 'fish') { G.onActivity && G.onActivity('fish'); startAct('cast', { dur: 1.0 }); setTimeout(() => { G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit() }, 650); return }
       pickup(sp)
     }
     GAME.actions.fishResult = (ok) => { const sp = L.spots.find(s => s.id === G.ui.fish?.spot); G.ui.fish = null; startAct('reel', { dur: ok ? 0.9 : 0.6, spark: ok && sp ? sp.pos : null, sparkCol: 'water' }); if (ok && sp) { markTaken(sp.id); setTimeout(() => add('fish'), 450) } else toast('It got away… try again!', 'fish'); emit() }
@@ -272,7 +272,7 @@ export function GameWorld() {
     G.ui.fly = [...G.ui.fly, { id: sp.id + performance.now(), item: sp.item, x: (_w.x * 0.5 + 0.5) * innerWidth, y: (-_w.y * 0.5 + 0.5) * innerHeight }]; emit()
     const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { dur: isWater ? 1.0 : 0.85, spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
     anim.current[sp.id] = { t0: performance.now() + 280 }
-    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); G.onGather && G.onGather(sp.item); delete anim.current[sp.id]; force() }, 980)
+    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
   }
   useFrame(() => {
     const P = GAME.P; if (!P || !L) return
@@ -351,6 +351,29 @@ function GhostDecor() {
   return <group ref={g}>{last.current && <Decor item={last.current} />}<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, 0]} material={GHOST}><ringGeometry args={[0.1, 0.13, 32]} /></mesh></group>
 }
 // carried lantern (shown at dusk/night once crafted)
+// the bicycle mesh loads the first time she is actually riding (zero draw calls until then)
+export function PlayerBike() {
+  const host = useRef(), wheels = useRef(null), loading = useRef(false)
+  useFrame(() => {
+    const g = host.current; if (!g) return
+    const on = !!(window.__bike && window.__bike.shown())
+    g.visible = on
+    if (!on) return
+    if (!wheels.current && !loading.current) {
+      loading.current = true
+      import('../art/bike/mesh.js').then(m => {
+        if (!host.current) return
+        const built = m.createBike()
+        host.current.add(built.frame)
+        for (const w of built.wheels) host.current.add(w)
+        wheels.current = built.wheels
+      }).catch(() => { loading.current = false })
+    }
+    const P = GAME.P
+    if (P && wheels.current) { const spin = P.phase * 2.4; for (const w of wheels.current) w.rotation.x = spin }
+  })
+  return <group ref={host} visible={false} position={[0, 0, 0.012]} />
+}
 export function PlayerLantern() {
   const g = useRef(), l = useRef()
   useFrame(({ clock }) => { const on = !!G.s.tools.lantern && (T.night > 0.3 || T.dusk > 0.5); g.current.visible = on; if (on) { g.current.rotation.z = Math.sin(clock.elapsedTime * 3) * 0.15; l.current.intensity = 1.2 + Math.sin(clock.elapsedTime * 7) * 0.08 } })

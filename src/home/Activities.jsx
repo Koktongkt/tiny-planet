@@ -118,7 +118,7 @@ async function cook() {
   if (!haveFor(r).every(h => h.ok)) { toast(`To cook ${ITEMS[r.makes].name} you need ${need(r)}.`, r.makes, 3000); return }
   if (!await begin('cook', 3.2, 'cook')) return
   placeAt(0.86, -0.66, Math.PI / 2); pose({ x: 0.9, z: -0.76, yaw: Math.PI / 2, rate: 5 }); A.pot = 1
-  await wait(2600); use(r); add(r.makes, 1, true); toast(`✦ Cooked ${ITEMS[r.makes].name}! Into the bag it goes.`, r.makes); FX && FX.spark.emit(1.05, 0.62, -0.76, 10, { spread: 0.1, up: 0.35, size: 0.05, life: 1 }); emit()
+  await wait(2600); use(r); add(r.makes, 1, true); G.onActivity && G.onActivity('cook'); toast(`✦ Cooked ${ITEMS[r.makes].name}! Into the bag it goes.`, r.makes); FX && FX.spark.emit(1.05, 0.62, -0.76, 10, { spread: 0.1, up: 0.35, size: 0.05, life: 1 }); emit()
   await wait(600); A.pot = 0; end()
 }
 async function bath() {

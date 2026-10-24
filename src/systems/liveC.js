@@ -98,6 +98,7 @@ export function donate(id) {
 export function digAt(spot) {
   needRelicIcons()
   const f = C.dig(S().dig, spot, S().day); if (!f) { toast('Already dug here today.', 'leaf'); return null }
+  G.onActivity && G.onActivity('dig')
   add(f, 1, true); C.note(S().journal, f, S().day); toast(`You dug up ${ITEMS[f] ? nm(f) : f}!`, f, 3200); emit(); return f
 }
 

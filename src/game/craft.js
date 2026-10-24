@@ -3,6 +3,7 @@
 import { G, emit, toast, count, add, take } from './store.js'
 import { ITEMS, TOOLS, DECOR } from './items.js'
 import './itemsB.js'
+import './itemsE.js'
 import { RECIPES } from './recipes.js'
 import { startAct, blip, ACT } from '../act.js'
 const q = new URLSearchParams(location.search)
@@ -22,6 +23,7 @@ export function craft(r, done) {
     G.ui.crafting = null; G.s.crafted++
     if (r.cat === 'Unlock') { G.s.unlocked.bridge = true; toast('The rope bridge is up! A new path climbs the cliff.', 'bridgekit', 4200) }
     else { add(r.makes, 1, true); toast(`✦ Crafted ${ITEMS[r.makes].name}!`, r.makes) }
+    G.onActivity && G.onActivity('craft')
     if (G.benchPos) ACT.spark = { t0: performance.now(), pos: G.benchPos.clone(), n: 14, col: 'gold' }
     emit(); done && done()
   }, 1100)
