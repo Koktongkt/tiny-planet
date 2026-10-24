@@ -61,7 +61,7 @@ export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   // ---- notes ----
   function play(d, k, t, m, dur, v) {
     if (v <= 0.004) return
-    if (voices >= MAXV) { stats.skipped++; return }
+    if (voices >= MAXV && PART !== 'mel' && PART !== 'bass') { stats.skipped++; return } // the tune + bass always play
     if (log) log.push({ t, k, m, dur, part: PART, pcs: CPC, deck: d.id })
     if (LIVE[k]) return live(d, k, t, m, dur, v)
     const S = SAMPLED[k], set = BUF[k]; if (!S || !set) return
