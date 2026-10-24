@@ -7,6 +7,9 @@
 .tp-nrg{display:block;margin-top:4px;height:7px;width:72px;border:1.6px solid var(--ink);border-radius:6px;background:#fff8;overflow:hidden}
 .tp-nrg i{display:block;height:100%;background:linear-gradient(90deg,#8fbf6a,#e8c56a)}
 .tp-nrg.low i{background:#e39a3c}.tp-nrg.empty{background:#f3d0c8}
+/* touch HUD column starts 74px under the clock. The pip stays in the clock's padding so Bag still clears it. */
+html.tp-touch .tp-clock small{line-height:1}
+html.tp-touch .tp-nrg{position:absolute;left:8px;right:8px;bottom:1px;width:auto;height:3px;margin:0;border-width:1px}
 .tp-ride{position:absolute;left:50%;bottom:186px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:3px 12px 3px 5px;font-size:15px;pointer-events:auto;z-index:6}
 html.tp-touch .tp-ride{bottom:calc(env(safe-area-inset-bottom,0px) + 236px)}
 .tp-btns{position:absolute;right:22px;bottom:22px;display:flex;gap:12px}

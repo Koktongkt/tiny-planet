@@ -63,4 +63,4 @@ Opening the bag or placing decor blocks a *new* mount and does not kick her off.
 
 - `?give=wood:4,stone:2,shard:1` then craft **Bicycle** at the bench, then **R**.
 - `?give=bike` owns it immediately.
-- Eat from the Bag. The toast includes the energy gained. The bar under the clock is the meter (green, amber at ≤25, empty track at 0).
+- Eat from the Bag. The toast includes the energy gained. The bar under the clock is the meter (green, amber at ≤25, empty track at 0). On touch it sits in the clock's padding, so the five HUD buttons stay clear of the clock.
