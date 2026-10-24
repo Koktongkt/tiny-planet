@@ -8,10 +8,12 @@ const ang = (n, z) => Math.acos(Math.max(-1, Math.min(1, n.x * z.x + n.y * z.y +
 const near = (n, z, r, fall) => c(1 - Math.max(0, ang(n, z) - r) * R / fall) // 1 inside the zone, fading over `fall` world units
 const _n = { x: 0, y: 1, z: 0 }
 export function defaultListener() {
-  const P = window.__player, H = window.__home, L = window.__layout
+  const P = window.__player, H = window.__home, M = window.__museum, R = window.__scRide, L = window.__layout
   let n = P && P.n ? P.n : _n
   if (H && H.inside && L && L.homeN) n = L.homeN
-  return { n, mode: VIEW.mode, inside: !!(H && H.inside), night: T.night }
+  // where she is, for the score: her house (HOME.inside), the museum hall (museumC MU.inside), aboard the train, or out
+  const house = !!(H && H.inside), museum = !!(M && M.inside), loc = house ? 'house' : museum ? 'museum' : R && R.riding ? 'train' : 'outdoor'
+  return { n, mode: VIEW.mode, inside: house || museum, loc, night: T.night, season: T.season }
 }
 /** zone weights 0..1: river, lake (lake + harbour sea), forest, village, meadow, hill, night */
 export function zonesAt(L) {

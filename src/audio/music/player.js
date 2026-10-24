@@ -31,6 +31,8 @@ export function createMusic(ctx, out, { staged = true } = {}) {
   function pump(ms) { const s = performance.now(); while (Q.length && performance.now() - s < ms) { const [i, r] = Q.shift(), x = SAMPLED[i].render(r), b = ctx.createBuffer(1, x.length, SR); b.getChannelData(0).set(x); BUF[i][r] = b; stats.rendered++ } stats.renderMs += performance.now() - s }
   function step() { if (disposed) return; pump(6); if (Q.length) setTimeout(step, 4); else pumping = 0 }
   const instsOf = (arr) => arr.parts.filter(Boolean).flatMap(p => [p.i, p.bass, p.stab]).filter(Boolean)
+  const TI = {}, instsFor = (id) => TI[id] || (TI[id] = [...new Set([0, 1, 2].flatMap(c => instsOf(arrange(id, scene, c, c))))])
+  const ready = (id) => instsFor(id).every(i => !SAMPLED[i] || (BUF[i] && SAMPLED[i].roots.every(r => BUF[i][r])))
   const wave = (k) => WAVE[k] || (WAVE[k] = (() => { const h = LIVE[k].h, re = new Float32Array(h.length), im = Float32Array.from(h); return ctx.createPeriodicWave(re, im) })())
 
   // ---- decks ----
@@ -39,7 +41,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + fadeIn)
     const d = { id, th, g, send, buses: {}, bar: 0, cycle: 0, t, end: Infinity, arr: null }
     // pre-render this piece's instruments for every arrangement it may use
-    need(instsOf(arrange(id, scene, 0, 0)).concat(instsOf(arrange(id, scene, 1, 1)), instsOf(arrange(id, scene, 2, 2))), true)
+    need(instsFor(id), true)
     decks.push(d); return d
   }
   function fadeOut(d, t) {
@@ -129,13 +131,14 @@ export function createMusic(ctx, out, { staged = true } = {}) {
   /** where she is + how the world sounds: { loc: outdoor|house|museum|train, period: day|evening|night, season, rain 0..1, orbit 0|1 } */
   function setScene(s, now = ctx.currentTime) {
     Object.assign(scene, s); const id = THEMES[scene.loc] ? scene.loc : 'outdoor'
-    if (!cur) cur = deck(id, now + 0.25, 3.5)
+    if (!cur) { need(instsFor(id), true); if (staged && !ready(id)) return; cur = deck(id, now + 0.25, 3.5) } // first piece waits for its samples
     else if (cur.id !== id) { fadeOut(cur, now); cur = deck(id, now + 0.35, XF) }
     const out = id === 'outdoor', wet = out ? scene.rain || 0 : 0
     tone.frequency.setTargetAtTime(16000 - 12500 * wet, now, 0.8)
     duck.gain.setTargetAtTime((1 - 0.32 * wet) * (scene.orbit ? 0.75 : 1), now, 0.8)
   }
   function schedule(until) {
+    for (const d of decks) { if (d.t < ctx.currentTime - 0.5) d.t = ctx.currentTime + 0.1 } // music was off / paused: rejoin, don't catch up
     for (const d of decks) while (d.t < until && d.t < d.end) { d.t += playBar(d); if (++d.bar >= d.th.bars.length) { d.bar = 0; d.cycle++ } }
     const now = ctx.currentTime
     for (let i = decks.length - 1; i >= 0; i--) { const d = decks[i]; if (now > d.end + 4) { decks.splice(i, 1); try { d.g.disconnect(); d.send.disconnect() } catch (e) {} } }

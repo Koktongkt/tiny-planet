@@ -13,7 +13,7 @@ export function partial(out, sr, f, a, tau, o = {}) {
   for (let i = n0, k = 0, n = out.length; i < n; i++, k++) {
     const xn = x * c - y * s; y = x * s + y * c; x = xn
     out[i] += y * (g1 + g2) * (k < att ? k / att : 1); g1 *= e1; g2 *= e2
-    if ((k & 255) === 0 && g1 + g2 < 2e-5) break
+    if ((k & 255) === 0 && g1 + g2 < 1e-4) break
   }
 }
 /** struck bell / bar: inharmonic ratios, upper partials die faster */

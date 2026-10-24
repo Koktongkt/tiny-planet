@@ -10,7 +10,7 @@ export const dayFromPhase = (a) => Math.max(0, Math.floor((a + Math.PI / 2) / TA
 
 // v3 (Stage B): garden plots, friends (npcId -> Friend), today's errands, timed food buffs, settings. The systems that use
 // them (src/systems) are lazy; here only the shape lives. `day` in garden/friends/errands = the last in-game day applied.
-const SET = () => ({ volume: 0.8, music: 0.7, muted: false, textScale: 1 })
+const SET = () => ({ volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1 })
 const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [] }, buffs: [], settings: SET() })
 // v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
 // tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.

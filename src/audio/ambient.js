@@ -1,48 +1,55 @@
-// Tiny Planet ambient audio runtime (lazy chunk; loaded by arm.js on the first user gesture).
-// Contract (roadmap/stage-b-contract.md): startAudio({ getListener, getZones }) -> { setVolume(0..1), setMusic(0..1), mute(bool), dispose() }
-// Extra: getAudioSettings() -> { volume, music, muted } (for <SettingsPanel value>), onAudioSettings(fn) -> unsubscribe.
+// Tiny Planet audio runtime (lazy chunk; loaded by arm.js on the first user gesture): ambience (engine.js), the
+// procedural score (music/player.js, its own chunk, a few seconds later) and the activity SFX (sfx.js + hooks.js).
+// Contract (roadmap/stage-b-contract.md): startAudio({ getListener, getZones }) -> { setVolume, setMusic, setSfx, mute, dispose, sfx }
+// Extra: getAudioSettings() -> { volume, music, sfx, muted } (for <SettingsPanel value>), onAudioSettings(fn) -> unsubscribe.
 import { buildGraph } from './engine.js'
 import { zonesAt, defaultListener } from './zones.js'
+import { createSfx } from './sfx.js'
+import { hookGame } from './hooks.js'
 
-const KEY = 'tp-audio', MUSIC_DELAY = 4000, TICK_MS = 100
-const MUSIC_LEVEL = 0.28, AMB_LEVEL = 0.9 // piano sits well under the ambience
-let SET = { volume: 0.8, music: 0.7, muted: false }
+const KEY = 'tp-audio', MUSIC_DELAY = 3000, TICK_MS = 100
+const MUSIC_LEVEL = 0.5, AMB_LEVEL = 0.9, SFX_LEVEL = 0.9 // the score sits under the ambience; SFX a touch forward
+let SET = { volume: 0.8, music: 0.7, sfx: 0.8, muted: false }
 try { SET = { ...SET, ...JSON.parse(localStorage.getItem(KEY) || '{}') } } catch (e) {}
 const subs = new Set()
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(SET)) } catch (e) {} for (const f of subs) f({ ...SET }) }
 export const getAudioSettings = () => ({ ...SET })
 export const onAudioSettings = (f) => { subs.add(f); return () => subs.delete(f) }
+const c01 = (v) => Math.max(0, Math.min(1, +v || 0))
+
+/** listener -> the score's scene: where she is (loc), time of day, season, rain */
+export function sceneFor(L, Z) {
+  const n = Z.night ?? L.night ?? 0, T = typeof window !== 'undefined' && window.__T
+  return { loc: L.loc || (L.inside ? 'house' : 'outdoor'), period: n > 0.6 ? 'night' : n > 0.15 ? 'evening' : 'day', season: L.season || (T && T.season) || 'spring', rain: Z.rain || 0, orbit: L.mode === 'orbit' ? 1 : 0 }
+}
 
 let API = null
 export function startAudio(opts = {}) {
   if (API) return API
   const t0 = performance.now()
   let ctx = opts.ctx
-  if (!ctx) try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch (e) { return (API = { setVolume() {}, setMusic() {}, mute() {}, dispose() {} }) }
+  if (!ctx) try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch (e) { return (API = { setVolume() {}, setMusic() {}, setSfx() {}, mute() {}, dispose() {}, sfx() { return false } }) }
   const E = buildGraph(ctx, undefined, true), getL = opts.getListener || defaultListener, getZ = opts.getZones || zonesAt
-  const D = window.__audio = { ctx, E, ticks: 0, tickMs: 0, tickMax: 0, buildMs: 0, mix: null, music: null }
-  // share with the SFX blips (src/act.js) if it opts in: window.__tpAudio.{ctx, sfx}
-  window.__tpAudio = { ctx, sfx: E.sfx }
+  const S = createSfx(ctx, E.sfx), H = hookGame(S)
+  const D = window.__audio = { ctx, E, S, H, ticks: 0, tickMs: 0, tickMax: 0, buildMs: 0, mix: null, music: null, scene: null }
+  // act.js blip(kind) asks play() first; anything else can call __tpAudio.sfx(name, { delay, vol, rate, pan })
+  window.__tpAudio = { ctx, sfx: E.sfx, play: (kind) => H.act(kind), fx: (name, o) => S.play(name, o) }
+  S.warm()
 
   const applyMaster = (tc = 0.25) => {
     const on = !SET.muted && SET.volume > 0 && !document.hidden
     E.master.gain.setTargetAtTime(on ? SET.volume * AMB_LEVEL : 0, ctx.currentTime, tc)
-    E.music.gain.setTargetAtTime(SET.music * MUSIC_LEVEL, ctx.currentTime, 1.5)
-    if (on) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); if (el && SET.music > 0) playEl() } else { if (el) el.pause(); clearTimeout(sus); sus = setTimeout(() => { if (SET.muted || document.hidden || !SET.volume) ctx.suspend().catch(() => {}) }, 800) }
-    if (el && !(SET.music > 0)) el.pause()
+    E.music.gain.setTargetAtTime(SET.music * MUSIC_LEVEL, ctx.currentTime, 0.6)
+    E.sfx.gain.setTargetAtTime((SET.sfx ?? 0.8) * SFX_LEVEL, ctx.currentTime, 0.1)
+    if (on) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}) } else { clearTimeout(sus); sus = setTimeout(() => { if (SET.muted || document.hidden || !SET.volume) ctx.suspend().catch(() => {}) }, 800) }
   }
   let sus = 0
 
-  // ---- piano loop: streamed through a media element (decoded off the main thread), fetched a few seconds in ----
-  let el = null
-  const playEl = () => { const p = el.play(); if (p && p.catch) p.catch(() => { const r = () => { removeEventListener('pointerdown', r, true); if (!SET.muted && SET.music > 0) el.play().catch(() => {}) }; addEventListener('pointerdown', r, true) }) }
+  // ---- the score: procedural, its own lazy chunk; instrument samples render in small slices, current place first ----
+  let M = null, loading = false
   const loadMusic = () => {
-    if (el || opts.music === false) return
-    el = new Audio(); el.loop = true; el.preload = 'auto'; el.crossOrigin = 'anonymous'
-    const base = (import.meta.env && import.meta.env.BASE_URL) || './'
-    el.src = base + (el.canPlayType('audio/ogg; codecs="opus"') ? 'audio/piano-loop.ogg' : 'audio/piano-loop.m4a')
-    try { ctx.createMediaElementSource(el).connect(E.music) } catch (e) { el.volume = SET.music * MUSIC_LEVEL } // very old Safari: plain element
-    D.music = el; if (!SET.muted && SET.music > 0 && !document.hidden) playEl()
+    if (M || loading || opts.music === false || !(SET.music > 0)) return
+    loading = true; import('./music/player.js').then(m => { if (!API) return; M = D.music = m.createMusic(ctx, E.music) })
   }
   const musicT = setTimeout(loadMusic, opts.musicDelay ?? MUSIC_DELAY)
 
@@ -50,8 +57,10 @@ export function startAudio(opts = {}) {
   const tick = () => {
     const s = performance.now()
     if (ctx.state === 'running') {
-      const L = getL(), Z = getZ(L), mix = mixFor(L, Z)
-      E.setMix(mix); E.schedule(ctx.currentTime + 0.6); D.mix = mix
+      const L = getL(), Z = getZ(L), mix = mixFor(L, Z), now = ctx.currentTime
+      E.setMix(mix); E.schedule(now + 0.6); D.mix = mix
+      try { H.tick(L, Z, now) } catch (e) { D.hookErr = e }
+      if (M && SET.music > 0) { const sc = D.scene = sceneFor(L, Z); M.setScene(sc, now); M.schedule(now + 0.6) }
     }
     D.ticks++; D.tickMs = performance.now() - s; if (D.ticks > 1 && D.tickMs > D.tickMax) D.tickMax = D.tickMs
   }
@@ -62,11 +71,13 @@ export function startAudio(opts = {}) {
   D.buildMs = performance.now() - t0; E.ready.then(() => { D.readyMs = performance.now() - t0 })
 
   API = {
-    setVolume(v) { SET.volume = Math.max(0, Math.min(1, +v || 0)); persist(); applyMaster() },
-    setMusic(v) { SET.music = Math.max(0, Math.min(1, +v || 0)); persist(); if (SET.music > 0) loadMusic(); applyMaster() },
+    setVolume(v) { SET.volume = c01(v); persist(); applyMaster() },
+    setMusic(v) { SET.music = c01(v); persist(); if (SET.music > 0) loadMusic(); applyMaster() },
+    setSfx(v) { SET.sfx = c01(v); persist(); applyMaster() },
     mute(b = true) { SET.muted = !!b; persist(); applyMaster() },
+    sfx: (name, o) => S.play(name, o),
     get settings() { return { ...SET } },
-    dispose() { clearInterval(iv); clearTimeout(musicT); clearTimeout(sus); document.removeEventListener('visibilitychange', vis); if (el) { el.pause(); el.removeAttribute('src'); el.load() } E.dispose(); chip && chip.remove(); ctx.close().catch(() => {}); API = null; window.__audio = null; window.__tpAudio = null },
+    dispose() { clearInterval(iv); clearTimeout(musicT); clearTimeout(sus); document.removeEventListener('visibilitychange', vis); if (M) M.dispose(); E.dispose(); chip && chip.remove(); ctx.close().catch(() => {}); API = null; window.__audio = null; window.__tpAudio = null },
   }
   let chip = null
   if (opts.chip !== false) import('./chip.js').then(m => { if (API) chip = m.mountChip(API, getAudioSettings, onAudioSettings) })
