@@ -111,8 +111,8 @@ G.onGather = (item) => { if (Bf.has(S().buffs, 'lucky', now()) && Math.random() 
 export function applySettings(next) {
   const s = S().settings = { ...S().settings, ...(next || {}) }
   document.documentElement.style.setProperty('--tpts', String(s.textScale || 1))
-  try { localStorage.setItem('tp-audio', JSON.stringify({ volume: s.volume, music: s.music, muted: s.muted })) } catch (e) {} // read by src/audio when it starts
-  if (window.__tpAudio) import('../audio/ambient.js').then(m => { const A = m.startAudio(); A.setVolume(s.volume); A.setMusic(s.music); A.mute(!!s.muted) })
+  try { localStorage.setItem('tp-audio', JSON.stringify({ volume: s.volume, music: s.music, sfx: s.sfx ?? 0.8, muted: s.muted })) } catch (e) {} // read by src/audio when it starts
+  if (window.__tpAudio) import('../audio/ambient.js').then(m => { const A = m.startAudio(); A.setVolume(s.volume); A.setMusic(s.music); A.setSfx && A.setSfx(s.sfx ?? 0.8); A.mute(!!s.muted) })
   if (next) emit()
   return s
 }

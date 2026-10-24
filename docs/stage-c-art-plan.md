@@ -322,3 +322,15 @@ Steps 1–3 can start now in parallel with Codor drafting the contract; 4–5 af
 7. Museum: separate interior mode like Home (recommended for budget) or an open-air pavilion at the ruins? Where do new relics come from (digging spots at ruins)?
 8. Tutorial: who signs the note (suggest Grandma or the postman), and should it reappear from Settings?
 9. Are forage/relic/fish display names fine in a new lazy `itemsC.js` (like itemsB.js), with Studio owning the text?
+
+## audio-d (after Stage C): livelier music, per-place themes, activity SFX — wiring notes for Codor
+Branch `audio-d` (from main 603d47a). The full details are in `src/audio/README.md`.
+- **No wiring is required.**
+  - Place detection reads `__home.inside`, `__museum.inside` and `__scRide.riding`.
+  - SFX are hooked from inside the audio chunk: `blip` routing, wraps on `__sc` / `__sb`, and a 10 Hz state diff.
+- The one startup-chunk edit is in `act.js`: `blip()` asks `window.__tpAudio.play(kind)` first (+~10 B gz).
+- Settings: the save default has `sfx: 0.8`, and `live.js applySettings` persists and applies it, so the SettingsPanel now shows its "Sounds" slider.
+- Removed: `public/audio/piano-loop.{ogg,m4a}` and `src/audio/render/piano.mjs`. The score is fully procedural, so there are no audio downloads.
+- Optional:
+  - To give any new event a sound, call `window.__tpAudio?.fx('quest')` (the names are in `sfx.js DEF`).
+  - If you'd rather call SFX explicitly than rely on the hooks, the hook table in the README lists every trigger point.

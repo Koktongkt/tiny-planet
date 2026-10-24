@@ -74,7 +74,7 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Fishing minigame:** stop the marker in the green zone (3 tries).
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
-- **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a piano loop, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
+- **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a procedural Ghibli-style score (a different piece outdoors, at home, in the museum and on the train) and activity sound effects, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
 - **Relaxing + world (Stage C):** a calmer fishing reel with 12 species and a catch card, seasons every 7 in-game days and seeded rain days, train rides between two stations, photo mode (free camera, filters, PNG + journal album), a collection journal, ruins dig spots and Professor Hoshino's museum, and Grandma's first-day note.
 - **Day cycle and saves:** items respawn each in-game sunrise (one day is one real hour); progress, including the time of day, saves to localStorage and carries over across reloads. Reset from the Bag or with `?reset`.
 
