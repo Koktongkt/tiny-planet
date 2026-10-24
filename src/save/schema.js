@@ -1,7 +1,7 @@
 // Save schema + ordered migrations. Pure (no DOM), so node unit tests can import it.
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
-export const SAVE_VERSION = 5
+export const SAVE_VERSION = 6
 export const TAU = Math.PI * 2
 // clock phase (rot.a) the game starts at: 0 = noon, so 0.4 is early afternoon
 export const START_PHASE = 0.4
@@ -10,13 +10,14 @@ export const dayFromPhase = (a) => Math.max(0, Math.floor((a + Math.PI / 2) / TA
 
 // v3 (Stage B): garden plots, friends (npcId -> Friend), today's errands, timed food buffs, settings. The systems that use
 // them (src/systems) are lazy; here only the shape lives. `day` in garden/friends/errands = the last in-game day applied.
-const SET = () => ({ volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1 })
+const SET = () => ({ volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1, autoCook: false })
 const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [] }, buffs: [], settings: SET() })
 // v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
 // tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.
 const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0, open: null }, dig: { taken: {} } })
 // v5 (Stage E): energy 0–100. The bicycle, once crafted, lives in tools.bike (no extra field).
 const E5 = () => ({ energy: 100 })
+// v6 (Stage F): settings.autoCook. Perfect dishes are bag ids (`soup_perfect`), not a separate field.
 export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4(), ...E5() })
 
 // each step takes a save of version `from` and returns one of version `from + 1`
@@ -32,6 +33,11 @@ export const MIGRATIONS = [
   { from: 3, up: (s) => ({ ...C4(Number.isFinite(s.day) && s.day > 0 ? Math.floor(s.day) : 0), ...s }) },
   // v5: Stage E energy. A value already on the blob (a newer field written early) is kept, then clamped below.
   { from: 4, up: (s) => ({ ...s, energy: Number.isFinite(s.energy) ? s.energy : 100 }) },
+  // v6: auto-cook defaults off. An explicit true on the blob is kept. Perfect-dish ids already live in inv.
+  { from: 5, up: (s) => {
+    const prev = s.settings && typeof s.settings === 'object' ? s.settings : {}
+    return { ...s, settings: { ...prev, autoCook: prev.autoCook === true } }
+  } },
 ]
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)

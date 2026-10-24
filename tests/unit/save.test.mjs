@@ -41,7 +41,7 @@ test('v2 save migrates through v3 (to the current version): progress kept, Stage
   assert.equal(s.v, SAVE_VERSION); assert.deepEqual(s.inv, v2.inv); assert.deepEqual(s.tools, v2.tools); assert.equal(s.day, 4); assert.equal(s.clock.a, v2.clock.a)
   assert.deepEqual(s.garden, { day: 4, plots: [] }); assert.deepEqual(s.friends, { day: 4, list: {} })
   assert.deepEqual(s.errands, { day: -1, list: [] }) // today's notes roll when the systems load
-  assert.deepEqual(s.buffs, []); assert.deepEqual(s.settings, { volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1 })
+  assert.deepEqual(s.buffs, []); assert.deepEqual(s.settings, { volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1, autoCook: false })
 })
 test('v1 save goes through every step', () => {
   const s = migrate(v1); assert.equal(s.v, SAVE_VERSION); assert.equal(s.garden.day, 3); assert.equal(dayFromPhase(s.clock.a), 3)
@@ -52,7 +52,7 @@ test('v3 Stage B state round-trips; broken parts fall back to defaults', () => {
     buffs: [{ id: 'swift', endsAt: 5000 }], settings: { volume: 0.3, muted: true, textScale: 1.15 } })
   assert.deepEqual(migrate(JSON.parse(JSON.stringify(s))), s)
   assert.equal(s.garden.plots[0].stage, 'young'); assert.equal(s.friends.list.baker.hearts, 2.5); assert.equal(s.errands.list[0].accepted, true)
-  assert.deepEqual(s.settings, { volume: 0.3, music: 0.7, sfx: 0.8, muted: true, textScale: 1.15 }) // missing key filled
+  assert.deepEqual(s.settings, { volume: 0.3, music: 0.7, sfx: 0.8, muted: true, textScale: 1.15, autoCook: false }) // missing key filled
   const bad = migrate({ v: 3, day: 1, garden: 'x', friends: { day: 1, list: [] }, errands: { list: {} }, buffs: {}, settings: 7 })
   assert.deepEqual(bad.garden, { day: 1, plots: [] }); assert.deepEqual(bad.friends, { day: 1, list: {} }); assert.deepEqual(bad.errands, { day: -1, list: [] }); assert.deepEqual(bad.buffs, []); assert.equal(bad.settings.volume, 0.8)
 })

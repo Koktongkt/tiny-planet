@@ -13,8 +13,8 @@ import { HOME, ROOM, BLOCKS } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { Box, W } from './Room.jsx'
 import { T, q } from '../common.jsx'
-import { G, emit, toast, count, take, add, newDay } from '../game/store.js'
-import { haveFor, RECIPES, ITEMS } from '../game/craft.js'
+import { G, emit, toast, newDay } from '../game/store.js'
+import { haveFor, RECIPES, ITEMS, playFood, finishDish } from '../game/craft.js'
 import { startAct, POSES } from '../act.js'
 import { CAT } from '../pets/catState.js'
 
@@ -111,15 +111,17 @@ async function sleep(full) {
 const FOODS = () => RECIPES.filter(r => r.cat === 'Food' && r.id !== 'teacup')
 const dish = () => FOODS()[A.dish % FOODS().length]
 const need = (r) => haveFor(r).filter(h => !h.ok).map(({ need: [id, n], have: h }) => `${n - h} ${typeof id === 'string' ? ITEMS[id].name : 'Herbs or Tea'}`).join(', ')
-function use(r) { for (const [k, n] of r.needs) { if (typeof k === 'string') take(k, n); else { let left = n; for (const x of k.any) { const u = Math.min(left, count(x)); take(x, u); left -= u } } } }
 async function cook() {
   // pick the chosen dish, or the first one she has the ingredients for
   let r = dish(); if (!haveFor(r).every(h => h.ok)) { const ok = FOODS().find(x => haveFor(x).every(h => h.ok)); if (ok) r = ok }
   if (!haveFor(r).every(h => h.ok)) { toast(`To cook ${ITEMS[r.makes].name} you need ${need(r)}.`, r.makes, 3000); return }
-  if (!await begin('cook', 3.2, 'cook')) return
+  const auto = !!(G.s.settings && G.s.settings.autoCook)
+  if (!await begin('cook', auto ? 0.9 : 4.2, 'cook')) return
   placeAt(0.86, -0.66, Math.PI / 2); pose({ x: 0.9, z: -0.76, yaw: Math.PI / 2, rate: 5 }); A.pot = 1
-  await wait(2600); use(r); add(r.makes, 1, true); G.onActivity && G.onActivity('cook'); toast(`✦ Cooked ${ITEMS[r.makes].name}! Into the bag it goes.`, r.makes); FX && FX.spark.emit(1.05, 0.62, -0.76, 10, { spread: 0.1, up: 0.35, size: 0.05, life: 1 }); emit()
-  await wait(600); A.pot = 0; end()
+  const result = await playFood(r)
+  if (result) finishDish(r, result, { activity: 'cook' })
+  FX && FX.spark.emit(1.05, 0.62, -0.76, 10, { spread: 0.1, up: 0.35, size: 0.05, life: 1 })
+  await wait(auto ? 200 : 600); A.pot = 0; end()
 }
 async function bath() {
   if (!await begin('bath', 7.4, 'bath')) return
@@ -133,10 +135,17 @@ async function tea() {
   if (!await begin('tea', 4.6, 'tea')) return
   placeAt(0.14, -0.17, 0); pose({ x: 0.14, z: -0.16, yaw: 0, rate: 6 }); A.pour = 1
   const r = RECIPES.find(x => x.id === 'teacup'), herbal = r && haveFor(r).every(h => h.ok)
-  await wait(1800); A.pour = 0; A.sip = 1
-  if (herbal) { use(r); add('teacup', 1, true) }
-  toast(herbal ? 'You brew a pot of herbal tea and pour a cup for later too. ✦ +1 Herbal Tea' : 'A cup of warm barley tea. The kettle sings softly.', 'teacup', 3000)
-  await wait(2500); A.sip = 0; end()
+  if (!herbal) {
+    await wait(1800); A.pour = 0; A.sip = 1
+    toast('A cup of warm barley tea. The kettle sings softly.', 'teacup', 3000)
+    await wait(2500); A.sip = 0; end()
+    return
+  }
+  await wait(400); A.pour = 0
+  const result = await playFood(r)
+  A.sip = 1
+  if (result) finishDish(r, result)
+  await wait(500); A.sip = 0; end()
 }
 async function read() {
   if (!await begin('read', 6, 'read')) return

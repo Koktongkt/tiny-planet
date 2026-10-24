@@ -44,6 +44,8 @@ html.tp-touch .tp-ride{bottom:calc(env(safe-area-inset-bottom,0px) + 236px)}
 .tp-slot .nm{font-weight:500;text-align:center;line-height:1.1}
 .tp-slot .ct{position:absolute;top:4px;right:6px;font-weight:600;font-size:14px;color:#8a5a3c}
 .tp-slot .tag{font-size:11px;background:#9cc46a;color:#fffaf0;border-radius:9px;padding:0 6px;margin-top:2px}.tp-slot .tag.dim{background:#b8aca0}
+.tp-slot.perfect{box-shadow:inset 0 0 0 2px #e8a24a}
+.tp-slot .tp-spark{position:absolute;top:2px;left:4px;font-size:14px;color:#e8a24a;text-shadow:0 0 4px #fff;font-style:normal}
 .tp-empty{opacity:.7;font-size:15px}
 .tp-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:14px;opacity:.85}
 .tp-link{background:none;border:none;text-decoration:underline wavy #d9655b80;font-size:14px;padding:8px}

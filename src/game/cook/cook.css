@@ -1,0 +1,19 @@
+.tp-cook{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:#3a2a2033;touch-action:none;overscroll-behavior:none;pointer-events:auto;user-select:none;-webkit-user-select:none}
+.tp-cook-card{width:min(440px,94vw);max-height:min(620px,96vh);display:flex;flex-direction:column;padding:14px 16px 16px;color:#4a3a35;font-family:Fredoka,sans-serif}
+html.tp-touch .tp-cook-card{width:min(520px,100vw);height:min(640px,100%);max-height:100%;border-radius:0}
+.tp-cook-top{display:flex;align-items:center;gap:8px}
+.tp-cook-top h3{margin:0;flex:1;font-size:26px;font-weight:600;line-height:1.05}
+.tp-cook-top h3 small{display:block;font-size:14px;font-weight:500;opacity:.7}
+.tp-cook-skip{border:2.4px solid #4a3a35;border-radius:12px;background:#fff6d8;min-width:72px;min-height:44px;padding:6px 14px;font:600 16px Fredoka,sans-serif;color:#4a3a35;box-shadow:0 3px 0 #4a3a35}
+.tp-cook-stage{position:relative;height:280px;margin:8px 0 4px;touch-action:none}
+html.tp-touch .tp-cook-stage{flex:1;height:auto;min-height:240px}
+.tp-cook-pot,.tp-cook-pad{position:absolute;inset:0;touch-action:none}
+.tp-cook-meter{height:16px;border:2.2px solid #4a3a35;border-radius:10px;background:#fff8;overflow:hidden;margin-top:4px}
+.tp-cook-meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f2c46a,#e39a3c)}
+.tp-cook-meter.good i{background:linear-gradient(90deg,#b7d98a,#6f9e4f)}
+.tp-cook-hint{margin:8px 0 0;font-size:15px;text-align:center;opacity:.85}
+.tp-cook-toast{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 22px;font-size:22px;font-weight:600;text-align:center;min-width:180px;z-index:2}
+.tp-cook-toast b{font-size:15px;font-weight:500;opacity:.75}
+.tp-cook .spark{font-size:28px;color:#e8a24a}
+html.tp-cooking .tp-ui,html.tp-cooking .tp-pad,html.tp-cooking .tp-title,html.tp-cooking .mm-wrap{display:none!important}
+@media (prefers-reduced-motion: reduce){.tp-cook-card{animation:none}}

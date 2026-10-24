@@ -103,6 +103,6 @@ test('settings panel: text size and mute are applied and saved', async ({ page }
   await page.waitForTimeout(1200) // debounced save
   await page.reload(); await page.waitForFunction(() => window.__loadMarks?.game && !document.getElementById('ld') && window.__game?.L, null, { timeout: 200_000, polling: 500 }); await sbReady(page)
   const s = await page.evaluate(() => ({ v: JSON.parse(localStorage.getItem('tinyplanet.save.v1')).v, set: window.__game.G.s.settings, css: getComputedStyle(document.documentElement).getPropertyValue('--tpts').trim(), audio: JSON.parse(localStorage.getItem('tp-audio') || '{}') }))
-  expect(s.v).toBe(5); expect(s.set).toMatchObject({ muted: true, textScale: 1.15 }); expect(s.css).toBe('1.15'); expect(s.audio.muted).toBe(true)
+  expect(s.v).toBe(6); expect(s.set).toMatchObject({ muted: true, textScale: 1.15, autoCook: false }); expect(s.css).toBe('1.15'); expect(s.audio.muted).toBe(true)
   w.check()
 })

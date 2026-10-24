@@ -55,7 +55,17 @@ export function spend(energy, activity) {
   if (!c) return e
   return clamp(e - c)
 }
-export const restoreFor = (itemId) => RESTORE[itemId] || 0
+export function foodKey(itemId) {
+  return typeof itemId === 'string' && itemId.endsWith('_perfect') ? itemId.slice(0, -8) : itemId
+}
+// A perfect dish restores about a quarter more than the ordinary one.
+export const perfectRestore = (base) => Math.round(base * 1.25)
+export function restoreFor(itemId) {
+  const base = foodKey(itemId)
+  const n = RESTORE[base] || 0
+  if (!n || base === itemId) return n
+  return perfectRestore(n)
+}
 export function eatRestore(energy, itemId) {
   const n = restoreFor(itemId)
   const e = clamp(energy)
