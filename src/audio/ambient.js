@@ -8,7 +8,7 @@ import { createSfx } from './sfx.js'
 import { hookGame } from './hooks.js'
 
 const KEY = 'tp-audio', MUSIC_DELAY = 3000, TICK_MS = 100
-const MUSIC_LEVEL = 0.5, AMB_LEVEL = 0.9, SFX_LEVEL = 0.9 // the score sits under the ambience; SFX a touch forward
+const MUSIC_LEVEL = 1.4, AMB_LEVEL = 0.9, SFX_LEVEL = 1.8 // the score sits under the ambience; SFX a touch forward
 let SET = { volume: 0.8, music: 0.7, sfx: 0.8, muted: false }
 try { SET = { ...SET, ...JSON.parse(localStorage.getItem(KEY) || '{}') } } catch (e) {}
 const subs = new Set()

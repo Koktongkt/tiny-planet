@@ -9,7 +9,7 @@ import { THEMES, arrange } from './score.js'
 import { mtof, rng } from '../dsp.js'
 const XF = 2.2 // crossfade seconds between places
 const PAN = { piano: 0, celesta: 0.28, pizz: -0.3, harpsi: -0.22, guitar: 0.32, flute: 0.12, ocarina: 0.12, clarinet: -0.12, accordion: -0.25, strings: 0, wood: 0.35, tri: -0.4, shaker: 0.42, bells: 0.3 }
-const MAXV = 44 // simultaneous notes, all decks together (a note is ~2-5 nodes)
+const MAXV = 72 // simultaneous notes, all decks together (a note is ~2-5 nodes)
 
 export function createMusic(ctx, out, { staged = true } = {}) {
   const G = (v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g }
@@ -67,7 +67,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
     const b = set[best], rate = 2 ** ((m - best) / 12), s = ctx.createBufferSource(), g = ctx.createGain()
     s.buffer = b; s.playbackRate.value = rate
     g.gain.setValueAtTime(v * S.gain, t); g.gain.setTargetAtTime(0, t + dur, S.rel)
-    s.connect(g); g.connect(bus(d, k)); s.start(t); s.stop(Math.min(t + b.duration / rate, t + dur + S.rel * 4))
+    s.connect(g); g.connect(bus(d, k)); s.start(t); s.stop(Math.min(t + b.duration / rate, t + dur + S.rel * 3))
     voices++; stats.peakVoices = Math.max(stats.peakVoices, voices); s.onended = () => { voices--; s.disconnect(); g.disconnect() }
   }
   function live(d, k, t, m, dur, v) {
@@ -109,7 +109,7 @@ export function createMusic(ctx, out, { staged = true } = {}) {
           for (let b = Math.max(1, c.at); b < c.at + c.len; b++) for (const x of vc) play(d, p.stab, T(b), x, spb * 0.42, v * 0.42) } }
       else if (p.k === 'arp') { const n = M * 2; for (let s = 0; s < n; s++) { const b = s / 2, c = chordAt(bar, b), tones = [bassOf(c, tr, 48), ...voicing(c, tr, 57)], x = tones[p.pat[s % p.pat.length] % tones.length]; play(d, p.i, T(b), x, 1.6 * spb, v * (s === 0 ? 1.1 : 0.85)) } }
       else if (p.k === 'alb') { for (let s = 0; s < M * 2; s++) { const b = s / 2, c = chordAt(bar, b), vc = voicing(c, tr, 57, 3); play(d, p.i, T(b), vc[[0, 2, 1, 2][s % 4]], 0.45 * spb, v * (s % 2 ? 0.8 : 1)) } }
-      else if (p.k === 'strum') { for (let b = 0; b < M; b++) { const c = chordAt(bar, b), vc = voicing(c, tr, 55, 4); vc.forEach((x, j) => { play(d, p.i, T(b + 0.5) + j * 0.012, x, 0.4 * spb, v * 0.7); if (b % 2 === 0) play(d, p.i, T(b) + j * 0.014, x, 0.3 * spb, v * 0.4) }) } }
+      else if (p.k === 'strum') { for (let b = 0; b < M; b++) { const c = chordAt(bar, b), vc = voicing(c, tr, 55, 3); vc.forEach((x, j) => { play(d, p.i, T(b + 0.5) + j * 0.012, x, 0.35 * spb, v * 0.7); if (b === 0) play(d, p.i, T(b) + j * 0.014, x, 0.3 * spb, v * 0.45) }) } }
       else if (p.k === 'bass') { const c0 = bar.ch[0], r = bassOf(c0, tr)
         if (p.st === 'bar') play(d, p.i, T(0), r, M * spb, v)
         else if (p.st === 'half') { for (const c of bar.ch) play(d, p.i, T(c.at), bassOf(c, tr), c.len * spb * 0.95, v); if (bar.ch.length === 1) play(d, p.i, T(2), r + 7, 2 * spb * 0.9, v * 0.7) }

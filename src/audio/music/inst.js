@@ -30,7 +30,7 @@ export const SAMPLED = {
     for (let k = 1; k <= 24; k++) { const fk = f * k * (1 + 0.00008 * k * k); if (fk > 10500) break; partial(x, SR, fk, (0.15 + Math.abs(Math.sin(k * Math.PI * 0.12))) / k ** 0.75, T / (1 + 0.12 * (k - 1)), { att: 0.0008, ph: k }) }
     noise(x, SR, 0, 0.006, 0.08, 'hp', 3000, 3000, 0.7, { seed: m }); return tail(norm(x, 0.6), SR) } },
   // nylon guitar / harp: warm plucked series, plucked over the sound hole, long gentle ring
-  guitar: { roots: roots(40, 88), gain: 0.48, rel: 0.4, render(m) {
+  guitar: { roots: roots(40, 88), gain: 0.48, rel: 0.3, render(m) {
     const f = mtof(m), x = buf(2.2), T = 1.9 * (196 / f) ** 0.5
     for (let k = 1; k <= 14; k++) { const fk = f * k * (1 + 0.00012 * k * k); if (fk > 9000) break; partial(x, SR, fk, (0.08 + Math.abs(Math.sin(k * Math.PI * 0.19))) / k ** 1.3 * (1 + 0.6 * body(fk, 220, 120)), T / (1 + 0.32 * (k - 1)), { att: 0.002, ph: k * 1.3 }) }
     return tail(norm(x, 0.6), SR) } },

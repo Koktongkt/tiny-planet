@@ -31,7 +31,7 @@ export const DEF = {
   cast: [0.6, 0.3, (x, sr) => { noise(x, sr, 0, 0.38, 1, 'bp', 350, 2600, 1.4, { att: 0.16, dk: 3 }); noise(x, sr, 0.22, 0.25, 0.3, 'bp', 5200, 3000, 3, { dk: 4, seed: 4 }) }],
   plop: [0.3, 0.32, (x, sr) => { tone(x, sr, 260, 780, 0, 0.09, 0.8, { dk: 3, curve: 0.6 }); noise(x, sr, 0, 0.18, 0.3, 'lp', 2400, 600, 0.7, { dk: 5 }); tone(x, sr, 600, 1400, 0.06, 0.05, 0.25) }],
   bite: [0.6, 0.3, (x, sr) => { tone(x, sr, 420, 900, 0, 0.07, 0.7, { dk: 3 }); tone(x, sr, 480, 1000, 0.13, 0.07, 0.6, { dk: 3 }); noise(x, sr, 0, 0.1, 0.25, 'lp', 2000, 800, 0.7); chime(x, sr, N.E6, 0.02, 0.2, 0.4) }],
-  reel: [0.03, 0.09, (x, sr) => { noise(x, sr, 0, 0.012, 1, 'bp', 3600, 3600, 2, { att: 0.0005, dk: 8 }); partial(x, sr, 2100, 0.3, 0.006) }],
+  reel: [0.03, 0.14, (x, sr) => { noise(x, sr, 0, 0.012, 1, 'bp', 3600, 3600, 2, { att: 0.0005, dk: 8 }); partial(x, sr, 2100, 0.3, 0.006) }],
   splash: [0.6, 0.3, (x, sr) => { noise(x, sr, 0, 0.45, 1, 'lp', 3200, 900, 0.7, { att: 0.01, dk: 5 }); tone(x, sr, 300, 800, 0.05, 0.06, 0.5); tone(x, sr, 500, 1200, 0.12, 0.05, 0.3); noise(x, sr, 0.03, 0.2, 0.2, 'bp', 5000, 4000, 1, { grit: 0.8, seed: 3 }) }],
   catch: [1.5, 0.4, (x, sr) => { [N.F5, N.A5, N.C6, N.F6].forEach((m, i) => chime(x, sr, m, i * 0.08, 0.5, 1)); pluck(x, sr, 53, 0.24, 0.4); chime(x, sr, N.A6, 0.4, 0.15, 0.5) }],
   catch_rare: [2.1, 0.42, (x, sr) => { [N.F5, N.A5, N.C6, N.F6].forEach((m, i) => chime(x, sr, m, i * 0.07, 0.45, 0.8)); chime(x, sr, N.D6, 0.42, 0.4, 0.6); for (const m of [N.A5, N.C6, N.F6]) chime(x, sr, m, 0.6, 0.38, 1.4); pluck(x, sr, 41, 0.6, 0.5, 1); pluck(x, sr, 53, 0.6, 0.3, 1)
