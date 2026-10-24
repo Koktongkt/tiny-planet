@@ -9,7 +9,7 @@ import * as Gd from './garden.js'
 import * as Fr from './friendship.js'
 import * as Er from './errands.js'
 import * as Bf from './buffs.js'
-import { eatRestore } from './energy.js'
+import { eatRestore, foodKey } from './energy.js'
 import { PROFILES } from '../talk/profiles.js'
 const nm = (id) => (ITEMS[id] && ITEMS[id].name) || id
 const who = (npcId) => (PROFILES[npcId] && PROFILES[npcId].name) || npcId
@@ -92,12 +92,13 @@ export function deliverErrand(id) {
 }
 
 // ---------- food buffs ----------
-export const buffFor = (itemId) => Bf.FOOD[itemId] ? Bf.FOOD[itemId][0] : null
+export const buffFor = (itemId) => { const id = foodKey(itemId); return Bf.FOOD[id] ? Bf.FOOD[id][0] : null }
 export function eatFood(itemId) {
-  if (count(itemId) < 1 || !Bf.FOOD[itemId]) return null
+  const base = foodKey(itemId)
+  if (count(itemId) < 1 || !Bf.FOOD[base]) return null
   const id = Bf.eat(S().buffs, itemId, now()); take(itemId, 1); const b = S().buffs.find(x => x.id === id); b.src = itemId
   const before = S().energy, next = eatRestore(before, itemId); S().energy = next; const gain = Math.round(next - before)
-  window.__sbAct && window.__sbAct('feed'); toast(`Yum, ${nm(itemId)}!${gain > 0 ? ` +${gain} energy.` : ''} You feel ${Bf.BUFFS[id].name.toLowerCase()}: ${Bf.BUFFS[id].desc}.`, itemId, 3600); applyBuffs(); emit(); return id
+  window.__sbAct && window.__sbAct('feed'); toast(`Yum, ${nm(itemId)}!${gain > 0 ? ` +${gain} energy.` : ''} You feel ${Bf.BUFFS[id].name.toLowerCase()}: ${Bf.BUFFS[id].desc}.`, base, 3600); applyBuffs(); emit(); return id
 }
 export const activeBuffs = () => Bf.active(S().buffs, now()).map(b => ({ ...b, ...Bf.BUFFS[b.id], left: Math.max(0, Math.round(b.endsAt - now())) }))
 let lastSig = ''

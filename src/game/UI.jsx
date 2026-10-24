@@ -25,9 +25,10 @@ idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady 
 }))
 const SCM = { m: null }
 const StageCPanels = lazy(() => import('../systems/PanelsC.jsx'))
+const CookOverlay = lazy(() => import('./cook/ui.jsx'))
 const q = new URLSearchParams(location.search)
 const useGame = () => { const [, f] = useReducer(x => x + 1, 0); useEffect(() => subscribe(f), []) }
-const isModal = () => !!(G.ui.panel || G.ui.fish || G.ui.lock) // lock: Stage C train ride / photo mode
+const isModal = () => !!(G.ui.panel || G.ui.fish || G.ui.lock || G.ui.cook) // lock: Stage C train ride / photo mode; cook: Stage F overlay
 export const gameBlocksKeys = () => isModal() || !!G.ui.place
 
 function Clock() {
@@ -70,9 +71,14 @@ function Fly() {
   const hold = q.has('pick')
   return <>{list.map(f => <div key={f.id} className={'tp-fly' + (hold ? ' hold' : '')} style={{ '--x0': f.x + 'px', '--y0': f.y + 'px', '--x1': (bag ? bag.x + bag.width / 2 : innerWidth - 60) + 'px', '--y1': (bag ? bag.y + bag.height / 2 : 60) + 'px' }}><Icon id={f.item} size={46} /></div>)}</>
 }
-function Slot({ id, n, onClick, tag }) { return <button className={'tp-slot' + (onClick ? ' act' : '')} onClick={onClick} title={ITEMS[id].desc}><Icon id={id} size={52} /><span className="nm">{ITEMS[id].name}</span>{n != null && <span className="ct">×{n}</span>}{tag && <span className="tag">{tag}</span>}</button> }
+function Slot({ id, n, onClick, tag }) {
+  const perfect = typeof id === 'string' && id.endsWith('_perfect')
+  const icon = perfect ? id.slice(0, -8) : id
+  const item = ITEMS[id] || ITEMS[icon] || { name: id, desc: '' }
+  return <button className={'tp-slot' + (onClick ? ' act' : '') + (perfect ? ' perfect' : '')} onClick={onClick} title={item.desc}><Icon id={icon} size={52} />{perfect && <i className="tp-spark" aria-label="perfect">✦</i>}<span className="nm">{item.name}</span>{n != null && <span className="ct">×{n}</span>}{tag && <span className="tag">{tag}</span>}</button>
+}
 function Bag() {
-  const inv = Object.entries(G.s.inv).filter(([, n]) => n > 0), decor = inv.filter(([k]) => DECOR.includes(k)), food = inv.filter(([k]) => ITEMS[k].cat === 'food'), mats = inv.filter(([k]) => !DECOR.includes(k) && ITEMS[k].cat !== 'food')
+  const inv = Object.entries(G.s.inv).filter(([, n]) => n > 0), decor = inv.filter(([k]) => DECOR.includes(k)), food = inv.filter(([k]) => ITEMS[k] && ITEMS[k].cat === 'food'), mats = inv.filter(([k]) => ITEMS[k] && !DECOR.includes(k) && ITEMS[k].cat !== 'food')
   return <Panel title="Bag" icon="bag" onClose={() => setPanel(null)}>
     <h4>Tools</h4><div className="tp-row">{TOOLS.map(t => G.s.tools[t] ? <Slot key={t} id={t} tag="owned" /> : <div key={t} className="tp-slot ghost"><Icon id={t} size={52} dim /><span className="nm">{ITEMS[t].name}</span><span className="tag dim">not yet</span></div>)}</div>
     <h4>Gathered</h4>{mats.length ? <div className="tp-grid">{mats.map(([k, n]) => <Slot key={k} id={k} n={n} />)}</div> : <p className="tp-empty">Nothing yet — wander the forest and press E near things that shimmer.</p>}
@@ -154,7 +160,7 @@ export function GameUI() {
   useEffect(() => {
     const k = (e) => {
       if (e.repeat) return
-      if (G.ui.fish || G.ui.lock) return
+      if (G.ui.fish || G.ui.lock || G.ui.cook) return
       if (G.ui.place) { if (e.code === 'KeyR') { G.ui.place.rot += Math.PI / 4; emit() } else if (e.code === 'KeyE' || e.code === 'Enter') confirmPlace(); else if (e.code === 'Escape') { G.ui.place = null; emit() } return }
       if (e.code === 'Escape') { setPanel(null); G.ui.atBench = false }
       else if (e.code === 'KeyB' || e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); setPanel('bag') }
@@ -177,6 +183,7 @@ export function GameUI() {
       {SCM.m && <><button className="tp-btn paper tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal"><Icon id="book" size={46} /><span>Journal</span></button>
       <button className="tp-btn paper tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode"><Icon id="sun" size={46} /><span>Photo</span></button></>}</div>
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
+    {G.ui.cook && <Suspense fallback={null}><CookOverlay /></Suspense>}
     {panel === 'bag' && <Bag />}{panel === 'recipes' && <Recipes />}
     {SBM.m && <Suspense fallback={null}><StageBPanels /></Suspense>}
     {SCM.m && <Suspense fallback={null}><StageCPanels /></Suspense>}

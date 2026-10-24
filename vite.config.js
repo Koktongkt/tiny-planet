@@ -10,5 +10,5 @@ const VENDORS = [['three', /node_modules\/three\//], ['post', /node_modules\/(po
 export default defineConfig({
   base: './', plugins: [react(), loaderManifest(), noWebGL2Probe()],
   server: { fs: { allow: ['..'] }, headers: { 'Cache-Control': 'no-store' } },
-  build: { target: 'es2020', chunkSizeWarningLimit: 700, rollupOptions: { output: { manualChunks(id) { for (const [n, re] of VENDORS) if (re.test(id)) return 'vendor-' + n; if (/node_modules/.test(id)) return 'vendor-r3f' } } } },
+  build: { target: 'es2020', chunkSizeWarningLimit: 700, rollupOptions: { output: { manualChunks(id) { if (id.includes('/src/game/cook/')) return 'cook'; for (const [n, re] of VENDORS) if (re.test(id)) return 'vendor-' + n; if (/node_modules/.test(id)) return 'vendor-r3f' } } } },
 })

@@ -13,8 +13,9 @@ export const FOOD = {
   pine_tea: ['cozy', 180], teacup: ['cozy', 120], soup: ['cozy', 150],
   jam: ['lucky', 150], skyberry: ['lucky', 120],
 }
+const foodKey = (id) => (typeof id === 'string' && id.endsWith('_perfect') ? id.slice(0, -8) : id)
 export function eat(buffs, itemId, now) {
-  const f = FOOD[itemId]; if (!f) return null
+  const f = FOOD[itemId] || FOOD[foodKey(itemId)]; if (!f) return null
   const [id, dur] = f, b = buffs.find(x => x.id === id), endsAt = now + dur
   if (b) b.endsAt = Math.max(b.endsAt, endsAt); else buffs.push({ id, endsAt })
   return id
