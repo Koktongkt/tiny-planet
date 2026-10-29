@@ -41,7 +41,8 @@ export function startAudio(opts = {}) {
     E.master.gain.setTargetAtTime(on ? SET.volume * AMB_LEVEL : 0, ctx.currentTime, tc)
     E.music.gain.setTargetAtTime(SET.music * MUSIC_LEVEL, ctx.currentTime, 0.6)
     E.sfx.gain.setTargetAtTime((SET.sfx ?? 0.8) * SFX_LEVEL, ctx.currentTime, 0.1)
-    if (on) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}) } else { clearTimeout(sus); sus = setTimeout(() => { if (SET.muted || document.hidden || !SET.volume) ctx.suspend().catch(() => {}) }, 800) }
+    // 'interrupted' (iOS: call, Siri, lock screen) needs a resume too; arm.js retries on the next tap if this one is refused
+    if (on) { if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {}) } else { clearTimeout(sus); sus = setTimeout(() => { if (SET.muted || document.hidden || !SET.volume) ctx.suspend().catch(() => {}) }, 800) }
   }
   let sus = 0
 
@@ -66,7 +67,8 @@ export function startAudio(opts = {}) {
   }
   let iv = 0; E.ready.then(() => { if (API) { tick(); iv = setInterval(tick, TICK_MS) } }) // start ticking once the staged build is done
   const vis = () => applyMaster(0.15)
-  document.addEventListener('visibilitychange', vis)
+  document.addEventListener('visibilitychange', vis); addEventListener('pageshow', vis) // pageshow: back/forward-cache restore (iOS)
+  window.__tpAudioWant = () => !SET.muted && SET.volume > 0 && !document.hidden // arm.js: may a tap wake the context?
   applyMaster(1.2)
   D.buildMs = performance.now() - t0; E.ready.then(() => { D.readyMs = performance.now() - t0 })
 
@@ -77,7 +79,7 @@ export function startAudio(opts = {}) {
     mute(b = true) { SET.muted = !!b; persist(); applyMaster() },
     sfx: (name, o) => S.play(name, o),
     get settings() { return { ...SET } },
-    dispose() { clearInterval(iv); clearTimeout(musicT); clearTimeout(sus); document.removeEventListener('visibilitychange', vis); if (M) M.dispose(); E.dispose(); chip && chip.remove(); ctx.close().catch(() => {}); API = null; window.__audio = null; window.__tpAudio = null },
+    dispose() { clearInterval(iv); clearTimeout(musicT); clearTimeout(sus); document.removeEventListener('visibilitychange', vis); removeEventListener('pageshow', vis); window.__tpAudioWant = null; if (M) M.dispose(); E.dispose(); chip && chip.remove(); ctx.close().catch(() => {}); API = null; window.__audio = null; window.__tpAudio = null },
   }
   let chip = null
   if (opts.chip !== false) import('./chip.js').then(m => { if (API) chip = m.mountChip(API, getAudioSettings, onAudioSettings) })
