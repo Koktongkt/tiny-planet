@@ -1,13 +1,22 @@
 // Stage F smoke (desktop): play all four cook steps, Skip, a forced normal result, and Auto-cook.
 import { test, expect } from '@playwright/test'
 import { watchErrors, boot } from './helpers.js'
-import { cookReady, openStep, settled, playStirKey, playFlip, playPress, playPour } from './cookplay.js'
+import { cookReady, openStep, settled, expectCookFits, playStirKey, playFlip, playPress, playPour } from './cookplay.js'
 
 test('cooking: stir, flip, press, pour, skip, and auto-cook', async ({ page }) => {
   test.setTimeout(300_000)
   const w = watchErrors(page)
   await boot(page, '?enter&nosave&t=day&out&at=home&give=acorn:3,rice:1')
   await cookReady(page)
+
+  await page.setViewportSize({ width: 1280, height: 720 })
+  for (const step of ['press', 'stir', 'flip', 'pour']) {
+    await openStep(page, step, 0)
+    await expectCookFits(page)
+  }
+  await page.evaluate(() => window.__tpCook.skip())
+  await settled(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
 
   await playStirKey(page)
   await playFlip(page, { key: true })

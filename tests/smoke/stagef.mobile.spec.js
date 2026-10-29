@@ -1,7 +1,7 @@
 // Stage F smoke (mobile): the four steps by touch, and a full-screen panel that hides the HUD.
 import { test, expect } from '@playwright/test'
 import { watchErrors, boot } from './helpers.js'
-import { cookReady, openStep, settled, playStirTouch, playFlip, playPress, playPour } from './cookplay.js'
+import { cookReady, openStep, settled, expectCookFits, playStirTouch, playFlip, playPress, playPour } from './cookplay.js'
 
 test('cooking on a phone: touch steps, HUD hidden, controls return', async ({ page }) => {
   test.setTimeout(300_000)
@@ -37,6 +37,16 @@ test('cooking on a phone: touch steps, HUD hidden, controls return', async ({ pa
   expect(hud.overlapPad).toBe(false)
   expect(hud.centered).toBe(true)
   expect(hud.wide).toBe(true)
+
+  // Phone panel stays inside the screen, Skip included, and the step art stays off the meter.
+  for (const size of [{ width: 390, height: 664 }, { width: 360, height: 640 }, { width: 844, height: 390 }, { width: 640, height: 360 }]) {
+    await page.setViewportSize(size)
+    for (const step of ['press', 'stir']) {
+      await openStep(page, step, 0)
+      await expectCookFits(page)
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 664 })
   await page.locator('.tp-cook-skip').click()
   await settled(page)
   const back = await page.evaluate(() => ({
