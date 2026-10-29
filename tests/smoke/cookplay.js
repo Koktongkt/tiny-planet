@@ -5,17 +5,53 @@ export async function cookReady(page) {
   await page.waitForFunction(() => typeof window.__tpCook?.open === 'function', null, { timeout: 60_000 })
 }
 
-function reset(step) {
-  window.__tpCook.last = null
-  window.__tpCook.hold = false
-  window.__tpCook.force(null)
-  window.__tpCook.scale = 1
-  window.__tpCook.open(step)
+export async function openStep(page, step, scale = 1) {
+  await page.evaluate(({ step, scale }) => {
+    window.__tpCook.last = null
+    window.__tpCook.hold = false
+    window.__tpCook.force(null)
+    window.__tpCook.scale = scale
+    window.__tpCook.open(step)
+  }, { step, scale })
+  await page.waitForFunction(() => window.__tpCook.ready === true && document.querySelector('[data-step]'), null, { timeout: 30_000 })
 }
 
-export async function openStep(page, step) {
-  await page.evaluate(reset, step)
-  await page.waitForFunction(() => window.__tpCook.ready === true && document.querySelector('[data-step]'), null, { timeout: 30_000 })
+// Card, Skip, meter, and hint sit in the viewport, Skip's center hits the button, and step art stays off the meter.
+export async function expectCookFits(page) {
+  const fit = await page.evaluate(() => {
+    const vw = innerWidth, vh = innerHeight
+    const box = (el) => {
+      const b = el.getBoundingClientRect()
+      return { left: b.left, top: b.top, right: b.right, bottom: b.bottom, width: b.width, height: b.height }
+    }
+    const card = box(document.querySelector('.tp-cook-card'))
+    const skip = box(document.querySelector('.tp-cook-skip'))
+    const meter = box(document.querySelector('.tp-cook-meter'))
+    const hint = box(document.querySelector('.tp-cook-hint'))
+    const art = document.querySelector('[data-step]')
+    const overlap = (a, b) => a.right > b.left + 0.5 && a.left < b.right - 0.5 && a.bottom > b.top + 0.5 && a.top < b.bottom - 0.5
+    let artOverlap = false
+    for (const el of art.querySelectorAll('ellipse, circle, path, rect, polygon')) {
+      const b = el.getBoundingClientRect()
+      if (b.width > 1 && b.height > 1 && overlap(b, meter)) artOverlap = true
+    }
+    const hit = document.elementFromPoint(skip.left + skip.width / 2, skip.top + skip.height / 2)
+    const skipEl = document.querySelector('.tp-cook-skip')
+    const inside = (b) => b.left >= -0.5 && b.top >= -0.5 && b.right <= vw + 0.5 && b.bottom <= vh + 0.5
+    return {
+      step: art.dataset.step, vw, vh,
+      cardIn: inside(card), skipIn: inside(skip), meterIn: inside(meter), hintIn: inside(hint),
+      skipTap: !!(hit && skipEl.contains(hit)),
+      artOverlap, card, skip,
+    }
+  })
+  const where = `${fit.step} ${fit.vw}x${fit.vh}`
+  expect(fit.cardIn, `${where} card ${JSON.stringify(fit.card)}`).toBe(true)
+  expect(fit.skipIn, `${where} skip ${JSON.stringify(fit.skip)}`).toBe(true)
+  expect(fit.skipTap, `${where} skip tappable`).toBe(true)
+  expect(fit.meterIn, `${where} meter`).toBe(true)
+  expect(fit.hintIn, `${where} hint`).toBe(true)
+  expect(fit.artOverlap, `${where} art overlaps the progress bar`).toBe(false)
 }
 
 export async function settled(page) {
