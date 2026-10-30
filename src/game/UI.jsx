@@ -1,7 +1,9 @@
 // DOM side of Gather & Craft: HUD, prompt, bag, recipe book / bench, toasts, fly-to-bag, fishing minigame, placement bar.
 import { TOUCH } from '../touch.jsx'
+import { VIEW } from '../common.jsx'
+import { visible as noteVisible, STEP_IDS } from '../systems/tutorial.js'
 import React, { Suspense, lazy, useEffect, useReducer, useRef, useState } from 'react'
-import { G, subscribe, emit, setPanel, count, reset } from './store.js'
+import { G, subscribe, emit, setPanel, count, reset, toast } from './store.js'
 import { haveFor, known, owned, canCraft, craft, ITEMS, RECIPES } from './craft.js'
 import { TOOLS, DECOR } from './items.js'
 import { NEEDS_TOOL } from './recipes.js'
@@ -155,6 +157,55 @@ function PlaceBar() {
     <button className="go" onClick={confirmPlace}><Icon id="check" size={26} wash={false} /> Place</button>
     <button onClick={() => { G.ui.place = null; emit() }}><Icon id="close" size={24} wash={false} /> Esc</button></div>
 }
+const tapKey = (k, code) => { const o = { key: k, code, bubbles: true, cancelable: true }; window.dispatchEvent(new KeyboardEvent('keydown', o)); setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', o)), 60) }
+const MenuGlyph = () => <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 13.5h22M9 20h22M9 26.5h22" fill="none" stroke="#4a3a35" strokeWidth="2.4" strokeLinecap="round" /></svg>
+const MapGlyph = () => <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 8.5 12 6l8 3 7-2.5V23l-7 2.5-8-3-7 2.5Z" fill="#f1e2bf" stroke="#4a3a35" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 6v16.5M20 9v16.5" fill="none" stroke="#4a3a35" strokeWidth="1.4" /></svg>
+const PinGlyph = () => <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5.5a7 7 0 0 0-7 7c0 5.2 7 14 7 14s7-8.8 7-14a7 7 0 0 0-7-7z" fill="#d9655b" stroke="#4a3a35" strokeWidth="1.7" /><circle cx="16" cy="12.2" r="2.2" fill="#fffaf0" /></svg>
+const GlobeGlyph = () => <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="#4a3a35" strokeWidth="1.8" /><path d="M7.5 16h17M16 7c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9s1.2-6.4 3.6-9z" fill="none" stroke="#4a3a35" strokeWidth="1.5" /></svg>
+function DeskButtons() {
+  const n = Object.values(G.s.inv).reduce((a, b) => a + b, 0)
+  return <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{n > 0 && <i>{n}</i>}</button>
+    <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button>
+    <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button>
+    {SCM.m && <><button className="tp-btn paper tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal"><Icon id="book" size={46} /><span>Journal</span></button>
+    <button className="tp-btn paper tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode"><Icon id="sun" size={46} /><span>Photo</span></button></>}</div>
+}
+function PhoneMenu({ mode, onClose }) {
+  const walk = mode === 'follow'
+  const go = (fn) => { onClose(); fn() }
+  const tut = G.s.tutorial
+  const nDone = tut ? Object.values(tut.done || {}).filter(Boolean).length : 0
+  const openNote = () => { if (SCM.m) SCM.m.tutorial(true); else toast('Grandma is still folding her note.', 'leaf') }
+  const openMap = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', bubbles: true }))
+  return <>
+    <div className="tp-menu-back" onPointerDown={onClose} />
+    <div className="tp-menu paper" role="menu" aria-label="Menu">
+      <button className="tp-tile paper" onClick={() => go(() => setPanel('recipes'))}><Icon id="book" size={32} /><span>Recipes</span></button>
+      {SCM.m && <button className="tp-tile paper tp-jbtn" onClick={() => go(() => setPanel('journal'))} aria-label="Journal"><Icon id="book" size={32} /><span>Journal</span></button>}
+      {SCM.m && <button className="tp-tile paper tp-cambtn" onClick={() => go(() => SCM.m.photo(true))} aria-label="Photo mode"><Icon id="sun" size={32} /><span>Photo</span></button>}
+      <button className="tp-tile paper" onClick={() => go(openMap)} aria-label="Map"><MapGlyph /><span>Map</span></button>
+      <button className="tp-tile paper tp-notebtn" onClick={() => go(openNote)} aria-label="Grandma's note"><PinGlyph /><span>Grandma's note</span><small>{nDone}/{STEP_IDS.length}</small></button>
+      <button className="tp-tile paper tp-gearbtn" onClick={() => go(() => setPanel('settings'))} aria-label="Settings"><Icon id="gear" size={32} /><span>Settings</span></button>
+      <button className="tp-tile wide" onClick={() => go(() => tapKey('v', 'KeyV'))} aria-label={walk ? 'Planet view' : 'Back to walking'}><GlobeGlyph /><span>{walk ? 'Planet view' : 'Walk'}</span></button>
+      <p className="tp-menu-tip">Stick to walk · drag to look · ✋ to gather. Turn sideways for a wider view.</p>
+    </div>
+  </>
+}
+function PhoneCorners() {
+  const [menu, setMenu] = useState(false)
+  const [mode, setMode] = useState(VIEW.mode)
+  useEffect(() => { const i = setInterval(() => setMode(VIEW.mode), 300); const k = (e) => { if (e.key === 'Escape') setMenu(false) }; addEventListener('keydown', k); return () => { clearInterval(i); removeEventListener('keydown', k) } }, [])
+  const n = Object.values(G.s.inv).reduce((a, b) => a + b, 0)
+  const tut = G.s.tutorial
+  const dot = !!(tut && noteVisible(tut, G.s.day, false) && !tut.open)
+  return <>
+    <div className="tp-btns">
+      <button className="tp-btn paper tp-bagbtn" aria-label="Bag" onClick={() => { setMenu(false); setPanel('bag') }}><Icon id="bag" size={28} /><span>Bag</span>{n > 0 && <i>{n}</i>}</button>
+      <button className="tp-btn paper tp-menubtn" aria-label={dot ? 'Menu, Grandma\'s note is waiting' : 'Menu'} aria-expanded={menu} onClick={() => setMenu(v => !v)}><MenuGlyph />{dot && <i className="tp-dot" />}</button>
+    </div>
+    {menu && <PhoneMenu mode={mode} onClose={() => setMenu(false)} />}
+  </>
+}
 export function GameUI() {
   useGame()
   useEffect(() => {
@@ -177,11 +228,7 @@ export function GameUI() {
   return <div className="tp-ui">
     <IconDefs />
     <Clock /><RideChip />
-    <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{Object.values(G.s.inv).reduce((a, b) => a + b, 0) > 0 && <i>{Object.values(G.s.inv).reduce((a, b) => a + b, 0)}</i>}</button>
-      <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button>
-      <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button>
-      {SCM.m && <><button className="tp-btn paper tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal"><Icon id="book" size={46} /><span>Journal</span></button>
-      <button className="tp-btn paper tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode"><Icon id="sun" size={46} /><span>Photo</span></button></>}</div>
+    {TOUCH ? <PhoneCorners /> : <DeskButtons />}
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
     {G.ui.cook && <Suspense fallback={null}><CookOverlay /></Suspense>}
     {panel === 'bag' && <Bag />}{panel === 'recipes' && <Recipes />}

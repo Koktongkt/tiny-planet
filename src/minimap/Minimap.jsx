@@ -59,8 +59,9 @@ function paintBase(W, H, dpr) {
   return { c, X, Y }
 }
 
+const phone = () => typeof document !== 'undefined' && document.documentElement.classList.contains('tp-touch')
 export default function Minimap() {
-  const ref = useRef(), [on, setOn] = useState(true), [idle, setIdle] = useState(false), [size, setSize] = useState(null)
+  const ref = useRef(), [on, setOn] = useState(() => !phone()), [idle, setIdle] = useState(false), [size, setSize] = useState(null)
   useEffect(() => { const k = (e) => { if (e.key?.toLowerCase() !== 'm' || /input|textarea/i.test(e.target?.tagName || '') || document.querySelector('.tp-talk, .talk-open')) return; setOn(v => !v) }; addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [])
   useEffect(() => { const fit = () => { const el = ref.current; if (el) setSize([el.clientWidth, el.clientHeight]) }; fit(); addEventListener('resize', fit); return () => removeEventListener('resize', fit) }, [on])
   useEffect(() => { if (!on || !size || !size[0]) return; const [W, H] = size, dpr = Math.min(2, devicePixelRatio || 1), cv = ref.current; cv.width = W * dpr; cv.height = H * dpr
@@ -75,8 +76,9 @@ export default function Minimap() {
       const a = Math.atan2(fe, fn); g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = '#d9534f'; g.strokeStyle = INK; g.lineWidth = 0.9; g.beginPath(); g.moveTo(0, -6); g.lineTo(4, 4); g.lineTo(0, 2); g.lineTo(-4, 4); g.closePath(); g.fill(); g.stroke(); g.restore()
       window.__minimap.ticks++; window.__minimap.lastMs = +(performance.now() - s).toFixed(2) }
     const id = setInterval(tick, 100); tick(); return () => clearInterval(id) }, [on, size])
-  return <div className={'mm-wrap' + (idle ? ' mm-idle' : '') + (TOUCH ? ' mm-touch' : '')}>
+  if (phone() && !on) return null
+  return <div className={'mm-wrap' + (idle ? ' mm-idle' : '') + ((TOUCH || phone()) ? ' mm-touch' : '')}>
     {on && <canvas ref={ref} className="mm-map" aria-label="map" />}
-    <button className="mm-btn" title="Map (M)" onClick={() => setOn(v => !v)} onPointerDown={e => e.stopPropagation()}>{on ? '×' : '🗺'}</button>
+    <button className="mm-btn" title="Map (M)" aria-label={on ? 'Close map' : 'Map'} onClick={() => setOn(v => !v)} onPointerDown={e => e.stopPropagation()}>{on ? '×' : '🗺'}</button>
   </div>
 }

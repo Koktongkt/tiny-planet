@@ -4,6 +4,9 @@
 .tpt-note::before{content:'';position:absolute;left:50%;top:-11px;width:84px;height:24px;margin-left:-42px;transform:rotate(-4deg);
   background:repeating-linear-gradient(90deg,#e8a6a0cc 0 6px,#f2c2bccc 6px 12px);box-shadow:0 1px 2px #2a1e1440;border-radius:2px;clip-path:polygon(3% 0,97% 4%,100% 50%,96% 100%,2% 96%,0 52%)}
 .tpt-head{display:flex;align-items:flex-start;gap:8px;margin:2px 0 6px}
+.tpt-play{margin:0 0 8px;padding:2px 2px 8px;border-bottom:1px dashed #3b2f2240}
+.tpt-play b{display:block;font:500 22px/1.05 Fredoka,sans-serif}
+.tpt-play p{margin:4px 0 0;font:15px/1.35 Fredoka,sans-serif;opacity:.85}
 .tpt-head h3{flex:1;margin:0;font:italic 600 27px/1.05 TPSerif,"Cormorant Garamond",Georgia,serif}
 .tpt-head small{display:block;font-size:16px;font-weight:500;opacity:.7;margin-top:3px}
 .tpt-sprig{width:44px;height:44px;flex:none;margin:-4px -2px 0 -6px}
