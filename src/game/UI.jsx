@@ -45,7 +45,7 @@ function Clock() {
 function RideChip() {
   const m = SEM.m; if (!m) return null
   const mode = m.hudPrompt(); if (!mode) return null
-  return <button className="tp-ride paper" onClick={() => m.toggle()}><span className="key">R</span><Icon id="bike" size={26} /><span>{mode === 'off' ? 'Hop off' : 'Ride'}</span></button>
+  return <button className="tp-ride paper" onClick={() => m.toggle()}>{!TOUCH && <span className="key">R</span>}<Icon id="bike" size={26} /><span>{mode === 'off' ? 'Hop off' : 'Ride'}</span></button>
 }
 function Prompt() {
   const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock) return null
@@ -58,11 +58,11 @@ function Prompt() {
   const need = n.kind === 'spot' && NEEDS_TOOL[n.spot.item]; const lack = need && !G.s.tools[need]
   // round6: compact chips (pets): a small main chip, plus an optional secondary chip (e.g. throw a stick, key F)
   if (n.chip) return <div className="tp-chips">
-    <button className="tp-chip paper" onClick={() => GAME.actions.act?.()}><span className="key">E</span><Icon id={icon} size={24} /><span>{verb}{name ? <> <b>{name}</b></> : null}</span></button>
-    {n.alt && <button className="tp-chip tp-chip-alt paper" onClick={() => n.alt.act()}><span className="key">{n.alt.key || 'F'}</span><Icon id={n.alt.icon} size={20} /><span>{n.alt.verb}</span></button>}
+    <button className="tp-chip paper" onClick={() => GAME.actions.act?.()}>{!TOUCH && <span className="key">E</span>}<Icon id={icon} size={24} /><span>{verb}{name ? <> <b>{name}</b></> : null}</span></button>
+    {n.alt && <button className="tp-chip tp-chip-alt paper" onClick={() => n.alt.act()}>{!TOUCH && <span className="key">{n.alt.key || 'F'}</span>}<Icon id={n.alt.icon} size={20} /><span>{n.alt.verb}</span></button>}
   </div>
   return <button className={'tp-prompt paper' + (lack ? ' lack' : '')} onClick={() => GAME.actions.act?.()}>
-    <span className="key">E</span><Icon id={icon} size={38} /><span>{verb} <b>{name}</b>{lack && <em>needs {ITEMS[need].name}</em>}</span>
+    {!TOUCH && <span className="key">E</span>}<Icon id={icon} size={38} /><span>{verb} <b>{name}</b>{lack && <em>needs {ITEMS[need].name}</em>}</span>
   </button>
 }
 function Toasts() { return <div className="tp-toasts">{G.ui.toasts.map(t => <div key={t.id} className="tp-toast paper"><Icon id={t.icon || 'leaf'} size={30} /><span>{t.text}</span></div>)}</div> }
@@ -153,15 +153,15 @@ function Fishing() {
 function PlaceBar() {
   const p = G.ui.place; if (!p) return null
   return <div className="tp-placebar paper"><Icon id={p.item} size={40} /><span>Placing <b>{ITEMS[p.item].name}</b></span>
-    <button onClick={() => { p.rot += Math.PI / 4; emit() }}><Icon id="rotate" size={26} wash={false} /> R</button>
+    <button onClick={() => { p.rot += Math.PI / 4; emit() }}><Icon id="rotate" size={26} wash={false} />{TOUCH ? ' Turn' : ' R'}</button>
     <button className="go" onClick={confirmPlace}><Icon id="check" size={26} wash={false} /> Place</button>
-    <button onClick={() => { G.ui.place = null; emit() }}><Icon id="close" size={24} wash={false} /> Esc</button></div>
+    <button onClick={() => { G.ui.place = null; emit() }}><Icon id="close" size={24} wash={false} />{TOUCH ? ' Cancel' : ' Esc'}</button></div>
 }
 const tapKey = (k, code) => { const o = { key: k, code, bubbles: true, cancelable: true }; window.dispatchEvent(new KeyboardEvent('keydown', o)); setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', o)), 60) }
 const MenuGlyph = () => <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 13.5h22M9 20h22M9 26.5h22" fill="none" stroke="#4a3a35" strokeWidth="2.4" strokeLinecap="round" /></svg>
-const MapGlyph = () => <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 8.5 12 6l8 3 7-2.5V23l-7 2.5-8-3-7 2.5Z" fill="#f1e2bf" stroke="#4a3a35" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 6v16.5M20 9v16.5" fill="none" stroke="#4a3a35" strokeWidth="1.4" /></svg>
-const PinGlyph = () => <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5.5a7 7 0 0 0-7 7c0 5.2 7 14 7 14s7-8.8 7-14a7 7 0 0 0-7-7z" fill="#d9655b" stroke="#4a3a35" strokeWidth="1.7" /><circle cx="16" cy="12.2" r="2.2" fill="#fffaf0" /></svg>
-const GlobeGlyph = () => <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="#4a3a35" strokeWidth="1.8" /><path d="M7.5 16h17M16 7c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9s1.2-6.4 3.6-9z" fill="none" stroke="#4a3a35" strokeWidth="1.5" /></svg>
+const MapGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><path d="M5 8.5 12 6l8 3 7-2.5V23l-7 2.5-8-3-7 2.5Z" fill="#f1e2bf" stroke="#4a3a35" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 6v16.5M20 9v16.5" fill="none" stroke="#4a3a35" strokeWidth="1.4" /></svg>
+const PinGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><path d="M16 5.5a7 7 0 0 0-7 7c0 5.2 7 14 7 14s7-8.8 7-14a7 7 0 0 0-7-7z" fill="#d9655b" stroke="#4a3a35" strokeWidth="1.7" /><circle cx="16" cy="12.2" r="2.2" fill="#fffaf0" /></svg>
+const GlobeGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="#4a3a35" strokeWidth="1.8" /><path d="M7.5 16h17M16 7c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9s1.2-6.4 3.6-9z" fill="none" stroke="#4a3a35" strokeWidth="1.5" /></svg>
 function DeskButtons() {
   const n = Object.values(G.s.inv).reduce((a, b) => a + b, 0)
   return <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{n > 0 && <i>{n}</i>}</button>
@@ -180,13 +180,15 @@ function PhoneMenu({ mode, onClose }) {
   return <>
     <div className="tp-menu-back" onPointerDown={onClose} />
     <div className="tp-menu paper" role="menu" aria-label="Menu">
+      <div className="tp-menu-grid">
       <button className="tp-tile paper" onClick={() => go(() => setPanel('recipes'))}><Icon id="book" size={32} /><span>Recipes</span></button>
       {SCM.m && <button className="tp-tile paper tp-jbtn" onClick={() => go(() => setPanel('journal'))} aria-label="Journal"><Icon id="book" size={32} /><span>Journal</span></button>}
       {SCM.m && <button className="tp-tile paper tp-cambtn" onClick={() => go(() => SCM.m.photo(true))} aria-label="Photo mode"><Icon id="sun" size={32} /><span>Photo</span></button>}
       <button className="tp-tile paper" onClick={() => go(openMap)} aria-label="Map"><MapGlyph /><span>Map</span></button>
       <button className="tp-tile paper tp-notebtn" onClick={() => go(openNote)} aria-label="Grandma's note"><PinGlyph /><span>Grandma's note</span><small>{nDone}/{STEP_IDS.length}</small></button>
       <button className="tp-tile paper tp-gearbtn" onClick={() => go(() => setPanel('settings'))} aria-label="Settings"><Icon id="gear" size={32} /><span>Settings</span></button>
-      <button className="tp-tile wide" onClick={() => go(() => tapKey('v', 'KeyV'))} aria-label={walk ? 'Planet view' : 'Back to walking'}><GlobeGlyph /><span>{walk ? 'Planet view' : 'Walk'}</span></button>
+      <button className="tp-tile paper" onClick={() => go(() => tapKey('v', 'KeyV'))} aria-label={walk ? 'Planet view' : 'Back to walking'}><GlobeGlyph /><span>{walk ? 'Planet view' : 'Walk'}</span></button>
+      </div>
       <p className="tp-menu-tip">Stick to walk · drag to look · ✋ to gather. Turn sideways for a wider view.</p>
     </div>
   </>

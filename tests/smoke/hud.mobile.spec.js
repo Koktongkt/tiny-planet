@@ -30,6 +30,41 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
   for (const name of ['Recipes', 'Journal', 'Photo mode', 'Map', "Grandma's note", 'Settings', 'Planet view']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
   }
+  for (const size of [{ width: 390, height: 664 }, { width: 360, height: 640 }, { width: 844, height: 390 }, { width: 640, height: 360 }]) {
+    await page.setViewportSize(size)
+    await page.waitForTimeout(100)
+    const info = await page.evaluate(() => {
+      const menu = document.querySelector('.tp-menu')
+      const tiles = [...menu.querySelectorAll('.tp-tile')]
+      const mb = menu.getBoundingClientRect()
+      return {
+        n: tiles.length,
+        overflow: getComputedStyle(menu).overflowY,
+        menuTop: mb.top, menuBottom: mb.bottom, vh: innerHeight,
+        boxes: tiles.map(t => {
+          const b = t.getBoundingClientRect(), s = t.querySelector('svg').getBoundingClientRect()
+          return { w: b.width, h: b.height, iw: s.width, ih: s.height, bottom: b.bottom }
+        }),
+      }
+    })
+    expect(info.n, `${size.width}x${size.height}`).toBe(7)
+    expect(info.overflow).not.toBe('auto')
+    expect(info.overflow).not.toBe('scroll')
+    expect(info.menuTop).toBeGreaterThanOrEqual(0)
+    expect(info.menuBottom).toBeLessThanOrEqual(info.vh + 1)
+    const span = (xs) => Math.max(...xs) - Math.min(...xs)
+    expect(span(info.boxes.map(b => b.w)), 'tile width').toBeLessThanOrEqual(1.5)
+    expect(span(info.boxes.map(b => b.h)), 'tile height').toBeLessThanOrEqual(1.5)
+    expect(span(info.boxes.map(b => b.iw)), 'icon width').toBeLessThanOrEqual(1.5)
+    expect(span(info.boxes.map(b => b.ih)), 'icon height').toBeLessThanOrEqual(1.5)
+    for (const b of info.boxes) {
+      expect(b.h).toBeGreaterThanOrEqual(44)
+      expect(b.bottom).toBeLessThanOrEqual(info.vh + 1)
+      expect(b.iw).toBeGreaterThan(16)
+      expect(b.iw).toBeLessThan(40)
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 664 })
   await page.getByRole('button', { name: "Grandma's note", exact: true }).tap()
   await expect(page.locator('.tpt-play')).toContainText('Tiny Planet')
   await expect(page.locator('.tpt-play')).toContainText('Stick to walk')
@@ -54,7 +89,15 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
 
   await page.evaluate(() => { window.__game.G.s.tools.bike = true; window.__tp.emit() })
   await expect(page.locator('.tp-ride')).toBeVisible()
-  await expect(page.locator('.tp-ride .key')).toBeHidden()
+  await expect(page.locator('.tp-ride .key')).toHaveCount(0)
+  await expect(page.locator('.tp-ride')).toHaveAccessibleName(/^(Ride|Hop off)$/)
+  expect(await page.evaluate(() => [...document.querySelectorAll('.key')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.textContent))).toEqual([])
+  await page.waitForFunction(() => window.__dog?.n, null, { timeout: 30_000 })
+  await page.evaluate(() => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
+  const pet = page.locator('.tp-chip').first()
+  await expect(pet).toBeVisible({ timeout: 20_000 })
+  await expect(pet.locator('.key')).toHaveCount(0)
+  await expect(pet).not.toHaveAccessibleName(/EPet|^E/)
   const ride = await page.locator('.tp-ride').boundingBox()
   expect(ride.height).toBeGreaterThanOrEqual(44)
 
