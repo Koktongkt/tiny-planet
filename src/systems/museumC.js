@@ -13,7 +13,9 @@ export const MLAYER = 6
 export const MU = { inside: false, busy: false, obj: null, mp: { x: MDOOR.x, z: MDOOR.z + 0.3, yaw: 0 }, camYaw: Math.PI, prevCam: null }
 if (typeof window !== 'undefined') window.__museum = MU
 const UP = new THREE.Vector3(0, 1, 0), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _q = new THREE.Quaternion()
-function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); const f = () => { const k = Math.min(1, (performance.now() - t0) / ms); HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); if (k < 1) requestAnimationFrame(f); else res() }; f() }) }
+// rAF paints the iris. The timer finishes the fade on wall-clock time so a stalled frame (or a hidden tab,
+// where rAF is paused) cannot leave the door lock or HOME.fade stuck after the fade's own duration.
+function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); let done = false; const step = () => { if (done) return; const k = Math.min(1, (performance.now() - t0) / ms); if (k < 1) { HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); requestAnimationFrame(step); return } done = true; HOME.fade = v; res() }; setTimeout(step, ms); step() }) }
 export function resolveM(p, r = 0.09) {
   p.x = Math.min(MUSEUM.x1 - r, Math.max(MUSEUM.x0 + r, p.x)); p.z = Math.min(MUSEUM.z1 - r, Math.max(MUSEUM.z0 + r, p.z))
   for (const b of MBLOCKS) { const cx = Math.min(b.x1, Math.max(b.x0, p.x)), cz = Math.min(b.z1, Math.max(b.z0, p.z)), dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz)
@@ -48,20 +50,23 @@ function cam(camera, g, dt) {
   return true
 }
 function layersOn(scene) { scene.traverse(o => { if (o.isLight) o.layers.enable(MLAYER) }); if (HOME.playerObj) HOME.playerObj.traverse(o => o.layers.enable(MLAYER)) }
+const fading = () => HOME.fade > 0.02 // iris still moving: don't start a second door fade on top of this one
 export async function enter(scene) {
-  if (MU.busy || MU.inside || HOME.inside) return; MU.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300))
+  if (MU.busy || MU.inside || HOME.inside || fading()) return; MU.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300))
   await fadeTo(1, 380)
   layersOn(scene); if (MU.ray) MU.ray.layers.enable(MLAYER); Object.assign(MU.mp, { x: MDOOR.x, z: MDOOR.z + 0.3, yaw: 0.15 }); snap = 3
   if (HOME.camera !== cam) { MU.prevCam = HOME.camera; HOME.camera = cam }
   MU.inside = true; HOME.alt = step; G.near = null; emit()
-  await fadeTo(0, 520); MU.busy = false
+  MU.busy = false // lock ends with the cut, not the iris reopening (that can sit behind a multi-second frame)
+  await fadeTo(0, 520)
 }
 export async function exit() {
-  if (MU.busy || !MU.inside) return; MU.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300))
+  if (MU.busy || !MU.inside || fading()) return; MU.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300))
   await fadeTo(1, 380)
   MU.inside = false; HOME.alt = null; if (MU.ray) MU.ray.layers.disable(MLAYER); G.near = null; const P = window.__player; if (P) { P.target = null; P.fwd.negate() } // step back out, facing away from the door
   window.__snap = 1; setTimeout(() => { window.__snap = 0 }, 200); emit()
-  await fadeTo(0, 520); MU.busy = false
+  MU.busy = false
+  await fadeTo(0, 520)
 }
 // Hoshino's catalogue card for a slot: 'donate' when she carries one that isn't on display yet, else 'inspect'
 export function openSlot(id) {

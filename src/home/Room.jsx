@@ -24,24 +24,28 @@ export const W = { wall: '#f6e7cc', wain: '#b98a5a', wood: '#a8744c', dark: '#7a
 
 // ---------- transitions ----------
 let snapFrames = 0
-function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); const f = () => { const k = Math.min(1, (performance.now() - t0) / ms); HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); if (k < 1) requestAnimationFrame(f); else res() }; f() }) }
+// rAF paints the iris; the timer finishes it on wall-clock time so a stalled frame cannot hold the door lock.
+function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); let done = false; const step = () => { if (done) return; const k = Math.min(1, (performance.now() - t0) / ms); if (k < 1) { HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); requestAnimationFrame(step); return } done = true; HOME.fade = v; res() }; setTimeout(step, ms); step() }) }
+const fading = () => HOME.fade > 0.02
 HOME.enter = async () => {
-  if (HOME.busy || HOME.inside) return; HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
+  if (HOME.busy || HOME.inside || fading()) return; HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
   await fadeTo(1, 380)
   HOME.inside = true; Object.assign(HOME.hp, { x: DOOR.x, z: DOOR.z + 0.28, yaw: Math.PI * 0.92, target: null }); snapFrames = 3
   HOME.onEnter && HOME.onEnter()
   setTimeout(() => { HOME.doorOpen = 0 }, 350)
-  await fadeTo(0, 520); HOME.busy = false
+  HOME.busy = false // lock ends with the cut; the iris reopening must not wait on the next stalled frame
+  await fadeTo(0, 520)
 }
 HOME.exit = async () => {
-  if (HOME.busy || !HOME.inside) return; HOME.needDog && HOME.needDog(); HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
+  if (HOME.busy || !HOME.inside || fading()) return; HOME.needDog && HOME.needDog(); HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
   await fadeTo(1, 380)
   const P = HOME.P; HOME.inside = false
   if (P && HOME.outN) { P.n.copy(HOME.outN); const f = HOME.outN.clone().sub(HOME.homeN); P.fwd.copy(f.addScaledVector(P.n, -f.dot(P.n)).normalize()).applyAxisAngle(P.n, 1.25); /* step out along the porch so the follow camera clears the house */ P.target = null; P.h = 0; P.vy = 0 }
   HOME.snapOut = 6; HOME.snap0 = window.__snap
   HOME.onExit && HOME.onExit()
   setTimeout(() => { HOME.doorOpen = 0 }, 300)
-  await fadeTo(0, 520); HOME.busy = false
+  HOME.busy = false
+  await fadeTo(0, 520)
 }
 // ---------- her movement inside (keyboard is tank-style like outdoors; the touch stick is camera-relative) ----------
 HOME.stepInside = (dt, KEYS, P, obj) => {
