@@ -91,7 +91,8 @@ let FX = null
 
 // ---------- the activity runner ----------
 const wait = (ms) => new Promise(r => setTimeout(r, ms))
-function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); const f = () => { const k = Math.min(1, (performance.now() - t0) / ms); HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); if (k < 1) requestAnimationFrame(f); else res() }; f() }) }
+// same iris deadline as the house door: rAF paints, the timer finishes the fade if frames stall (sleep / nap)
+function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); let done = false; const step = () => { if (done) return; const k = Math.min(1, (performance.now() - t0) / ms); if (k < 1) { HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); requestAnimationFrame(step); return } done = true; HOME.fade = v; res() }; setTimeout(step, ms); step() }) }
 const A = { doing: null, dish: 0, watered: () => (G.s.watered = G.s.watered || {}) }
 function placeAt(x, z, yaw) { Object.assign(HOME.hp, { x, z, yaw, target: null }) }
 function pose(o) { HOME.pose = { k: 0, goal: 1, rate: 6, y: 0, tilt: 0, ...o } }
