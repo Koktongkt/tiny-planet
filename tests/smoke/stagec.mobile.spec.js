@@ -6,10 +6,14 @@ test('touch: tutorial note, journal + photo chips, photo mode hides the pads, re
   test.setTimeout(420_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=lake&give=rod')
   await page.waitForFunction(() => window.__scReady && window.__sc && window.__scLayout, null, { timeout: 150_000, polling: 250 })
-  await expect(page.locator('.tpt-slip')).toBeVisible() // folded on touch
-  await page.locator('.tpt-slip').tap(); await expect(page.locator('.tpt-note')).toBeVisible()
+  await expect(page.locator('.tpt-slip')).toHaveCount(0) // phone: the note is in the Menu, not a corner slip
+  await page.locator('.tp-menubtn').tap()
+  await page.locator('.tp-notebtn').tap(); await expect(page.locator('.tpt-note')).toBeVisible()
+  await expect(page.locator('.tpt-play')).toContainText('Tiny Planet')
   await page.locator('.tpt-x').tap(); await expect(page.locator('.tpt')).toBeHidden()
+  await page.locator('.tp-menubtn').tap()
   await page.locator('.tp-jbtn').tap(); await expect(page.locator('.jn-veil')).toBeVisible(); await page.locator('.jn-veil .tpx-x').tap()
+  await page.locator('.tp-menubtn').tap()
   await page.locator('.tp-cambtn').tap()
   await page.waitForFunction(() => document.documentElement.classList.contains('tp-photo'), null, { timeout: 30_000 })
   await expect(page.locator('.tp-pad')).toBeHidden(); await expect(page.locator('.tpp-shutter')).toBeVisible()

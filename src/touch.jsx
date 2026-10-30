@@ -1,7 +1,8 @@
-// Touch controls: virtual stick + Jump / Action / View buttons, one-finger camera drag, pinch zoom.
+// Touch controls: virtual stick + Jump / Action, one-finger camera drag, pinch zoom.
 // Shown on touch / coarse-pointer devices, or forced with ?touch=1 (?touch=0 forces them off).
 // The stick feeds PAD (read by stepPlayer next to the keyboard); the buttons send the same key events the
-// keyboard would (Space / E / V), so jumping, gathering, fishing, placing and the bench all share one code path.
+// keyboard would (Space / E), so jumping, gathering, fishing, placing and the bench all share one code path.
+// Planet view (V) lives in the phone Menu, in the lazy game HUD, so the pad stays three controls.
 import React, { useEffect, useRef, useState } from 'react'
 import { q, VIEW } from './common.jsx'
 import './touch.css'
@@ -50,7 +51,6 @@ function RotateHint() {
 const ICON = {
   hand: <svg viewBox="0 0 40 40"><path d="M14.2 21.8V11.6c0-1.5 1-2.6 2.4-2.6s2.3 1.1 2.3 2.5l.1 8.3M18.9 19.6V8.9c0-1.5 1-2.5 2.4-2.5 1.3 0 2.3 1 2.3 2.4v10.6M23.6 19.5v-8.2c0-1.4 1-2.4 2.3-2.4 1.4 0 2.3 1.1 2.3 2.5l-.1 12.4c-.1 6.4-4.3 10.2-9.6 10.2-4.2 0-6.6-2-8.7-5.3l-3.7-5.9c-.8-1.2-.4-2.6.8-3.2 1.1-.6 2.3-.3 3.1.7l2.2 2.8" /><path className="soft" d="M17.2 30.1c1.4 1 3.1 1.3 4.7 1" /></svg>,
   foot: <svg viewBox="0 0 40 40"><path d="M16.4 6.8c-.3 4.6-.1 9.7.7 14.4.5 3-.2 5.2-1.8 7.2-1.3 1.7-1.6 3.6-.5 5 1.2 1.6 3.6 1.9 7.1 1.6l6.7-.6c2.1-.2 3.2-1.5 2.8-3.1-.4-1.5-2-2.3-4.4-2.8-2.9-.6-4.6-2-5.1-4.7-.6-3.6-.7-9.2-.6-14.2" /><path className="soft" d="M22.8 31.3l1-2.4M26.4 31.6l.6-2.2" /><path className="soft" d="M9.4 15.2c1.6-1.6 3-2.3 4.5-2.6M8.6 20.6c1.6-.9 3.1-1.2 4.8-1.1" /></svg>,
-  globe: <svg viewBox="0 0 40 40"><path d="M20.3 8.6c6.5.1 11.4 5.3 11.2 11.8-.2 6.4-5.4 11.2-11.8 11-6.2-.2-11-5.3-10.8-11.6.2-6.2 5.2-11.3 11.4-11.2z" /><path className="soft" d="M9.4 18.6c3.6 1.4 8.4 1.9 13.2 1.4 3.3-.3 6.4-1 8.6-2M19.8 8.9c-3.2 3.6-4.6 8.2-4.1 13 .4 3.6 1.9 6.9 4.3 9.4" /></svg>,
 }
 // auto-hide: the pad fades to nothing after a few idle seconds and comes back on any touch.
 // Faded controls stay hit-testable, so the first touch both reveals them and works (stick / buttons respond at once).
@@ -79,7 +79,6 @@ export function TouchPad() {
     <div className="tp-acts">
       {walk && <Btn cls="tp-jump" label="Jump" icon={ICON.foot} onPress={() => tapKey(' ', 'Space')} />}
       {walk && <Btn cls="tp-act" label="Action" aria="Gather, talk or use" icon={ICON.hand} onPress={() => tapKey('e', 'KeyE')} />}
-      <Btn cls="tp-view" label={walk ? 'Planet' : 'Walk'} aria={walk ? 'Planet view' : 'Back to walking'} icon={ICON.globe} onPress={() => { tapKey('v', 'KeyV'); setTimeout(() => setMode(VIEW.mode), 80) }} />
     </div>
     <RotateHint />
   </div>

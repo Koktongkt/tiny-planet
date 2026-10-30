@@ -47,6 +47,7 @@ export function TutorialNote({ steps = TUTORIAL_STEPS, touch = false, open = tru
     <div className="tpx-paper tpt-note" role="dialog" aria-label="Welcome note">
       <div className="tpt-head"><Sprig /><h3>{all ? 'Well done, dear!' : 'Welcome home, dear'}<small>{all ? 'You\'ll fit right in here.' : 'A few things for your first day'}</small></h3>
         <button className="tpx-x tpt-x" aria-label="Put the note away" onClick={() => onDismiss && onDismiss()}><X /></button></div>
+      {touch && <div className="tpt-play"><b>Tiny Planet</b><p>Stick to walk · push to the edge to run · tap the ground to walk. Drag to look · pinch to zoom · ✋ gather. Recipes, the map and planet view are in the menu.</p></div>}
       <ol>{steps.map(s => <li key={s.id} className={(s.done ? 'done' : '') + (s === next ? ' next' : '')}>
         <Box done={s.done} /><Doodle k={s.icon || s.id} /><span className="t"><span className="tx">{touch && s.textTouch ? s.textTouch : s.text}</span></span></li>)}</ol>
       <div className="tpt-foot"><Stitch n={steps.length} k={done} /><div className="tpt-sign">— {signer}<small>the bench by the square</small></div></div>

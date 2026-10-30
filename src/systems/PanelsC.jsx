@@ -52,7 +52,8 @@ function Ride() {
 }
 function Tutorial() {
   if (!SC.tutorialVisible() || G.ui.panel || PH.on || RIDE.riding) return null
-  const t = G.s.tutorial, open = t.open ?? !TOUCH // saved; touch starts as the small pinned slip so it doesn't cover the button column
+  const t = G.s.tutorial, open = t.open ?? !TOUCH // saved; desktop opens the letter, phone keeps it in the Menu
+  if (TOUCH && !open) return null
   return <div className="tpc-tut"><TutorialNote steps={withProgress(t.done)} touch={TOUCH} open={open} onToggle={SC.tutorialFold} onDismiss={() => SC.tutorial(false)} signer={TUTORIAL_SIGNER.name} /></div>
 }
 // Studio's catch card after a landed fish (G.ui.panel = 'catch' keeps the game keys off while it's up)

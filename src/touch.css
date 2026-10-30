@@ -23,41 +23,35 @@ html.tp-touch canvas{touch-action:none}
 .tp-act{right:0;bottom:0;width:var(--act);height:var(--act);background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#ffe7b0 55%,#f2c879 100%)!important}
 .tp-act svg{width:36px!important;height:36px!important}
 .tp-jump{right:calc(var(--act) + 14px);bottom:4px;width:62px;height:62px;background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#dcecf6 55%,#a9cde3 100%)!important}
-.tp-view{right:8px;bottom:calc(var(--act) + 14px);width:54px;height:54px}
-.tp-view svg{width:26px!important;height:26px!important;stroke-width:2.4!important}
-.tp-rotate{position:absolute;left:50%;top:calc(var(--st) + 92px);transform:translateX(-50%);pointer-events:auto;display:flex;align-items:center;gap:8px;padding:8px 14px;font:500 14px Fredoka,sans-serif;color:var(--ink);white-space:nowrap;animation:tp-drop .4s ease-out}
+.tp-rotate{position:absolute;left:50%;top:calc(var(--st) + 92px);transform:translateX(-50%);pointer-events:auto;display:none;align-items:center;gap:8px;padding:8px 14px;font:500 14px Fredoka,sans-serif;color:var(--ink);white-space:nowrap;animation:tp-drop .4s ease-out}
 .tp-rotate span{font-size:20px}.tp-rotate small{opacity:.6;font-size:11px}
 /* game UI on touch: keep everything clear of the pad and the notch */
-html.tp-touch .tp-btns{bottom:auto;top:calc(var(--st,0px) + env(safe-area-inset-top,0px) + 74px);right:calc(env(safe-area-inset-right,0px) + 12px);flex-direction:column;gap:8px}
-html.tp-touch .tp-ui .tp-btn{min-width:58px;min-height:58px;padding:4px 6px;font-size:12px}
-html.tp-touch .tp-ui .tp-btn svg{width:34px;height:34px}
-html.tp-touch .tp-clock{top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(env(safe-area-inset-right,0px) + 12px)}
+html.tp-touch .tp-btns{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);left:auto;flex-direction:row;gap:8px;z-index:7}
+html.tp-touch .tp-btns .tp-btn{width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border-radius:50%;justify-content:center}
+html.tp-touch .tp-btns .tp-btn span{display:none}
+html.tp-touch .tp-btns .tp-btn svg{width:26px;height:26px}
+html.tp-touch .tp-clock{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 10px);right:auto;pointer-events:none;gap:4px;padding:4px 12px 8px 6px;border-radius:999px}
 html.tp-touch .tp-prompt{bottom:calc(env(safe-area-inset-bottom,0px) + 178px);max-width:calc(100vw - 24px);font-size:16px}
 html.tp-touch .tp-placebar{bottom:calc(env(safe-area-inset-bottom,0px) + 178px);max-width:calc(100vw - 16px);flex-wrap:wrap;justify-content:center}
 html.tp-touch .tp-fish{bottom:calc(env(safe-area-inset-bottom,0px) + 178px);width:min(520px,calc(100vw - 24px))}
-html.tp-touch .tp-toasts{top:calc(env(safe-area-inset-top,0px) + 12px);max-width:calc(100vw - 200px)}
+html.tp-touch .tp-toasts{top:calc(env(safe-area-inset-top,0px) + 58px);max-width:min(240px,calc(100vw - 24px))}
 html.tp-touch .tp-panel{max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));width:min(560px,calc(100vw - 20px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)))}
 html.tp-touch .tp-panel.wide{width:min(820px,calc(100vw - 20px))}
 html.tp-touch .tp-scroll{touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-html.tp-touch .tp-title{left:calc(env(safe-area-inset-left,0px) + 16px)!important;top:calc(env(safe-area-inset-top,0px) + 12px)!important;max-width:calc(100vw - 150px)}
-html.tp-touch .tp-title>div:first-child{font-size:24px!important}
-html.tp-touch .tp-title>div:last-child{font-size:12px!important;line-height:1.35!important}
-@media (max-width:520px){html.tp-touch .tp-toasts{top:calc(env(safe-area-inset-top,0px) + 118px);max-width:calc(100vw - 24px)}}
+html.tp-touch .tp-title{display:none!important}
 /* short landscape phones: smaller pad, panels use the full height */
 @media (max-height:500px){.tp-pad{--stick:118px;--act:70px}.tp-acts{width:160px;height:160px}
   html.tp-touch .tp-prompt,html.tp-touch .tp-placebar,html.tp-touch .tp-fish{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}
   html.tp-touch .tp-fish{width:min(420px,calc(100vw - 340px));padding:8px 12px}
-  html.tp-touch .tp-prompt{max-width:calc(100vw - 340px)}
-  html.tp-touch .tp-btns{flex-direction:row;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(env(safe-area-inset-right,0px) + 150px)}
-  html.tp-touch .tp-title>div:last-child{display:none}}
+  html.tp-touch .tp-prompt,html.tp-touch .tp-chips{max-width:calc(100vw - 420px)}}
 @keyframes tp-drop{from{opacity:0;transform:translate(-50%,-12px)}}
 @media (prefers-reduced-motion:reduce){.tp-stick,.tp-pad .tp-btn,.tp-rotate{transition:none;animation:none}}
 .tp-pad .tp-btn:hover{transform:none}.tp-pad .tp-btn.down:hover{transform:scale(.92) rotate(-2deg)}
 html.tp-touch .tp-panel{box-sizing:border-box}
 html.tp-touch .tp-panel .tp-scroll{min-height:0;flex:1 1 auto}
 html.tp-touch .tp-prompt{white-space:nowrap}
-html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-placebar .key{display:none}
-@media (max-height:500px){html.tp-touch .tp-panel{padding:8px 14px}html.tp-touch .tp-head{padding-bottom:4px;margin-bottom:2px}html.tp-touch .tp-head h3{font-size:22px}}
+html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-placebar .key,html.tp-touch .tp-ride .key{display:none}
+@media (max-height:500px){html.tp-touch .tp-panel{padding:8px 14px}html.tp-touch .tp-head{padding-bottom:4px;margin-bottom:2px}html.tp-touch .tp-head h3{font-size:22px}html.tp-touch .tp-prompt{white-space:normal}}
 /* ---- Ghibli storybook skin (visual only: parchment, hand-inked outline, watercolour wash, leaf accents) ---- */
 .tp-pad{--ink:#3b2f22;--paper:#f4ead2;--leaf:#7fa36b;font-family:TPSerif,"Cormorant Garamond",Garamond,Georgia,serif}
 .tp-stick{
@@ -118,7 +112,6 @@ html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-plac
 .tp-jump{background:radial-gradient(40% 36% at 70% 74%,#7aa3bd2a,transparent 70%),radial-gradient(64% 58% at 36% 30%,#fffaf0d6 0,#e8efe8b0 60%,#c3d8db96 100%)!important}
 .tp-act svg{width:40px!important;height:40px!important}
 .tp-jump svg{width:32px!important;height:32px!important}
-.tp-view{opacity:.85}
 .tp-pad .tp-btn.down,.tp-pad .tp-btn.down:hover{transform:scale(.93);
   background:radial-gradient(64% 58% at 36% 30%,#f6fbe9e0 0,#d3e6bdc0 55%,#9cbf86a8 100%)!important;
   box-shadow:inset 0 0 0 1.8px #3b2f22,inset 0 2px 8px #3f5f3240,0 2px 6px #2a1e1426}
@@ -127,5 +120,5 @@ html.tp-touch .tp-prompt .key,html.tp-touch .tp-fish .key,html.tp-touch .tp-plac
 /* round6: pet chips sit just above the pad row and stay small */
 html.tp-touch .tp-chips{bottom:calc(env(safe-area-inset-bottom,0px) + 178px)}
 html.tp-touch .tp-chip .key{display:none}
-html.tp-touch .tp-chip{min-height:34px;font-size:14px;padding:3px 12px 3px 6px}
-@media (orientation:landscape) and (max-height:520px){html.tp-touch .tp-chips{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}}
+html.tp-touch .tp-chip,html.tp-touch .tp-chip-alt{min-height:44px;font-size:14px;padding:6px 14px 6px 8px}
+@media (orientation:landscape) and (max-height:520px){html.tp-touch .tp-chips{bottom:calc(env(safe-area-inset-bottom,0px) + 14px);max-width:calc(100vw - 420px)}}
