@@ -8,7 +8,8 @@ const StageBWorld = lazy(() => import('../systems/World3D.jsx')) // Stage B gard
 import { useFrame, useThree } from '@react-three/fiber'
 import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H } from '../world.js'
 import { T, C, toon, glow, planetRef } from '../common.jsx'
-import { G, emit, add, markTaken, available, toast, count, take } from './store.js'
+import { G, emit, subscribe, add, markTaken, available, toast, count, take } from './store.js'
+import { watchReady } from '../signals.js'
 import { ITEMS, DECOR } from './items.js'
 import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
@@ -354,7 +355,7 @@ export function GameWorld() {
 // mounts once the Stage B systems chunk is in (UI.jsx loads it in an idle slot), so the garden never delays the first frame
 function StageBSlot({ L }) {
   const [on, setOn] = useState(!!window.__sbReady)
-  useEffect(() => { if (on) return; const i = setInterval(() => { if (window.__sbReady) { setOn(true); clearInterval(i) } }, 250); return () => clearInterval(i) }, [on])
+  useEffect(() => { if (on) return; return watchReady(() => !!window.__sbReady, subscribe, () => setOn(true)) }, [on])
   return on ? <Suspense fallback={null}><StageBWorld L={L} GAME={GAME} /></Suspense> : null
 }
 const GHOST = new THREE.MeshBasicMaterial({ color: '#bff0c8', transparent: true, opacity: 0.55, depthWrite: false })

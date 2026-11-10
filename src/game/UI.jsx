@@ -1,6 +1,6 @@
 // DOM side of Gather & Craft: HUD, prompt, bag, recipe book / bench, toasts, fly-to-bag, fishing minigame, placement bar.
 import { TOUCH } from '../touch.jsx'
-import { VIEW } from '../common.jsx'
+import { VIEW, subscribeView } from '../common.jsx'
 import { visible as noteVisible, STEP_IDS } from '../systems/tutorial.js'
 import React, { Suspense, lazy, useEffect, useReducer, useRef, useState } from 'react'
 import { G, subscribe, emit, setPanel, count, reset, toast } from './store.js'
@@ -198,7 +198,7 @@ function PhoneMenu({ mode, onClose }) {
 function PhoneCorners() {
   const [menu, setMenu] = useState(false)
   const [mode, setMode] = useState(VIEW.mode)
-  useEffect(() => { const i = setInterval(() => setMode(VIEW.mode), 300); const k = (e) => { if (e.key === 'Escape') setMenu(false) }; addEventListener('keydown', k); return () => { clearInterval(i); removeEventListener('keydown', k) } }, [])
+  useEffect(() => { const off = subscribeView(setMode); const k = (e) => { if (e.key === 'Escape') setMenu(false) }; addEventListener('keydown', k); return () => { off(); removeEventListener('keydown', k) } }, [])
   const n = Object.values(G.s.inv).reduce((a, b) => a + b, 0)
   const tut = G.s.tutorial
   const dot = !!(tut && noteVisible(tut, G.s.day, false) && !tut.open)
