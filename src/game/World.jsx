@@ -273,7 +273,7 @@ export function GameWorld() {
       if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
       const sp = nr.spot, need = NEEDS_TOOL[sp.item]
       if (need && !G.s.tools[need]) { toast(`You need a ${ITEMS[need].name} for that.`, need); return }
-      if (sp.item === 'fish') { G.onActivity && G.onActivity('fish'); startAct('cast', { dur: 1.0 }); setTimeout(() => { G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit() }, 650); return }
+      if (sp.item === 'fish') { G.onActivity && G.onActivity('fish'); startAct('cast', { dur: 1.0 }); G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit(); return }
       pickup(sp)
     }
     GAME.actions.fishResult = (ok) => { const sp = L.spots.find(s => s.id === G.ui.fish?.spot); G.ui.fish = null; startAct('reel', { dur: ok ? 0.9 : 0.6, spark: ok && sp ? sp.pos : null, sparkCol: 'water' }); if (ok && sp) { markTaken(sp.id); setTimeout(() => add('fish'), 450) } else toast('It got away… try again!', 'fish'); emit() }

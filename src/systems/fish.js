@@ -53,6 +53,13 @@ export const REEL = { fill: 0.35, drain: 0.12, barW: 0.26, rise: 1.1, fall: 0.9,
 export const fishSpeed = (rarity) => [0.25, 0.35, 0.47, 0.6][RARE[rarity] ?? 0]
 export function newReel(fishId, seed = 1) { return { state: 'cast', t: 0, fishId, speed: fishSpeed(FISH[fishId]?.rarity), fx: 0.5, ft: 0.5, bar: 0.5, bv: 0, prog: REEL.start, zero: 0, wait: 1.5 + (seed % 1000) / 1000 * 2.5, k: seed >>> 0 } }
 const lcg = (s) => (s.k = (Math.imul(s.k, 1664525) + 1013904223) >>> 0) / 4294967296
+// Cast, wait and bite are timers. A software-GL frame can last seconds; counting at most 50 ms
+// of it means the bite never arrives inside the smoke test. The reel itself stays clamped
+// so one long frame cannot fling the net across the bar.
+export function reelDt(state, elapsed) {
+  const raw = Math.min(2, Math.max(0, elapsed))
+  return state === 'reel' ? Math.min(0.05, raw) : raw
+}
 // one step; holding = E/Space/pointer down. Mutates and returns st.
 export function fishStep(st, dt, holding) {
   st.t += dt
