@@ -31,9 +31,11 @@ import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
+import { fxPasses, nightFromPhase } from './fx.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
+import { walkerPlan, walkerStats } from './npc/sleep.js'
 
 const spin = { a: -0.8 * ROT_A0 + 0.25, v: 0 }
 const _v = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _s = new THREE.Vector3()
@@ -291,8 +293,18 @@ function Walker({ w, i }) {
   const L = useMemo(() => ({ clk: 0, pc: 0, cur: null, curF: new THREE.Vector3(), face: new THREE.Vector3() }), [])
   const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.4 * (w.cfg.body?.H ?? 1) }; NPCS.push(c); return c }, [])
   useEffect(() => () => { const k = NPCS.indexOf(npc); if (k >= 0) NPCS.splice(k, 1) }, [])
-  useFrame((_, dt) => {
-    dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t; npc.obj = ref.current; npc.ready = ready
+  useFrame((_, rawDt) => {
+    // touch: past SLEEP_DIST, skip this whole step and replay the gap on wake (see npc/sleep.js)
+    const frameDt = Math.min(rawDt, 0.05)
+    let dist = 0
+    const g0 = ref.current
+    if (L.placed && g0 && planetRef.current) { _f.copy(g0.position).applyMatrix4(planetRef.current.matrixWorld); dist = camera.position.distanceTo(_f) }
+    const plan = walkerPlan({ touch: TOUCH, talking: !!w.talking, dist, acc: L.acc || 0, dt: frameDt, placed: !!L.placed })
+    L.acc = plan.acc
+    if (!plan.steps.length) { walkerStats.skips++; if (g0 && dist > 7) g0.visible = false; return }
+    for (const dt of plan.steps) { walkerStats.steps++
+    const full = plan.full
+    const t = wind.time.value; st.t = t; npc.obj = ref.current; npc.ready = ready
     const per = periodAt(rot.a), talking = !!w.talking
     let n, fwd, mv = 1, act = null
     if (w.mode === 'path') {
@@ -320,7 +332,7 @@ function Walker({ w, i }) {
     } else { n = _wn.copy(w.n).normalize(); fwd = _wf.copy(w.fwd); mv = 0 }
     // greet each other in passing: two villagers walking within ~0.4 units wave once (cooldown), cheap O(22) scan at ~2 Hz
     if (!talking && ready) { L.gT = (L.gT || 0) - dt; L.gCD = (L.gCD || 0) - dt
-      if (L.gT <= 0 && L.gCD <= 0 && st.move > 0.3 && (L.scan = (L.scan || 0) - dt) <= 0) { L.scan = 0.5; for (const o of NPCS) { if (o === npc || !o.ready || !o.n) continue; if (o.n.angleTo(n) * R < 0.42 && (o.st.move > 0.3 || o.stage)) { L.gT = 1.6; L.gCD = 22 + (i % 5) * 3; o.greetAt = t; break } } }
+      if (full && L.gT <= 0 && L.gCD <= 0 && st.move > 0.3 && (L.scan = (L.scan || 0) - dt) <= 0) { L.scan = 0.5; for (const o of NPCS) { if (o === npc || !o.ready || !o.n) continue; if (o.n.angleTo(n) * R < 0.42 && (o.st.move > 0.3 || o.stage)) { L.gT = 1.6; L.gCD = 22 + (i % 5) * 3; o.greetAt = t; break } } }
       if (npc.greetAt && t - npc.greetAt < 1.4 && !act) { act = 'wave'; mv = 0 }
       if (L.gT > 0) { act = 'wave'; mv = 0 } }
     npc.n = (npc.n || new THREE.Vector3()).copy(n); if (w.mode !== 'anchor') npc.stage = act || (mv > 0.2 ? 'walk' : 'idle')
@@ -335,6 +347,8 @@ function Walker({ w, i }) {
       _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); _c0.setFromMatrixPosition(planetRef.current.matrixWorld)
       const up = _wy.copy(_f).sub(_c0).normalize(), toCam = _wz.copy(camera.position).sub(_f).normalize()
       g.visible = up.dot(toCam) > (TOUCH && VIEW.mode === 'orbit' ? 0.5 : -0.05) && (VIEW.mode === 'orbit' || /* mobile orbit: skip the few-px villagers along the limb */ camera.position.distanceTo(_f) < (TOUCH ? 7 : 10) /* polish-ship: tighter villager range to fit village budget */) } else g.visible = true
+    }
+    L.placed = true
   })
   return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
@@ -672,26 +686,40 @@ const COMPOSER = { current: null }
 // battery / thermal: stop the render loop while the tab is hidden; adaptive resolution when frames struggle
 // (between 1x and the usual cap; ?q=fixed keeps the cap for screenshot comparisons)
 const DPR_MAX = TOUCH ? 1.25 : 1.5, ADAPT = q.get('q') !== 'fixed'
+// Composer multisamples, so the drawing-buffer antialias is a second AA pass. Touch also drops
+// noise, and bloom except at night (lamps). ?fx=full is the old touch stack.
+const FX = fxPasses({ touch: TOUCH, fx: q.get('fx'), night: nightFromPhase(rot.a) })
+function WorldFx() {
+  const slim = TOUCH && q.get('fx') !== 'full'
+  const [night, setNight] = useState(() => nightFromPhase(rot.a))
+  const cur = useRef(night)
+  useFrame(() => {
+    if (!slim) return
+    const v = T.night > 0.5
+    if (v !== cur.current) { cur.current = v; setNight(v) }
+  })
+  return <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={FX.multisampling}>
+    {(!slim || night) && <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />}
+    {FX.noise && <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />}
+    <Vignette offset={0.3} darkness={0.55} />
+  </EffectComposer>
+}
 function useHidden() { const [h, setH] = useState(typeof document !== 'undefined' && document.hidden); useEffect(() => { const f = () => setH(document.hidden); document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f) }, []); return h }
 export default function App() {
   const [live, setLive] = useState(false), hidden = useHidden()
   const [dpr, setDpr] = useState(Math.min(DPR_MAX, typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1))
   if (VIEW.mode === 'charstudio') return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: false }} style={{ position: 'fixed', inset: 0 }}>
       <Suspense fallback={null}><StudioScene Boot={Boot} onLive={() => setLive(true)} /></Suspense>
       <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
     </Canvas>
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: FX.antialias }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
       {ADAPT && live && <PerformanceMonitor factor={1} flipflops={3} onChange={({ factor }) => setDpr(Math.min(devicePixelRatio || 1, Math.round((1 + (DPR_MAX - 1) * factor) * 20) / 20))} />}
       <Boot onLive={() => setLive(true)} /><Clock /><TalkSlot /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
-      <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={TOUCH ? 2 : 4}>
-        <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
-        <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
-        <Vignette offset={0.3} darkness={0.55} />
-      </EffectComposer>
+      <WorldFx />
     </Canvas>
     <div className="tp-title" style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
       <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
