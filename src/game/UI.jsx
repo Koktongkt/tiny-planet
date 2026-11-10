@@ -11,7 +11,7 @@ import { Icon, IconDefs } from './icons.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
 import { armAudio } from '../audio/arm.js'
-import { newReel, fishStep, REEL } from '../systems/fish.js'
+import { newReel, fishStep, reelDt, REEL } from '../systems/fish.js'
 // Stage B: garden / gifts / errands / buffs / settings. The rules + state wiring (systems/live.js) and the panels load as
 // their own chunks a moment after the game UI, so the first game frame doesn't wait for them.
 const SBM = { m: null }
@@ -121,12 +121,14 @@ const STATE_MSG = { cast: 'Casting…', wait: 'Waiting for a bite…', bite: 'A 
 function Fishing() {
   const f = G.ui.fish, fishEl = useRef(), barEl = useRef(), progEl = useRef(), [phase, setPhase] = useState('wait'), st = useRef(null), hold = useRef(false), roll = useRef(null)
   useEffect(() => {
-    if (!f) return; let raf, last = performance.now(), done = false
+    if (!f) return; let raf, done = false
     roll.current = SCM.m ? SCM.m.rollFor(f.spot) : { fishId: f.spot && f.spot.includes('harbour') ? 'mackerel' : 'minnow', size: 12 }
-    const s = st.current = window.__fishSt = newReel(roll.current.fishId, Math.floor(Math.random() * 1e6)); s.state = 'wait'
-    if (q.has('fish')) { s.wait = 0.2; s.prog = +q.get('fish') || 0.6 } // screenshots: skip the wait, freeze the bar
-    setPhase('wait')
-    const loop = (t) => { const dt = Math.min(0.05, (t - last) / 1000); last = t; const was = s.state
+    const s = st.current = window.__fishSt = newReel(roll.current.fishId, Math.floor(Math.random() * 1e6))
+    if (q.has('fish')) { s.state = 'reel'; s.wait = 0; s.prog = +q.get('fish') || 0.6 } // screenshots: skip the wait, freeze the bar
+    setPhase(s.state)
+    let last = 0
+    const loop = (t) => { if (window.__fishPause) { raf = requestAnimationFrame(loop); return } // screenshot hold
+      const dt = last ? reelDt(s.state, (t - last) / 1000) : 0; last = t; const was = s.state
       if (!q.has('fish') || s.state !== 'reel') fishStep(s, dt, hold.current)
       if (fishEl.current) fishEl.current.style.left = (s.fx * 100) + '%'
       if (barEl.current) { barEl.current.style.left = ((s.bar - REEL.barW / 2) * 100) + '%'; barEl.current.classList.toggle('on', Math.abs(s.fx - s.bar) < REEL.barW / 2) }

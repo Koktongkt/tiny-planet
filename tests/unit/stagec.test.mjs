@@ -3,7 +3,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { migrate, fresh, SAVE_VERSION, TAU, START_PHASE } from '../../src/save/schema.js'
 import { seasonOf, seasonWeights, isRainDay, weatherAt, dayPos, applyTo, rainWindow, SEASON_DAYS } from '../../src/systems/weather.js'
-import { FISH, FISH_IDS, rollFish, candidates, recordCatch, newReel, fishStep, RARE_ITEMS, habitatOf } from '../../src/systems/fish.js'
+import { FISH, FISH_IDS, rollFish, candidates, recordCatch, newReel, fishStep, reelDt, RARE_ITEMS, habitatOf } from '../../src/systems/fish.js'
 import { buildSchedule, trainState, fare, DWELL } from '../../src/systems/train.js'
 import { note, donate, canDonate, entries, dig, digFind, RELICS, DONATABLE, progress } from '../../src/systems/collection.js'
 import { mark, visible, allDone, STEP_IDS, freshTutorial, steps } from '../../src/systems/tutorial.js'
@@ -89,6 +89,18 @@ test('catch log tracks count, best size and new/record flags', () => {
   assert.deepEqual(recordCatch(log, 'koi', 52.5, 5), { isNew: false, isRecord: true }); assert.deepEqual(log.koi, { count: 3, best: 52.5, firstDay: 3 })
 })
 const run = (st, secs, hold) => { for (let t = 0; t < secs; t += 1 / 60) fishStep(st, 1 / 60, typeof hold === 'function' ? hold(st) : hold); return st }
+test('a stalled frame still finishes the cast and the wait', () => {
+  // software GL can spend seconds inside one frame; the wait used to count at most 50 ms of it
+  assert.equal(reelDt('cast', 1.5), 1.5)
+  assert.equal(reelDt('wait', 5), 2)
+  assert.equal(reelDt('bite', -1), 0)
+  assert.equal(reelDt('reel', 1), 0.05)
+  const st = newReel('minnow', 0) // wait is 1.5 s
+  fishStep(st, reelDt('cast', 3), false)
+  assert.equal(st.state, 'wait')
+  fishStep(st, reelDt('wait', 3), false)
+  assert.equal(st.state, 'bite')
+})
 test('reel: cast -> wait -> bite -> reel in order', () => {
   const st = newReel('minnow', 0); assert.equal(st.state, 'cast')
   run(st, 0.7, false); assert.equal(st.state, 'wait'); run(st, 1.6, false); assert.equal(st.state, 'bite'); fishStep(st, 1 / 60, true); assert.equal(st.state, 'reel')

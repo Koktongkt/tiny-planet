@@ -2,6 +2,7 @@
 // harbour, mossy ruins, camphor forest, giant tree hill, meadow flowers.
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
@@ -269,9 +270,16 @@ function Camphors() {
   return <><Instanced items={trunks} geo={geos.tr} mat={ZM.trunk} /><Instanced items={crowns} geo={geos.cr} mat={mats.cr} isOcc /><Instanced items={ferns} geo={geos.fe} mat={mats.fe} /></>
 }
 
+// same shapes, one draw: flat-coloured parts that share a material and have no ink hull
+function fuse(src, parts) {
+  const geos = parts.map(([x, y, z, rx, ry, rz]) => { const g = src.clone(); g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)).setPosition(x, y, z)); return g })
+  const m = mergeGeometries(geos); geos.forEach(g => g.dispose()); return m
+}
 function GiantTree() {
   const c = Zc.giant
   const trunk = useMemo(() => new THREE.LatheGeometry([[0.0, 0], [0.78, 0], [0.55, 0.25], [0.4, 0.8], [0.37, 1.6], [0.42, 2.3], [0.32, 2.85], [0.0, 3.0]].map(([x, y]) => new THREE.Vector2(x, y)), 18), [])
+  const paper = useMemo(() => fuse(new THREE.PlaneGeometry(0.05, 0.16), [0, 1, 2, 3, 4, 5, 6].map(k => [Math.cos(k * 0.9) * 0.46, 1.0, Math.sin(k * 0.9) * 0.46, 0, -k * 0.9 + Math.PI / 2, 0.15])), [])
+  const torii = useMemo(() => { const post = new THREE.CylinderGeometry(0.035, 0.04, 0.7, 8), beam = new THREE.BoxGeometry(0.68, 0.04, 0.05); const g = mergeGeometries([fuse(post, [[-0.3, 0.35, 1.25], [0.3, 0.35, 1.25]]), fuse(beam, [[0, 0.6, 1.25]])]); post.dispose(); beam.dispose(); return g }, [])
   const crowns = useMemo(() => { const a = [], cols = ['#4f9a4f', '#62ad58', '#7cc062', '#4a8a50'].map(C), p = place(c, 0, 0); for (let k = 0; k < 18; k++) { const ang = k * 2.4, rr = k < 12 ? 1.1 + rnd() * 0.6 : 0.4 + rnd() * 0.4, y = k < 12 ? 2.7 + rnd() * 0.5 : 3.4 + rnd() * 0.5; const local = new THREE.Vector3(Math.cos(ang) * rr, y, Math.sin(ang) * rr); a.push({ pos: p.pos.clone().add(local.applyQuaternion(p.q)), q: p.q, s: 2.0 + rnd() * 0.9, c: cols[k % 4] }) } return a }, [])
   const crGeo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.42, 2); g.scale(1.2, 0.8, 1.2); return g }, []), crMat = useMemo(() => windify(toon('#ffffff'), 0.02, -0.3), [])
   return <>
@@ -280,10 +288,9 @@ function GiantTree() {
       {[0, 1, 2, 3, 4, 5].map(k => <mesh key={k} position={[Math.cos(k * 1.05) * 0.55, 0.08, Math.sin(k * 1.05) * 0.55]} rotation={[Math.sin(k * 1.05) * 1.1, 0, -Math.cos(k * 1.05) * 1.1]} material={ZM.trunk}><capsuleGeometry args={[0.1, 0.5, 4, 8]} /></mesh>)}
       {[0, 1, 2, 3, 4].map(k => <mesh key={'b' + k} position={[Math.cos(k * 1.26) * 0.55, 2.55, Math.sin(k * 1.26) * 0.55]} rotation={[Math.sin(k * 1.26) * 0.9, 0, -Math.cos(k * 1.26) * 0.9]} material={ZM.trunk}><cylinderGeometry args={[0.07, 0.13, 1.3, 7]} /></mesh>)}
       <mesh position={[0, 1.15, 0]} rotation={[Math.PI / 2, 0, 0]} material={ZM.rope}><torusGeometry args={[0.43, 0.055, 8, 32]} /><Outlines thickness={0.008} color={INK} /></mesh>
-      {[0, 1, 2, 3, 4, 5, 6].map(k => <mesh key={'s' + k} position={[Math.cos(k * 0.9) * 0.46, 1.0, Math.sin(k * 0.9) * 0.46]} rotation={[0, -k * 0.9 + Math.PI / 2, 0.15]} material={ZM.paper}><planeGeometry args={[0.05, 0.16]} /></mesh>)}
-      {[-1, 1].map(s => <mesh key={'t' + s} position={[s * 0.3, 0.35, 1.25]} material={ZM.red}><cylinderGeometry args={[0.035, 0.04, 0.7, 8]} /></mesh>)}
+      <mesh geometry={paper} material={ZM.paper} />
+      <mesh geometry={torii} material={ZM.red} />
       <mesh position={[0, 0.72, 1.25]} material={ZM.red}><boxGeometry args={[0.85, 0.06, 0.07]} /><Outlines thickness={0.006} color={INK} /></mesh>
-      <mesh position={[0, 0.6, 1.25]} material={ZM.red}><boxGeometry args={[0.68, 0.04, 0.05]} /></mesh>
     </Surface>
     <Instanced items={crowns} geo={crGeo} mat={crMat} isOcc />
   </>

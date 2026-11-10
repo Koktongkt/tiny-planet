@@ -10,8 +10,8 @@ export function defaultAnchor() {
   if ((H && H.inside) || (VIEW.mode !== 'follow' && VIEW.mode !== 'detail')) return null
   return { p: P.wPos, up: P.wUp && P.wUp.lengthSq() > 0.5 ? P.wUp : P.wPos }
 }
-// Drift's anchor: as above, but off in the forest on desktop (Codor: desktop forest view sits at 497/500 draw calls,
-// no regressions). Touch keeps it (mobile.forest has its own 400-call cap).
+// Drift's anchor: as above, but off in the forest on desktop (Codor: desktop forest view sits at the 500 draw-call cap).
+// Touch keeps it. The mobile forest walk is under the 350 cap after gather props bake down to two draws.
 const inForest = (n) => { for (const z of [ZONES.forest, ZONES.giant]) if (z && Math.acos(Math.max(-1, Math.min(1, (n.x * z.x + n.y * z.y + n.z * z.z) / (n.length() || 1)))) < (z.r || 0) + 1.5 / R) return true; return false }
 export function driftAnchor() {
   const a = defaultAnchor(); if (!a) return null
