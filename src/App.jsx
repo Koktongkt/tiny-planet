@@ -35,6 +35,7 @@ import { fxPasses, nightFromPhase } from './fx.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
+import { walkerPlan, walkerStats } from './npc/sleep.js'
 
 const spin = { a: -0.8 * ROT_A0 + 0.25, v: 0 }
 const _v = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _s = new THREE.Vector3()
@@ -292,8 +293,18 @@ function Walker({ w, i }) {
   const L = useMemo(() => ({ clk: 0, pc: 0, cur: null, curF: new THREE.Vector3(), face: new THREE.Vector3() }), [])
   const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.4 * (w.cfg.body?.H ?? 1) }; NPCS.push(c); return c }, [])
   useEffect(() => () => { const k = NPCS.indexOf(npc); if (k >= 0) NPCS.splice(k, 1) }, [])
-  useFrame((_, dt) => {
-    dt = Math.min(dt, 0.05); const t = wind.time.value; st.t = t; npc.obj = ref.current; npc.ready = ready
+  useFrame((_, rawDt) => {
+    // touch: past SLEEP_DIST, skip this whole step and replay the gap on wake (see npc/sleep.js)
+    const frameDt = Math.min(rawDt, 0.05)
+    let dist = 0
+    const g0 = ref.current
+    if (L.placed && g0 && planetRef.current) { _f.copy(g0.position).applyMatrix4(planetRef.current.matrixWorld); dist = camera.position.distanceTo(_f) }
+    const plan = walkerPlan({ touch: TOUCH, talking: !!w.talking, dist, acc: L.acc || 0, dt: frameDt, placed: !!L.placed })
+    L.acc = plan.acc
+    if (!plan.steps.length) { walkerStats.skips++; if (g0 && dist > 7) g0.visible = false; return }
+    for (const dt of plan.steps) { walkerStats.steps++
+    const full = plan.full
+    const t = wind.time.value; st.t = t; npc.obj = ref.current; npc.ready = ready
     const per = periodAt(rot.a), talking = !!w.talking
     let n, fwd, mv = 1, act = null
     if (w.mode === 'path') {
@@ -321,7 +332,7 @@ function Walker({ w, i }) {
     } else { n = _wn.copy(w.n).normalize(); fwd = _wf.copy(w.fwd); mv = 0 }
     // greet each other in passing: two villagers walking within ~0.4 units wave once (cooldown), cheap O(22) scan at ~2 Hz
     if (!talking && ready) { L.gT = (L.gT || 0) - dt; L.gCD = (L.gCD || 0) - dt
-      if (L.gT <= 0 && L.gCD <= 0 && st.move > 0.3 && (L.scan = (L.scan || 0) - dt) <= 0) { L.scan = 0.5; for (const o of NPCS) { if (o === npc || !o.ready || !o.n) continue; if (o.n.angleTo(n) * R < 0.42 && (o.st.move > 0.3 || o.stage)) { L.gT = 1.6; L.gCD = 22 + (i % 5) * 3; o.greetAt = t; break } } }
+      if (full && L.gT <= 0 && L.gCD <= 0 && st.move > 0.3 && (L.scan = (L.scan || 0) - dt) <= 0) { L.scan = 0.5; for (const o of NPCS) { if (o === npc || !o.ready || !o.n) continue; if (o.n.angleTo(n) * R < 0.42 && (o.st.move > 0.3 || o.stage)) { L.gT = 1.6; L.gCD = 22 + (i % 5) * 3; o.greetAt = t; break } } }
       if (npc.greetAt && t - npc.greetAt < 1.4 && !act) { act = 'wave'; mv = 0 }
       if (L.gT > 0) { act = 'wave'; mv = 0 } }
     npc.n = (npc.n || new THREE.Vector3()).copy(n); if (w.mode !== 'anchor') npc.stage = act || (mv > 0.2 ? 'walk' : 'idle')
@@ -336,6 +347,8 @@ function Walker({ w, i }) {
       _f.copy(g.position).applyMatrix4(planetRef.current.matrixWorld); _c0.setFromMatrixPosition(planetRef.current.matrixWorld)
       const up = _wy.copy(_f).sub(_c0).normalize(), toCam = _wz.copy(camera.position).sub(_f).normalize()
       g.visible = up.dot(toCam) > (TOUCH && VIEW.mode === 'orbit' ? 0.5 : -0.05) && (VIEW.mode === 'orbit' || /* mobile orbit: skip the few-px villagers along the limb */ camera.position.distanceTo(_f) < (TOUCH ? 7 : 10) /* polish-ship: tighter villager range to fit village budget */) } else g.visible = true
+    }
+    L.placed = true
   })
   return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
