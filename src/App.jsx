@@ -31,6 +31,7 @@ import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
+import { fxPasses, nightFromPhase } from './fx.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
@@ -672,26 +673,40 @@ const COMPOSER = { current: null }
 // battery / thermal: stop the render loop while the tab is hidden; adaptive resolution when frames struggle
 // (between 1x and the usual cap; ?q=fixed keeps the cap for screenshot comparisons)
 const DPR_MAX = TOUCH ? 1.25 : 1.5, ADAPT = q.get('q') !== 'fixed'
+// Composer multisamples, so the drawing-buffer antialias is a second AA pass. Touch also drops
+// noise, and bloom except at night (lamps). ?fx=full is the old touch stack.
+const FX = fxPasses({ touch: TOUCH, fx: q.get('fx'), night: nightFromPhase(rot.a) })
+function WorldFx() {
+  const slim = TOUCH && q.get('fx') !== 'full'
+  const [night, setNight] = useState(() => nightFromPhase(rot.a))
+  const cur = useRef(night)
+  useFrame(() => {
+    if (!slim) return
+    const v = T.night > 0.5
+    if (v !== cur.current) { cur.current = v; setNight(v) }
+  })
+  return <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={FX.multisampling}>
+    {(!slim || night) && <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />}
+    {FX.noise && <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />}
+    <Vignette offset={0.3} darkness={0.55} />
+  </EffectComposer>
+}
 function useHidden() { const [h, setH] = useState(typeof document !== 'undefined' && document.hidden); useEffect(() => { const f = () => setH(document.hidden); document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f) }, []); return h }
 export default function App() {
   const [live, setLive] = useState(false), hidden = useHidden()
   const [dpr, setDpr] = useState(Math.min(DPR_MAX, typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1))
   if (VIEW.mode === 'charstudio') return <>
-    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+    <Canvas frameloop={live ? 'always' : 'never'} dpr={TOUCH ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, near: 0.01 }} gl={{ antialias: false }} style={{ position: 'fixed', inset: 0 }}>
       <Suspense fallback={null}><StudioScene Boot={Boot} onLive={() => setLive(true)} /></Suspense>
       <EffectComposer multisampling={4}><Noise opacity={0.08} blendFunction={BlendFunction.SOFT_LIGHT} /><Vignette offset={0.35} darkness={0.35} /></EffectComposer>
     </Canvas>
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: FX.antialias }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
       {ADAPT && live && <PerformanceMonitor factor={1} flipflops={3} onChange={({ factor }) => setDpr(Math.min(devicePixelRatio || 1, Math.round((1 + (DPR_MAX - 1) * factor) * 20) / 20))} />}
       <Boot onLive={() => setLive(true)} /><Clock /><TalkSlot /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
-      <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={TOUCH ? 2 : 4}>
-        <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />
-        <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />
-        <Vignette offset={0.3} darkness={0.55} />
-      </EffectComposer>
+      <WorldFx />
     </Canvas>
     <div className="tp-title" style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
       <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
