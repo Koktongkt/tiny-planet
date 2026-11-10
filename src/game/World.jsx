@@ -3,7 +3,7 @@
 import { onTap, TOUCH } from '../touch.jsx'
 import { startAct, ACT, FREEZE } from '../act.js'
 import * as THREE from 'three'
-import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
+import React, { useMemo, useRef, useEffect, useLayoutEffect, useReducer, useState, lazy, Suspense } from 'react'
 const StageBWorld = lazy(() => import('../systems/World3D.jsx')) // Stage B garden + errands board (lazy)
 import { useFrame, useThree } from '@react-three/fiber'
 import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H } from '../world.js'
@@ -12,6 +12,7 @@ import { G, emit, add, markTaken, available, toast, count, take } from './store.
 import { ITEMS, DECOR } from './items.js'
 import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
+import { bakePropMeshes } from './propBake.js'
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
@@ -131,6 +132,18 @@ function Prop({ item, s = 1 }) {
   }
 }
 const G_GLOW = glow('#b8ff7a'), G_CRYS = new THREE.MeshToonMaterial({ color: '#b8d4ff', emissive: '#6a7ad0', emissiveIntensity: 0.4 }), G_WATER = new THREE.MeshBasicMaterial({ color: '#9fe6f0' }), G_SPARK = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false })
+// touch: each gather prop was ~6-14 draws (a mesh plus an ink hull per part). Bake once per item
+// into one vertex-coloured body + one hull. Glow and glass return null and stay as <Prop>.
+const PROP_BAKE = {}
+let propBody = null
+function MergedProp({ item, s }) {
+  const ref = useRef(), [, force] = useReducer(x => x + 1, 0), c = PROP_BAKE[item]
+  useLayoutEffect(() => { if (PROP_BAKE[item] === undefined && ref.current) { PROP_BAKE[item] = bakePropMeshes(ref.current) || false; force() } }, [item])
+  if (c) { if (!propBody) propBody = toon('#ffffff', { vertexColors: true }); return <group scale={s}>{c.body && <mesh geometry={c.body} material={propBody} />}{c.hull && <mesh geometry={c.hull} material={hullMat} />}</group> }
+  if (c === false) return <Prop item={item} s={s} />
+  return <group ref={ref} visible={false}><Prop item={item} s={1} /></group>
+}
+function SpotProp(p) { return TOUCH ? <MergedProp {...p} /> : <Prop {...p} /> }
 const G_RING = new THREE.MeshBasicMaterial({ color: '#fffbe8', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false, depthWrite: false })
 const G_FLY = glow('#f2ff8a'), G_HALO = new THREE.MeshBasicMaterial({ color: '#e8ff9a', transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false })
 
@@ -327,7 +340,7 @@ export function GameWorld() {
   if (!L) return null
   return <group>
     {L.spots.map(sp => <group key={sp.id} ref={el => { if (el) refs.current[sp.id] = el }} position={sp.pos} quaternion={place(sp.water ? sp.n : sp.n, 0, sp.spin).q}
-      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <Prop item={sp.item} s={sp.s} />}</group>)}
+      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <SpotProp item={sp.item} s={sp.s} />}</group>)}
     <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
