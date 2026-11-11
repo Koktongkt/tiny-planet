@@ -10,6 +10,7 @@ import { HeartsBadge } from './Hearts.jsx'
 import '../../art/parchment.css'
 import './gifts.css'
 export const PREF_ICON = { love: '♥♥', like: '♥', neutral: '·', dislike: '✕' }
+const plainOf = (id) => typeof id === 'string' && id.endsWith('_perfect') ? id.slice(0, -8) : id
 const PREF_TXT = { love: 'Loves this', like: 'Likes this', neutral: 'Not fussed', dislike: 'Not keen' }
 export function GiftPicker({ items = [], onPick, onClose, npcName, hearts, prefs = {}, giftedToday = false, defaultSelected = null }) {
   const list = items.filter(it => it.count > 0)
@@ -27,16 +28,16 @@ export function GiftPicker({ items = [], onPick, onClose, npcName, hearts, prefs
       </div>
       <div className="tpx-scroll">
         {list.length === 0 ? <p className="tpg-empty">Your bag is empty. Gather something first, then come back.</p> :
-          <div className="tpg-grid">{list.map(it => { const p = prefs[it.id], on = sel === it.id
+          <div className="tpg-grid">{list.map(it => { const plain = plainOf(it.id), perfect = plain !== it.id, p = prefs[plain], on = sel === it.id
             return <button key={it.id} className={'tpg-item' + (on ? ' on' : '') + (p ? ' p-' + p : '')} aria-pressed={on} onClick={() => setSel(it.id)} onDoubleClick={() => give(it.id)}>
-              <Icon id={it.id} size={46} />
+              <span className="tpg-ic"><Icon id={plain} size={46} />{perfect && <i className="tpg-spark" aria-label="perfect">✦</i>}</span>
               <span className="nm">{itemName(it.id)}</span>
               <span className="ct tpx-num">×{it.count}</span>
               {p && <span className="pref" title={PREF_TXT[p]}>{PREF_ICON[p]}</span>}
             </button> })}</div>}
       </div>
       <div className="tpg-foot">
-        <span className="tpg-sel">{sel ? <><Icon id={sel} size={28} /><span>{itemName(sel)}</span>{prefs[sel] && <em className={'p-' + prefs[sel]}>{PREF_TXT[prefs[sel]]}</em>}</> : <span className="dim">Nothing chosen yet</span>}</span>
+        <span className="tpg-sel">{sel ? <><Icon id={plainOf(sel)} size={28} />{plainOf(sel) !== sel && <i className="tpg-spark" aria-hidden>✦</i>}<span>{itemName(sel)}</span>{prefs[plainOf(sel)] && <em className={'p-' + prefs[plainOf(sel)]}>{PREF_TXT[prefs[plainOf(sel)]]}</em>}</> : <span className="dim">Nothing chosen yet</span>}</span>
         <button className="tpx-btn go" disabled={!sel || giftedToday} onClick={() => give(sel)}><Icon id="heart" size={24} wash={false} />Give</button>
       </div>
     </div>

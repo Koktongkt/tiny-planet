@@ -7,7 +7,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { VIEW } from '../common.jsx'
 import { G, subscribe } from '../game/store.js'
 import { HOME } from '../home/state.js'
-import { PADUI } from '../touch.jsx'
+import { setHideStick } from '../touch.jsx'
 import { NPCS, TALK, weatherFor, noteActivity, recentActivity, periodAt } from './state.js'
 import { buildLines, PROFILES } from './profiles.js'
 import { HeartsBadge } from '../ui/gifts/Hearts.jsx'
@@ -16,20 +16,20 @@ const HoshinoPortrait = React.lazy(() => import('../art/museum/portrait.jsx').th
 
 const NEAR = 0.62, _w = new THREE.Vector3(), _h = new THREE.Vector3(), _up = new THREE.Vector3()
 const modal = () => !!(G.ui.panel || G.ui.place || G.ui.fish || G.ui.crafting)
-function close() { if (!TALK.open) return; TALK.open.w.talking = false; TALK.open = null; TALK.lines = null; PADUI.hideStick = false; bump() }
+function close() { if (!TALK.open) return; TALK.open.w.talking = false; TALK.open = null; TALK.lines = null; setHideStick(false); bump() }
 function open(npc) {
   const rot = window.__rot || { a: 0.4 }
   const L = buildLines(npc.key, { period: periodAt(rot.a), weather: weatherFor(G.s.day || 0), recent: recentActivity(), stage: npc.stage })
   // Stage B: a friendship line (unlocked by hearts) after the greeting
   const sb = window.__sb, hl = sb && sb.Fr.heartLine(G.s.friends.list[npc.key]); if (hl) L.pages.splice(1, 0, hl)
-  TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; PADUI.hideStick = true; TALK.onOpen && TALK.onOpen(); bump()
+  TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; setHideStick(true); TALK.onOpen && TALK.onOpen(); bump()
 }
 // Stage B gifts: G near a villager or the Gift button in the dialogue opens Studio's GiftPicker (systems/Panels.jsx)
 function gift(npc) { if (!npc || !window.__sb) return; close(); window.__sb.openGift(npc.key) }
 // after a gift she answers in the dialogue box (one page)
 if (typeof window !== 'undefined') window.__sbSay = (key, r) => { const npc = NPCS.find(c => c.key === key); if (!npc) return
   const p = PROFILES[key] || {}, say = { love: `Oh! For me? I love this!`, like: `How thoughtful. Thank you!`, neutral: `Oh… thank you, I suppose.`, dislike: `Hmm. That's… not really for me.` }[r.kind]
-  TALK.open = npc; TALK.lines = { name: p.name || 'Villager', role: p.role || '', pages: [say] }; TALK.page = 0; npc.w.talking = true; PADUI.hideStick = true; bump() }
+  TALK.open = npc; TALK.lines = { name: p.name || 'Villager', role: p.role || '', pages: [say] }; TALK.page = 0; npc.w.talking = true; setHideStick(true); bump() }
 function advance() { if (!TALK.open) return; if (TALK.page < TALK.lines.pages.length - 1) { TALK.page++; bump() } else close() }
 if (typeof window !== 'undefined') window.__openTalk = () => { const n = TALK.near || (window.__npcs || []).find(c => c.ready && c.obj); if (n) open(n) }
 const subs = new Set(); function bump() { for (const f of subs) f() }
