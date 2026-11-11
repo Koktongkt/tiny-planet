@@ -11,6 +11,7 @@ import { Icon, IconDefs } from './icons.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
 import { armAudio } from '../audio/arm.js'
+import { rideShows } from '../ui/ridePlace.js'
 import { newReel, fishStep, reelDt, REEL } from '../systems/fish.js'
 // Stage B: garden / gifts / errands / buffs / settings. The rules + state wiring (systems/live.js) and the panels load as
 // their own chunks a moment after the game UI, so the first game frame doesn't wait for them.
@@ -44,8 +45,9 @@ function Clock() {
 }
 function RideChip() {
   const m = SEM.m; if (!m) return null
-  const mode = m.hudPrompt(); if (!mode) return null
-  return <button className="tp-ride paper" onClick={() => m.toggle()}>{!TOUCH && <span className="key">R</span>}<Icon id="bike" size={26} /><span>{mode === 'off' ? 'Hop off' : 'Ride'}</span></button>
+  const place = rideShows({ touch: TOUCH, mode: m.hudPrompt() })
+  if (!place.chip) return null
+  return <button className="tp-ride paper" onClick={() => m.toggle()}>{!TOUCH && <span className="key">R</span>}<Icon id="bike" size={26} /><span>{place.label}</span></button>
 }
 function Prompt() {
   const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock) return null
@@ -176,6 +178,7 @@ function PhoneMenu({ mode, onClose }) {
   const walk = mode === 'follow'
   const go = (fn) => { onClose(); fn() }
   const tut = G.s.tutorial
+  const ride = rideShows({ touch: true, mode: SEM.m ? SEM.m.hudPrompt() : null })
   const nDone = tut ? Object.values(tut.done || {}).filter(Boolean).length : 0
   const openNote = () => { if (SCM.m) SCM.m.tutorial(true); else toast('Grandma is still folding her note.', 'leaf') }
   const openMap = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', bubbles: true }))
@@ -183,6 +186,7 @@ function PhoneMenu({ mode, onClose }) {
     <div className="tp-menu-back" onPointerDown={onClose} />
     <div className="tp-menu paper" role="menu" aria-label="Menu">
       <div className="tp-menu-grid">
+      {ride.menu && <button className="tp-tile paper tp-ridebtn" onClick={() => go(() => SEM.m.toggle())} aria-label={ride.label}><Icon id="bike" size={32} /><span>{ride.label}</span></button>}
       <button className="tp-tile paper" onClick={() => go(() => setPanel('recipes'))}><Icon id="book" size={32} /><span>Recipes</span></button>
       {SCM.m && <button className="tp-tile paper tp-jbtn" onClick={() => go(() => setPanel('journal'))} aria-label="Journal"><Icon id="book" size={32} /><span>Journal</span></button>}
       {SCM.m && <button className="tp-tile paper tp-cambtn" onClick={() => go(() => SCM.m.photo(true))} aria-label="Photo mode"><Icon id="sun" size={32} /><span>Photo</span></button>}

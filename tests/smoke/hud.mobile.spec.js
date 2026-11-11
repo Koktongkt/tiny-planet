@@ -88,9 +88,32 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
   await expect(page.locator('.tp-stick')).toBeVisible()
 
   await page.evaluate(() => { window.__game.G.s.tools.bike = true; window.__tp.emit() })
-  await expect(page.locator('.tp-ride')).toBeVisible()
-  await expect(page.locator('.tp-ride .key')).toHaveCount(0)
-  await expect(page.locator('.tp-ride')).toHaveAccessibleName(/^(Ride|Hop off)$/)
+  await expect(page.locator('.tp-ride')).toHaveCount(0)
+  await page.locator('.tp-menubtn').tap()
+  const rideBtn = page.getByRole('button', { name: 'Ride', exact: true })
+  await expect(rideBtn).toBeVisible()
+  for (const size of [{ width: 390, height: 664 }, { width: 844, height: 390 }, { width: 640, height: 360 }]) {
+    await page.setViewportSize(size)
+    await page.waitForTimeout(100)
+    const fit = await page.evaluate(() => {
+      const menu = document.querySelector('.tp-menu')
+      const tiles = [...menu.querySelectorAll('.tp-tile')]
+      const mb = menu.getBoundingClientRect()
+      return { n: tiles.length, top: mb.top, bottom: mb.bottom, vh: innerHeight, h: tiles.map(t => t.getBoundingClientRect().height) }
+    })
+    expect(fit.n, `${size.width}x${size.height}`).toBe(8)
+    expect(fit.top).toBeGreaterThanOrEqual(0)
+    expect(fit.bottom).toBeLessThanOrEqual(fit.vh + 1)
+    for (const h of fit.h) expect(h).toBeGreaterThanOrEqual(44)
+  }
+  await page.setViewportSize({ width: 390, height: 664 })
+  await rideBtn.tap()
+  await expect(page.locator('.tp-menu')).toHaveCount(0)
+  await expect(page.locator('.tp-ride')).toHaveCount(0)
+  await page.locator('.tp-menubtn').tap()
+  await expect(page.getByRole('button', { name: 'Hop off', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Hop off', exact: true }).tap()
+  await expect(page.locator('.tp-ride')).toHaveCount(0)
   expect(await page.evaluate(() => [...document.querySelectorAll('.key')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.textContent))).toEqual([])
   await page.waitForFunction(() => window.__dog?.n, null, { timeout: 30_000 })
   await page.evaluate(() => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
@@ -98,9 +121,6 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
   await expect(pet).toBeVisible({ timeout: 20_000 })
   await expect(pet.locator('.key')).toHaveCount(0)
   await expect(pet).not.toHaveAccessibleName(/EPet|^E/)
-  const ride = await page.locator('.tp-ride').boundingBox()
-  expect(ride.height).toBeGreaterThanOrEqual(44)
-
   await page.evaluate(() => { const P = window.__player; P.n.copy(window.__sbLayout.plots[0].n); P.target = null; window.__snap = 1 })
   await expect(page.locator('.tp-prompt, .tp-chip').first()).toBeVisible({ timeout: 30_000 })
   const cdp = await context.newCDPSession(page)
@@ -125,14 +145,12 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
     clock: getComputedStyle(document.querySelector('.tp-clock')).opacity,
     btns: getComputedStyle(document.querySelector('.tp-btns')).opacity,
     prompt: getComputedStyle(document.querySelector('.tp-prompt, .tp-chip')).opacity,
-    ride: getComputedStyle(document.querySelector('.tp-ride')).opacity,
     pe: getComputedStyle(document.querySelector('.tp-prompt, .tp-chip')).pointerEvents,
   }))
   expect(Number(faded.clock)).toBeGreaterThan(0.2)
   expect(Number(faded.clock)).toBeLessThan(0.4)
   expect(Number(faded.btns)).toBeLessThan(0.4)
   expect(Number(faded.prompt)).toBeGreaterThan(0.9)
-  expect(Number(faded.ride)).toBeGreaterThan(0.9)
   expect(faded.pe).not.toBe('none')
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector('.tp-clock')).opacity) > 0.95, null, { timeout: 3000 })
