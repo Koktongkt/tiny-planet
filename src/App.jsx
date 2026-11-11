@@ -33,6 +33,7 @@ import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { fxPasses, nightFromPhase } from './fx.js'
 import { paceFrame, stampActive } from './framePace.js'
+import { butterflyAngle, butterflyFrame } from './butterflies.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
@@ -156,10 +157,26 @@ const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3
 const SmokeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Smoke }))) // r7-ship: lazy (startup budget)
 
 function Butterflies() {
+  if (typeof window !== 'undefined' && !window.__bfly) window.__bfly = { updates: 0, resting: true, resumed: false }
   const bs = useMemo(() => Array.from({ length: 16 }, (_, i) => ({ base: (i < 10 ? VILLAGE.clone().add(randDir().multiplyScalar(0.35)) : randDir()).normalize(), ph: rnd() * 6, ax: randDir(), m: DM.wing[i % 4] })), [])
-  const refs = useRef([])
-  useFrame(() => { const t = wind.time.value; bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = t * 0.35 + b.ph; const n = _wn.copy(b.base).applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = _wf.copy(b.base).applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl; g.visible = T.night < 0.6 }) })
-  return bs.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.8}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.022, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={b.m}><circleGeometry args={[0.024, 8]} /></mesh></group>)}</group>)
+  const refs = useRef([]), root = useRef(), awake = useRef(false)
+  useFrame(() => {
+    const step = butterflyFrame(T.night, awake.current)
+    const g0 = root.current
+    if (!step.update) {
+      if (awake.current) { awake.current = false; if (g0) g0.visible = false }
+      if (window.__bfly) window.__bfly.resting = true
+      return
+    }
+    const waking = !awake.current
+    awake.current = true
+    if (g0) g0.visible = true
+    const t = wind.time.value
+    const stat = window.__bfly || (window.__bfly = { updates: 0, resting: false })
+    stat.updates++; stat.resting = false; stat.resumed = waking
+    bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = butterflyAngle(t, b.ph); const n = _wn.copy(b.base).applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = _wf.copy(b.base).applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl })
+  })
+  return <group ref={root} visible={false}>{bs.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.8}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.022, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={b.m}><circleGeometry args={[0.024, 8]} /></mesh></group>)}</group>)}</group>
 }
 
 function Seeds() {
