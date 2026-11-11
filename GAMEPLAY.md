@@ -4,7 +4,7 @@
 | Action | Keyboard | Touch |
 |---|---|---|
 | Walk | WASD / arrow keys | Tap the ground |
-| Ride (once you own the bicycle) | R | Ride button |
+| Ride (once you own the bicycle) | R | Menu, then Ride. Menu, then Hop off, to stop |
 | Jump | Space | |
 | Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
 | Bag | B / I / Tab | Bag button |
