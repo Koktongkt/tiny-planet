@@ -40,6 +40,13 @@ export function errandsFor(day) {
 }
 // a new day pins up new notes (yesterday's unfinished ones are taken down)
 export function rollDay(errands, day) { if (errands.day === day) return false; errands.day = day; errands.list = errandsFor(day); return true }
+// The morning after the museum's last case fills, the board says so once. Same day stays quiet.
+export function pinHallMention(errands, museum, day) {
+  if (!museum || museum.full == null || museum.told != null || !(day > museum.full)) return false
+  museum.told = day
+  errands.list = [{ id: 'hall-' + day, npcId: 'scholar', mention: 'Every case in the museum is full. Professor Hoshino asked the board to say so, just this once.', wants: [], reward: {}, day, accepted: true, done: false }, ...errands.list]
+  return true
+}
 export function accept(errands, id) { const e = errands.list.find(x => x.id === id); if (!e || e.accepted || e.done) return false; e.accepted = true; return true }
 export const canDeliver = (e, inv) => !!e && e.accepted && !e.done && e.wants.every(w => (inv[w.itemId] || 0) >= w.count)
 // takes the items from inv (mutates) and returns the reward, or null

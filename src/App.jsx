@@ -28,11 +28,12 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
 import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
-import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
+import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, setViewMode, subscribeView, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { fxPasses, nightFromPhase } from './fx.js'
 import { paceFrame, stampActive } from './framePace.js'
+import { butterflyAngle, butterflyFrame } from './butterflies.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
@@ -156,10 +157,26 @@ const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3
 const SmokeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Smoke }))) // r7-ship: lazy (startup budget)
 
 function Butterflies() {
+  if (typeof window !== 'undefined' && !window.__bfly) window.__bfly = { updates: 0, resting: true, resumed: false }
   const bs = useMemo(() => Array.from({ length: 16 }, (_, i) => ({ base: (i < 10 ? VILLAGE.clone().add(randDir().multiplyScalar(0.35)) : randDir()).normalize(), ph: rnd() * 6, ax: randDir(), m: DM.wing[i % 4] })), [])
-  const refs = useRef([])
-  useFrame(() => { const t = wind.time.value; bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = t * 0.35 + b.ph; const n = _wn.copy(b.base).applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = _wf.copy(b.base).applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl; g.visible = T.night < 0.6 }) })
-  return bs.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.8}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.022, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={b.m}><circleGeometry args={[0.024, 8]} /></mesh></group>)}</group>)
+  const refs = useRef([]), root = useRef(), awake = useRef(false)
+  useFrame(() => {
+    const step = butterflyFrame(T.night, awake.current)
+    const g0 = root.current
+    if (!step.update) {
+      if (awake.current) { awake.current = false; if (g0) g0.visible = false }
+      if (window.__bfly) window.__bfly.resting = true
+      return
+    }
+    const waking = !awake.current
+    awake.current = true
+    if (g0) g0.visible = true
+    const t = wind.time.value
+    const stat = window.__bfly || (window.__bfly = { updates: 0, resting: false })
+    stat.updates++; stat.resting = false; stat.resumed = waking
+    bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = butterflyAngle(t, b.ph); const n = _wn.copy(b.base).applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = _wf.copy(b.base).applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl })
+  })
+  return <group ref={root} visible={false}>{bs.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.8}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.022, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={b.m}><circleGeometry args={[0.024, 8]} /></mesh></group>)}</group>)}</group>
 }
 
 function Seeds() {
@@ -377,7 +394,7 @@ _setupHome()
 TALK.onOpen = () => { for (const k in KEYS) KEYS[k] = false; P.target = null } // she stops while talking
 function Keys() {
   useEffect(() => {
-    const d = e => { const k = e.key.toLowerCase(); if (gameBlocksKeys()) { if (k === ' ') e.preventDefault(); return } KEYS[k] = true; if (k === ' ' && Math.abs(P.h - floorLift(P.n)) < 0.003) P.vy = 1.9; if (k === 'v') VIEW.mode = VIEW.mode === 'follow' ? 'orbit' : 'follow'; if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault() }
+    const d = e => { const k = e.key.toLowerCase(); if (gameBlocksKeys()) { if (k === ' ') e.preventDefault(); return } KEYS[k] = true; if (k === ' ' && Math.abs(P.h - floorLift(P.n)) < 0.003) P.vy = 1.9; if (k === 'v') setViewMode(VIEW.mode === 'follow' ? 'orbit' : 'follow'); if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault() }
     const u = e => { KEYS[e.key.toLowerCase()] = false }
     addEventListener('keydown', d); addEventListener('keyup', u); return () => { removeEventListener('keydown', d); removeEventListener('keyup', u) }
   }, [])
@@ -510,7 +527,7 @@ function Rig() {
 }
 function Hint() {
   const [m, setM] = React.useState(VIEW.mode)
-  useEffect(() => { const id = setInterval(() => setM(VIEW.mode), 300); return () => clearInterval(id) }, [])
+  useEffect(() => subscribeView(setM), [])
   return <div style={{ fontSize: 15, opacity: 0.85, lineHeight: 1.5 }}>{TOUCH ? (m === 'follow' ? <>stick to walk · push to the edge to run · tap the ground to walk<br />drag to look · pinch to zoom · ✋ gather</> : <>drag to spin · pinch to zoom · tap Walk to go back</>) : m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
 }
 

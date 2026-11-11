@@ -23,7 +23,7 @@ A cozy, watercolour-toon 3D tiny planet you can walk around. Every mesh is gener
 - **WASD / arrow keys:** walk · **Shift:** run · **Space:** jump · **tap or click:** walk to that spot
 - **V:** toggle planet view (drag to spin, with inertia) / walk view
 
-URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
+URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
 
 ## Tech stack
 
@@ -38,13 +38,13 @@ Explore the planet, gather resources in each biome, and craft tools, food and de
 | Action | Keyboard | Touch |
 |---|---|---|
 | Walk | WASD / arrow keys | Tap the ground |
-| Jump | Space | |
+| Jump | Space | Jump button |
 | Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
 | Bag | B / I / Tab | Bag button |
-| Recipes | C | Recipes button |
+| Recipes | C | Menu, then Recipes |
 | Fishing | E / Space / Enter | Tap the bar |
 | Placing decor | R rotates, E/Enter places, Esc cancels | Placement bar buttons |
-| Planet view | V | |
+| Planet view | V | Menu, then Planet view |
 | Go in / out of the house | E at the door | ✋ Action, or tap the prompt |
 | Walk indoors | WASD / arrows | Stick (screen-relative), or tap the floor |
 | Pet Mochi (cat, indoors) | E near him | ✋ Action |
@@ -64,14 +64,15 @@ The touch controls appear on touch or coarse-pointer devices. Use `?touch=1` to 
 | Walk to a spot | Tap the ground (a clean tap; drags don't count) |
 | Look around | Drag one finger on empty screen to turn, and drag up or down to tilt |
 | Zoom | Pinch |
-| Planet view | **Planet / Walk** button |
-| Bag / Recipes | Buttons under the clock |
+| Planet view | Menu, then Planet view (or Walk, to come back) |
+| Bag | Bag button, top corner |
+| Recipes, journal, photo, map, settings | Menu |
 
-You can use the stick and buttons together with several fingers. Supported devices give light haptic feedback. Page scroll and zoom are locked, and the layout respects safe-area insets. In portrait, a dismissible hint suggests turning sideways; play works either way. On touch devices the render resolution is capped at 1.25x and post-processing MSAA is 2x (4x on desktop). The look is otherwise unchanged.
+You can use the stick and buttons together with several fingers. Supported devices give light haptic feedback. Page scroll and zoom are locked, and the layout respects safe-area insets. In portrait, a dismissible hint suggests turning sideways; play works either way. On touch devices the render resolution is capped at 1.25x and post-processing MSAA is 2x (4x on desktop). Touch also drops the film grain, and bloom except at night, when the lamps still halo. `?fx=full` puts the full stack back, including the canvas antialias. Desktop always keeps bloom, grain and vignette.
 
 ### Features
 - **Gathering** in every zone: forest wood and mushrooms, meadow flowers and sheep wool, lake fish and shells, terrace rice and tea, cliff stone and crystal, and night-only glowing moss and fireflies.
-- **Fishing minigame:** stop the marker in the green zone (3 tries).
+- **Fishing:** cast, wait for a bite, then hold to reel. Keep the net on the fish. Twelve species, one generic fish in the bag.
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
 - **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a procedural Ghibli-style score (a different piece outdoors, at home, in the museum and on the train) and activity sound effects, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
@@ -119,7 +120,7 @@ npm run preview  # http://localhost:4190
 
 ```bash
 npm run lint         # ESLint (light: undefined names, hook rules, JSX)
-npm run test:unit    # node --test tests/unit: save migrations (v1 fixture -> v4), Stage B + Stage C systems
+npm run test:unit    # node --test tests/unit: save migrations (v1 through v6), Stage B, C, E and F systems
 npx playwright install chromium   # once
 npm run build && npm run test:smoke   # Playwright smoke suite on the built game (starts vite preview on :4173)
 npm run perf:budget -- http://localhost:4173/   # startup chunk + draw calls / triangles per view vs tests/perf/budget.json
@@ -131,8 +132,8 @@ iPhone 13 profile, plus the Stage B loop and Stage C (fishing reel + species, ph
 `BASE_URL=http://host:port/` points it at an already-served build.
 
 The perf gate fails a PR when the startup chunk is over 80 KB gz (warns over 70) or a key view goes over its draw-call or triangle
-cap from `budget.md` (with a few % tolerance for run-to-run drift; known pre-existing overs are listed as overrides in
-`tests/perf/budget.json`). FPS and JS ms per frame are reported but never fail the build, since they are noise on software GL.
+cap from `budget.md` (with a few % tolerance for run-to-run drift). Tracked exceptions, if any, are the `overrides` object in
+`tests/perf/budget.json` (empty right now: the mobile forest walk sits under the 350-call cap). FPS and JS ms per frame are reported but never fail the build, since they are noise on software GL.
 
 ## Code layout
 
@@ -142,6 +143,9 @@ cap from `budget.md` (with a few % tolerance for run-to-run drift; known pre-exi
 - `src/world/village.js`: village, mills and house positions, the first bridge's set-piece spots
 - `src/npc/routines.js`: townsfolk and the villagers' day plans
 - `src/world/sky.jsx`: sky dome, sun and moon lights, clouds, birds, fireflies
+- `src/fx.js`: which post passes run (`?fx=full` restores the touch stack)
+- `src/game/propBake.js`: touch-only merged gather props
+- `src/npc/sleep.js`: far villagers on touch catch up instead of simulating every frame
 - `src/debug/`: dev-only views (`?view=charstudio`, `?view=lineup`), lazy chunks
 - `src/systems/`: Stage B rules (pure, unit-tested: `garden.js`, `friendship.js`, `errands.js`, `buffs.js`). `live.js` applies them to the save, and `World3D.jsx` and `Panels.jsx` mount Studio's art and UI. These are all lazy chunks, loaded in an idle slot after the game UI.
 - `src/systems/` Stage C: `weather.js` (seasons + rain), `fish.js` (balance over Studio's `game/fishTable.js`, rolls, the reel stepper), `train.js` (schedule + fares), `collection.js` (journal, museum, dig), `tutorial.js`, `photo.js` (album); `liveC.js` applies them, `WorldC.jsx` (prompts, capture, ride pin) and `PanelsC.jsx` (journal, museum, photo bar, ride chip, Studio's note + catch card). Loaded one idle step after `live.js`.

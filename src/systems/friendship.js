@@ -30,18 +30,29 @@ export const PREFS = {
 // what she gives back the first time you reach these hearts
 export const RETURN_GIFTS = { 3: ['seedpack', 2], 5: ['skyseed', 1] }
 export const newFriend = (npcId) => ({ npcId, hearts: 0, giftedToday: false, lastGiftReaction: null })
-export function reactionTo(npcId, itemId) {
+export function plainGift(itemId) {
+  return typeof itemId === 'string' && itemId.endsWith('_perfect') ? itemId.slice(0, -8) : itemId
+}
+function reactionPlain(npcId, itemId) {
   const p = PREFS[npcId] || {}
   if (p.love && p.love.includes(itemId)) return 'love'
   if (p.dislike && p.dislike.includes(itemId)) return 'dislike'
   if ((p.like && p.like.includes(itemId)) || ALL_LIKE.includes(itemId)) return 'like'
   return 'neutral'
 }
+export function giftScore(npcId, itemId) {
+  const plain = plainGift(itemId), perfect = plain !== itemId, base = reactionPlain(npcId, plain)
+  if (!perfect) return { kind: base, gain: GAIN[base] }
+  if (base === 'love') return { kind: 'love', gain: GAIN.love + 0.25 }
+  if (base === 'like') return { kind: 'love', gain: GAIN.love }
+  return { kind: 'like', gain: GAIN.like }
+}
+export function reactionTo(npcId, itemId) { return giftScore(npcId, itemId).kind }
 export const friendOf = (friends, npcId) => friends.list[npcId] || (friends.list[npcId] = newFriend(npcId))
 // -> { kind, gained, returns: [[item, n], ...] } or null (already gifted today)
 export function give(friends, npcId, itemId, mul = 1) {
   const f = friendOf(friends, npcId); if (f.giftedToday) return null
-  const kind = reactionTo(npcId, itemId), before = f.hearts, g = GAIN[kind] * (GAIN[kind] > 0 ? mul : 1)
+  const score = giftScore(npcId, itemId), kind = score.kind, before = f.hearts, g = score.gain * (score.gain > 0 ? mul : 1)
   f.hearts = Math.max(0, Math.min(MAX_HEARTS, before + g)); f.giftedToday = true; f.lastGiftReaction = kind
   const returns = []; f.got = f.got || []
   for (const h of Object.keys(RETURN_GIFTS)) if (f.hearts >= +h && !f.got.includes(+h)) { f.got.push(+h); returns.push(RETURN_GIFTS[h]) }
