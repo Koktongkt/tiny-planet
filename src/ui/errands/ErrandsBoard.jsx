@@ -28,7 +28,8 @@ function Note({ e, k, inv, names, onDeliver, onAccept }) {
     <Pin k={k} />
     <h4>{e.wants.length > 1 ? 'Could you bring…' : 'Wanted:'}</h4>
     <ul className="tpe-wants">{e.wants.map(w => { const have = Math.min(w.count, inv[w.itemId] || 0), ok = have >= w.count
-      return <li key={w.itemId} className={ok ? 'ok' : ''}><Icon id={w.itemId} size={44} /><span className="nm">{itemName(w.itemId)}</span><span className="tpx-num ct">{e.done ? '' : <>{have}/{w.count}</>}{!e.done && ok && ' ✓'}</span></li> })}</ul>
+      const plain = typeof w.itemId === 'string' && w.itemId.endsWith('_perfect') ? w.itemId.slice(0, -8) : w.itemId, perfect = plain !== w.itemId
+      return <li key={w.itemId} className={ok ? 'ok' : ''}><span className="tpe-ic"><Icon id={plain} size={44} />{perfect && <i className="tpe-spark" aria-label="perfect">✦</i>}</span><span className="nm">{itemName(w.itemId)}</span><span className="tpx-num ct">{e.done ? '' : <>{have}/{w.count}</>}{!e.done && ok && ' ✓'}</span></li> })}</ul>
     <div className="tpe-reward"><span className="lbl">Reward</span>
       {e.reward.itemId && <span className="rw"><Icon id={e.reward.itemId} size={28} wash={false} />{itemName(e.reward.itemId)}</span>}
       {e.reward.coins ? <span className="rw"><Icon id="coin" size={26} wash={false} /><b className="tpx-num">{e.reward.coins}</b></span> : null}

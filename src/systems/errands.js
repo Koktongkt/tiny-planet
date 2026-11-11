@@ -21,9 +21,18 @@ const LATER = [ // from day 2 on: crops and crafted things
   ['grandpa', [['pine_tea', 1]], { coins: 3, hearts: 1 }],
 ]
 const hash = (x) => { x = Math.imul(x ^ 0x9e3779b9, 0x85ebca6b); x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35); return (x ^ (x >>> 16)) >>> 0 }
+// A villager who already likes the plain dish. At most one perfect note, and not on day 0.
+const FITS = [['cook', 'soup'], ['baker', 'acorn_cookie'], ['grandma', 'teacup'], ['grandpa', 'pine_tea'], ['fisherman', 'grilledfish'], ['mother', 'soup']]
+export function perfectWant(day) {
+  if (day < 2 || hash(day * 17 + 11) % 4 !== 0) return null
+  const [npcId, plain] = FITS[hash(day * 13 + 1) % FITS.length]
+  return { npcId, itemId: plain + '_perfect' }
+}
 export function errandsFor(day) {
   const pool = day >= 2 ? POOL.concat(LATER) : POOL, n = day === 0 ? 1 : 2, out = [], used = new Set()
-  for (let k = 0, i = 0; out.length < n && k < 20; k++) {
+  const perfect = perfectWant(day)
+  if (perfect) { used.add(perfect.npcId); out.push({ id: `e${day}-p`, npcId: perfect.npcId, wants: [{ itemId: perfect.itemId, count: 1 }], reward: { coins: 4, hearts: 1 }, day, accepted: false, done: false }) }
+  for (let k = 0, i = out.length; out.length < n && k < 20; k++) {
     const pick = pool[hash(day * 31 + k) % pool.length]; if (used.has(pick[0])) continue; used.add(pick[0])
     out.push({ id: `e${day}-${i++}`, npcId: pick[0], wants: pick[1].map(([itemId, count]) => ({ itemId, count })), reward: { ...pick[2] }, day, accepted: false, done: false })
   }
