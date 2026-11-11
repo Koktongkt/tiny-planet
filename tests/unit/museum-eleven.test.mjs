@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import { caseCount, HALL_LINE, DONATABLE, RELICS } from '../../src/systems/collection.js'
 import { pinHallMention } from '../../src/systems/errands.js'
 import { fresh, migrate } from '../../src/save/schema.js'
@@ -12,6 +13,12 @@ test('the museum is eleven cases: eight relics and three fish', () => {
   for (const id of DONATABLE) s.museum.donated[id] = 1
   assert.deepEqual(caseCount(s), { n: 11, of: 11 })
   assert.match(HALL_LINE, /plinth|case|museum/i)
+})
+
+test('the journal labels the museum count on its own line', () => {
+  const src = fs.readFileSync(new URL('../../src/ui/journal/Journal.jsx', import.meta.url), 'utf8')
+  assert.match(src, /<p className="jn-cases">Museum \{progress\.donated\} of \{progress\.donatedOf\}<\/p>/)
+  assert.equal(src.includes('jn-cases"> {progress'), false)
 })
 
 test('the board mentions a full museum once, the morning after, and never again', () => {
