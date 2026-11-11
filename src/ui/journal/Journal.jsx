@@ -23,7 +23,7 @@ function Cell({ e, on, onPick }) {
 function Photos({ list }) {
   return <div className="jn-photos">{list.map((p, i) => <figure key={p.id} style={{ '--r': ((i * 37) % 9 - 4) * 0.8 + 'deg' }}><i className="jn-tape" />{p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jn-lost">faded</div>}<figcaption>Day {p.day + 1}</figcaption></figure>)}</div>
 }
-export function Journal({ tab = 'fish', onTab, entries = [], progress, onClose, touch = false }) {
+export function Journal({ tab = 'fish', onTab, entries = [], progress, stitches, onClose, touch = false }) {
   const [pick, setPick] = useState(null), T = JOURNAL_TABS.find(t => t.id === tab) || JOURNAL_TABS[0]
   useEffect(() => setPick(null), [tab])
   const sel = tab !== 'photos' && entries.find(e => e.id === pick), cnt = tab === 'photos' ? null : tabCount(entries)
@@ -40,6 +40,7 @@ export function Journal({ tab = 'fish', onTab, entries = [], progress, onClose, 
           </div>
           {(tab === 'fish' || tab === 'relics') && progress && <p className="jn-cases">Museum {progress.donated} of {progress.donatedOf}</p>}
         </header>
+        {stitches && stitches.length > 0 && <div className="jn-stitches" aria-label={`${stitches.filter(Boolean).length} of ${stitches.length} perfect dishes`}>{stitches.map((on, i) => <i key={i} className={on ? 'on' : ''} />)}</div>}
         <div className="jn-body tpx-scroll">
           {tab === 'photos' ? (entries.length ? <Photos list={entries} /> : <p className="jn-blank">{T.blank}</p>)
             : (entries.some(e => e.seen) || entries.length ? <div className="jn-grid">{entries.map(e => <Cell key={e.id} e={e} on={pick === e.id} onPick={setPick} />)}</div> : <p className="jn-blank">{T.blank}</p>)}

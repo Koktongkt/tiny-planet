@@ -10,6 +10,7 @@ import { FISH_TEXT } from '../game/itemsC.js'
 import { TOUCH } from '../touch.jsx'
 import { SC, RIDE, PH, STOP_NAME } from './liveC.js'
 import { withProgress, TUTORIAL_SIGNER } from '../ui/tutorial/steps.js'
+import { stitchRow } from './perfectLog.js'
 import { registerFishIcons } from '../art/fish/icons.jsx'
 import './panelsC.css'
 const TutorialNote = lazy(() => import('../ui/tutorial/TutorialNote.jsx'))
@@ -29,7 +30,7 @@ const JournalBook = lazy(() => import('../ui/journal/Journal.jsx'))
 const DonateCard = lazy(() => import('../ui/museum/DonateCard.jsx'))
 function Journal() {
   const [tab, setTab] = useState('fish')
-  return <JournalBook tab={tab} onTab={setTab} entries={SC.journal(tab)} progress={SC.C.progress(G.s)} onClose={close} touch={TOUCH} />
+  return <JournalBook tab={tab} onTab={setTab} entries={SC.journal(tab)} progress={SC.C.progress(G.s)} stitches={stitchRow(G.s)} onClose={close} touch={TOUCH} />
 }
 function Donate() {
   const d = G.ui.donate; if (!d) return null
