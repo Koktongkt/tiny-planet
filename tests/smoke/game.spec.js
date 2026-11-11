@@ -79,12 +79,18 @@ test('an old v1 save loads and migrates', async ({ page }) => {
 test('indoor controls: walk, turn, go out of the door', async ({ page }) => {
   test.setTimeout(480_000)
   const w = watchErrors(page); await boot(page)
-  const h0 = await page.evaluate(() => ({ ...window.__home.hp, inside: window.__home.inside }))
+  const h0 = await page.evaluate(() => ({ x: window.__home.hp.x, z: window.__home.hp.z, yaw: window.__home.hp.yaw, inside: window.__home.inside }))
   expect(h0.inside).toBe(true)
-  await hold(page, ['w'], 1500)
+  // Sim time is clamped to 50 ms per frame, so a fixed 1.5 s of wall clock is not enough
+  // when software GL is near 1 fps. Wait until she has actually moved.
+  await page.keyboard.down('w')
+  await page.waitForFunction((o) => { const h = window.__home.hp; return Math.hypot(h.x - o.x, h.z - o.z) > 0.1 }, h0, { timeout: 90_000 })
+  await page.keyboard.up('w')
   const h1 = await page.evaluate(() => ({ x: window.__home.hp.x, z: window.__home.hp.z, yaw: window.__home.hp.yaw }))
   expect(Math.hypot(h1.x - h0.x, h1.z - h0.z)).toBeGreaterThan(0.1)
-  await hold(page, ['a'], 1000)
+  await page.keyboard.down('a')
+  await page.waitForFunction((y) => Math.abs(window.__home.hp.yaw - y) > 0.2, h1.yaw, { timeout: 90_000 })
+  await page.keyboard.up('a')
   expect(Math.abs(await page.evaluate(() => window.__home.hp.yaw) - h1.yaw)).toBeGreaterThan(0.2)
   await hold(page, ['w'], 5000) // walk into a wall: stays in the room
   const h2 = await page.evaluate(() => window.__home.hp); expect(Math.abs(h2.x)).toBeLessThan(1.6); expect(Math.abs(h2.z)).toBeLessThan(1.6)
