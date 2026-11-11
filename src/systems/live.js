@@ -19,6 +19,7 @@ const S = () => G.s
 // ---------- days ----------
 function catchUp(day, quiet) {
   const s = S(), grew = Gd.advanceTo(s.garden, day), reset = Fr.resetDay(s.friends, day), rolled = Er.rollDay(s.errands, day)
+  Er.pinHallMention(s.errands, s.museum, day)
   if (!quiet && rolled && s.errands.list.length) setTimeout(() => toast(`New request${s.errands.list.length > 1 ? 's' : ''} on the village errands board.`, 'board', 3400), 1800)
   if (!quiet && grew && s.garden.plots.some(p => p.stage === 'ripe')) setTimeout(() => toast('Something in your garden is ready to pick!', 'seedpack', 3400), 3600)
   return grew || reset || rolled

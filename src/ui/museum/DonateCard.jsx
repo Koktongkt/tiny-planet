@@ -14,8 +14,8 @@ registerFishIcons(); registerRelicIcons()
 const kindOf = (id) => (FISH_TEXT[id] ? 'fish' : 'relic')
 const X = () => <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" /></svg>
 export function DonateCard({ itemId, onDonate, onClose, mode = 'donate', donatedDay, have, line }) {
-  const [done, setDone] = useState(false), e = { id: itemId, kind: kindOf(itemId) }, name = entryName(e)
-  const thanks = line || HOSHINO_LINES.donate[(itemId || '').length % HOSHINO_LINES.donate.length]
+  const [done, setDone] = useState(false), [spoken, setSpoken] = useState(''), e = { id: itemId, kind: kindOf(itemId) }, name = entryName(e)
+  const thanks = spoken || line || HOSHINO_LINES.donate[(itemId || '').length % HOSHINO_LINES.donate.length]
   const inspect = mode === 'inspect' || done
   return <div className="tpx tpx-veil dn-veil" onPointerDown={ev => { if (ev.target === ev.currentTarget && onClose) onClose() }}>
     <IconDefs />
@@ -28,7 +28,7 @@ export function DonateCard({ itemId, onDonate, onClose, mode = 'donate', donated
         <div className="dn-plaque"><i />{PLAQUE_TEXT[itemId] || 'A curious thing. I shall need to think about this one.'}{inspect && donatedDay != null && <small> — catalogued on day {donatedDay + 1}</small>}</div>
         {done ? <p className="dn-say">“{thanks}”</p> : mode === 'donate' ? <p className="dn-say">“May I put it on show? It would be in very good company.”</p> : null}
         <div className="dn-btns">{mode === 'donate' && !done
-          ? <><button className="tpx-btn" onClick={onClose}>Keep it</button><button className="tpx-btn go" onClick={() => { const ok = onDonate ? onDonate(itemId) : true; if (ok !== false) setDone(true) }}>Donate</button></>
+          ? <><button className="tpx-btn" onClick={onClose}>Keep it</button><button className="tpx-btn go" onClick={() => { const ok = onDonate ? onDonate(itemId) : true; if (ok === false) return; if (typeof ok === 'string') setSpoken(ok); setDone(true) }}>Donate</button></>
           : <button className="tpx-btn" onClick={onClose}>{done ? 'You’re welcome' : 'Lovely'}</button>}</div>
       </div>
     </div>

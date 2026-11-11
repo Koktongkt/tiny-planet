@@ -93,7 +93,12 @@ export const journal = (tab) => tab === 'photos' ? S().photos.list.map(p => ({ .
 export const donatable = () => C.DONATABLE.filter(id => C.canDonate(S().museum, id, S().inv))
 export function donate(id) {
   if (!C.donate(S().museum, id, S().inv, S().day)) return false
-  SB.Fr.addHearts(S().friends, C.HOSHINO, 0.5); toast(`Professor Hoshino: "Splendid! The ${nm(id)} goes on display."`, id, 3600); emit(); return true
+  SB.Fr.addHearts(S().friends, C.HOSHINO, 0.5)
+  const cases = C.caseCount(S()), full = cases.n === cases.of
+  if (full && S().museum.full == null) S().museum.full = S().day
+  const line = full ? C.HALL_LINE : null
+  toast(line ? `Professor Hoshino: "${line}"` : `Professor Hoshino: "Splendid! The ${nm(id)} goes on display."`, id, 4200)
+  emit(); return line || true
 }
 export function digAt(spot) {
   needRelicIcons()

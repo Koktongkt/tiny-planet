@@ -34,7 +34,7 @@ export function Journal({ tab = 'fish', onTab, entries = [], progress, onClose, 
       <nav className="jn-tabs" role="tablist">{JOURNAL_TABS.map(t => <button key={t.id} role="tab" aria-selected={t.id === tab} className={t.id === tab ? 'on' : ''} style={{ '--c': t.color }} onClick={() => onTab && onTab(t.id)}>{t.label}</button>)}</nav>
       <div className="jn-page">
         <header className="jn-head"><h3>{T.label}</h3>
-          <span className="jn-prog">{cnt ? <>{cnt.seen}<small>/{cnt.of}</small> found</> : <>{entries.length}<small>/12</small> kept</>}{progress && <em> · {progress.donated}/{progress.donatedOf} in the museum</em>}</span>
+          <span className="jn-prog">{cnt ? <>{cnt.seen}<small>/{cnt.of}</small> found</> : <>{entries.length}<small>/12</small> kept</>}{(tab === 'fish' || tab === 'relics') && progress && <span className="jn-cases"> {progress.donated} of {progress.donatedOf}</span>}</span>
           {onClose && <button className="tpx-x" aria-label="Close journal" onClick={onClose}><X /></button>}</header>
         <div className="jn-body tpx-scroll">
           {tab === 'photos' ? (entries.length ? <Photos list={entries} /> : <p className="jn-blank">{T.blank}</p>)

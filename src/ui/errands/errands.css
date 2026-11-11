@@ -41,6 +41,7 @@
 .tpe-stamp{position:absolute;right:22px;top:46px;width:104px;transform:rotate(-14deg);mix-blend-mode:multiply;animation:tpe-stamp .35s cubic-bezier(.3,1.6,.5,1)}
 @keyframes tpe-stamp{from{transform:rotate(-14deg) scale(1.8);opacity:0}}
 .tpe-note.s-new{outline:2px dashed #5f8fc480;outline-offset:-8px}
+.tpe-mention{margin:10px 4px 0;font-size:18px;line-height:1.35}
 .tpe-empty{display:grid;place-items:center;text-align:center;padding:40px 10px;font-size:22px;color:#3b2f22}
 .tpe-empty p{margin:8px 0 0;padding:10px 20px;background:#fffaf0;border-radius:6px;transform:rotate(-1.5deg);box-shadow:0 3px 4px #3a2a2030}
 @media (max-width:640px){

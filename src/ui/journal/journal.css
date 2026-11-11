@@ -15,6 +15,7 @@
 .jn-head{display:flex;align-items:baseline;gap:12px;padding-bottom:6px;margin-bottom:6px;border-bottom:2px solid var(--tab)}
 .jn-head h3{margin:0;font:italic 600 34px/1 TPSerif,Georgia,serif}
 .jn-prog{flex:1;font-size:18px}.jn-prog small{opacity:.6}.jn-prog em{opacity:.7;font-size:16px}
+.jn-cases{font-weight:600}
 .jn-head .tpx-x{align-self:center}
 .jn-body{flex:1;min-height:0}
 .jn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px 12px;padding:6px 2px 10px}
