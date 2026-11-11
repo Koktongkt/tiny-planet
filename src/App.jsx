@@ -651,14 +651,14 @@ function Boot({ onLive, player = true }) {
     //    without it, programs compile inside the sliced warm-up renders below, so the cost is spread over many tasks
     const parallel = gl.extensions.has('KHR_parallel_shader_compile')
     const compileOn = (list, async) => { const prev = gl.getRenderTarget(); gl.setRenderTarget(rt); try { const proxy = { traverse: f => list.forEach(f), traverseVisible: () => {} }; return async ? gl.compileAsync(proxy, camera, scene) : gl.compile(proxy, camera, scene) } finally { gl.setRenderTarget(prev) } }
-    if (parallel) { try { await compileOn(reps, true) } catch (err) { console.warn('compile', err) } }
+    if (parallel) { try { await compileOn(reps, true) } catch (err) {} }
     // 2) first-use them in time-boxed slices (~40 ms each), yielding a paint between slices
     const warm = (batch) => {
       const prev = gl.getRenderTarget(), saved = batch.map(o => [o, o.frustumCulled, o.isInstancedMesh ? o.count : -1])
       try {
         lights.forEach(l => l.layers.enable(31)); saved.forEach(([o]) => { o.layers.enable(31); o.frustumCulled = false; if (o.isInstancedMesh) o.count = Math.min(o.count, 1) }) // real (tiny-target) draw: program link, uniforms, buffer upload and the driver's first-draw work
         gl.setRenderTarget(rt); gl.render(scene, warmCam)
-      } catch (err) { console.warn('warm batch', err) } finally {
+      } catch (err) {} finally {
         gl.setRenderTarget(prev); lights.forEach(l => l.layers.disable(31)); saved.forEach(([o, fc, c]) => { o.layers.disable(31); o.frustumCulled = fc; if (c >= 0) o.count = c })
       }
     }
@@ -674,7 +674,7 @@ function Boot({ onLive, player = true }) {
     }
     window.__programs = reps.length
     // effect passes (bloom/noise/vignette) compile on their first composer render: do that off-screen-behind-the-loader now
-    if (COMPOSER.current && !dead) { try { COMPOSER.current.render(0) } catch (err) { console.warn('warm composer', err) } await nextPaint() }
+    if (COMPOSER.current && !dead) { try { COMPOSER.current.render(0) } catch (err) {} await nextPaint() }
     bootStage('shaders', 1)
     if (q.get('bootpause') === 'shaders') return // screenshot aid: hold the real loader state before the first frame
     live.current = true; onLive()
