@@ -76,7 +76,7 @@ export function paint(mat, amt = 0.12, shadow = true, scale = 2.2) { mat.userDat
     sh.vertexShader = 'varying vec3 vPW; varying vec3 vPO;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vPO = transformed; vPW = (modelMatrix*vec4(transformed,1.)).xyz;')
     sh.fragmentShader = 'uniform float uTime, uDay; varying vec3 vPW; varying vec3 vPO;\n' + NOISE_GLSL + '\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       float pn = pfbm(vPO*${scale.toFixed(2)}); float pn2 = pn3(vPO*${(scale * 9).toFixed(2)});
-      diffuseColor.rgb *= 1. - ${amt.toFixed(3)} + 2.*${amt.toFixed(3)}*pn; diffuseColor.rgb *= .96 + .08*pn2; // brushy colour variation
+      diffuseColor.rgb *= 1. - ${amt.toFixed(3)} + 2.*${amt.toFixed(3)}*pn; diffuseColor.rgb *= .96 + .08*pn2;
       ${shadow ? `float ca = -uTime*0.03; vec3 cp = vec3(cos(ca)*vPW.x - sin(ca)*vPW.z, vPW.y, sin(ca)*vPW.x + cos(ca)*vPW.z);
       float cs = smoothstep(.5,.66, pfbm(cp*.42 + vec3(3.1)));
       diffuseColor.rgb *= mix(1., .74, cs*uDay); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*vec3(.86,.9,1.05), cs*uDay*.6);` : ''}`)
@@ -93,7 +93,6 @@ export function inkRim(mat) { const prev = mat.onBeforeCompile, key = mat.custom
     sh.fragmentShader = 'uniform float uInkW, uInkK;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
       { vec3 Vd = normalize(vViewPosition); float ndv = abs(dot(normalize(vNormal), Vd));
         float px = ndv / max(fwidth(ndv), 1e-4);
-        // width = the old hull's 0.06 world units projected (thick on near ridges), never under uInkW px
         float wpx = clamp(.06 * uInkK / length(vViewPosition), uInkW, 28.); float ink = 1. - smoothstep(wpx * .7, wpx, px);
         gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(${[0x4a, 0x3a, 0x35].map(v => (v / 255).toFixed(3)).join(',')}), ink * .92); }`) }
   mat.customProgramCacheKey = () => (key ? key() : '') + 'ink'
