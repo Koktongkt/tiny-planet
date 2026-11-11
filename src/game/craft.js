@@ -7,6 +7,7 @@ import './itemsE.js'
 import { RECIPES } from './recipes.js'
 import './itemsF.js'
 import { startAct, blip, ACT } from '../act.js'
+import { notePerfect } from '../systems/perfectLog.js'
 const q = new URLSearchParams(location.search)
 const COOK_STEPS = { stir: 1, flip: 1, press: 1, pour: 1 }
 const stepOf = (r) => (r && COOK_STEPS[r.cook] ? r.cook : 'stir')
@@ -26,6 +27,7 @@ export function finishDish(r, result, o = {}) {
   if (o.activity && G.onActivity) G.onActivity(o.activity)
   const name = (ITEMS[item] && ITEMS[item].name) || item
   const icon = item.endsWith('_perfect') ? item.slice(0, -8) : item
+  if (result.perfect) notePerfect(G.s, item, G.s.day)
   toast(result.perfect ? `✦ Perfect ${name}!` : `✦ Cooked ${name}! Into the bag it goes.`, icon)
   if (o.spark && G.benchPos) ACT.spark = { t0: performance.now(), pos: G.benchPos.clone(), n: 14, col: 'gold' }
   emit()

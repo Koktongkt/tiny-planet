@@ -18,6 +18,9 @@
 .jn-prog{flex:1;font-size:18px}.jn-prog small{opacity:.6}.jn-prog em{opacity:.7;font-size:16px}
 .jn-cases{margin:0;font:600 16px/1.15 Fredoka,sans-serif;font-style:normal}
 .jn-head .tpx-x{align-self:center}
+.jn-stitches{display:flex;gap:8px;align-items:center;margin:-2px 0 8px}
+.jn-stitches i{width:22px;height:8px;border-radius:4px;background:#e7dcc4;box-shadow:inset 0 0 0 1.4px #4a3a3588}
+.jn-stitches i.on{background:#d9a24a}
 .jn-body{flex:1;min-height:0}
 .jn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px 12px;padding:6px 2px 10px}
 .jn-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 6px 7px;border:0;border-radius:14px 10px 16px 11px;background:#fffaf0a8;
