@@ -46,4 +46,6 @@
 .tpg-react.k-love .tpg-say{background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#fde2e6 70%,#f6c4cc 100%)}
 .tpg-react.k-dislike .tpg-say{background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#e8eef2 70%,#d4dfe8 100%)}
 @keyframes tpg-say{0%{opacity:0;transform:translate(-50%,-32px)}14%{opacity:1;transform:translate(-50%,-40px)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-46px)}}
+.tpg-ic{position:relative;display:grid;place-items:center}
+.tpg-spark{position:absolute;right:-2px;top:-6px;color:#c9842a;font-style:normal;font-size:16px}
 @media (prefers-reduced-motion:reduce){.tpg-react *{animation-duration:.01s!important}.tpg-heart .lvl{transition:none}}
