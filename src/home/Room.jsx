@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { HOME, ROOM, DOOR, BLOCKS, resolve, freeAt, roomToWorld } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
-import { toon, T, C, CC, q, VIEW } from '../common.jsx'
+import { toon, T, C, CC, q, VIEW, setViewMode } from '../common.jsx'
 import { toonRamp, R, height } from '../world.js'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
@@ -72,7 +72,7 @@ let fov0 = null
 HOME.camera = (camera, g, dt) => {
   if (!HOME.inside && HOME.snapOut > 0) { window.__snap = true; if (--HOME.snapOut === 0) setTimeout(() => { window.__snap = HOME.snap0 }, 0) } // land the follow camera behind her at once
   if (!HOME.inside) { if (fov0 != null) { camera.fov = fov0; fov0 = null; camera.updateProjectionMatrix(); camera.layers.set(0) } return HOME.camOverride ? HOME.camOverride(camera, g) : false }
-  if (VIEW.mode !== 'follow') VIEW.mode = 'follow'
+  if (VIEW.mode !== 'follow') setViewMode('follow')
   if (fov0 == null) { fov0 = camera.fov; camera.fov = 56; camera.updateProjectionMatrix(); camera.layers.set(LAYER) }
   const hp = HOME.hp, z = Math.min(1, Math.max(0.6, CAM.zoom))
   // frame her, and lean toward the cat when he's close by
