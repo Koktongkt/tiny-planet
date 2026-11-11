@@ -32,6 +32,7 @@
 .jn-note{min-height:52px;padding:8px 4px 2px;border-top:1.6px dashed #3b2f2240;font-size:18px;line-height:1.3}
 .jn-note b{font-weight:600}.jn-note em{color:#7a5a3a}
 .jn-hint{opacity:.55}
+.jn-quiet{margin:6px 0 0;font-size:15px;opacity:.72}
 .jn-blank{margin:60px auto;max-width:360px;text-align:center;font-size:22px;opacity:.6}
 .jn-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px 16px;padding:12px 8px}
 .jn-photos figure{position:relative;margin:0;padding:8px 8px 4px;background:#fffdf8;box-shadow:0 0 0 1.4px #3b2f2240,2px 4px 8px #2a1e1430;transform:rotate(var(--r))}

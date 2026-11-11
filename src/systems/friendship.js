@@ -51,6 +51,16 @@ export function addHearts(friends, npcId, n) { const f = friendOf(friends, npcId
 // a new morning: everyone can receive a gift again
 export function resetDay(friends, day) { if (friends.day === day) return false; friends.day = day; for (const k in friends.list) friends.list[k].giftedToday = false; return true }
 // extra dialogue unlocked by friendship (Talk appends one of these)
+export function familyCount(friends) {
+  const list = (friends && friends.list) || {}
+  let n = 0
+  for (const k in list) if (list[k] && list[k].hearts >= MAX_HEARTS) n++
+  return { n: Math.min(22, n), of: 22 }
+}
+export function familyLine(friends) {
+  const c = familyCount(friends)
+  return `${c.n} of ${c.of} neighbours feel like family`
+}
 export function heartLine(f, name) {
   const h = Math.floor(f ? f.hearts : 0)
   if (h >= 5) return `You're family here now, you know. The whole village says so.`
