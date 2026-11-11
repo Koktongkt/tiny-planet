@@ -33,9 +33,13 @@ export function Journal({ tab = 'fish', onTab, entries = [], progress, stitches,
       <div className="jn-spiral" aria-hidden>{[...Array(touch ? 0 : 9)].map((_, i) => <i key={i} />)}</div>
       <nav className="jn-tabs" role="tablist">{JOURNAL_TABS.map(t => <button key={t.id} role="tab" aria-selected={t.id === tab} className={t.id === tab ? 'on' : ''} style={{ '--c': t.color }} onClick={() => onTab && onTab(t.id)}>{t.label}</button>)}</nav>
       <div className="jn-page">
-        <header className="jn-head"><h3>{T.label}</h3>
-          <span className="jn-prog">{cnt ? <>{cnt.seen}<small>/{cnt.of}</small> found</> : <>{entries.length}<small>/12</small> kept</>}{progress && <em> · {progress.donated}/{progress.donatedOf} in the museum</em>}</span>
-          {onClose && <button className="tpx-x" aria-label="Close journal" onClick={onClose}><X /></button>}</header>
+        <header className="jn-head">
+          <div className="jn-title"><h3>{T.label}</h3>
+            <span className="jn-prog">{cnt ? <>{cnt.seen}<small>/{cnt.of}</small> found</> : <>{entries.length}<small>/12</small> kept</>}</span>
+            {onClose && <button className="tpx-x" aria-label="Close journal" onClick={onClose}><X /></button>}
+          </div>
+          {(tab === 'fish' || tab === 'relics') && progress && <p className="jn-cases">Museum {progress.donated} of {progress.donatedOf}</p>}
+        </header>
         {stitches && stitches.length > 0 && <div className="jn-stitches" aria-label={`${stitches.filter(Boolean).length} of ${stitches.length} perfect dishes`}>{stitches.map((on, i) => <i key={i} className={on ? 'on' : ''} />)}</div>}
         <div className="jn-body tpx-scroll">
           {tab === 'photos' ? (entries.length ? <Photos list={entries} /> : <p className="jn-blank">{T.blank}</p>)

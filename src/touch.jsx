@@ -4,7 +4,8 @@
 // keyboard would (Space / E), so jumping, gathering, fishing, placing and the bench all share one code path.
 // Planet view (V) lives in the phone Menu, in the lazy game HUD, so the pad stays three controls.
 import React, { useEffect, useRef, useState } from 'react'
-import { q, VIEW } from './common.jsx'
+import { q, VIEW, subscribeView, subscribeStick } from './common.jsx'
+import { emitStick } from './signals.js'
 import './touch.css'
 const tq = q.get('touch')
 export const TOUCH = tq === '1' || (tq !== '0' && typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && matchMedia('(hover: none)').matches)))
@@ -68,10 +69,11 @@ function useIdleFade() {
   return idle
 }
 export const PADUI = { hideStick: false } // set by the dialogue box: stick unmounts (releasing PAD) while she is talking
+export function setHideStick(v) { if (PADUI.hideStick === v) return; PADUI.hideStick = v; emitStick(v) }
 export function TouchPad() {
   const idle = useIdleFade()
   const [mode, setMode] = useState(VIEW.mode)
-  useEffect(() => { const t = setInterval(() => setMode(VIEW.mode + (PADUI.hideStick ? ':talk' : '')), 150); return () => clearInterval(t) }, [])
+  useEffect(() => { const paint = () => setMode(VIEW.mode + (PADUI.hideStick ? ':talk' : '')); const a = subscribeView(paint), b = subscribeStick(paint); return () => { a(); b() } }, [])
   if (!TOUCH) return null
   const walk = mode.startsWith('follow'), talk = mode.endsWith(':talk')
   return <div className={'tp-pad' + (idle ? ' tp-idle' : '')}>

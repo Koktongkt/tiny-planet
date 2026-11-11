@@ -3,6 +3,8 @@ import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { R, height, toonRamp, wind, place } from './world.js'
+import { emitView, subscribeView, subscribeStick } from './signals.js'
+export { subscribeView, subscribeStick }
 export const q = new URLSearchParams(location.search)
 export const INK = '#4a3a35'
 // T.h: monotonic in-game hours (advances 24 h per day length even when ?t= pins the lighting) for game-time cooldowns
@@ -17,9 +19,10 @@ export const glowMats = []
 export const glow = (c) => { const m = new THREE.MeshBasicMaterial({ color: c, toneMapped: false }); m.userData.base = C(c); glowMats.push(m); return m }
 export const MAT = { wall: toon('#fbf3e4'), wall2: toon('#f2e2c4'), roofs: ['#d9655b', '#5f8fc4', '#e8a24a', '#c97b9a'].map(c => toon(c)), wood: toon('#8a5a3c'), stone: toon('#cfc3b0'), white: toon('#fffaf0'), win: glow('#ffcf6e'), lamp: glow('#ffd27a'), sail: toon('#f6ead2') }
 export const VIEW = { mode: ['orbit', 'detail', 'lineup', 'zone', 'hero', 'charstudio'].includes(q.get('view')) ? q.get('view') : 'follow' }
+export function setViewMode(m) { if (VIEW.mode === m) return; VIEW.mode = m; emitView(m) }
 export const OCC = [], occ = (el) => { if (el && !OCC.includes(el)) OCC.push(el) }
 export const RC = new THREE.Raycaster()
-window.__setView = (m) => { VIEW.mode = m }
+window.__setView = setViewMode
 export const planetRef = { current: null }
 // Large instance sets are split into spatial clusters (by nearest of 42 icosphere directions) so each
 // cluster gets a tight bounding sphere (frustum culling) and can be dropped when past the planet's horizon.

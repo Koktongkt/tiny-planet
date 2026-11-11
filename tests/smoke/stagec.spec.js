@@ -24,10 +24,16 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   test.setTimeout(420_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=lake&give=rod'); await scReady(page)
   await page.waitForFunction(() => window.__game.G.near?.spot?.item === 'fish', null, { timeout: 60_000 })
-  await page.keyboard.press('e')
+  // Day 0 opens Grandma's note on top of the lake. A keypress lands on that dialog, so fold it and use the prompt.
+  await page.locator('.tpt-note').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {})
+  if (await page.locator('.tpt-note').isVisible().catch(() => false)) await page.locator('.tpt-note .tpt-btns .tpx-btn').click()
+  await page.locator('.tp-prompt').click()
   await expect(page.locator('.tp-fish-c')).toBeVisible()
-  await page.waitForFunction(() => window.__fishSt && window.__fishSt.state === 'bite', null, { timeout: 120_000, polling: 100 })
-  await page.keyboard.down('e'); await page.waitForFunction(() => window.__fishSt.state === 'reel', null, { timeout: 60_000, polling: 100 })
+  // One long frame can pass through 'bite' before a poll, so 'reel' counts too.
+  await page.waitForFunction(() => { const s = window.__fishSt; return !!s && (s.state === 'bite' || s.state === 'reel' || s.state === 'caught') }, null, { timeout: 120_000, polling: 100 })
+  if (await page.evaluate(() => window.__fishSt.state) === 'bite') {
+    await page.keyboard.down('e'); await page.waitForFunction(() => window.__fishSt.state === 'reel', null, { timeout: 60_000, polling: 100 })
+  } else await page.keyboard.down('e')
   await expect(page.locator('.tp-fish-c .net')).toBeVisible()
   // the real reel takes ~15 s of game time (minutes on SwiftShader): jump near the end and follow the fish
   await page.evaluate(() => { const s = window.__fishSt; s.prog = 0.97; s.bar = s.fx; s.bv = 0 })
