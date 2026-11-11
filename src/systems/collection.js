@@ -29,6 +29,14 @@ export function entries(tab, s) {
   return []
 }
 export const progress = (s) => ({ fish: FISH_IDS.filter(id => s.fish[id]).length, fishOf: FISH_IDS.length, donated: Object.keys(s.museum.donated).length, donatedOf: DONATABLE.length })
+export const CASES = DONATABLE.length
+export function caseCount(s) {
+  const don = (s.museum && s.museum.donated) || {}
+  let n = 0
+  for (const id of DONATABLE) if (don[id] !== undefined) n++
+  return { n, of: CASES }
+}
+export const HALL_LINE = 'Every plinth filled. The old library would be proud of you. I certainly am.'
 // ruins dig spots: DIG_SPOTS per day; each yields a seeded find (mostly shards/coins, sometimes a new relic)
 export const DIG_SPOTS = 5
 const hash = (n) => { let h = (n | 0) * 2654435761; h = (h ^ (h >>> 15)) * 2246822519; return ((h ^ (h >>> 13)) >>> 0) / 4294967296 }

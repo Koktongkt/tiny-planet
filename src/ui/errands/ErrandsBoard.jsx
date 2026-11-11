@@ -23,6 +23,8 @@ function Stamp() { return <svg className="tpe-stamp" viewBox="0 0 120 120" aria-
   <text fontFamily="TPSerif,Georgia,serif" fontStyle="italic" fontWeight="600" fontSize="17" fill="#c0403a" letterSpacing="2"><textPath href="#tpe-arc" startOffset="50%" textAnchor="middle">THANK YOU</textPath></text>
   <path d="M38 64 L54 80 L84 44" fill="none" stroke="#c0403a" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity=".9" /></svg> }
 function Note({ e, k, inv, names, onDeliver, onAccept }) {
+  if (e.mention) return <article className="tpe-note s-mention" style={{ '--tilt': TILT[k % TILT.length] + 'deg', '--paper': NOTE[k % NOTE.length] }}>
+    <Pin k={k} /><p className="tpe-mention">{e.mention}</p><p className="tpe-sig">— {giver(e.npcId, names)}</p></article>
   const st = errandState(e, inv), needAccept = onAccept && !e.accepted && !e.done, role = roleOf(e.npcId)
   return <article className={'tpe-note s-' + st + (needAccept ? ' s-new' : '')} style={{ '--tilt': TILT[k % TILT.length] + 'deg', '--paper': NOTE[k % NOTE.length] }}>
     <Pin k={k} />
