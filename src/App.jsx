@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { ACT, tickAct, actLocked } from './act.js'
 import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree, advance, _roots } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
@@ -32,6 +32,7 @@ import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, setV
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { fxPasses, nightFromPhase } from './fx.js'
+import { paceFrame, stampActive } from './framePace.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
@@ -369,6 +370,7 @@ const LineupLazy = lazy(() => import('./debug/Lineup.jsx'))
 const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
 { const t = new THREE.Vector3(0, 1, 0); P.fwd.copy(t.sub(P.n.clone().multiplyScalar(P.n.dot(t)))).normalize().negate() }
 const KEYS = {}
+window.__keys = KEYS
 if (VIEW.mode === 'detail') { P.n.copy(bl(B0, 0.08, 0)); P.fwd.copy(B0.tan) }
 window.__player = P
 _setupHome()
@@ -705,6 +707,49 @@ function WorldFx() {
   </EffectComposer>
 }
 function useHidden() { const [h, setH] = useState(typeof document !== 'undefined' && document.hidden); useEffect(() => { const f = () => setH(document.hidden); document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f) }, []); return h }
+// Touch only. The canvas stays on frameloop "never" (switching it resets the three clock) and this
+// loop calls advance() in clock-seconds. Idle drops to 30 fps; a key, the stick, a drag or her
+// own movement returns to every frame on the next tick. Cooking and a hidden tab already pause
+// the world by clearing internal.active / __tpWorldLoop, and advance() would ignore that, so we do too.
+function worldPaused() {
+  if (document.hidden || window.__tpWorldLoop === 'demand') return true
+  let any = false
+  for (const root of _roots.values()) {
+    any = true
+    const s = root.store && root.store.getState()
+    if (s && s.internal && s.internal.active === false) return true
+  }
+  return !any
+}
+function signals() {
+  const pad = window.__pad, cam = window.__cam, keys = window.__keys || {}, P = window.__player
+  const held = !!(pad && pad.active) || !!(cam && cam.drag) || !!(keys.w || keys.a || keys.s || keys.d || keys.arrowup || keys.arrowdown || keys.arrowleft || keys.arrowright || keys[' '])
+  const moving = !!(P && (P.move > 0.08 || P.target || Math.abs(P.vy) > 0.05))
+  return { held, moving }
+}
+function TouchPace() {
+  useEffect(() => {
+    const pace = window.__pace = { idle: false, renders: 0, skips: 0, busyMs: 0 }
+    let raf, lastRender = null, lastActive = performance.now()
+    const tick = (ts) => {
+      raf = requestAnimationFrame(tick)
+      const now = ts
+      lastActive = stampActive(now, lastActive, signals())
+      const d = paceFrame({ touch: true, now, lastActive, lastRender, paused: worldPaused(), booted: !!(window.__loadMarks && window.__loadMarks.frame) })
+      pace.idle = d.idle
+      if (!d.render) { pace.skips++; return }
+      const t0 = performance.now()
+      // frameloop "never" reads this timestamp as clock seconds, not the rAF millisecond value
+      advance(now / 1000)
+      pace.busyMs += performance.now() - t0
+      pace.renders++
+      lastRender = now
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return null
+}
 export default function App() {
   const [live, setLive] = useState(false), hidden = useHidden()
   const [dpr, setDpr] = useState(Math.min(DPR_MAX, typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1))
@@ -716,7 +761,7 @@ export default function App() {
     <div style={{ position: 'fixed', left: 28, top: 22, fontFamily: 'Fredoka, sans-serif', color: '#5a4636', fontSize: 22 }}>Character studio{q.has('compare') ? (SPRITE ? ' · 3D (left) vs 2.5D sprite (right)' : (NEWCHAR ? ' · previous 3D prototype (left) vs new (right)' : ' · old (left) vs new (right)')) : ''}</div>
   </>
   return <>
-    <Canvas frameloop={live && !hidden ? 'always' : 'never'} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: FX.antialias }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
+    <Canvas frameloop={TOUCH ? 'never' : (live && !hidden ? 'always' : 'never')} dpr={dpr} camera={{ position: [0, 5.8 * WS, 30 * WS], fov: 36, far: 400 }} gl={{ antialias: FX.antialias }} onCreated={({ camera, gl }) => { camera.lookAt(0, 1, 0); gl.debug.checkShaderErrors = !!import.meta.env.DEV }} style={{ position: 'fixed', inset: 0, cursor: 'pointer' }}>
       {ADAPT && live && <PerformanceMonitor factor={1} flipflops={3} onChange={({ factor }) => setDpr(Math.min(devicePixelRatio || 1, Math.round((1 + (DPR_MAX - 1) * factor) * 20) / 20))} />}
       <Boot onLive={() => setLive(true)} /><Clock /><TalkSlot /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <WorldFx />
@@ -725,6 +770,7 @@ export default function App() {
       <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
     </div>
     {GAMEON && <GameSlot ui />}
+    {TOUCH && <TouchPace />}
     <TouchPad />
     {live && <Suspense fallback={null}><MinimapLazy /></Suspense>}{/* r7: minimap (src/minimap, lazy) */}
     <TalkSlot ui />
