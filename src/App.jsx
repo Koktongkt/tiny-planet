@@ -463,7 +463,8 @@ function faceInside(dt, obj) { const hp = HOME.hp; if (!hp) return
   if (want !== null) { let d = want - FI.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); FI.yaw += d * Math.min(1, dt * 10) }
   HOME.faceYaw = FI.yaw; obj.quaternion.setFromAxisAngle(_Y, FI.yaw) }
 function Traveller() {
-  const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake])
+  const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), [])
+  const [gw, setGw] = useState(!!GM.W); useEffect(() => onBoot('game', () => setGw(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake]) // gw: re-render once the game chunk is in, so the lantern and bike mount even if it lands after her bake
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); HOME.playerObj = ref.current
     if (HOME.inside) { HOME.stepInside(dt, KEYS, P, ref.current); faceInside(dt, ref.current) } // inside her house
@@ -476,7 +477,7 @@ function Traveller() {
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
-  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{GM.W && <GM.W.PlayerLantern />}{GM.W && <GM.W.PlayerBike />}</group>
+  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
 }
 const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
 const ZVIEWS = {
