@@ -12,9 +12,9 @@ import { cel, OUT, GEO } from '../home/kit.jsx'
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
 const _lw = new THREE.Vector3(), _ls = new THREE.Vector3(), LOD_PET = 1.7
-function lodStep(root, lod, cam) { if (!root) return
+function lodStep(root, lod, cam, holdFar) { if (!root) return
   if (!lod.current) { const L = []; root.updateWorldMatrix(true, true); root.traverse(o => { if (!o.isMesh || !o.geometry) return; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); o.getWorldScale(_ls); if (o.geometry.boundingSphere.radius * Math.max(_ls.x, _ls.y, _ls.z) < 0.008) L.push(o) }); lod.current = { L, vis: true, n: 0 }; if (typeof window !== 'undefined') (window.__petLod = window.__petLod || []).push(lod.current) }
-  const D = lod.current; if (D.n++ % 6) return; root.getWorldPosition(_lw); const v = cam.position.distanceTo(_lw) < LOD_PET
+  const D = lod.current; if (!holdFar && D.n++ % 6) return; root.getWorldPosition(_lw); const v = !holdFar && cam.position.distanceTo(_lw) < LOD_PET
   if (v !== D.vis) { D.vis = v; for (const o of D.L) o.visible = v } }
 const K = { hop: 30, roll: 4, bodyYaw: 6, purr: 10 }
 function Part({ geo = GEO.sph, mat, out = OUT.pet, pos, scl, rot, children, gref }) {
@@ -31,7 +31,7 @@ export function Quadruped({ cfg, st }) {
   const lodRoot = useRef(), lod = useRef(null)
   useFrame((S3, dt) => {
     if (st.frozen) return
-    lodStep(lodRoot.current, lod, S3.camera) // off-screen (cat while she's outdoors, dog waiting by the door while she's in)
+    lodStep(lodRoot.current, lod, S3.camera, !!st.ride) // off-screen (cat while she's outdoors, dog waiting by the door while she's in). st.ride holds the far LOD so the crate does not turn the tiny face meshes back on.
     dt = Math.min(dt, 0.05); st.t += dt; const p = st.p, g = st.goal, R_ = r.current, t = st.t
     for (const k in g) { const kk = K[k] ?? 7; p[k] += (g[k] - p[k]) * Math.min(1, dt * kk) }
     // blink + ear twitches

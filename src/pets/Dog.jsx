@@ -7,6 +7,7 @@ import { startAct } from '../act.js'
 import React, { useEffect, useMemo, useRef, Suspense, lazy } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
+import { rideSeat, sitInCrate, placeAtSeat, hopOffSpot, hopArc, hopPose, hopFrom, HOP_S, RIDE_SCALE, SEAT_LIFT } from './petRide.js'
 import { HOME } from '../home/state.js'
 import { GEO, cel, OUT } from '../home/kit.jsx'
 import { R, height, ZONES, LAKE_W, HARB_W, around, dir as dirLL, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, BRIDGES, JUMPS, BL, streamHalf, streamLat } from '../world.js'
@@ -30,7 +31,7 @@ const angTo = (a, b) => Math.acos(Math.min(1, Math.max(-1, a.dot(b) / (a.length(
 const surf = (n, out) => out.copy(n).multiplyScalar(R + Math.max(height(n), LAKE_W - 0.07))
 const DIG = ['acorn', 'stone', 'coin', 'shell', 'pinecone', 'clay', 'shard']
 export const DOG = { n: new THREE.Vector3(0, 1, 0), f: new THREE.Vector3(1, 0, 0), speed: 0, state: 'follow', t: 0, dur: 0, mood: 0.6, side: 1, idleT: 0, barkCD: 4, splashCD: 0, name: 'Pip',
-  petCD: 0, ex: 0, wetT: 0, decT: 2, playWin: 0, playRoll: 20, lastFetchH: -99, throws: 0, cd: {}, route: null, routeT: 0, stick: { mode: 'none', n: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector3(), t: 0 }, critter: { on: false, kind: 'fly', n: new THREE.Vector3(), d: new THREE.Vector3(), t: 0, up: 0 }, dug: [] }
+  petCD: 0, ex: 0, wetT: 0, decT: 2, playWin: 0, playRoll: 20, lastFetchH: -99, throws: 0, cd: {}, route: null, routeT: 0, stick: { mode: 'none', n: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector3(), t: 0 }, critter: { on: false, kind: 'fly', n: new THREE.Vector3(), d: new THREE.Vector3(), t: 0, up: 0 }, dug: [], onBike: 0, hop: 0, obj: null }
 if (typeof window !== 'undefined') window.__dog = DOG
 const DEMO = q.has('petsdemo') // ?petsdemo: both pets side by side outdoors (Mochi's rig sits beside Pip), close camera
 const FORCE = q.get('dog') || (DEMO ? 'sit' : null)
@@ -76,7 +77,7 @@ function bowlN() { if (BOWLD.n || !HOME.outN || !HOME.homeN) return BOWLD.n
   BOWLD.n = HOME.outN.clone().addScaledVector(side, -0.5 / R).addScaledVector(away, 0.06 / R).normalize(); BOWLD.eat = BOWLD.n.clone().addScaledVector(away, 0.13 / R).normalize(); BOWLD.away = away; return BOWLD.n }
 if (typeof window !== 'undefined') window.__dogBowl = BOWLD
 export function Dog() {
-  const st = useMemo(() => newPet(), []), root = useRef(), stickW = useRef(), stickM = useRef(), crit = useRef(), bub = useRef(), puff = useRef(), drops = useRef(), hearts = useRef(), dugRefs = useRef([]), bowlR = useRef()
+  const st = useMemo(() => newPet(), []), root = useRef(), rig = useRef(), stickW = useRef(), stickM = useRef(), crit = useRef(), bub = useRef(), puff = useRef(), drops = useRef(), hearts = useRef(), dugRefs = useRef([]), bowlR = useRef()
   const D = DOG
   const go = (s, dur, x = {}) => { D.state = s; D.t = 0; D.dur = dur; Object.assign(D, x) }
   useMemo(() => {
@@ -119,11 +120,34 @@ export function Dog() {
     try { (gl.compileAsync ? gl.compileAsync(proxy, camera, scene) : Promise.resolve(gl.compile(proxy, camera, scene))).catch(() => {}) } catch {} }, [])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); const P = HOME.P; if (!P || !D.init) { if (!D.init && HOME.outN && HOME.P) { D.init = false } return }
+    st.ride = 0 // far pet LOD unless the crate branch below says otherwise (no extra face-mesh draw calls)
     D.t += dt; D.barkCD -= dt; D.splashCD -= dt; D.petCD -= dt; D.mood = Math.max(0.25, D.mood - dt * 0.004); D.clock = (D.clock || 0) + dt; D.decT -= dt; D.routeT -= dt
     D.playWin -= dt; D.playRoll -= dt; if (D.playRoll < 0) { D.playRoll = 40 + Math.random() * 30; if (Math.random() < 0.4) D.playWin = 30 + Math.random() * 20 } // playful moods come and go
     D.ex = Math.max(0, D.ex + (D.speed > 1.8 ? dt : -dt * 0.25)) // exertion -> panting
     const g = st.goal; Object.assign(g, POSE0); bub.current.visible = false
     if (D.photo) { D.photo(st, D); D.speed = 0; root.current.position.copy(surf(D.n, _a)); root.current.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(D.n, D.f), D.n, D.f)); return } // Stage C photo mode: brain frozen, pose held
+    D.obj = root.current
+    // bicycle crate: the GLB pet_seat, and only while she is actually mounted (same RIDE flag PlayerBike draws).
+    // Placeholder bikes and a GLB that has not loaded yet have no empty, so he keeps following on the ground.
+    const bk = window.__bike
+    const seat = D.forced ? null : rideSeat(!!(bk && bk.RIDE.mounted), window.__bikeArt && window.__bikeArt.bike)
+    if (seat) {
+      if (!D.onBike) { D.onBike = 1; D.hop = 0; D.route = null; D.stick.mode = 'none'; D.critter.on = false; if (stickW.current) stickW.current.visible = false; if (stickM.current) stickM.current.visible = false; if (crit.current) crit.current.visible = false }
+      D.state = 'onBike'; D.speed = 0; st.speed = sitInCrate(g, D.t); st.run = 0; st.ride = 1
+      placeAtSeat(root.current, seat, undefined, SEAT_LIFT)
+      if (rig.current) rig.current.scale.setScalar(RIDE_SCALE)
+      return
+    }
+    if (D.onBike || D.hop > 0) {
+      if (D.onBike) { D.onBike = 0; hopFrom.copy(root.current.position); D.hop = HOP_S; const fwd = P.face && P.face.lengthSq() > 0.5 ? P.face : P.fwd; hopOffSpot(P.n, fwd, D.n, _s, R); tan(D.n, _a.copy(P.n).sub(D.n), D.f) }
+      D.hop = Math.max(0, D.hop - dt); const k = 1 - D.hop / HOP_S
+      hopPose(g, k); D.speed = 0; st.speed = 0; st.run = 0; st.ride = D.hop > 0 ? 1 : 0; D.state = D.hop > 0 ? 'hopOff' : 'follow'
+      hopArc(hopFrom, surf(D.n, _a).addScaledVector(D.n, bridgeLift(D.n)), D.n, k, root.current.position)
+      root.current.quaternion.setFromRotationMatrix(_m.makeBasis(_x.crossVectors(D.n, D.f), D.n, D.f))
+      if (rig.current) rig.current.scale.setScalar(RIDE_SCALE + (DOG_CFG.s - RIDE_SCALE) * k)
+      return
+    }
+    if (rig.current && rig.current.scale.x !== DOG_CFG.s) rig.current.scale.setScalar(DOG_CFG.s)
     const dHer = angTo(D.n, P.n) * R, herMoving = P.move > 0.2, sN = streamNear(D.n, _sn3), sGap = sN.d - sN.half, wet = height(D.n) < LAKE_W - 0.03 || (sGap < -0.02 && !onBridgeDeck(D.n))
     if (wet) D.wetT += dt; else if (D.wetT > 0.6 && !FETCHING.has(D.state) && D.state !== 'splash' && D.state !== 'shake' && D.state !== 'wait' && D.state !== 'toDoor') { D.wasWet = true; D.wetT = 0; go('shake', 1.1) } else if (!wet) D.wetT = 0
     g.tailUp = 0.6 + 0.6 * D.mood; g.tailWag = 0.25 + 0.75 * D.mood; g.tailSpeed = 8 + 8 * D.mood; g.tongue = D.speed > 1 || D.ex > 1.2 ? 1 : 0.4 * D.mood; g.mouth = g.tongue * 0.25; if (D.ex > 1.2 && D.speed < 0.6) { g.pant = Math.min(1, D.ex / 3); g.mouth = 0.55 }
@@ -259,7 +283,7 @@ export function Dog() {
   })
   return <>
     <group ref={root}>
-      <group scale={DOG_CFG.s}><Quadruped cfg={DOG_CFG} st={st} /></group>
+      <group ref={rig} scale={DOG_CFG.s}><Quadruped cfg={DOG_CFG} st={st} /></group>
       {PetsDemo && <Suspense fallback={null}><PetsDemo /></Suspense>}
       <group ref={stickM} position={[0, 0.117, 0.142]} rotation={[0, Math.PI / 2, 0]} visible={false}><Stick /></group>
       <group position={[0.04, 0.23, 0.06]}><Bubble bref={bub} scale={0.68} /></group>
