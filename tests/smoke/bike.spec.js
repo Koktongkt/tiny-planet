@@ -18,7 +18,26 @@ test('bike: lazy GLB, mounts on R, ride pose, hop off', async ({ page }) => {
   expect(files.some(n => n.startsWith('vendor-gltf-'))).toBe(true)
   const b = await page.evaluate(() => { const k = window.__bikeArt.bike; let ink = 0; window.__scene.traverse(o => { if (o.name === 'bike_ink' && o.isSkinnedMesh) ink++ }); return { calls: k.calls, ink, seat: !!k.empties.seat, pet: !!k.empties.pet_seat } })
   expect(b).toEqual({ calls: 2, ink: 1, seat: true, pet: true })
+  // the dog sits on the crate floor (pet_seat), not trotting alongside
+  await page.waitForFunction(() => {
+    const d = window.__dog, seat = window.__bikeArt?.bike?.empties?.pet_seat
+    if (!d?.onBike || d.state !== 'onBike' || !d.obj || !seat || d.speed !== 0) return false
+    d.obj.updateWorldMatrix(true, false); seat.updateWorldMatrix(true, false)
+    const e = d.obj.matrixWorld.elements, s = seat.matrixWorld.elements
+    return Math.hypot(e[12] - s[12], e[13] - s[13], e[14] - s[14]) < 0.05
+  }, null, { timeout: 30_000, polling: 250 })
   await page.keyboard.press('r')
-  await page.waitForFunction(() => !window.__bike.shown(), null, { timeout: 30_000, polling: 250 })
+  // she is standing still, so he sits beside her once the hop finishes (that is the normal follow brain)
+  await page.waitForFunction(() => {
+    const d = window.__dog, seat = window.__bikeArt?.bike?.empties?.pet_seat
+    if (!d?.obj || !seat || window.__bike.shown() || d.onBike || d.hop > 0) return false
+    if (d.state === 'onBike' || d.state === 'hopOff') return false
+    d.obj.updateWorldMatrix(true, false); seat.updateWorldMatrix(true, false)
+    const player = window.__home.playerObj; player.updateWorldMatrix(true, false)
+    const e = d.obj.matrixWorld.elements, p = player.matrixWorld.elements, s = seat.matrixWorld.elements
+    const nearHer = Math.hypot(e[12] - p[12], e[13] - p[13], e[14] - p[14])
+    const offSeat = Math.hypot(e[12] - s[12], e[13] - s[13], e[14] - s[14])
+    return nearHer < 0.85 && offSeat > 0.05
+  }, null, { timeout: 30_000, polling: 250 })
   w.check()
 })
