@@ -133,8 +133,9 @@ function Prop({ item, s = 1 }) {
   }
 }
 const G_GLOW = glow('#b8ff7a'), G_CRYS = new THREE.MeshToonMaterial({ color: '#b8d4ff', emissive: '#6a7ad0', emissiveIntensity: 0.4 }), G_WATER = new THREE.MeshBasicMaterial({ color: '#9fe6f0' }), G_SPARK = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false })
-// touch: each gather prop was ~6-14 draws (a mesh plus an ink hull per part). Bake once per item
-// into one vertex-coloured body + one hull. Glow and glass return null and stay as <Prop>.
+// each gather prop was ~6-14 draws (a mesh plus an ink hull per part). Bake once per item into one vertex-coloured
+// body + one hull (same triangles, colours and transforms). Glow and glass return null and stay as <Prop>.
+// Touch has baked since the mobile forest fix; desktop bakes too now, which frees the forest calls the bike needs.
 const PROP_BAKE = {}
 let propBody = null
 function MergedProp({ item, s }) {
@@ -144,7 +145,6 @@ function MergedProp({ item, s }) {
   if (c === false) return <Prop item={item} s={s} />
   return <group ref={ref} visible={false}><Prop item={item} s={1} /></group>
 }
-function SpotProp(p) { return TOUCH ? <MergedProp {...p} /> : <Prop {...p} /> }
 const G_RING = new THREE.MeshBasicMaterial({ color: '#fffbe8', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false, depthWrite: false })
 const G_FLY = glow('#f2ff8a'), G_HALO = new THREE.MeshBasicMaterial({ color: '#e8ff9a', transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false })
 
@@ -341,7 +341,7 @@ export function GameWorld() {
   if (!L) return null
   return <group>
     {L.spots.map(sp => <group key={sp.id} ref={el => { if (el) refs.current[sp.id] = el }} position={sp.pos} quaternion={place(sp.water ? sp.n : sp.n, 0, sp.spin).q}
-      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <SpotProp item={sp.item} s={sp.s} />}</group>)}
+      onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <MergedProp item={sp.item} s={sp.s} />}</group>)}
     <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
@@ -365,28 +365,27 @@ function GhostDecor() {
   return <group ref={g}>{last.current && <Decor item={last.current} />}<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, 0]} material={GHOST}><ringGeometry args={[0.1, 0.13, 32]} /></mesh></group>
 }
 // carried lantern (shown at dusk/night once crafted)
-// the bicycle mesh loads the first time she is actually riding (zero draw calls until then)
-export function PlayerBike() {
-  const host = useRef(), wheels = useRef(null), loading = useRef(false)
-  useFrame(() => {
+// the bicycle loads the first time she is actually riding (zero draw calls and zero bytes until then): Studio's
+// Village Pet Bike GLB, 2 draw calls (toon body + skinned ink hull). Nothing is drawn while it loads. `st` is her pose
+// state (App.jsx PST): wheels roll by the distance she covers, the fork follows her turn, and she sits in POSES.ride_bike.
+const BIKE_Z = 0.04 // saddle under her hips (the GLB origin is the placeholder's centre; the old mesh sat at z 0.012)
+export function PlayerBike({ st }) {
+  const host = useRef(), bike = useRef(null), loading = useRef(false)
+  useFrame((_, dt) => {
     const g = host.current; if (!g) return
     const on = !!(window.__bike && window.__bike.shown())
     g.visible = on
-    if (!on) return
-    if (!wheels.current && !loading.current) {
+    if (!on) { if (st && st.act === 'ride_bike') { st.act = null; st.actW = 0 } return }
+    if (!loading.current) {
       loading.current = true
-      import('../art/bike/mesh.js').then(m => {
-        if (!host.current) return
-        const built = m.createBike()
-        host.current.add(built.frame)
-        for (const w of built.wheels) host.current.add(w)
-        wheels.current = built.wheels
-      }).catch(() => { loading.current = false })
+      import('../art/bike/mesh.js').then(m => m.loadBike()).then(b => { if (host.current) { host.current.add(b.root); bike.current = b } })
     }
+    const b = bike.current; if (!b) return
     const P = GAME.P
-    if (P && wheels.current) { const spin = P.phase * 2.4; for (const w of wheels.current) w.rotation.x = spin }
+    b.update({ dist: st ? st.dist : P ? P.phase * 2.4 * b.wheelRadius : 0, steer: st ? THREE.MathUtils.clamp((st.turn || 0) * 0.12, -0.45, 0.45) : 0 })
+    if (st && b.empties.seat && !st.ownAct) { if (st.act !== 'ride_bike') { st.act = 'ride_bike'; st.actW = 0 } st.actW = Math.min(1, st.actW + Math.min(dt, 0.05) * 6) }
   })
-  return <group ref={host} visible={false} position={[0, 0, 0.012]} />
+  return <group ref={host} visible={false} position={[0, 0, BIKE_Z]} />
 }
 export function PlayerLantern() {
   const g = useRef(), l = useRef()

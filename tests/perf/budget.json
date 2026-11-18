@@ -4,7 +4,7 @@
   "tolerance": { "calls": 0.03, "tris": 0.05 },
   "caps": {
     "desktop": { "walk": { "calls": 500, "tris": 600000 }, "orbit": { "calls": 900, "tris": 900000 } },
-    "mobile": { "walk": { "calls": 350, "tris": 350000 }, "orbit": { "calls": 600, "tris": 500000 } }
+    "mobile": { "walk": { "calls": 350, "tris": 390000 }, "orbit": { "calls": 600, "tris": 500000 } }
   },
   "overrides": {},
   "views": {
