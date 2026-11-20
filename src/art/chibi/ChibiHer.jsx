@@ -18,7 +18,9 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 // projection); 4 expressions in a 2x2 atlas.
 const FX = 0.052, FY0 = -0.047, FY1 = 0.019
 export const FACES = ['happy', 'blink', 'sleepy', 'excited']
-const EYE = { x: 0.0278, y: -0.0153, rx: 0.0116, ry: 0.0127 }
+// pass 6 (KT): features a touch smaller, higher and closer together. FT scales the tweak (1 = chosen, 1.5 = 'stronger').
+const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
+const EYE = { x: 0.0278 - FDX, y: -0.0153 + FDY, rx: 0.0116 * FS, ry: 0.0127 * FS }
 function drawFaces(W) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX), INK = '#2a1a14', BROW = '#3b2621'
@@ -27,12 +29,12 @@ function drawFaces(W) {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     // blush: round, saturated pink ovals under the outer eyes, soft rim
-    for (const sd of [-1, 1]) { const x = X(sd * 0.0383), y = Y(-0.0319), r = 0.0105 * s, gr = g.createRadialGradient(x, y, 0, x, y, r)
+    for (const sd of [-1, 1]) { const x = X(sd * (0.0383 - FDX)), y = Y(-0.0319 + FDY + 0.0004 * FT), r = 0.0105 * s, gr = g.createRadialGradient(x, y, 0, x, y, r)
       gr.addColorStop(0, 'rgba(244,146,140,.9)'); gr.addColorStop(0.62, 'rgba(244,146,140,.8)'); gr.addColorStop(1, 'rgba(244,146,140,0)'); g.fillStyle = gr; g.beginPath(); el(x, y, r, r * 0.86); g.fill() }
     // brows: short, thick, softly arched, round ends, tucked just under the bangs
-    const by = name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : 0.0098
+    const by = (name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : 0.0098) + 0.0004 * FT // eye tops rise only ~0.001 (smaller eyes), brows stay under the bang tips
     g.strokeStyle = BROW; g.lineWidth = 0.0034 * s
-    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0192), Y(by - 0.0015)); g.quadraticCurveTo(X(sd * 0.0261), Y(by + 0.0031), X(sd * 0.0328), Y(by - 0.0012)); g.stroke() }
+    for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0015)); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + 0.0031), X(sd * (0.0328 - bx)), Y(by - 0.0012)); g.stroke() }
     // eyes
     for (const sd of [-1, 1]) {
       const big = name === 'excited' ? 1.05 : 1, x = X(sd * EYE.x), y = Y(EYE.y), RX = EYE.rx * s * big, RY = EYE.ry * s * big
@@ -54,9 +56,9 @@ function drawFaces(W) {
       g.fillStyle = INK; g.beginPath(); el(x, y, RX * 1.05, RY * 1.06, a0, a1); el(x, y + RY * 0.1, RX * 0.97, RY * 0.95, a1, a0, true); g.closePath(); g.fill()
     }
     // nose: a tiny warm dot
-    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238), 0.0017 * s, 0.0011 * s); g.fill()
+    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT), 0.0017 * s, 0.0011 * s); g.fill()
     // mouth: small soft u (happy / blink), little frown (sleepy), open D with tongue (excited)
-    const my = -0.0351
+    const my = -0.0351 + FDY + 0.0008 * FT // mouth rises a bit more than the eyes: tighter cluster
     if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
