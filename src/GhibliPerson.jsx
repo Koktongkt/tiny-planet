@@ -228,7 +228,7 @@ export function spec(b = {}) {
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
-  S.ar = [0.017 * ar, 0.0145 * ar, 0.0115 * ar]
+  const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
   for (const sd of [-1, 1]) {
     const k = sd < 0 ? 'L' : 'R', dir = V3(sd * Math.sin(S.armA), -Math.cos(S.armA), 0)
     S['sh' + k] = V3(sd * 0.05 * shw * (0.85 + 0.15 * gw) * (b.shX ?? 1), S.shY, -0.002 + 0.025 * hc); S['el' + k] = S['sh' + k].clone().addScaledVector(dir, 0.046 * al)
@@ -583,7 +583,9 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
           <group ref={set('scarf')}>{[-0.4, 0.35].map(a => <M key={a} geo={G.scarfTail} mat={cel(cfg.scarf)} rotation={[0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}
       {o.type === 'sailor' && <group position={[0, S.neckY - 0.03 - chestY, S.chest[1].z * 0.95]}><M geo={G.scarfKnot} mat={cel(o.acc ?? '#d9455b')} scale={0.6} /><group ref={set('scarf')}>{[-0.3, 0.3].map(a => <M key={a} geo={G.scarfTail} mat={cel(o.acc ?? '#d9455b')} rotation={[0.15, 0, a]} scale={0.7} />)}</group></group>}
       {o.type === 'overalls' && [-1, 1].map(x => <M key={x} geo={G.tiny} mat={cel('#f2d27a')} position={[x * (o.bibW ?? 0.031), S.chestY + 0.012 - chestY, S.chest[1].z * 0.93 + S.chest[0].z]} outline={false} />)}
-      {cfg.satchel && <mesh position={[0, S.chestY - 0.01 - chestY, -0.002]} rotation={[0.05, 0, -0.72]} material={cel('#8a5a3c')}><torusGeometry args={[S.chest[1].x * 1.26, 0.0035, 6, 40]} /></mesh>}
+      {cfg.satchel && !X.strap && <mesh position={[0, S.chestY - 0.01 - chestY, -0.002]} rotation={[0.05, 0, -0.72]} material={cel('#8a5a3c')}><torusGeometry args={[S.chest[1].x * 1.26, 0.0035, 6, 40]} /></mesh>}
+      {cfg.satchel && X.strap && <group position={[X.strap[5] ?? 0, S.chestY - 0.01 - chestY + X.strap[2], X.strap[4] ?? 0]} rotation={[0, 0, X.strap[0]]}>{/* ext.strap [tilt, radius, y, depth, z, x]: a cross-body loop over the shoulder down to the bag */}
+        <mesh rotation={[0, Math.PI / 2, 0]} scale={[X.strap[3], 1, 1]} material={cel('#8a5a3c')}><torusGeometry args={[X.strap[1], 0.0045, 6, 40]} /></mesh></group>}
     </Merge>, B.chest)}
     {cfg.satchel && createPortal(<group ref={lod(1)}><group ref={set('bag')} position={[S.belly[1].x + (X.bag?.[0] ?? 0), S.bellyY + 0.03 - hipsY + (X.bag?.[1] ?? 0), -0.006 + (X.bag?.[2] ?? 0)]}><M geo={X.bagGeo ?? G.bag} mat={cel(X.bagC ?? '#c08d58')} position={[0.006, -0.03, 0]} scale={X.bag?.[3] ?? 1} /></group></group>, B.hips)}
     {createPortal(<group position={headLocal} scale={1.17 * hd}>{X.Face ? <X.Face st={st} lod={lod} /> : <group ref={lod(2)}><Merge>
