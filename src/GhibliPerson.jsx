@@ -12,7 +12,8 @@ import { T, C, CC, q } from './common.jsx'
 // ?look=cel: art-direction preview (round 8 proposal). Painted animation cel: flat colour + one crisp shadow shape,
 // no gloss or rim, a thin warm ink line, paper grain, and taller, less doll-like proportions. Off by default.
 export const LOOK = q.get('look')
-const LOOKDEF = LOOK === 'cel' ? { CELLOOK: 1 } : {}
+// ?look=v2: the research brief (straw-hat silhouette, designed face shadow, own key light, animation on twos).
+const LOOKDEF = LOOK === 'cel' ? { CELLOOK: 1 } : LOOK === 'v2' ? { CELLOOK: 1, V2: 1 } : {}
 import { POSES } from './act.js'
 
 // ---------- shading ----------
@@ -27,11 +28,17 @@ const VS = `#include <common>
   #ifdef BODY
     attribute float aAO; attribute vec4 aReg;
   #endif
+  #if defined(V2) && defined(BODY)
+    uniform vec4 uY; uniform vec3 uHeadC;
+  #endif
   #ifdef KIND
     attribute float aKind;
   #endif
   void main(){
     #include <beginnormal_vertex>
+    #if defined(V2) && defined(BODY)
+      { float hm = smoothstep(uY.y + .004, uY.y + .022, position.y); objectNormal = normalize(mix(objectNormal, normalize(position - uHeadC), hm)); }
+    #endif
     #include <skinbase_vertex>
     #include <skinnormal_vertex>
     #include <begin_vertex>
@@ -133,6 +140,9 @@ const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
     float ndl = dot(N,L);
     #ifdef CELLOOK
     { // one hard shadow shape (anti-aliased), cool on cloth / warm on skin; occlusion only as a second hard shape
+      #ifdef V2
+        L = normalize(vec3(-.45, .5, .74)); ndl = dot(N, L); // her own key light, fixed to the camera: a designed shadow side
+      #endif
       float w = fwidth(ndl)*1.2 + 1e-4, lit = smoothstep(.22 - w, .22 + w, ndl);
       float occ = step(.5, smoothstep(.82, .38, vAO)); lit *= 1. - occ;
       vec3 sh = mix(base*vec3(.66,.64,.82), base*vec3(.9,.68,.66), sk);
@@ -197,7 +207,7 @@ function bodyMat(cfg, S) {
   const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 : S.bellyY + 0.008
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1, ...LOOKDEF }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, 0) } }, vertexShader: VS, fragmentShader: FS })
+    uHeadC: { value: S.headC.clone() }, uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
   bodyMatCache.set(key, m); return m
@@ -427,6 +437,11 @@ function Merge({ children }) {
 // ---------- traveller preset ----------
 export const TRAVELLER = { name: 'traveller', body: {}, hair: { style: 'bob', c: '#3b2a22', cowlick: true }, scarf: '#e0614f', satchel: true,
   outfit: { type: 'overalls', skin: '#f7d3b8', top: '#f4ecd8', bottom: '#5b86c0', shoe: '#7a4630', cuffs: '#7aa2d4', sleeve: 'puff' }, face: {}, walk: {} }
+if (LOOK === 'v2') Object.assign(TRAVELLER, { // silhouette first: wide straw hat, loose shirt, rolled trousers, satchel, boots; ~3.5 heads
+  body: { head: 0.88, leg: 1.3, torso: 1.08, arm: 1.15 }, hair: { style: 'bob', c: '#3b2a22' }, scarf: null,
+  hat: { type: 'straw', c: '#e9c77e', band: '#d9655b' },
+  outfit: { type: 'shirt', skin: '#f6d2b6', top: '#f3ead6', bottom: '#6d8fb3', shoe: '#6e4029', cuffs: '#8aa6c4', sleeve: 'puff' },
+  face: { eye: 0.82 } })
 if (LOOK === 'cel') TRAVELLER.body = { head: 0.8, leg: 1.5, torso: 1.12, arm: 1.22 } // ~4 heads tall instead of ~3: a child, not a doll
 
 function Hair({ h, set, hd }) {
@@ -437,6 +452,7 @@ function Hair({ h, set, hd }) {
     {st !== 'bald' && <M geo={back} mat={m} position={[0, 0.002, -0.004]} />}
     {(st === 'bob' || st === 'long' || st === 'braids') && [[-0.028, 0.026, 0.04, 0.4], [0.0, 0.031, 0.046, 0.05], [0.027, 0.025, 0.041, -0.45]].map(([x, y, z, rz], k) => <M key={k} geo={G.lump} mat={m} position={[x, y, z]} rotation={[0.5, 0, rz]} scale={[1.25, 0.6, 0.72]} />)}
     {(st === 'short' || st === 'bun' || st === 'ponytail') && [[-0.03, 0.03, 0.036, 0.5], [0.004, 0.038, 0.04, 0], [0.033, 0.03, 0.034, -0.5]].map(([x, y, z, rz], k) => <M key={k} geo={G.lump} mat={m} position={[x, y, z]} rotation={[0.6, 0, rz]} scale={[1.0, 0.45, 0.6]} />)}
+    {(st === 'bob' || st === 'long') && [-1, 1].map(x => <M key={'lock' + x} geo={G.lump} mat={m} position={[x * 0.05, -0.006, 0.03]} rotation={[0.15, 0, x * 0.12]} scale={[0.62, 1.55, 0.72]} />)}{/* side locks: hide the hard edge of the back hair beside the face */}
     {st === 'bob' && [-1, 1].map(x => <group key={x} ref={set(x < 0 ? 'bobL' : 'bobR')} position={[x * 0.052, 0.0, -0.01]}><M geo={G.lump} mat={m} position={[x * 0.005, -0.03, 0.004]} scale={[0.78, 1.0, 1.1]} /></group>)}
     {st === 'long' && <group ref={set('bobL')} position={[0, 0.02, -0.045]}><M geo={G.lump} mat={m} position={[0, -0.062, -0.006]} scale={[2.3, 2.3, 0.9]} /></group>}
     {st === 'bun' && <M geo={G.lump} mat={m} position={[0, 0.055, -0.04]} scale={[1.05, 1.0, 1.05]} />}
@@ -451,6 +467,7 @@ function Hair({ h, set, hd }) {
 function Hat({ hat }) {
   if (!hat) return null
   const m = cel(hat.c)
+  if (hat.type === 'straw' && LOOK === 'v2') return <group position={[0, 0.016, -0.006]} rotation={[-0.16, 0, 0.06]}><M geo={G.brim} mat={m} /><M geo={G.crown} mat={m} position={[0, 0.026, 0]} scale={[1.22, 1.25, 1.22]} /><mesh geometry={G.band} material={cel(hat.band ?? '#d9655b')} position={[0, 0.012, 0]} scale={[1.2, 1.4, 1.2]} /></group> // v2: sits down on her head, brim at the forehead
   if (hat.type === 'straw') return <group position={[0, 0.03, -0.004]} rotation={[-0.12, 0, 0.05]}><M geo={G.brim} mat={m} /><M geo={G.crown} mat={m} position={[0, 0.022, 0]} /><mesh geometry={G.band} material={cel(hat.band ?? '#d9655b')} position={[0, 0.012, 0]} /></group>
   // open domes get no hull outline (its inside would show as a dark band); a closed rim torus carries the edge line
   if (hat.type === 'cap') return <group position={[0, 0.03, -0.008]} rotation={[-0.38, 0, 0]}><M geo={G.capDome} mat={m} outline={false} /><M geo={G.rim} mat={m} scale={[1.0, 0.6, 1.0]} /><M geo={G.visor} mat={m} position={[0, 0.002, 0.056]} /></group>
@@ -493,6 +510,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     if (level !== prev.current.level) { prev.current.level = level; for (const [o, lv] of lods.current) o.visible = level < lv }
     if (R_.shadow) { const air = Math.max(0, st.air || 0) / (S.H * scale), k = 1 / (1 + air * 7); R_.shadow.visible = level < 2 && !(SEATED.has(st.act) && (st.actW ?? 1) > 0.3); /* seated on a bench / chair: no shadow on the grass below */ R_.shadow.position.y = 0.002 - air; R_.shadow.scale.setScalar(k) }
     if (level === 2 && !st.force) return // far: skip the per-frame posing work too
+    if (LOOK === 'v2') { prev.current.acc = (prev.current.acc || 0) + dt; if (prev.current.acc < 1 / 12) return; dt = Math.min(prev.current.acc, 0.1); prev.current.acc = 0 } // poses held for two frames, like drawn animation
     const m = st.move, i = 1 - m, p = st.phase, s = Math.sin(p), c = Math.cos(p), t = (st.t ?? 0) + prev.current.seed, hc = S.hc
     const bob = (1 - Math.abs(s)) * W.bounce * m, land = Math.pow(Math.abs(s), 4) * m * (W.bounce / 0.02)
     const bobVel = (bob - prev.current.bob) / Math.max(dt, 1e-3); prev.current.bob = bob
@@ -609,7 +627,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
           : <><mesh ref={set(x < 0 ? 'eyeL' : 'eyeR')} geometry={G.eye} scale={[0.82 * es, 1.12 * es, 0.36]} material={eyeMat}>
               <mesh geometry={G.iris} position={[0, -0.0034, 0.0016]} scale={[0.66, 0.5, 1]} material={f.iris ? irisFor(f.iris) : irisMat} /></mesh>
             <mesh geometry={G.lash} position={[0, 0.0004 * es, 0.0046]} scale={[0.88 * es, 1.1 * es, 0.35]} material={eyeMat} />
-            <mesh geometry={G.hi} position={[0.003 * es, 0.004 * es, 0.0035]} scale={es} material={hiMat} /></>}
+            {LOOK !== 'v2' && <mesh geometry={G.hi} position={[0.003 * es, 0.004 * es, 0.0035]} scale={es} material={hiMat} />}</>}
         <mesh position={[0, 0.019 + (f.brow ?? 0), 0.0]} rotation={[0, 0, -x * (0.15 + (f.browTilt ?? 0))]} material={cel(cfg.hair.c)}><boxGeometry args={[0.013, 0.0028 * (f.browW ?? 1), 0.003]} /></mesh>
         {f.glasses && <mesh geometry={G.ring} material={cel(f.glasses)} position={[0, 0, 0.006]} rotation={[0, 0, 0]} />}
       </group>)}
