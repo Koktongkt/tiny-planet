@@ -128,13 +128,14 @@ const LOCKS = [
   [0.14, 0.47, 0.0186, 0.009, 0.024, 0.005],
   [0.45, 1.12, 0.0128, 0.012, 0.02, -0.0075],
   [1.08, 1.4, -0.034, 0.05, 0.012]]
-function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.45, 2.1, t); return y }
+function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.3, 1.62, t); return y } // pass 4: the bob comes down right behind the side locks (no gap above the puffs)
 // -> [edge y, lock bulge (shell units), groove 0..1 (1 = between locks)]
 function edge(a) {
   let y = baseY(Math.abs(a)), bulge = 0, groove = 1
   for (const [a0, a1, tip, rise, bu, sl = 0] of LOCKS) { if (a < a0 || a > a1) continue
     const u = (a - a0) / (a1 - a0) * 2 - 1, c = Math.sqrt(Math.max(0, 1 - u * u)), ly = tip + rise * (1 - c) + sl * u
-    if (ly < y) { y = ly; bulge = bu * Math.sqrt(c); groove = ss(0.62, 0.98, Math.abs(u)) } }
+    bulge = Math.max(bulge, bu * Math.sqrt(c)) // pass 4: the fullest lock at this azimuth, so the shell has no ridge where locks hand over
+    if (ly < y) { y = ly; groove = ss(0.62, 0.98, Math.abs(u)) } }
   return [y, bulge, groove]
 }
 // azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
@@ -143,11 +144,11 @@ function helmetGeo(NT = 12, NL = 5) {
   const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
   for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
     const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
-    const P = (th) => { let st = Math.sin(th); const ct = Math.cos(th), w = ss(0.42, 1, th / thE), front = ss(1.2, 0.2, t) * ss(0.45, 1, th / thE)
+    const P = (th) => { let st = Math.sin(th); const ct = Math.cos(th), w = ss(0.55, 1.3, th), front = ss(1.2, 0.2, t) * ss(0.55, 1.3, th) /* pass 4: by polar angle, so neighbouring locks meet without a ridge up to the crown */
       if (th > Math.PI / 2) st = 1 - 0.42 * (1 - st) // below the equator the hair hangs straight down instead of hugging the jaw
       const r = 1 + 0.026 * front + bulge * w, Q = [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r]
       // pass 4: the fringe tips come down onto the forehead (no see-through gap under the bangs, so no stray ink lines)
-      const tk = TUCK * ss(0.5, 1, th / thE) * ss(1.2, 0.85, t); if (tk <= 0) return Q
+      const tk = TUCK * ss(thE - 0.2, thE, th) * ss(1.06, 0.72, t) /* only the tip curls in (a wider band makes flaps where locks hand over) */; if (tk <= 0) return Q
       const d = [Q[0] - HC[0], Q[1] - HC[1], Q[2] - HC[2]], L = Math.hypot(...d); d.forEach((v, i) => { d[i] = v / L })
       if (headSDF(HC[0] + d[0] * L, HC[1] + d[1] * L, HC[2] + d[2] * L) < 0) return Q
       let lo = 0, hi = L; for (let n = 0; n < 24; n++) { const m = (lo + hi) / 2; if (headSDF(HC[0] + d[0] * m, HC[1] + d[1] * m, HC[2] + d[2] * m) < 0) lo = m; else hi = m }
@@ -178,10 +179,10 @@ const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
   const parts = [hel,
     part(ball, [0, -0.008, -0.019], [0.0635, 0.054, 0.052]), // back volume of the bob
-    part(ball, [0, 0.0715, -0.008], [0.0185, 0.016, 0.018]), // top bun
+    part(ball, [0, 0.0715, -0.008], [0.0168, 0.016, 0.017]), // top bun
     part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
-    ...[-1, 1].flatMap(d => [part(ball, [d * 0.0615, -0.027, -0.02], [0.021, 0.024, 0.022]), // side puffs at cheek level
-      part(ballS, [d * 0.0555, -0.0155, 0.0125], [0.0052, 0.0082, 0.0042], [0, d * 0.45, 0], 1)])] // ears
+    // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
+    ...[-1, 1].map(d => part(ball, [d * 0.0615, -0.027, -0.02], [0.021, 0.024, 0.022]))]
   const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
 let hairShader = null
 const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMaterial({
