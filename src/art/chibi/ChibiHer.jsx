@@ -200,7 +200,7 @@ const HAIR_GEO = (() => {
     part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
     // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
     // pass 9 (KT): lower (centre near the blush/mouth line) and fuller/rounder, as on the concept. PT scales the change (1 chosen, 1.5 'stronger').
-    ...[-1, 1].map(d => part(ball, [d * (0.0615 - 0.0015 * PT), -0.027 - 0.007 * PT, -0.02], [0.021 * (1 + 0.19 * PT), 0.024 * (1 + 0.16 * PT), 0.022 * (1 + 0.14 * PT)]))]
+    ...[-1, 1].map(d => part(ball, [d * (0.0615 - 0.0015 * PT), -0.027 - 0.0058 * PT, -0.02 - 0.002 * PT], [0.021 * (1 + 0.19 * PT), 0.024 * (1 + 0.13 * PT), 0.022 * (1 + 0.14 * PT)]))]
   const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
 let hairShader = null
 const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMaterial({
