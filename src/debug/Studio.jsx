@@ -28,8 +28,8 @@ function Studio() {
     for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * 9 * st.move; st.dist += dt * 0.27 * st.move }
     if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
     if (q.has('act')) { stNew.act = q.get('act'); stNew.actW = 1; stNew.move = 0 }
-    const d = compare ? 1.35 : 0.95, cx = 0
-    camera.position.set(cx + Math.sin(ang) * d, 0.3, Math.cos(ang) * d); camera.up.set(0, 1, 0); camera.lookAt(cx, 0.2, 0)
+    const tall = q.get('look') === 'cel', d = (compare ? 1.35 : 0.95) * (tall ? 1.18 : 1), cx = 0 // ?look=cel is ~25% taller
+    camera.position.set(cx + Math.sin(ang) * d, tall ? 0.34 : 0.3, Math.cos(ang) * d); camera.up.set(0, 1, 0); camera.lookAt(cx, tall ? 0.25 : 0.2, 0)
   })
   return <>
     <mesh material={bg}><sphereGeometry args={[30, 32, 16]} /></mesh>

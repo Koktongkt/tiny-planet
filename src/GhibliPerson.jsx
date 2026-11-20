@@ -8,7 +8,11 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { useFrame, createPortal } from '@react-three/fiber'
 import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { T, C, CC } from './common.jsx'
+import { T, C, CC, q } from './common.jsx'
+// ?look=cel: art-direction preview (round 8 proposal). Painted animation cel: flat colour + one crisp shadow shape,
+// no gloss or rim, a thin warm ink line, paper grain, and taller, less doll-like proportions. Off by default.
+export const LOOK = q.get('look')
+const LOOKDEF = LOOK === 'cel' ? { CELLOOK: 1 } : {}
 import { POSES } from './act.js'
 
 // ---------- shading ----------
@@ -127,6 +131,20 @@ const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
       base *= mix(.9, 1.06, dot(N, normalize(vUp))*.5 + .5); // darker back, lighter belly
     #endif
     float ndl = dot(N,L);
+    #ifdef CELLOOK
+    { // one hard shadow shape (anti-aliased), cool on cloth / warm on skin; occlusion only as a second hard shape
+      float w = fwidth(ndl)*1.2 + 1e-4, lit = smoothstep(.22 - w, .22 + w, ndl);
+      float occ = step(.5, smoothstep(.82, .38, vAO)); lit *= 1. - occ;
+      vec3 sh = mix(base*vec3(.66,.64,.82), base*vec3(.9,.68,.66), sk);
+      vec3 c = mix(sh, base, lit)*mix(vec3(1.), uLight, .85) + base*uAmb*.5;
+      if (vKind > .5) { float ring = step(abs(vO.y - .037), .0035)*step(.45, dot(N,V)); c = mix(c, base*1.5 + .05, ring*lit*.8); }
+      float g = fract(sin(dot(floor(gl_FragCoord.xy*.7), vec2(12.9898,78.233)))*43758.5453); c *= .97 + .05*g; // paper grain
+      gl_FragColor = vec4(c,1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      return;
+    }
+    #endif
     float hair = step(.5, vKind), strand = 0.;
     #ifdef HAIRM
       hair = 1.;
@@ -155,19 +173,19 @@ const mkU = () => Object.fromEntries(Object.entries(OUT0).map(([k, v]) => [k, { 
 const celCache = new Map()
 export function cel(hex) {
   if (celCache.has(hex)) return celCache.get(hex)
-  const m = new THREE.ShaderMaterial({ uniforms: { ...CEL_U, uColor: { value: C(hex) }, ...mkU(), uY: { value: new THREE.Vector4() }, uO: { value: new THREE.Vector4() }, uZ: { value: new THREE.Vector4() } }, vertexShader: VS, fragmentShader: FS })
+  const m = new THREE.ShaderMaterial({ defines: { ...LOOKDEF }, uniforms: { ...CEL_U, uColor: { value: C(hex) }, ...mkU(), uY: { value: new THREE.Vector4() }, uO: { value: new THREE.Vector4() }, uZ: { value: new THREE.Vector4() } }, vertexShader: VS, fragmentShader: FS })
   celCache.set(hex, m); return m
 }
 const furCache = new Map()
 export function fur(hex) { // pets' coats: the cel shader + fur grain and a back-to-belly value shift
   if (furCache.has(hex)) return furCache.get(hex)
-  const m = cel(hex).clone(); m.defines = { FUR: 1 }; m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: C(hex).clone() } }
+  const m = cel(hex).clone(); m.defines = { FUR: 1, ...LOOKDEF }; m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: C(hex).clone() } }
   furCache.set(hex, m); return m
 }
 const hairCache = new Map()
 function hairMat(hex) { // unmerged hair pieces (the swinging bob / ponytail / braids): strand texture without the ring
   if (hairCache.has(hex)) return hairCache.get(hex)
-  const m = cel(hex).clone(); m.defines = { HAIRM: 1 }; m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: C(hex).clone() } }
+  const m = cel(hex).clone(); m.defines = { HAIRM: 1, ...LOOKDEF }; m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: C(hex).clone() } }
   hairCache.set(hex, m); return m
 }
 const bodyMatCache = new Map()
@@ -177,7 +195,7 @@ function bodyMat(cfg, S) {
   const TY = { overalls: 0, dress: 1, apron: 2, yukata: 3, sailor: 4, cardigan: 5, jacket: 6, shirt: 7 }
   const dressy = o.skirt
   const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 : S.bellyY + 0.008
-  const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
+  const m = new THREE.ShaderMaterial({ defines: { BODY: 1, ...LOOKDEF }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
     uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
@@ -196,7 +214,7 @@ const OUTLINE_VS = (body) => `#include <common>
   float sil = .5 + .85*length(n.xy), under = 1. + .7*max(0., -n.y);
   float crease = ${body ? 'smoothstep(.3, .75, aAO)' : '1.'}; // thin the hull in creases so it can't poke through
   mv.xyz += n*uT*sil*under*crease*(0.6 + 0.4*clamp(-mv.z*.35,0.,2.)); gl_Position = projectionMatrix*mv; }`
-const mkOutline = (body) => new THREE.ShaderMaterial({ side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4, uniforms: { uT: { value: 0.0042 }, uCol: { value: C('#3b2621') } },
+const mkOutline = (body) => new THREE.ShaderMaterial({ side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4, uniforms: { uT: { value: LOOK === 'cel' ? 0.0026 : 0.0042 }, uCol: { value: C(LOOK === 'cel' ? '#5a3a2c' : '#3b2621') } },
   vertexShader: OUTLINE_VS(body), fragmentShader: `uniform vec3 uCol; void main(){ gl_FragColor = vec4(uCol,1.);
     #include <colorspace_fragment>
   }` })
@@ -383,7 +401,7 @@ const _wp = new THREE.Vector3()
 // ---------- static-piece merging ----------
 // Collapses every static cel/basic mesh under it (skipping animated subtrees: anything given a ref via set()) into
 // one cel mesh (vertex colours), one basic mesh and one outline mesh. Transforms are baked relative to the Merge root.
-const celVC = (() => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
+const celVC = (() => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; m.defines = { KIND: 1, ...LOOKDEF }; return m })()
 const basicVC = new THREE.MeshBasicMaterial({ vertexColors: true })
 const _m4 = new THREE.Matrix4()
 function Merge({ children }) {
@@ -409,6 +427,7 @@ function Merge({ children }) {
 // ---------- traveller preset ----------
 export const TRAVELLER = { name: 'traveller', body: {}, hair: { style: 'bob', c: '#3b2a22', cowlick: true }, scarf: '#e0614f', satchel: true,
   outfit: { type: 'overalls', skin: '#f7d3b8', top: '#f4ecd8', bottom: '#5b86c0', shoe: '#7a4630', cuffs: '#7aa2d4', sleeve: 'puff' }, face: {}, walk: {} }
+if (LOOK === 'cel') TRAVELLER.body = { head: 0.8, leg: 1.5, torso: 1.12, arm: 1.22 } // ~4 heads tall instead of ~3: a child, not a doll
 
 function Hair({ h, set, hd }) {
   const m = hairMat(h.c), st = h.style
