@@ -6,7 +6,7 @@
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { Character, TRAVELLER, CEL_U, M, Merge } from '../../GhibliPerson.jsx'
 import { T, q } from '../../common.jsx'
 
@@ -194,10 +194,22 @@ function ChibiHair({ set }) {
   return <group ref={set('hair')}><Merge><M geo={HAIR_GEO} mat={chibiHairMat(CHIBI.outfit.skin)} /></Merge></group>
 }
 
+// satchel (concept B): a chunky soft leather bag with a rounded flap over the front (one geometry, so still 1 cel + 1 ink)
+const BAG_GEO = (() => {
+  const soft = (g, r) => { const p = g.attributes.position, v = new THREE.Vector3(), h = new THREE.Vector3()
+    g.computeBoundingBox(); const bb = g.boundingBox; h.subVectors(bb.max, bb.min).multiplyScalar(0.5).subScalar(r)
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const c = v.clone().clamp(h.clone().negate(), h), d = v.clone().sub(c); if (d.lengthSq() > 0) d.setLength(r); p.setXYZ(i, ...c.add(d).toArray()) }
+    g.deleteAttribute('uv'); g.computeVertexNormals(); return g }
+  const body = soft(new THREE.BoxGeometry(0.046, 0.038, 0.024, 6, 6, 4), 0.008)
+  const flap = soft(new THREE.BoxGeometry(0.048, 0.024, 0.007, 6, 4, 2), 0.0034); flap.translate(0, 0.006, 0.0125); flap.rotateX(-0.06)
+  const g = mergeGeometries([mergeVertices(body), mergeVertices(flap)]); g.computeBoundingSphere(); return g })()
 export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
-  body: { H: 0.93, head: 1.55, leg: 0.92, torso: 0.92, arm: 0.84, girth: 1.16, shoulder: 0.92, foot: 1.18, hand: 1.3, cheek: CHEEK },
+  // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
+  // taller soft barrel torso, thick straight trouser legs, chunky round boots, short arms hanging close to the body
+  body: { H: 0.89, head: 1.45, leg: 1.06, torso: 1.13, arm: 0.8, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.22, armA: 0.42,
+    legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.22, bootL: 0.98, hand: 1.12, cheek: CHEEK },
   hair: { style: 'chibi', c: '#3b2a22' },
-  outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4' },
+  outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4', bibW: 0.042, waistUp: 0.04, shoeY: 0.036 },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.02, arm: 0.6, lean: 0.05, twist: 0.1, sway: 0.06, idle: 'contra' },
-  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.004, 0.006, 1.35], bag: [0.016, -0.01, -0.006, 1.15] } }
+  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.006, 0.01, 1.75], ring: [1.22, 1.35, 1.2], bag: [-0.006, -0.024, 0.036, 1.3], bagGeo: BAG_GEO, bagC: '#a8703f' } }
 export function ChibiHer({ st }) { return <Character cfg={CHIBI} st={st} res={80} /> }
