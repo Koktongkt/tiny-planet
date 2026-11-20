@@ -228,7 +228,7 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   hair: { style: 'chibi', c: '#3b2a22' },
   outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4', bibW: 0.042, waistUp: 0.04, shoeY: 0.036 },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.02, arm: 0.6, lean: 0.05, twist: 0.1, sway: 0.06, idle: 'contra' },
-  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.017, 0.012, 1.65], ring: [1.22, 1.2, 1.2], bag: [-0.011, -0.024, 0.038, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
+  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.017, 0.012, 1.65], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
 const RIDE_S = 0.8
