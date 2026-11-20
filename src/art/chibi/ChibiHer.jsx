@@ -191,6 +191,7 @@ function helmetGeo(NT = 10, NL = 5) {
 const part = (geo, [x, y, z], [sx, sy, sz], [rx, ry, rz] = [0, 0, 0], skin = 0) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', geo.attributes.position.clone()); g.setIndex(geo.index.clone())
   g.scale(sx, sy, sz); g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); g.computeVertexNormals()
   g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(skin), 1)); return g }
+const PT = 1
 const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
   const parts = [hel,
@@ -198,7 +199,8 @@ const HAIR_GEO = (() => {
     part(ball, [0, 0.0715, -0.008], [0.0168, 0.016, 0.017]), // top bun
     part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
     // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
-    ...[-1, 1].map(d => part(ball, [d * 0.0615, -0.027, -0.02], [0.021, 0.024, 0.022]))]
+    // pass 9 (KT): lower (centre near the blush/mouth line) and fuller/rounder, as on the concept. PT scales the change (1 chosen, 1.5 'stronger').
+    ...[-1, 1].map(d => part(ball, [d * (0.0615 - 0.0015 * PT), -0.027 - 0.007 * PT, -0.02], [0.021 * (1 + 0.19 * PT), 0.024 * (1 + 0.16 * PT), 0.022 * (1 + 0.14 * PT)]))]
   const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
 let hairShader = null
 const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMaterial({
