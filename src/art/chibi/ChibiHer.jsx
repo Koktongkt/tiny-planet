@@ -31,8 +31,8 @@ function drawFaces(W) {
       gr.addColorStop(0, 'rgba(244,146,140,.9)'); gr.addColorStop(0.62, 'rgba(244,146,140,.8)'); gr.addColorStop(1, 'rgba(244,146,140,0)'); g.fillStyle = gr; g.beginPath(); el(x, y, r, r * 0.86); g.fill() }
     // brows: short, thick, softly arched, round ends, tucked just under the bangs
     const by = name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : 0.0098
-    g.strokeStyle = BROW; g.lineWidth = 0.0026 * s
-    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0186), Y(by - 0.0016)); g.quadraticCurveTo(X(sd * 0.0262), Y(by + 0.0032), X(sd * 0.0336), Y(by - 0.0012)); g.stroke() }
+    g.strokeStyle = BROW; g.lineWidth = 0.0028 * s
+    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0192), Y(by - 0.0015)); g.quadraticCurveTo(X(sd * 0.0261), Y(by + 0.0031), X(sd * 0.0328), Y(by - 0.0012)); g.stroke() }
     // eyes
     for (const sd of [-1, 1]) {
       const big = name === 'excited' ? 1.05 : 1, x = X(sd * EYE.x), y = Y(EYE.y), RX = EYE.rx * s * big, RY = EYE.ry * s * big
@@ -134,8 +134,8 @@ function edge(a) {
   return [y, bulge, groove]
 }
 // azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
-const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.034 : 0.1 } return out })()
-function helmetGeo(NT = 13, NL = 5) {
+const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.17 } return out })()
+function helmetGeo(NT = 12, NL = 5) {
   const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
   for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
     const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
@@ -200,8 +200,8 @@ const BAG_GEO = (() => {
     g.computeBoundingBox(); const bb = g.boundingBox; h.subVectors(bb.max, bb.min).multiplyScalar(0.5).subScalar(r)
     for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const c = v.clone().clamp(h.clone().negate(), h), d = v.clone().sub(c); if (d.lengthSq() > 0) d.setLength(r); p.setXYZ(i, ...c.add(d).toArray()) }
     g.deleteAttribute('uv'); g.computeVertexNormals(); return g }
-  const body = soft(new THREE.BoxGeometry(0.046, 0.038, 0.024, 6, 6, 4), 0.008)
-  const flap = soft(new THREE.BoxGeometry(0.048, 0.024, 0.007, 6, 4, 2), 0.0034); flap.translate(0, 0.006, 0.0125); flap.rotateX(-0.06)
+  const body = soft(new THREE.BoxGeometry(0.046, 0.038, 0.024, 4, 4, 3), 0.008)
+  const flap = soft(new THREE.BoxGeometry(0.048, 0.024, 0.007, 4, 2, 1), 0.0034); flap.translate(0, 0.006, 0.0125); flap.rotateX(-0.06)
   const g = mergeGeometries([mergeVertices(body), mergeVertices(flap)]); g.computeBoundingSphere(); return g })()
 export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
@@ -211,5 +211,5 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   hair: { style: 'chibi', c: '#3b2a22' },
   outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4', bibW: 0.042, waistUp: 0.04, shoeY: 0.036 },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.02, arm: 0.6, lean: 0.05, twist: 0.1, sway: 0.06, idle: 'contra' },
-  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.006, 0.01, 1.75], ring: [1.22, 1.35, 1.2], bag: [-0.006, -0.024, 0.036, 1.3], bagGeo: BAG_GEO, bagC: '#a8703f' } }
+  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.017, 0.012, 1.65], ring: [1.22, 1.2, 1.2], bag: [-0.006, -0.024, 0.036, 1.3], bagGeo: BAG_GEO, bagC: '#a8703f' } }
 export function ChibiHer({ st }) { return <Character cfg={CHIBI} st={st} res={80} /> }
