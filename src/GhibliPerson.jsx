@@ -19,9 +19,12 @@ function updateLight(frame) { if (frame === litFrame) return; litFrame = frame
   CEL_U.uAmb.value.setRGB(0.12, 0.11, 0.15).lerp(CC('#1c2240'), T.night) }
 const VS = `#include <common>
   #include <skinning_pars_vertex>
-  varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol;
+  varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   #ifdef BODY
     attribute float aAO; attribute vec4 aReg;
+  #endif
+  #ifdef KIND
+    attribute float aKind;
   #endif
   void main(){
     #include <beginnormal_vertex>
@@ -40,6 +43,12 @@ const VS = `#include <common>
     #else
       vAO = 1.; vReg = vec4(0.);
     #endif
+    #ifdef KIND
+      vKind = aKind;
+    #else
+      vKind = 0.;
+    #endif
+    vUp = normalize(normalMatrix*vec3(0.,1.,0.));
     vec4 mv = modelViewMatrix*vec4(transformed,1.); vN = normalize(normalMatrix*objectNormal); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`
 // outfit painter. uY = (waistY, neckY, shoeY, legHemY); uO = (type, longSleeve, bareLegs, apronW); uZ = (chestY, bellyZ, hipY, 0)
 const PAINT = `
@@ -96,23 +105,47 @@ const PAINT = `
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
     return c;
   }`
+// cel shading, round 8 ("less plastic"): a crisper painted terminator; shadows lean cool on cloth and rosy on skin;
+// a warm band where light turns to shadow on skin; sky fill from above and grass bounce from below (local up, so it
+// works anywhere on the planet); fine cloth / fur grain; and a strand texture + sheen ring on hair (aKind = 1).
 const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
   uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ;
-  varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol;
+  varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   ${PAINT}
+  float h3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
+  float n3(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }
   void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
-    vec3 base = uColor*vCol;
+    vec3 base = uColor*vCol; float sk = 0.;
     #ifdef BODY
       base = outfit();
+      sk = 1. - smoothstep(.03, .1, length(base - uSkin));
+      base *= mix(.965 + .07*n3(vO*vec3(900.,520.,900.)), 1., sk); // cloth weave, skin stays smooth
     #endif
-    vec3 shade = base*uShadeTint + vec3(.02,0.,.03);
+    #ifdef FUR
+      float fu = n3(vO*vec3(9.,26.,9.))*.6 + n3(vO*vec3(30.,70.,30.))*.4;
+      base *= .9 + .2*fu;
+      base *= mix(.9, 1.06, dot(N, normalize(vUp))*.5 + .5); // darker back, lighter belly
+    #endif
     float ndl = dot(N,L);
-    float lit = smoothstep(-0.16, 0.24, ndl); lit = mix(lit, smoothstep(.35,.65,lit), .5);
+    float hair = step(.5, vKind), strand = 0.;
+    #ifdef HAIRM
+      hair = 1.;
+    #endif
+    if (hair > .5) { strand = n3(vec3(vO.x*700., vO.y*90., vO.z*700.)); base *= .86 + .22*strand; }
+    vec3 tint = mix(uShadeTint*vec3(.92,1.,1.1), uShadeTint*vec3(1.06,.98,.92), sk);
+    vec3 shade = base*tint + vec3(.015,0.,.035);
+    float lit = smoothstep(-0.06, 0.14, ndl);
     float occ = smoothstep(.82, .38, vAO); lit *= 1. - occ*.85;
     vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
     c = mix(c, shade*uLight*.82, occ*.35);
+    float up = dot(N, normalize(vUp));
+    c += base*uLight*mix(vec3(.13,.12,.05), vec3(.05,.07,.11), up*.5 + .5); // grass bounce below, sky fill above
+    float term = smoothstep(-.12, -.02, ndl)*(1. - smoothstep(-.02, .08, ndl));
+    c += sk*term*vec3(.4,.1,.05)*uLight*.32; // light scattering through skin at the shadow edge
+    if (hair > .5) { float ring = 1. - smoothstep(.0, .0055, abs(vO.y - .036 - (strand - .5)*.008));
+      c += ring*max(dot(N,V),0.)*lit*uLight*base*.75; }
     float fr = 1. - max(dot(N,V),0.); float rim = smoothstep(.62,.92,fr)*(.25+.55*lit);
-    c += uRim*rim*.3;
+    c += uRim*rim*.26;
     gl_FragColor = vec4(c,1.);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -124,6 +157,18 @@ export function cel(hex) {
   if (celCache.has(hex)) return celCache.get(hex)
   const m = new THREE.ShaderMaterial({ uniforms: { ...CEL_U, uColor: { value: C(hex) }, ...mkU(), uY: { value: new THREE.Vector4() }, uO: { value: new THREE.Vector4() }, uZ: { value: new THREE.Vector4() } }, vertexShader: VS, fragmentShader: FS })
   celCache.set(hex, m); return m
+}
+const furCache = new Map()
+export function fur(hex) { // pets' coats: the cel shader + fur grain and a back-to-belly value shift
+  if (furCache.has(hex)) return furCache.get(hex)
+  const m = cel(hex).clone(); m.defines = { FUR: 1 }; m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: C(hex).clone() } }
+  furCache.set(hex, m); return m
+}
+const hairCache = new Map()
+function hairMat(hex) { // unmerged hair pieces (the swinging bob / ponytail / braids): strand texture without the ring
+  if (hairCache.has(hex)) return hairCache.get(hex)
+  const m = cel(hex).clone(); m.defines = { HAIRM: 1 }; m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: C(hex).clone() } }
+  hairCache.set(hex, m); return m
 }
 const bodyMatCache = new Map()
 function bodyMat(cfg, S) {
@@ -303,9 +348,10 @@ const G = (() => {
   g.sleeveS = curveLathe([[0.0, -0.034], [0.019, -0.035], [0.026, -0.031], [0.028, -0.018], [0.027, -0.004], [0.022, 0.01], [0.0, 0.014]], 24, 24) // short cap sleeve
   g.kimono = new THREE.BoxGeometry(0.028, 0.07, 0.05, 3, 4, 3); { const p = g.kimono.attributes.position; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(p, i), l = v.clone().normalize().multiplyScalar(Math.min(v.length(), 0.03)); p.setXYZ(i, ...v.lerp(l, 0.35).toArray()) } g.kimono.translate(0, -0.03, 0); g.kimono.computeVertexNormals() }
   g.cuff = curveLathe([[0.0, -0.012], [0.021, -0.012], [0.028, -0.008], [0.029, 0.0], [0.026, 0.008], [0.022, 0.011], [0.0, 0.011]], 16, 24)
-  g.eye = sph(0.0105, 20, 14); g.hi = sph(0.0034, 10, 8); g.tiny = sph(0.0045, 10, 8)
+  g.eye = sph(0.0105, 20, 14); g.iris = sph(0.0105, 12, 8); g.hi = sph(0.0034, 10, 8); g.tiny = sph(0.0045, 10, 8)
   g.blush = new THREE.CircleGeometry(0.0095, 20); g.mouth = new THREE.TorusGeometry(0.0062, 0.0014, 6, 16, Math.PI)
   g.lid = new THREE.TorusGeometry(0.008, 0.0017, 6, 14, Math.PI) // closed happy eye
+  g.lash = new THREE.TorusGeometry(0.0102, 0.0016, 5, 14, 2.0); g.lash.rotateZ((Math.PI - 2.0) / 2) // upper lash line: the drawn top of the eye
   g.cowlick = new THREE.TorusGeometry(0.013, 0.0055, 8, 18, Math.PI * 1.4)
   g.scarfKnot = sph(0.014, 14, 10)
   g.scarfTail = new THREE.ConeGeometry(0.018, 0.05, 4); g.scarfTail.translate(0, -0.025, 0); g.scarfTail.scale(1, 1, 0.35)
@@ -322,7 +368,14 @@ const G = (() => {
   return g
 })()
 const blushMat = new THREE.MeshBasicMaterial({ color: '#f5b0a6' })
+const irisMat = new THREE.MeshBasicMaterial({ color: '#7a4a33' }) // warm brown lower crescent: eyes read as eyes, not black beads
+const irisCache = new Map(), irisFor = (c) => irisCache.get(c) || irisCache.set(c, new THREE.MeshBasicMaterial({ color: c })).get(c)
 const eyeMat = new THREE.MeshBasicMaterial({ color: '#2b1d18' }), hiMat = new THREE.MeshBasicMaterial({ color: '#ffffff' }), mouthMat = new THREE.MeshBasicMaterial({ color: '#8a3b34' })
+// soft contact shadow: one small blurred disc under the feet grounds a character (people and pets share it)
+export const SHADOW = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32)
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.55, 'rgba(255,255,255,.6)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64)
+  const t = new THREE.CanvasTexture(c); return { geo: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat: new THREE.MeshBasicMaterial({ color: '#3a2c3a', alphaMap: t, transparent: true, opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }) } })()
+const SEATED = new Set(['sit', 'eat', 'nap'])
 const spring = (s, target, k, d, dt) => { s.v += ((target - s.x) * k - s.v * d) * dt; s.x += s.v * dt; return s.x }
 const SP = () => ({ x: 0, v: 0 })
 const _wp = new THREE.Vector3()
@@ -330,7 +383,7 @@ const _wp = new THREE.Vector3()
 // ---------- static-piece merging ----------
 // Collapses every static cel/basic mesh under it (skipping animated subtrees: anything given a ref via set()) into
 // one cel mesh (vertex colours), one basic mesh and one outline mesh. Transforms are baked relative to the Merge root.
-const celVC = (() => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; return m })()
+const celVC = (() => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
 const basicVC = new THREE.MeshBasicMaterial({ vertexColors: true })
 const _m4 = new THREE.Matrix4()
 function Merge({ children }) {
@@ -338,12 +391,13 @@ function Merge({ children }) {
   useLayoutEffect(() => {
     const g = root.current, buckets = { cel: [], basic: [], line: [] }, hidden = []
     const rel = (o) => { _m4.identity(); const m = new THREE.Matrix4(); for (let x = o; x && x !== g; x = x.parent) { x.updateMatrix(); m.premultiply(x.matrix) } return m }
-    const walk = (o) => { if (o !== g && o.userData.live) return
+    const walk = (o, hk = 0) => { if (o !== g && o.userData.live) return; if (o.userData.hair) hk = 1
       if (o.isMesh && o.visible) { const mat = o.material; let kind = mat === outlineMat ? 'line' : mat.isMeshBasicMaterial ? 'basic' : mat.uniforms?.uColor && !mat.defines?.BODY ? 'cel' : null
         if (kind) { let geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); const keep = new THREE.BufferGeometry(); keep.setAttribute('position', geo.attributes.position); keep.setAttribute('normal', geo.attributes.normal)
           if (kind !== 'line') { const c = kind === 'cel' ? mat.uniforms.uColor.value : mat.color, n = keep.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); keep.setAttribute('color', new THREE.BufferAttribute(a, 3)) }
+          if (kind === 'cel') keep.setAttribute('aKind', new THREE.BufferAttribute(new Float32Array(keep.attributes.position.count).fill(hk), 1)) // 1 = hair (strands + sheen)
           keep.applyMatrix4(rel(o)); buckets[kind].push(keep); hidden.push(o); o.visible = false } }
-      o.children.forEach(walk) }
+      o.children.forEach(c => walk(c, hk)) }
     walk(g)
     const made = []
     for (const [k, mat] of [['cel', celVC], ['basic', basicVC], ['line', outlineMat]]) if (buckets[k].length) { const mm = new THREE.Mesh(mergeGeometries(buckets[k]), mat); g.add(mm); made.push(mm) }
@@ -357,9 +411,9 @@ export const TRAVELLER = { name: 'traveller', body: {}, hair: { style: 'bob', c:
   outfit: { type: 'overalls', skin: '#f7d3b8', top: '#f4ecd8', bottom: '#5b86c0', shoe: '#7a4630', cuffs: '#7aa2d4', sleeve: 'puff' }, face: {}, walk: {} }
 
 function Hair({ h, set, hd }) {
-  const m = cel(h.c), st = h.style
+  const m = hairMat(h.c), st = h.style
   const back = st === 'bob' || st === 'long' ? G.hairBack : G.hairBackS
-  return <group ref={set('hair')}><Merge>
+  return <group ref={set('hair')}><Merge><group userData={{ hair: 1 }}>
     {st !== 'bald' && <M geo={G.hairTop} mat={m} position={[0, 0.003, -0.002]} rotation={[-0.32, 0, 0]} />}
     {st !== 'bald' && <M geo={back} mat={m} position={[0, 0.002, -0.004]} />}
     {(st === 'bob' || st === 'long' || st === 'braids') && [[-0.028, 0.026, 0.04, 0.4], [0.0, 0.031, 0.046, 0.05], [0.027, 0.025, 0.041, -0.45]].map(([x, y, z, rz], k) => <M key={k} geo={G.lump} mat={m} position={[x, y, z]} rotation={[0.5, 0, rz]} scale={[1.25, 0.6, 0.72]} />)}
@@ -371,6 +425,7 @@ function Hair({ h, set, hd }) {
     {st === 'braids' && [-1, 1].map(x => <group key={x} ref={set(x < 0 ? 'bobL' : 'bobR')} position={[x * 0.05, -0.012, -0.022]}>{[0, 1, 2].map(j => <M key={j} geo={G.ball} mat={m} position={[x * 0.004, -0.014 - j * 0.017, 0]} scale={1.45 - j * 0.12} />)}<M geo={G.ball} mat={cel(h.tie ?? '#e0614f')} position={[x * 0.004, -0.065, 0]} scale={0.9} /></group>)}
     {st === 'bald' && <M geo={G.fringeRing} mat={m} position={[0, -0.006, -0.004]} />}
     {h.cowlick && <group ref={set('cowlick')} position={[0.006, 0.055, -0.008]}><M geo={G.cowlick} mat={m} rotation={[0, Math.PI / 2, 0]} /></group>}
+    </group>
     {h.beard && <><M geo={G.beard} mat={cel(h.beardC ?? h.c)} position={[0, -0.012, 0.012]} /><M geo={G.lump} mat={cel(h.beardC ?? h.c)} position={[0, -0.024, 0.052]} scale={[0.75, 0.22, 0.3]} /></>}
   </Merge></group>
 }
@@ -417,6 +472,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     R.mesh.getWorldPosition(_wp); const dist = state.camera.position.distanceTo(_wp) / Math.max(S.H * scale, 0.5)
     const level = dist > 16 ? 2 : dist > 7 ? 1 : 0
     if (level !== prev.current.level) { prev.current.level = level; for (const [o, lv] of lods.current) o.visible = level < lv }
+    if (R_.shadow) { const air = Math.max(0, st.air || 0) / (S.H * scale), k = 1 / (1 + air * 7); R_.shadow.visible = level < 2 && !(SEATED.has(st.act) && (st.actW ?? 1) > 0.3); /* seated on a bench / chair: no shadow on the grass below */ R_.shadow.position.y = 0.002 - air; R_.shadow.scale.setScalar(k) }
     if (level === 2 && !st.force) return // far: skip the per-frame posing work too
     const m = st.move, i = 1 - m, p = st.phase, s = Math.sin(p), c = Math.cos(p), t = (st.t ?? 0) + prev.current.seed, hc = S.hc
     const bob = (1 - Math.abs(s)) * W.bounce * m, land = Math.pow(Math.abs(s), 4) * m * (W.bounce / 0.02)
@@ -511,6 +567,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
   const es = f.eye ?? 1
   return <group scale={S.H * scale}>
     <primitive object={R.mesh} /><primitive object={R.line} />
+    <group ref={set('shadow')}><mesh geometry={SHADOW.geo} material={SHADOW.mat} scale={[0.15 * (cfg.body.girth ?? 1), 1, 0.12]} position={[0, 0, 0.006]} renderOrder={1} /></group>
     {['L', 'R'].map(k => { const sd = k === 'L' ? -1 : 1; return <React.Fragment key={k}>
       {o.sleeve !== 'none' && createPortal(<group ref={lod(2)} rotation={[0, 0, sd * S.armA]}>
         {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
@@ -530,7 +587,9 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     {createPortal(<group position={headLocal} scale={1.17 * hd}><group ref={lod(2)}><Merge>
       {[-1, 1].map(x => <group key={x} position={[x * 0.021 * (f.wide ?? 1), -0.012 + (f.eyeY ?? 0), 0.047]} rotation={[0, x * 0.33, 0]}>
         {f.closed ? <mesh geometry={G.lid} material={eyeMat} rotation={[0, 0, 0]} position={[0, -0.002, 0.003]} ref={set(x < 0 ? 'eyeL' : 'eyeR')} />
-          : <><mesh ref={set(x < 0 ? 'eyeL' : 'eyeR')} geometry={G.eye} scale={[0.82 * es, 1.12 * es, 0.36]} material={eyeMat} />
+          : <><mesh ref={set(x < 0 ? 'eyeL' : 'eyeR')} geometry={G.eye} scale={[0.82 * es, 1.12 * es, 0.36]} material={eyeMat}>
+              <mesh geometry={G.iris} position={[0, -0.0034, 0.0016]} scale={[0.66, 0.5, 1]} material={f.iris ? irisFor(f.iris) : irisMat} /></mesh>
+            <mesh geometry={G.lash} position={[0, 0.0004 * es, 0.0046]} scale={[0.88 * es, 1.1 * es, 0.35]} material={eyeMat} />
             <mesh geometry={G.hi} position={[0.003 * es, 0.004 * es, 0.0035]} scale={es} material={hiMat} /></>}
         <mesh position={[0, 0.019 + (f.brow ?? 0), 0.0]} rotation={[0, 0, -x * (0.15 + (f.browTilt ?? 0))]} material={cel(cfg.hair.c)}><boxGeometry args={[0.013, 0.0028 * (f.browW ?? 1), 0.003]} /></mesh>
         {f.glasses && <mesh geometry={G.ring} material={cel(f.glasses)} position={[0, 0, 0.006]} rotation={[0, 0, 0]} />}

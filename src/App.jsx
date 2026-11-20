@@ -482,6 +482,7 @@ function Traveller() {
     faceStep(dt); const side = _wx.crossVectors(P.n, P.face)
     ref.current.quaternion.setFromRotationMatrix(_wm.makeBasis(side, P.n, P.face))
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
+    PST.air = HOME.inside || HOME.alt ? 0 : Math.max(0, P.h - floorLift(P.n)) // lets her contact shadow stay on the ground mid-jump
     tickAct(PST); PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)

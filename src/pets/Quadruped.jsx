@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { cel, OUT, GEO } from '../home/kit.jsx'
+import { fur, SHADOW } from '../GhibliPerson.jsx'
 
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
@@ -16,12 +17,13 @@ function lodStep(root, lod, cam, holdFar) { if (!root) return
   if (!lod.current) { const L = []; root.updateWorldMatrix(true, true); root.traverse(o => { if (!o.isMesh || !o.geometry) return; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); o.getWorldScale(_ls); if (o.geometry.boundingSphere.radius * Math.max(_ls.x, _ls.y, _ls.z) < 0.008) L.push(o) }); lod.current = { L, vis: true, n: 0 }; if (typeof window !== 'undefined') (window.__petLod = window.__petLod || []).push(lod.current) }
   const D = lod.current; if (!holdFar && D.n++ % 6) return; root.getWorldPosition(_lw); const v = !holdFar && cam.position.distanceTo(_lw) < LOD_PET
   if (v !== D.vis) { D.vis = v; for (const o of D.L) o.visible = v } }
+const FURRY = new Set(['main', 'belly', 'cream', 'dark', 'dark2', 'tip']) // coat colours get fur grain; eyes, nose, collar stay clean
 const K = { hop: 30, roll: 4, bodyYaw: 6, purr: 10 }
 function Part({ geo = GEO.sph, mat, out = OUT.pet, pos, scl, rot, children, gref }) {
   return <group ref={gref} position={pos} rotation={rot}><group scale={scl}><mesh geometry={geo} material={mat} />{out && <mesh geometry={geo} material={out} />}</group>{children}</group>
 }
 export function Quadruped({ cfg, st }) {
-  const c = cfg, [bw, bh, bl] = c.body, hr = c.head, M = useMemo(() => Object.fromEntries(Object.entries(c.col).map(([k, v]) => [k, cel(v)])), [c])
+  const c = cfg, [bw, bh, bl] = c.body, hr = c.head, M = useMemo(() => Object.fromEntries(Object.entries(c.col).map(([k, v]) => [k, FURRY.has(k) ? fur(v) : cel(v)])), [c])
   const r = useRef({}), set = (k) => (el) => { r.current[k] = el }
   const legs = useMemo(() => [['FL', 1, 1, 0], ['FR', -1, 1, Math.PI], ['RL', 1, -1, Math.PI], ['RR', -1, -1, 0]], [])
   const baseY = c.legH + bh * 0.55
@@ -86,10 +88,12 @@ export function Quadruped({ cfg, st }) {
     if (R_.curl) { // Shiba: the curled ring sways with the wag, sinks a little when low-spirited
       R_.curl.rotation.set(-0.35 * (1 - Math.min(1, p.tailUp)) + 0.35 * lie, 0, Math.sin(t * wf) * wag * 0.22 + p.curl * 0.3); R_.curl.position.x = Math.sin(t * wf) * wag * 0.006 }
     if (R_.hearts) R_.hearts.visible = false
+    if (R_.shadow) { R_.shadow.visible = !st.ride; const k = 1 / (1 + p.hop * 9); R_.shadow.scale.set(k * (1 + 0.25 * lie), 1, k) }
   })
   const seg = c.tail.seg, tailChain = (i) => i >= c.tail.n ? null : <group ref={set('t' + i)} position={[0, 0, i === 0 ? 0 : -seg]}>
     <Part mat={i >= c.tail.n - (c.tail.tip ?? 0) ? M.tip || M.belly : M.main} pos={[0, 0, -seg * 0.5]} scl={[c.tail.r * (1 - i * c.tail.taper), c.tail.r * (1 - i * c.tail.taper), seg * 0.64]} />{tailChain(i + 1)}</group>
   return <group ref={lodRoot}>
+    <group ref={set('shadow')}><mesh geometry={SHADOW.geo} material={SHADOW.mat} scale={[bw * 3.2, 1, bl * 2.7]} position={[0, 0.002, 0]} renderOrder={1} /></group>
     <group ref={set('body')}>
       {species === 'dog' ? <DogBody c={c} M={M} set={set} legs={legs} /> : <CatBody c={c} M={M} set={set} legs={legs} />}
       {species === 'dog'
@@ -129,10 +133,20 @@ function DogBody({ c, M, set, legs }) {
     {[-1, 1].map(sx => <Part key={'r' + sx} geo={GEO.cone} mat={M.main} pos={[sx * bw * 0.78, bh * 0.35, bl * 0.72]} rot={[0.3, 0, sx * 1.9]} scl={[bw * 0.22, bh * 0.38, bw * 0.22]} out={null} />)}
     {c.collar && <><Part geo={GEO.tor} mat={M.collar} pos={[0, bh * 0.55, bl * 0.86]} rot={[Math.PI / 2 - 0.75, 0, 0]} scl={[bw * 0.6, bw * 0.6, bw * 0.4]} /><Part mat={M.tag} pos={[0, bh * 0.12, bl * 1.0]} scl={0.007} /></>}
     {legs.map(([k, sx, fz]) => <group key={k} ref={set('leg' + k)} position={[sx * bw * 0.5, -bh * 0.2, fz * bl * 0.55]}>
-      <Part geo={GEO.cap} mat={M.main} pos={[0, -c.legH * 0.42, 0]} scl={[c.legR * (fz > 0 ? 1 : 1.15), c.legH * 0.4, c.legR * (fz > 0 ? 1 : 1.2)]} />
+      {/* round8: real leg shapes instead of straight posts. Front: shoulder + elbow, slimmer forearm. Hind: a big
+          thigh (haunch) that tucks into the body, then a shin that angles back at the hock. */}
+      {fz > 0 ? <>
+        <Part mat={M.main} pos={[0, -c.legH * 0.08, c.legR * 0.1]} scl={[c.legR * 1.35, c.legH * 0.3, c.legR * 1.55]} />
+        <Part geo={GEO.cap} mat={M.main} pos={[0, -c.legH * 0.34, 0]} scl={[c.legR * 1.02, c.legH * 0.24, c.legR * 1.08]} />
+        <Part geo={GEO.cap} mat={M.main} pos={[0, -c.legH * 0.66, c.legR * 0.12]} scl={[c.legR * 0.78, c.legH * 0.26, c.legR * 0.84]} />
+      </> : <>
+        <Part mat={M.main} pos={[0, -c.legH * 0.12, -c.legR * 0.35]} scl={[c.legR * 1.6, c.legH * 0.42, c.legR * 2.15]} />
+        <Part geo={GEO.cap} mat={M.main} pos={[0, -c.legH * 0.45, -c.legR * 0.55]} rot={[-0.35, 0, 0]} scl={[c.legR * 1.05, c.legH * 0.2, c.legR * 1.15]} />
+        <Part geo={GEO.cap} mat={M.main} pos={[0, -c.legH * 0.72, -c.legR * 0.35]} rot={[0.3, 0, 0]} scl={[c.legR * 0.72, c.legH * 0.22, c.legR * 0.8]} />
+      </>}
       {/* cream inner leg + white socks */}
-      <Part geo={GEO.cap} mat={M.cream} pos={[-sx * c.legR * 0.45, -c.legH * 0.55, c.legR * 0.2]} scl={[c.legR * 0.6, c.legH * 0.32, c.legR * 0.75]} out={null} />
-      <Part mat={M.cream} pos={[0, -c.legH * 0.93, c.legR * 0.45]} scl={[c.legR * 1.25, c.legR * 0.75, c.legR * 1.6]} />
+      <Part geo={GEO.cap} mat={M.cream} pos={[-sx * c.legR * 0.5, -c.legH * 0.62, fz > 0 ? c.legR * 0.2 : -c.legR * 0.2]} scl={[c.legR * 0.5, c.legH * 0.22, c.legR * 0.6]} out={null} />
+      <Part mat={M.cream} pos={[0, -c.legH * 0.93, c.legR * 0.5]} scl={[c.legR * 1.15, c.legR * 0.62, c.legR * 1.55]} />
     </group>)}
   </>
 }
@@ -185,6 +199,7 @@ function CatBody({ c, M, set, legs }) {
     {c.stripes && [-0.75, -0.42, -0.1, 0.22, 0.55].map((z, i) => <Part key={i} mat={M.dark} pos={[0, bh * 0.66, z * bl]} scl={[bw * (0.55 - Math.abs(z) * 0.1), bh * 0.24, bl * 0.06]} out={null} />)}
     {legs.map(([k, sx, fz]) => <group key={k} ref={set('leg' + k)} position={[sx * bw * 0.5, -bh * 0.2, fz * bl * 0.66]}>
       <Part geo={GEO.cap} mat={M.main} pos={[0, -c.legH * 0.42, 0]} scl={[c.legR * (fz > 0 ? 0.9 : 1.2), c.legH * 0.42, c.legR * (fz > 0 ? 0.9 : 1.35)]} />
+      {fz < 0 && <Part mat={M.main} pos={[0, -c.legH * 0.05, -c.legR * 0.3]} scl={[c.legR * 1.5, c.legH * 0.55, c.legR * 1.9]} />}{/* round8: a haunch, so the hind leg grows out of the hip */}
       {/* soft round paws with pink pads */}
       <Part mat={M.belly} pos={[0, -c.legH * 0.93, c.legR * 0.35]} scl={[c.legR * 1.25, c.legR * 0.8, c.legR * 1.35]} />
       <mesh geometry={GEO.sph} material={M.inner} position={[0, -c.legH * 0.98, c.legR * 0.2]} scale={[c.legR * 0.5, c.legR * 0.2, c.legR * 0.5]} />
