@@ -1,0 +1,21 @@
+/* Desktop HUD polish: the title sits on a small paper label so it reads over any sky, room or tree,
+   and the corner chrome steps back while Grandma's note is open. */
+.tp-title{position:fixed;left:24px;top:20px;z-index:5;pointer-events:none;font-family:Fredoka,sans-serif;color:#4a3a35;
+  padding:8px 16px 10px 14px;border-radius:14px 18px 12px 16px;background:radial-gradient(ellipse at 30% 20%,#fbf4e3f0,#f2e5c8e6);
+  box-shadow:0 0 0 1.5px #4a3a3555,0 3px 12px rgba(74,58,53,.18);transform:rotate(-.6deg);transition:padding .6s ease}
+.tp-name{font-size:30px;font-weight:500;line-height:1.05}
+.tp-hint{font-size:14px;line-height:1.45;opacity:.82;margin-top:2px;animation:tp-hint-in .6s ease}
+.tp-hint.quiet,html:has(.tpt-note) .tp-hint{display:none} /* the note teaches the same keys; the label shrinks to just the name */
+@keyframes tp-hint-in{from{opacity:0}}
+/* the minimap folds down to a smaller corner card while the note takes the right side, and lifts on hover */
+.mm-wrap:not(.mm-touch) .mm-map{transition:transform .5s ease,opacity .5s ease;transform-origin:0 100%}
+html:has(.tpt-note) .mm-wrap:not(.mm-touch) .mm-map{transform:rotate(-.6deg) scale(.72);opacity:.88}
+html:has(.tpt-note) .mm-wrap:not(.mm-touch) .mm-map:hover{transform:rotate(-.6deg);opacity:1}
+html:has(.tpt-note) .mm-wrap:not(.mm-touch):has(.mm-map) .mm-btn{transition:transform .5s ease;transform:translate(-73px,34px)}
+/* a narrower note on desktop: it was covering ~30% of a 1280px view */
+@media (min-width:641px){
+  .tpt-note{width:300px;padding:16px 18px 12px 20px}
+  .tpt-head h3{font-size:24px}
+  .tpt li{font-size:16px;padding:4px 0 5px;grid-template-columns:26px 22px 1fr}
+  .tpt li .box,.tpt li .doodle{width:22px;height:22px}
+}

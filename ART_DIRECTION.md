@@ -34,6 +34,9 @@ The day cycles on its own: one full day every 3 minutes. Phase φ=0 is noon and 
 - **Day:** high warm-white sun, cream horizon, blue sky, soft cool fill.
 - **Dusk:** low apricot sun, rose and lavender gradient, long warm bands; windows begin to glow.
 - **Night:** moon-blue fill, ink sky with twinkling stars; lamps and windows blaze warm, and fireflies drift and bloom.
+- **Sky gradient:** measured from the planet's visible rim, which dips well below level on a tiny planet, so the walk view gets cream at the rim and cornflower overhead. The palette is authored in sRGB (the hex values above) and converted to linear in the shader.
+- **Planet view:** the same palette fills the frame top to bottom, with a soft atmosphere halo hugging the globe.
+- **Night glow:** warm window light spills onto the grass around each cottage, and the walls take a faint lamplit warmth. Indoors the cool moon fill drops and warm pools of light sit under the lamp and in front of the stove. These are decals, not extra lights.
 
 ## Motion and ambient life
 - Grass and tree crowns sway in a shared wind field (vertex shader, gusts travel across the planet).

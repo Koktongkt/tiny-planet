@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { ACT, tickAct, actLocked } from './act.js'
 import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'react'
+import './ui/hud.css'
 import { Canvas, useFrame, useThree, advance, _roots } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
@@ -56,6 +57,7 @@ function Clock() {
     if (HOME.inside) HOME.sun() // indoors: light comes in through her window
     T.day = ss(-0.15, 0.45, e); T.night = 1 - ss(-0.35, 0.05, e); T.dusk = Math.max(0, 1 - Math.abs(e - 0.05) / 0.4); PU.uDay.value = T.day
     document.documentElement.style.setProperty('--ink', T.night > 0.5 ? '#f3e6c8' : '#5a4636'); for (const m of glowMats) m.color.copy(m.userData.base).multiplyScalar(0.25 + T.night * 5 + T.dusk * 1.6)
+    HM.shell.emissive.setRGB(0.07, 0.045, 0.025).multiplyScalar(T.night); SPILL.opacity = (0.3 * T.night + 0.06 * T.dusk) * (VIEW.mode === 'orbit' ? 0.4 : 1); SPILL.visible = SPILL.opacity > 0.004 // night: lamplit walls and window light on the grass
   })
   return null
 }
@@ -269,12 +271,19 @@ const _ev = new THREE.Vector3()
 const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && streamDist(n) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
 const EdgeVegLazy = lazy(() => import('./edgeveg.jsx'))
 function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /></Suspense> : null }
+// warm window light spilling onto the grass around each cottage at night: one additive decal per house, no real light
+const SPILL = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 18, 64, 64, 64)
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128)
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
+  return new THREE.MeshBasicMaterial({ map: t, color: '#ffb35c', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 }) })()
+const SPILL_GEO = new THREE.PlaneGeometry(1.5, 1.5).rotateX(-Math.PI / 2)
 function House({ n, i }) {
   const hg = houseVariant(i)
   return <Surface n={n} lift={HOUSE_LIFT} spin={i * 1.3}>
     <mesh geometry={hg.shell} material={HM.shell} ref={occ}><Outlines thickness={0.02} color={INK} /></mesh>
     <mesh geometry={hg.detail} material={HM.detail} />
     <mesh geometry={hg.glass} material={MAT.win} />
+    <mesh geometry={SPILL_GEO} material={SPILL} position={[0, 0.05, 0]} renderOrder={1} />
   </Surface>
 }
 function Lamp({ n, i = 0 }) {
@@ -529,7 +538,10 @@ function Rig() {
 function Hint() {
   const [m, setM] = React.useState(VIEW.mode)
   useEffect(() => subscribeView(setM), [])
-  return <div style={{ fontSize: 15, opacity: 0.85, lineHeight: 1.5 }}>{TOUCH ? (m === 'follow' ? <>stick to walk · push to the edge to run · tap the ground to walk<br />drag to look · pinch to zoom · ✋ gather</> : <>drag to spin · pinch to zoom · tap Walk to go back</>) : m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
+  // the controls line fades once she's been walking a while (Grandma's note teaches them too); a view change brings it back
+  const [quiet, setQuiet] = React.useState(false)
+  useEffect(() => { setQuiet(false); const id = setTimeout(() => setQuiet(true), 45000); return () => clearTimeout(id) }, [m])
+  return <div className={'tp-hint' + (quiet ? ' quiet' : '')}>{TOUCH ? (m === 'follow' ? <>stick to walk · push to the edge to run · tap the ground to walk<br />drag to look · pinch to zoom · ✋ gather</> : <>drag to spin · pinch to zoom · tap Walk to go back</>) : m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
 }
 
 const GAMEON = VIEW.mode === 'follow' && !q.has('nogame')
@@ -784,8 +796,8 @@ export default function App() {
       <Boot onLive={() => setLive(true)} /><Clock /><TalkSlot /><Stats /><HorizonCull /><Drag /><Rig /><Keys /><TouchCam /><Sky /><Lights /><Planet /><Clouds /><Birds />
       <WorldFx />
     </Canvas>
-    <div className="tp-title" style={{ position: 'fixed', left: 32, top: 26, fontFamily: 'Fredoka, sans-serif', color: 'var(--ink)', pointerEvents: 'none', textShadow: '0 1px 0 #fff8' }}>
-      <div style={{ fontSize: 34, fontWeight: 500 }}>Tiny Planet</div><Hint />
+    <div className="tp-title">
+      <div className="tp-name">Tiny Planet</div><Hint />
     </div>
     {GAMEON && <GameSlot ui />}
     {TOUCH && <TouchPace />}

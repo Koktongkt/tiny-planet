@@ -7,26 +7,46 @@ import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { R, WS, rnd, dir, randDir, wind } from '../world.js'
-import { T, ss, C, CC, toon } from '../common.jsx'
+import { T, ss, C, CC, toon, VIEW } from '../common.jsx'
 import { VILLAGE } from './village.js'
+import { HOME } from '../home/state.js'
 const MOON_OFF = new THREE.Vector3(6, 0, 8)
+// Colours are authored in sRGB and linearised at the end: written raw they were brightened a second time by the
+// output encoding, which is what turned the cornflower sky into a pale grey-cream.
+// Sky gradient is measured from the camera's own "up" (the traveller's local up in walk view), not world Y: on a tiny
+// planet world Y is only "up" at the north pole, so elsewhere the walk camera only ever saw the pale horizon band.
+// yw: 0.5 is the planet's visible rim, which dips well below level on a tiny planet (uDip). Washes are kept light.
+// In planet view (uOrbit) the backdrop stretches the same palette across the frame and adds a soft halo around the globe.
 export function Sky() {
-  const mat = useMemo(() => new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, uniforms: { uSun: { value: T.sun }, uDay: { value: 1 }, uDusk: { value: 0 }, uNight: { value: 0 }, uTime: wind.time }, vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-    fragmentShader: `varying vec3 vP; uniform vec3 uSun; uniform float uDay,uDusk,uNight,uTime;
+  const mat = useMemo(() => new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, uniforms: { uSun: { value: T.sun }, uDay: { value: 1 }, uDusk: { value: 0 }, uNight: { value: 0 }, uTime: wind.time, uUp: { value: new THREE.Vector3(0, 1, 0) }, uOrbit: { value: VIEW.mode === 'orbit' ? 1 : 0 }, uHalo: { value: 0.95 }, uDip: { value: 0 } },
+    vertexShader: `varying vec3 vP, vW; void main(){ vP = normalize(position); vW = (modelMatrix*vec4(position,1.)).xyz; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `varying vec3 vP, vW; uniform vec3 uSun, uUp; uniform float uDay,uDusk,uNight,uTime,uOrbit,uHalo,uDip;
     float h(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
     float n(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z); }
     float fbm(vec3 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*n(p); p*=2.03; a*=.5; } return s; }
-    void main(){ float y = vP.y*.5+.5;
-      vec3 dT=vec3(.56,.77,.91), dH=vec3(.99,.95,.85); vec3 kT=vec3(.42,.44,.66), kH=vec3(1.,.66,.52), kR=vec3(.97,.56,.63); vec3 nT=vec3(.06,.08,.2), nH=vec3(.18,.24,.43);
-      vec3 day = mix(dH,dT,smoothstep(.35,.9,y)); vec3 dusk = mix(mix(kH,kR,smoothstep(.3,.55,y)),kT,smoothstep(.5,.95,y)); vec3 night = mix(nH,nT,smoothstep(.3,.85,y));
+    void main(){ vec3 vD = normalize(vW - cameraPosition);
+      float yw = .5 + .5*sin(clamp(asin(clamp(dot(vD, normalize(uUp)),-1.,1.)) + uDip, -1.5707, 1.5707));
+      float yo = clamp(.5 + (yw-.5)*2.6, 0., 1.);
+      float y = mix(yw, yo, uOrbit);
+      vec3 dT=vec3(.49,.74,.91), dM=vec3(.72,.86,.94), dH=vec3(.99,.95,.84); vec3 kT=vec3(.42,.44,.68), kH=vec3(1.,.70,.52), kR=vec3(.97,.56,.63); vec3 nT=vec3(.05,.07,.19), nH=vec3(.17,.23,.44);
+      vec3 day = mix(mix(dH,dM,smoothstep(.47,.6,y)),dT,smoothstep(.56,.85,y));
+      vec3 dusk = mix(mix(kH,kR,smoothstep(.46,.6,y)),kT,smoothstep(.58,.9,y)); vec3 night = mix(nH,nT,smoothstep(.46,.8,y));
       vec3 c = night; c = mix(c, dusk, clamp(uDusk*1.2,0.,1.)); c = mix(c, day, uDay*(1.-uDusk*.7));
-      float wash = fbm(vP*3.+vec3(uTime*.01,0,0)); c *= .92 + .16*wash; // watercolour blotches
+      float wash = fbm(vP*3.+vec3(uTime*.01,0,0)); c *= .96 + .08*wash;
       float sd = max(dot(vP, uSun),0.); c += vec3(1.,.8,.55)*pow(sd,8.)*(.25+uDusk*.6)*(1.-uNight);
       c += vec3(1.,.95,.8)*smoothstep(.9985,.9992,sd)*(1.-uNight);
       vec3 mp = -uSun; c += vec3(.9,.93,1.)*smoothstep(.9986,.9991,dot(vP,normalize(mp+vec3(.3,0,0))))*uNight;
       float st = step(.9965, h(floor(vP*220.)))*(.6+.4*sin(uTime*3.+h(floor(vP*220.))*40.)); c += st*uNight*vec3(1.,.97,.85);
-      gl_FragColor = vec4(c,1.); }` }), [])
-  useFrame(() => { mat.uniforms.uDay.value = T.day; mat.uniforms.uDusk.value = T.dusk; mat.uniforms.uNight.value = T.night })
+      float ca = dot(vD, normalize(-cameraPosition)), rim = (uHalo - ca) / max(1. - uHalo, 1e-3);
+      float halo = exp(-max(rim, 0.)*5.) * step(ca, uHalo + .02);
+      vec3 hc = mix(mix(vec3(.62,.75,1.), vec3(1.,.8,.62), uDusk), vec3(.45,.55,.95), uNight);
+      c = mix(c, c*.8 + hc*.4, halo*uOrbit);
+      gl_FragColor = vec4(pow(max(c, 0.), vec3(2.2)),1.); }` }), []) // palette above is sRGB (ART_DIRECTION hex values); the buffer is linear
+  useFrame(({ camera }) => {
+    const u = mat.uniforms; u.uDay.value = T.day; u.uDusk.value = T.dusk; u.uNight.value = T.night; u.uUp.value.copy(camera.up)
+    u.uOrbit.value += ((VIEW.mode === 'orbit' ? 1 : 0) - u.uOrbit.value) * 0.08
+    const d = camera.position.length(); u.uDip.value = Math.acos(Math.min(1, R / Math.max(d, R))); u.uHalo.value = Math.sqrt(Math.max(0, 1 - (R * 1.04 / Math.max(d, R * 1.1)) ** 2)) // cos of the globe's angular radius
+  })
   return <mesh material={mat} renderOrder={-1}><sphereGeometry args={[80 * WS, 48, 32]} /></mesh>
 }
 
@@ -36,9 +56,10 @@ export function Lights() {
   useFrame(() => {
     sun.current.position.copy(T.sun).multiplyScalar(20)
     sun.current.color.copy(cDay).lerp(cDusk, T.dusk); sun.current.intensity = 2.6 * ss(-0.2, 0.2, T.sun.y)
-    moon.current.position.copy(T.sun).multiplyScalar(-20).add(MOON_OFF); moon.current.intensity = 1.1 * T.night
+    moon.current.position.copy(T.sun).multiplyScalar(-20).add(MOON_OFF); const inN = HOME.inside ? T.night : 0 // indoors at night the room is lit by its lamp and stove, not the cool moon fill
+    moon.current.intensity = 1.1 * T.night * (1 - 0.7 * inN)
     hemi.current.color.copy(tmp.set('#cfe6ff').lerp(CC('#ffb59a'), T.dusk).lerp(CC('#4a5fa0'), T.night))
-    hemi.current.groundColor.set('#b9d48c').lerp(CC('#2a2f55'), T.night); hemi.current.intensity = 0.9 + 0.25 * T.dusk - 0.3 * T.night
+    hemi.current.groundColor.set('#b9d48c').lerp(CC('#2a2f55'), T.night); hemi.current.intensity = (0.9 + 0.25 * T.dusk - 0.3 * T.night) * (1 - 0.35 * inN)
   })
   return <><directionalLight ref={sun} castShadow={false} /><directionalLight ref={moon} color="#9db4ff" /><hemisphereLight ref={hemi} /></>
 }

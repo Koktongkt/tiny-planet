@@ -277,9 +277,20 @@ function Pictures() {
     {[...Array(9)].map((_, i) => { const x = -0.95 + i * 0.1; return <O key={i} geo={GEO.cone} mat={tm(['#f59ab0', '#ffd36e', '#8fc3e8'][i % 3])} position={[x, 1.02 - Math.sin(i / 8 * Math.PI) * 0.06, ROOM.z0 + 0.03]} rotation={[0, 0, Math.PI]} scale={[0.025, 0.05, 0.006]} out={OUT.fine} /> })}
   </group>
 }
+// night: warm pools of light on the floor under the lamp and in front of the stove (additive decals, no extra
+// lights: a new light would recompile every material in the world). The cool fill is dimmed in Lights() while inside.
+const glowTex = () => canvasTex(128, 128, (x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.45, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h) })
+function NightGlow() {
+  const [lamp, stove] = useMemo(() => { const t = glowTex(); const mk = (c) => new THREE.MeshBasicMaterial({ map: t, color: c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }); return [mk('#ffb860'), mk('#ff8a3a')] }, [])
+  useFrame(() => { const t = performance.now() / 1000, k = HOME.inside ? Math.min(1, T.night + 0.4 * T.dusk) : 0; lamp.opacity = 0.42 * k; stove.opacity = k * (0.5 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.04) })
+  return <group>
+    <mesh position={[-0.25, 0.006, -0.3]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.7, 1.5]} /></mesh>
+    <mesh position={[0.95, 0.007, -0.62]} rotation={[-Math.PI / 2, 0, 0]} material={stove} renderOrder={2}><planeGeometry args={[0.8, 0.8]} /></mesh>
+  </group>
+}
 function Lamp() {
   const shade = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffd9a0', toneMapped: false }), []), light = useRef(), sway = useRef()
-  useFrame(() => { const t = performance.now() / 1000; if (light.current) light.current.intensity = HOME.inside ? (0.9 + 1.6 * T.night + 0.6 * T.dusk) * (1 + Math.sin(t * 9) * 0.01) : 0; if (sway.current) sway.current.rotation.z = Math.sin(t * 0.7) * 0.03 })
+  useFrame(() => { const t = performance.now() / 1000; if (light.current) light.current.intensity = HOME.inside ? (0.9 + 2.4 * T.night + 0.7 * T.dusk) * (1 + Math.sin(t * 9) * 0.01) : 0; if (sway.current) sway.current.rotation.z = Math.sin(t * 0.7) * 0.03 })
   return <group ref={sway} position={[-0.25, ROOM.h, -0.35]}>
     <Box p={[0, -0.14, 0]} s={[0.004, 0.28, 0.004]} c={W.iron} out={null} />
     <O geo={GEO.cone} mat={tm('#e8a24a')} position={[0, -0.33, 0]} scale={[0.12, 0.11, 0.12]} out={OUT.fine} />
@@ -332,7 +343,7 @@ export function Room() {
   })
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
-    <Floor onDown={onDown} /><Window /><Sunbeam /><Stove /><Door /><Lamp />
+    <Floor onDown={onDown} /><Window /><Sunbeam /><Stove /><Door /><Lamp /><NightGlow />
     <Merge><Hanging /><Walls /><Bed /><Shelf /><Kitchen /><Table /><Pictures /></Merge>
     <React.Suspense fallback={null}><Activities /></React.Suspense>
     <InsideDecor />
