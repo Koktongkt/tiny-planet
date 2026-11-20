@@ -30,9 +30,9 @@ function drawFaces(W) {
     for (const sd of [-1, 1]) { const x = X(sd * 0.0352), y = Y(-0.0306), r = 0.0089 * s, gr = g.createRadialGradient(x, y, 0, x, y, r)
       gr.addColorStop(0, 'rgba(244,146,140,.9)'); gr.addColorStop(0.62, 'rgba(244,146,140,.8)'); gr.addColorStop(1, 'rgba(244,146,140,0)'); g.fillStyle = gr; g.beginPath(); el(x, y, r, r * 0.86); g.fill() }
     // brows: short, thick, softly arched, round ends, tucked just under the bangs
-    const by = name === 'excited' ? 0.0068 : name === 'sleepy' ? 0.0052 : 0.0058
-    g.strokeStyle = BROW; g.lineWidth = 0.0036 * s
-    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0192), Y(by - 0.0014)); g.quadraticCurveTo(X(sd * 0.0258), Y(by + 0.0034), X(sd * 0.0324), Y(by - 0.0014)); g.stroke() }
+    const by = name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : 0.0098
+    g.strokeStyle = BROW; g.lineWidth = 0.0026 * s
+    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0186), Y(by - 0.0016)); g.quadraticCurveTo(X(sd * 0.0262), Y(by + 0.0032), X(sd * 0.0336), Y(by - 0.0012)); g.stroke() }
     // eyes
     for (const sd of [-1, 1]) {
       const big = name === 'excited' ? 1.05 : 1, x = X(sd * EYE.x), y = Y(EYE.y), RX = EYE.rx * s * big, RY = EYE.ry * s * big
@@ -79,7 +79,7 @@ const faceMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: 
       #include <colorspace_fragment>
     }` })
 // head shape in the head frame (same SDF as the baked body: head ellipsoid smooth-unioned with two mochi cheeks)
-const CHEEK = [0.026, -0.027, 0.018, 0.026, 0.022, 0.024, 0.016]
+const CHEEK = [0.011, -0.021, 0.014, 0.034, 0.031, 0.035, 0.012] // pass 3: a soft U (front fullness + round chin), no side puff
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
@@ -119,12 +119,12 @@ const RH = [0.0662, 0.0605, 0.0655], HC = [0, 0.0035, -0.0045] // the hair shell
 // [a0, a1, tipY, rise, bulge]
 const LOCKS = [
   [-1.26, -0.93, -0.034, 0.05, 0.012], // side lock framing the face, down to the cheeks (in front of the side puff)
-  [-1.0, -0.44, 0.0184, 0.0062, 0.02], // outer lock sweeping into the side lock
-  [-0.47, -0.15, 0.0168, 0.0052, 0.024],
-  [-0.07, 0.34, 0.0156, 0.0062, 0.028], // the big centre lock (the part sits just to its left, viewer's view)
-  [0.3, 0.98, 0.0181, 0.0064, 0.02],
+  [-1.0, -0.44, 0.0232, 0.0062, 0.02], // outer lock sweeping into the side lock
+  [-0.47, -0.15, 0.0216, 0.0052, 0.024],
+  [-0.07, 0.34, 0.0204, 0.0062, 0.028], // the big centre lock (the part sits just to its left, viewer's view)
+  [0.3, 0.98, 0.0229, 0.0064, 0.02],
   [0.93, 1.26, -0.034, 0.05, 0.012]]
-function baseY(t) { let y = 0.031 + (-0.004 - 0.031) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.45, 2.1, t); return y }
+function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.45, 2.1, t); return y }
 // -> [edge y, lock bulge (shell units), groove 0..1 (1 = between locks)]
 function edge(a) {
   let y = baseY(Math.abs(a)), bulge = 0, groove = 1
