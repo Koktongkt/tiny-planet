@@ -31,8 +31,8 @@ function drawFaces(W) {
       gr.addColorStop(0, 'rgba(244,146,140,.9)'); gr.addColorStop(0.62, 'rgba(244,146,140,.8)'); gr.addColorStop(1, 'rgba(244,146,140,0)'); g.fillStyle = gr; g.beginPath(); el(x, y, r, r * 0.86); g.fill() }
     // brows: short, thick, softly arched, round ends, tucked just under the bangs
     const by = name === 'excited' ? 0.0068 : name === 'sleepy' ? 0.0052 : 0.0058
-    g.strokeStyle = BROW; g.lineWidth = 0.0041 * s
-    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0188), Y(by - 0.0011)); g.quadraticCurveTo(X(sd * 0.026), Y(by + 0.0036), X(sd * 0.0328), Y(by - 0.0016)); g.stroke() }
+    g.strokeStyle = BROW; g.lineWidth = 0.0036 * s
+    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0192), Y(by - 0.0014)); g.quadraticCurveTo(X(sd * 0.0258), Y(by + 0.0034), X(sd * 0.0324), Y(by - 0.0014)); g.stroke() }
     // eyes
     for (const sd of [-1, 1]) {
       const big = name === 'excited' ? 1.05 : 1, x = X(sd * EYE.x), y = Y(EYE.y), RX = EYE.rx * s * big, RY = EYE.ry * s * big
