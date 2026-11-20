@@ -21,6 +21,10 @@ const GhibliPersonV1 = lazy(() => import('./GhibliPersonV1.jsx').then(m => ({ de
 const SpritePerson = lazy(() => import('./SpritePerson.jsx').then(m => ({ default: m.SpritePerson })))
 const SPRITE = q.get('char') === 'sprite'
 const NEWCHAR = !q.has('oldchar')
+// chibi-her prototype (concept B): her chibi look is a lazy chunk, fetched in parallel with the boot; ?chibi=0 = previous look
+const CHIBI = NEWCHAR && !SPRITE && q.get('chibi') !== '0'
+const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
+const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
@@ -487,7 +491,7 @@ function Traveller() {
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
-  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
+  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
 }
 const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
 const ZVIEWS = {
