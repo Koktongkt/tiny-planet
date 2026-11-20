@@ -112,40 +112,57 @@ function ChibiFace({ st, lod }) {
 // top bun and the ears, all one geometry with its own warm toon hair shader (1 draw) + the shared ink hull (1 draw).
 const ss = (e0, e1, x) => { const u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u) }
 const RH = [0.0662, 0.0605, 0.0655], HC = [0, 0.0035, -0.0045] // the hair shell ellipsoid
-// bottom edge of the hair (head-frame y) by azimuth t = |angle from the front|
-function edgeY(t) {
-  let y = 0.0186 - 0.0018 * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - 0.03) / 0.6))) // two heavy, blunt lobes
-  y += 0.0032 * Math.exp(-((t / 0.04) ** 2)) // the little centre split
-  y += (-0.012 - y) * ss(0.56, 1.12, t) // temple frames down beside the face, to the ear tops
-  y += (-0.047 - y) * ss(1.5, 2.3, t) // behind the ears: the bob down to the nape
-  return y
+// Pass 3: the fringe is built from locks. Each lock is an arc of azimuth a (0 = front, -x = her right / viewer's left)
+// whose lower edge is a rounded tip: y = tip + rise * (1 - sqrt(1 - u^2)), u in -1..1 across the lock. The hair edge is
+// the lowest lock at each azimuth, so neighbouring locks meet in small scallop notches; where no lock reaches (the
+// centre-left part, the temples, behind the side locks) the base edge shows a sliver of forehead / the ear.
+// [a0, a1, tipY, rise, bulge]
+const LOCKS = [
+  [-1.26, -0.93, -0.034, 0.05, 0.012], // side lock framing the face, down to the cheeks (in front of the side puff)
+  [-1.0, -0.44, 0.0184, 0.0062, 0.02], // outer lock sweeping into the side lock
+  [-0.47, -0.15, 0.0168, 0.0052, 0.024],
+  [-0.07, 0.34, 0.0156, 0.0062, 0.028], // the big centre lock (the part sits just to its left, viewer's view)
+  [0.3, 0.98, 0.0181, 0.0064, 0.02],
+  [0.93, 1.26, -0.034, 0.05, 0.012]]
+function baseY(t) { let y = 0.031 + (-0.004 - 0.031) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.45, 2.1, t); return y }
+// -> [edge y, lock bulge (shell units), groove 0..1 (1 = between locks)]
+function edge(a) {
+  let y = baseY(Math.abs(a)), bulge = 0, groove = 1
+  for (const [a0, a1, tip, rise, bu] of LOCKS) { if (a < a0 || a > a1) continue
+    const u = (a - a0) / (a1 - a0) * 2 - 1, c = Math.sqrt(Math.max(0, 1 - u * u)), ly = tip + rise * (1 - c)
+    if (ly < y) { y = ly; bulge = bu * Math.sqrt(c); groove = ss(0.62, 0.98, Math.abs(u)) } }
+  return [y, bulge, groove]
 }
-function helmetGeo(NA = 64, NT = 15, NL = 5) {
-  const pos = [], idx = [], rho = 0.0033, cols = []
-  for (let i = 0; i < NA; i++) { const a = (i / NA) * Math.PI * 2 - Math.PI, t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
-    const yE = edgeY(t), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = []
-    const P = (th, out = 0) => { const st = Math.sin(th), ct = Math.cos(th), front = ss(1.2, 0.2, t) * ss(0.45, 1, th / thE)
-      const r = 1 + 0.03 * front + out; return [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r] }
-    for (let j = 1; j <= NT; j++) col.push(P(thE * j / NT))
-    // rounded lip: half a turn from the outer edge to the inside
+// azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
+const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.034 : 0.1 } return out })()
+function helmetGeo(NT = 13, NL = 5) {
+  const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
+  for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
+    const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
+    const P = (th) => { let st = Math.sin(th); const ct = Math.cos(th), w = ss(0.42, 1, th / thE), front = ss(1.2, 0.2, t) * ss(0.45, 1, th / thE)
+      if (th > Math.PI / 2) st = 1 - 0.42 * (1 - st) // below the equator the hair hangs straight down instead of hugging the jaw
+      const r = 1 + 0.026 * front + bulge * w; return [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r] }
+    for (let j = 1; j <= NT; j++) { const f = j / NT; col.push(P(thE * f)); cg.push(groove * ss(0.3, 0.95, f) * (t < 1.45 ? 1 : 0)) }
+    // rounded lip: half a turn from the outer edge to the inside (the tips curl in)
     const E = P(thE), E2 = P(thE - 0.02), n = [E[0] - HC[0], E[1] - HC[1], E[2] - HC[2]], nl = Math.hypot(...n), dn = [E[0] - E2[0], E[1] - E2[1], E[2] - E2[2]], dl = Math.hypot(...dn)
     for (let k = 0; k < 3; k++) { n[k] /= nl; dn[k] /= dl }
-    for (let k = 1; k <= NL; k++) { const f = Math.PI * k / NL; col.push([0, 1, 2].map(q => E[q] - n[q] * rho + n[q] * rho * Math.cos(f) + dn[q] * rho * Math.sin(f))) }
-    col.push([0, 1, 2].map(q => E[q] - n[q] * rho * 2.4 - dn[q] * 0.006))
-    cols.push(col) }
+    for (let k = 1; k <= NL; k++) { const f = Math.PI * k / NL; col.push([0, 1, 2].map(q => E[q] - n[q] * rho + n[q] * rho * Math.cos(f) + dn[q] * rho * Math.sin(f))); cg.push(groove * (t < 1.45 ? 1 : 0)) }
+    col.push([0, 1, 2].map(q => E[q] - n[q] * rho * 2.4 - dn[q] * 0.006)); cg.push(0)
+    cols.push(col); gro.push(cg) }
   const R = cols[0].length; pos.push(HC[0], HC[1] + RH[1] * 1.05 * 1, HC[2]) // pole
-  for (const col of cols) for (const p of col) pos.push(...p)
+  const g0 = [0]; for (let i = 0; i < NA; i++) for (let j = 0; j < R; j++) { pos.push(...cols[i][j]); g0.push(gro[i][j]) }
   const at = (i, j) => 1 + (i % NA) * R + j
   for (let i = 0; i < NA; i++) { idx.push(0, at(i, 0), at(i + 1, 0)) // pole fan (winding: outward)
     for (let j = 0; j < R - 1; j++) idx.push(at(i, j), at(i, j + 1), at(i + 1, j + 1), at(i, j), at(i + 1, j + 1), at(i + 1, j)) }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals()
+  // aSkin carries the lock grooves for the hair (0..0.45, < 0.5 = hair); the ears use 1 = skin
+  g.setAttribute('aSkin', new THREE.Float32BufferAttribute(g0.map(v => v * 0.45), 1)); return g
 }
 const part = (geo, [x, y, z], [sx, sy, sz], [rx, ry, rz] = [0, 0, 0], skin = 0) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', geo.attributes.position.clone()); g.setIndex(geo.index.clone())
   g.scale(sx, sy, sz); g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); g.computeVertexNormals()
   g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(skin), 1)); return g }
 const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
-  hel.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(hel.attributes.position.count), 1))
   const parts = [hel,
     part(ball, [0, -0.008, -0.019], [0.0635, 0.054, 0.052]), // back volume of the bob
     part(ball, [0, 0.0695, -0.008], [0.0198, 0.0168, 0.0188]), // top bun
@@ -167,6 +184,7 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
       vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
       float band = 1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)));
       c = mix(c, uBand*uLight*(.75 + .25*lit), band*(1. - sk)*(.3 + .32*lit)*smoothstep(-.2, .5, dot(N, V)));
+      c *= 1. - (1. - sk)*.3*smoothstep(.1, .38, vSkin); // painted grooves between the fringe locks
       float fr = 1. - max(dot(N, V), 0.); c += uRim*smoothstep(.62, .92, fr)*(.2 + .5*lit)*.22;
       gl_FragColor = vec4(c, 1.);
       #include <tonemapping_fragment>
