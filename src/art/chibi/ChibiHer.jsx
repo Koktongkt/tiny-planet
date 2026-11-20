@@ -26,6 +26,14 @@ function drawFaces(W) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX), INK = '#1e1410', BROW = '#3b2621'
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
+  const sst = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t) }
+  // lid(x,y,RX,RY,o): o = +1 outer side is +x (viewer-right eye), -1 outer side is -x. Tapered filled band hugging the eye ellipse.
+  const lid = (x, y, RX, RY, o) => {
+    const N = 40, th0 = -0.35, th1 = -Math.PI - 0.45, W = RY * 0.2, P = [], Q = []
+    for (let i = 0; i <= N; i++) { const u = i / N, th = th0 + (th1 - th0) * u
+      const w = W * sst(0, 0.16, u) * (1 - sst(0.6, 1, u)) * (0.78 + 0.32 * sst(0.25, 0.62, u)), c = Math.cos(th), sn = Math.sin(th)
+      P.push([x - o * (RX + w * 0.35) * c, y + (RY + w * 0.35) * sn]); Q.push([x - o * (RX - w * 0.65) * c, y + (RY - w * 0.65) * sn]) }
+    g.fillStyle = INK; g.beginPath(); g.moveTo(...P[0]); P.forEach(q => g.lineTo(...q)); Q.reverse().forEach(q => g.lineTo(...q)); g.closePath(); g.fill() }
   FACES.forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
@@ -44,9 +52,9 @@ function drawFaces(W) {
         g.fillStyle = INK; g.beginPath(); g.moveTo(x - w, yy); g.quadraticCurveTo(x, yy + RY * 0.9, x + w, yy); g.quadraticCurveTo(x, yy + RY * 0.46, x - w, yy); g.fill(); continue }
       g.fillStyle = '#fffaf4'; g.beginPath(); el(x, y, RX, RY); g.fill() // white
       g.save(); g.beginPath(); el(x, y, RX, RY); g.clip()
-      // pass 7 (KT): the iris fills almost the whole eye (thin white sliver on the outer side only), very dark brown, near black at top/edges,
-      // a soft warm-brown glow in the lower third; pupil merged into it; crisp pure-white highlights (big upper-right ~34% of eye width, small lower-left)
-      const ix = x - sd * RX * 0.07, iy = y + RY * 0.02, IX = RX * 0.95, IY = RY * 0.99
+      // pass 8 (KT): iris pushed toward the nose and narrowed so a clear white crescent shows on the outer side (~22% of the eye width at
+      // mid-height, tapering top and bottom); dark iris + warm lower glow from pass 7; ONE big round highlight upper right
+      const ix = x - sd * RX * 0.22, iy = y + RY * 0.02, IX = RX * 0.78, IY = RY * 0.97
       g.fillStyle = IRIS.edge; g.beginPath(); el(ix, iy, IX, IY); g.fill()
       let gr = g.createLinearGradient(0, iy - IY, 0, iy + IY); gr.addColorStop(0, IRIS.top); gr.addColorStop(0.55, IRIS.mid); gr.addColorStop(1, IRIS.mid)
       g.fillStyle = gr; g.beginPath(); el(ix, iy, IX * 0.9, IY * 0.92); g.fill()
@@ -54,13 +62,12 @@ function drawFaces(W) {
       gr = g.createRadialGradient(ix, iy + IY * 0.7, 0, ix, iy + IY * 0.7, IX * 0.66); gr.addColorStop(0, 'rgba(107,68,48,.85)'); gr.addColorStop(0.45, 'rgba(107,68,48,.5)'); gr.addColorStop(1, 'rgba(107,68,48,0)')
       g.fillStyle = gr; g.beginPath(); el(ix, iy + IY * 0.7, IX * 0.66, IY * 0.4); g.fill()
       g.restore()
-      g.fillStyle = '#fff'; g.beginPath(); el(ix + IX * 0.3, iy - IY * 0.34, RX * 0.34, RX * 0.34); g.fill() // big highlight, top right
-      g.beginPath(); el(ix - IX * 0.42, iy + IY * 0.44, RX * 0.13, RX * 0.13); g.fill() // small one, lower left
-      if (name === 'excited') { g.beginPath(); el(ix + IX * 0.08, iy + IY * 0.02, RX * 0.07, RX * 0.07); g.fill() }
+      g.fillStyle = '#fff'; g.beginPath(); el(ix + IX * 0.3, iy - IY * 0.36, RX * 0.34, RX * 0.34); g.fill() // the one highlight, top right
       g.restore()
-      g.strokeStyle = INK; g.lineWidth = 0.0013 * s; g.beginPath(); el(x, y, RX, RY); g.stroke() // bold clean outline
-      const a0 = sd < 0 ? Math.PI - 0.2 : Math.PI + 0.3, a1 = sd < 0 ? Math.PI * 2 - 0.3 : Math.PI * 2 + 0.2 // thick upper lid, heavier at the outer corner
-      g.fillStyle = INK; g.beginPath(); el(x, y, RX * 1.05, RY * 1.06, a0, a1); el(x, y + RY * 0.1, RX * 0.97, RY * 0.95, a1, a0, true); g.closePath(); g.fill()
+      // soft skin boundary under the eye (no heavy line along the bottom / lower outer side)
+      g.strokeStyle = 'rgba(58,34,26,.28)'; g.lineWidth = 0.0005 * s; g.beginPath(); el(x, y, RX, RY); g.stroke()
+      // thick upper lid: from the nose-side top, over the top, down the outer side, tapering out a little below mid-height
+      lid(x, y, RX, RY, sd)
     }
     // nose: a tiny warm dot
     g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT), 0.0017 * s, 0.0011 * s); g.fill()
