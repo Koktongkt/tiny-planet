@@ -21,9 +21,10 @@ export const FACES = ['happy', 'blink', 'sleepy', 'excited']
 // pass 6 (KT): features a touch smaller, higher and closer together. FT scales the tweak (1 = chosen, 1.5 = 'stronger').
 const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
 const EYE = { x: 0.0278 - FDX, y: -0.0153 + FDY, rx: 0.0116 * FS, ry: 0.0127 * FS }
+const IRIS = { top: '#1e1410', mid: '#2a1a12', edge: '#1a110d', glow: '#6b4430' }
 function drawFaces(W) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
-  const g = c.getContext('2d'), s = W / (2 * FX), INK = '#2a1a14', BROW = '#3b2621'
+  const g = c.getContext('2d'), s = W / (2 * FX), INK = '#1e1410', BROW = '#3b2621'
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
   FACES.forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
@@ -43,15 +44,21 @@ function drawFaces(W) {
         g.fillStyle = INK; g.beginPath(); g.moveTo(x - w, yy); g.quadraticCurveTo(x, yy + RY * 0.9, x + w, yy); g.quadraticCurveTo(x, yy + RY * 0.46, x - w, yy); g.fill(); continue }
       g.fillStyle = '#fffaf4'; g.beginPath(); el(x, y, RX, RY); g.fill() // white
       g.save(); g.beginPath(); el(x, y, RX, RY); g.clip()
-      const ix = x - sd * RX * 0.07, iy = y + RY * 0.04, IX = RX * 0.88, IY = RY * 0.94 // big dark iris, set toward the nose
-      g.fillStyle = '#2a1912'; g.beginPath(); el(ix, iy, IX, IY); g.fill()
-      g.fillStyle = '#6b4330'; g.beginPath(); el(ix, iy + IY * 0.3, IX * 0.84, IY * 0.62); g.fill() // warm brown lower crescent
-      g.fillStyle = '#2a1912'; g.beginPath(); el(ix, iy + IY * 0.08, IX * 0.8, IY * 0.64); g.fill()
-      g.fillStyle = '#fff'; g.beginPath(); el(ix + IX * 0.33, iy - IY * 0.38, IX * 0.34, IX * 0.34); g.fill() // big highlight, top right
-      g.beginPath(); el(ix - IX * 0.4, iy + IY * 0.42, IX * 0.13, IX * 0.13); g.fill() // small one, lower left
-      if (name === 'excited') { g.beginPath(); el(ix + IX * 0.05, iy + IY * 0.05, IX * 0.08, IX * 0.08); g.fill() }
+      // pass 7 (KT): the iris fills almost the whole eye (thin white sliver on the outer side only), very dark brown, near black at top/edges,
+      // a soft warm-brown glow in the lower third; pupil merged into it; crisp pure-white highlights (big upper-right ~34% of eye width, small lower-left)
+      const ix = x - sd * RX * 0.07, iy = y + RY * 0.02, IX = RX * 0.95, IY = RY * 0.99
+      g.fillStyle = IRIS.edge; g.beginPath(); el(ix, iy, IX, IY); g.fill()
+      let gr = g.createLinearGradient(0, iy - IY, 0, iy + IY); gr.addColorStop(0, IRIS.top); gr.addColorStop(0.55, IRIS.mid); gr.addColorStop(1, IRIS.mid)
+      g.fillStyle = gr; g.beginPath(); el(ix, iy, IX * 0.9, IY * 0.92); g.fill()
+      g.save(); g.beginPath(); el(ix, iy, IX * 0.9, IY * 0.92); g.clip()
+      gr = g.createRadialGradient(ix, iy + IY * 0.7, 0, ix, iy + IY * 0.7, IX * 0.66); gr.addColorStop(0, 'rgba(107,68,48,.85)'); gr.addColorStop(0.45, 'rgba(107,68,48,.5)'); gr.addColorStop(1, 'rgba(107,68,48,0)')
+      g.fillStyle = gr; g.beginPath(); el(ix, iy + IY * 0.7, IX * 0.66, IY * 0.4); g.fill()
       g.restore()
-      g.strokeStyle = INK; g.lineWidth = 0.0009 * s; g.beginPath(); el(x, y, RX, RY); g.stroke() // clean outline
+      g.fillStyle = '#fff'; g.beginPath(); el(ix + IX * 0.3, iy - IY * 0.34, RX * 0.34, RX * 0.34); g.fill() // big highlight, top right
+      g.beginPath(); el(ix - IX * 0.42, iy + IY * 0.44, RX * 0.13, RX * 0.13); g.fill() // small one, lower left
+      if (name === 'excited') { g.beginPath(); el(ix + IX * 0.08, iy + IY * 0.02, RX * 0.07, RX * 0.07); g.fill() }
+      g.restore()
+      g.strokeStyle = INK; g.lineWidth = 0.0013 * s; g.beginPath(); el(x, y, RX, RY); g.stroke() // bold clean outline
       const a0 = sd < 0 ? Math.PI - 0.2 : Math.PI + 0.3, a1 = sd < 0 ? Math.PI * 2 - 0.3 : Math.PI * 2 + 0.2 // thick upper lid, heavier at the outer corner
       g.fillStyle = INK; g.beginPath(); el(x, y, RX * 1.05, RY * 1.06, a0, a1); el(x, y + RY * 0.1, RX * 0.97, RY * 0.95, a1, a0, true); g.closePath(); g.fill()
     }
