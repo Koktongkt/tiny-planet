@@ -79,7 +79,7 @@ const faceMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: 
       #include <colorspace_fragment>
     }` })
 // head shape in the head frame (same SDF as the baked body: head ellipsoid smooth-unioned with two mochi cheeks)
-const CHEEK = [0.016, -0.026, 0.012, 0.034, 0.028, 0.035, 0.012] // pass 3: a soft U (front fullness + round chin), no side puff
+const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide jaw ellipsoid (two cheek blobs left a dip / double bump at the chin), softer blend
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
@@ -140,7 +140,7 @@ function edge(a) {
 }
 // azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
 const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.17 } return out })()
-function helmetGeo(NT = 12, NL = 5) {
+function helmetGeo(NT = 10, NL = 5) {
   const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
   for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
     const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
@@ -228,7 +228,7 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   hair: { style: 'chibi', c: '#3b2a22' },
   outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4', bibW: 0.042, waistUp: 0.04, shoeY: 0.036 },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.02, arm: 0.6, lean: 0.05, twist: 0.1, sway: 0.06, idle: 'contra' },
-  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.017, 0.012, 1.65], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
+  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
 const RIDE_S = 0.8
