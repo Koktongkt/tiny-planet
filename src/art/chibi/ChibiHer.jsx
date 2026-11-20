@@ -18,7 +18,7 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 // projection); 4 expressions in a 2x2 atlas.
 const FX = 0.052, FY0 = -0.047, FY1 = 0.019
 export const FACES = ['happy', 'blink', 'sleepy', 'excited']
-const EYE = { x: 0.0255, y: -0.0148, rx: 0.0116, ry: 0.0127 }
+const EYE = { x: 0.0278, y: -0.0153, rx: 0.0116, ry: 0.0127 }
 function drawFaces(W) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX), INK = '#2a1a14', BROW = '#3b2621'
@@ -27,11 +27,11 @@ function drawFaces(W) {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     // blush: round, saturated pink ovals under the outer eyes, soft rim
-    for (const sd of [-1, 1]) { const x = X(sd * 0.0352), y = Y(-0.0306), r = 0.0089 * s, gr = g.createRadialGradient(x, y, 0, x, y, r)
+    for (const sd of [-1, 1]) { const x = X(sd * 0.0383), y = Y(-0.0319), r = 0.0105 * s, gr = g.createRadialGradient(x, y, 0, x, y, r)
       gr.addColorStop(0, 'rgba(244,146,140,.9)'); gr.addColorStop(0.62, 'rgba(244,146,140,.8)'); gr.addColorStop(1, 'rgba(244,146,140,0)'); g.fillStyle = gr; g.beginPath(); el(x, y, r, r * 0.86); g.fill() }
     // brows: short, thick, softly arched, round ends, tucked just under the bangs
     const by = name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : 0.0098
-    g.strokeStyle = BROW; g.lineWidth = 0.0028 * s
+    g.strokeStyle = BROW; g.lineWidth = 0.0034 * s
     for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0192), Y(by - 0.0015)); g.quadraticCurveTo(X(sd * 0.0261), Y(by + 0.0031), X(sd * 0.0328), Y(by - 0.0012)); g.stroke() }
     // eyes
     for (const sd of [-1, 1]) {
@@ -41,7 +41,7 @@ function drawFaces(W) {
         g.fillStyle = INK; g.beginPath(); g.moveTo(x - w, yy); g.quadraticCurveTo(x, yy + RY * 0.9, x + w, yy); g.quadraticCurveTo(x, yy + RY * 0.46, x - w, yy); g.fill(); continue }
       g.fillStyle = '#fffaf4'; g.beginPath(); el(x, y, RX, RY); g.fill() // white
       g.save(); g.beginPath(); el(x, y, RX, RY); g.clip()
-      const ix = x - sd * RX * 0.13, iy = y + RY * 0.07, IX = RX * 0.8, IY = RY * 0.9 // big dark iris, set toward the nose
+      const ix = x - sd * RX * 0.07, iy = y + RY * 0.04, IX = RX * 0.88, IY = RY * 0.94 // big dark iris, set toward the nose
       g.fillStyle = '#2a1912'; g.beginPath(); el(ix, iy, IX, IY); g.fill()
       g.fillStyle = '#6b4330'; g.beginPath(); el(ix, iy + IY * 0.3, IX * 0.84, IY * 0.62); g.fill() // warm brown lower crescent
       g.fillStyle = '#2a1912'; g.beginPath(); el(ix, iy + IY * 0.08, IX * 0.8, IY * 0.64); g.fill()
@@ -56,7 +56,7 @@ function drawFaces(W) {
     // nose: a tiny warm dot
     g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238), 0.0017 * s, 0.0011 * s); g.fill()
     // mouth: small soft u (happy / blink), little frown (sleepy), open D with tongue (excited)
-    const my = -0.0331
+    const my = -0.0351
     if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
@@ -79,7 +79,7 @@ const faceMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: 
       #include <colorspace_fragment>
     }` })
 // head shape in the head frame (same SDF as the baked body: head ellipsoid smooth-unioned with two mochi cheeks)
-const CHEEK = [0.011, -0.021, 0.014, 0.034, 0.031, 0.035, 0.012] // pass 3: a soft U (front fullness + round chin), no side puff
+const CHEEK = [0.016, -0.026, 0.012, 0.034, 0.028, 0.035, 0.012] // pass 3: a soft U (front fullness + round chin), no side puff
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
@@ -111,25 +111,29 @@ function ChibiFace({ st, lod }) {
 // ---------- hair: one sculpted helmet (heavy blunt bangs with a centre split, temple frames, round bob), side puffs,
 // top bun and the ears, all one geometry with its own warm toon hair shader (1 draw) + the shared ink hull (1 draw).
 const ss = (e0, e1, x) => { const u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u) }
-const RH = [0.0662, 0.0605, 0.0655], HC = [0, 0.0035, -0.0045] // the hair shell ellipsoid
+const RH = [0.0662, 0.07, 0.0655], HC = [0, 0.003, -0.0045], TUCK = 0.85 // the hair shell ellipsoid
 // Pass 3: the fringe is built from locks. Each lock is an arc of azimuth a (0 = front, -x = her right / viewer's left)
 // whose lower edge is a rounded tip: y = tip + rise * (1 - sqrt(1 - u^2)), u in -1..1 across the lock. The hair edge is
 // the lowest lock at each azimuth, so neighbouring locks meet in small scallop notches; where no lock reaches (the
 // centre-left part, the temples, behind the side locks) the base edge shows a sliver of forehead / the ear.
 // [a0, a1, tipY, rise, bulge]
+// pass 4 (measured against the concept): three centre locks with small notches, then a deeper notch at |x| ~ 0.16 head
+// widths, and outer locks that curve down over the temples into the side locks, so the forehead reads as a soft arch.
+// [a0, a1, tipY, rise, bulge, slope]  (slope tilts the tip line across the lock: y += slope * u)
 const LOCKS = [
-  [-1.26, -0.93, -0.034, 0.05, 0.012], // side lock framing the face, down to the cheeks (in front of the side puff)
-  [-1.0, -0.44, 0.0232, 0.0062, 0.02], // outer lock sweeping into the side lock
-  [-0.47, -0.15, 0.0216, 0.0052, 0.024],
-  [-0.07, 0.34, 0.0204, 0.0062, 0.028], // the big centre lock (the part sits just to its left, viewer's view)
-  [0.3, 0.98, 0.0229, 0.0064, 0.02],
-  [0.93, 1.26, -0.034, 0.05, 0.012]]
+  [-1.4, -1.08, -0.034, 0.05, 0.012], // side lock framing the face, down to the cheeks (in front of the side puff)
+  [-1.12, -0.45, 0.0128, 0.012, 0.02, 0.0075], // outer lock curving down over the temple
+  [-0.47, -0.14, 0.0186, 0.009, 0.024, -0.005],
+  [-0.17, 0.17, 0.0184, 0.004, 0.028], // the big centre lock
+  [0.14, 0.47, 0.0186, 0.009, 0.024, 0.005],
+  [0.45, 1.12, 0.0128, 0.012, 0.02, -0.0075],
+  [1.08, 1.4, -0.034, 0.05, 0.012]]
 function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.45, 2.1, t); return y }
 // -> [edge y, lock bulge (shell units), groove 0..1 (1 = between locks)]
 function edge(a) {
   let y = baseY(Math.abs(a)), bulge = 0, groove = 1
-  for (const [a0, a1, tip, rise, bu] of LOCKS) { if (a < a0 || a > a1) continue
-    const u = (a - a0) / (a1 - a0) * 2 - 1, c = Math.sqrt(Math.max(0, 1 - u * u)), ly = tip + rise * (1 - c)
+  for (const [a0, a1, tip, rise, bu, sl = 0] of LOCKS) { if (a < a0 || a > a1) continue
+    const u = (a - a0) / (a1 - a0) * 2 - 1, c = Math.sqrt(Math.max(0, 1 - u * u)), ly = tip + rise * (1 - c) + sl * u
     if (ly < y) { y = ly; bulge = bu * Math.sqrt(c); groove = ss(0.62, 0.98, Math.abs(u)) } }
   return [y, bulge, groove]
 }
@@ -141,13 +145,22 @@ function helmetGeo(NT = 12, NL = 5) {
     const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
     const P = (th) => { let st = Math.sin(th); const ct = Math.cos(th), w = ss(0.42, 1, th / thE), front = ss(1.2, 0.2, t) * ss(0.45, 1, th / thE)
       if (th > Math.PI / 2) st = 1 - 0.42 * (1 - st) // below the equator the hair hangs straight down instead of hugging the jaw
-      const r = 1 + 0.026 * front + bulge * w; return [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r] }
+      const r = 1 + 0.026 * front + bulge * w, Q = [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r]
+      // pass 4: the fringe tips come down onto the forehead (no see-through gap under the bangs, so no stray ink lines)
+      const tk = TUCK * ss(0.5, 1, th / thE) * ss(1.2, 0.85, t); if (tk <= 0) return Q
+      const d = [Q[0] - HC[0], Q[1] - HC[1], Q[2] - HC[2]], L = Math.hypot(...d); d.forEach((v, i) => { d[i] = v / L })
+      if (headSDF(HC[0] + d[0] * L, HC[1] + d[1] * L, HC[2] + d[2] * L) < 0) return Q
+      let lo = 0, hi = L; for (let n = 0; n < 24; n++) { const m = (lo + hi) / 2; if (headSDF(HC[0] + d[0] * m, HC[1] + d[1] * m, HC[2] + d[2] * m) < 0) lo = m; else hi = m }
+      const s2 = Math.max(hi + 0.0016, L - (L - hi) * 1) * (1 - tk) + (hi + 0.0016) * tk
+      return [HC[0] + d[0] * s2, HC[1] + d[1] * s2, HC[2] + d[2] * s2] }
     for (let j = 1; j <= NT; j++) { const f = j / NT; col.push(P(thE * f)); cg.push(groove * ss(0.3, 0.95, f) * (t < 1.45 ? 1 : 0)) }
     // rounded lip: half a turn from the outer edge to the inside (the tips curl in)
     const E = P(thE), E2 = P(thE - 0.02), n = [E[0] - HC[0], E[1] - HC[1], E[2] - HC[2]], nl = Math.hypot(...n), dn = [E[0] - E2[0], E[1] - E2[1], E[2] - E2[2]], dl = Math.hypot(...dn)
     for (let k = 0; k < 3; k++) { n[k] /= nl; dn[k] /= dl }
-    for (let k = 1; k <= NL; k++) { const f = Math.PI * k / NL; col.push([0, 1, 2].map(q => E[q] - n[q] * rho + n[q] * rho * Math.cos(f) + dn[q] * rho * Math.sin(f))); cg.push(groove * (t < 1.45 ? 1 : 0)) }
-    col.push([0, 1, 2].map(q => E[q] - n[q] * rho * 2.4 - dn[q] * 0.006)); cg.push(0)
+    // the lip's lower half carries an ink value (aSkin 0.47..0.49 -> painted ink line along the fringe tips, as in the concept)
+    const lipInk = t < 1.45 ? 1 : 0
+    for (let k = 1; k <= NL; k++) { const f = Math.PI * k / NL; col.push([0, 1, 2].map(q => E[q] - n[q] * rho + n[q] * rho * Math.cos(f) + dn[q] * rho * Math.sin(f))); cg.push(lipInk ? (k === 1 ? 1.07 : 1.09) : 0) }
+    col.push([0, 1, 2].map(q => E[q] - n[q] * rho * 2.4 - dn[q] * 0.006)); cg.push(lipInk ? 1.09 : 0)
     cols.push(col); gro.push(cg) }
   const R = cols[0].length; pos.push(HC[0], HC[1] + RH[1] * 1.05 * 1, HC[2]) // pole
   const g0 = [0]; for (let i = 0; i < NA; i++) for (let j = 0; j < R; j++) { pos.push(...cols[i][j]); g0.push(gro[i][j]) }
@@ -165,9 +178,9 @@ const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
   const parts = [hel,
     part(ball, [0, -0.008, -0.019], [0.0635, 0.054, 0.052]), // back volume of the bob
-    part(ball, [0, 0.0695, -0.008], [0.0198, 0.0168, 0.0188]), // top bun
-    part(ring, [0, 0.0605, -0.007], [0.0128, 0.0128, 0.011], [Math.PI / 2 - 0.15, 0, 0]),
-    ...[-1, 1].flatMap(d => [part(ball, [d * 0.066, -0.034, -0.022], [0.0215, 0.0245, 0.0225]), // side puffs at cheek level
+    part(ball, [0, 0.0715, -0.008], [0.0185, 0.016, 0.018]), // top bun
+    part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
+    ...[-1, 1].flatMap(d => [part(ball, [d * 0.0615, -0.027, -0.02], [0.021, 0.024, 0.022]), // side puffs at cheek level
       part(ballS, [d * 0.0555, -0.0155, 0.0125], [0.0052, 0.0082, 0.0042], [0, d * 0.45, 0], 1)])] // ears
   const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
 let hairShader = null
@@ -185,6 +198,7 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
       float band = 1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)));
       c = mix(c, uBand*uLight*(.75 + .25*lit), band*(1. - sk)*(.3 + .32*lit)*smoothstep(-.2, .5, dot(N, V)));
       c *= 1. - (1. - sk)*.3*smoothstep(.1, .38, vSkin); // painted grooves between the fringe locks
+      c = mix(c, vec3(.17,.1,.08), (1. - sk)*smoothstep(.455, .488, vSkin)); // ink along the fringe tips
       float fr = 1. - max(dot(N, V), 0.); c += uRim*smoothstep(.62, .92, fr)*(.2 + .5*lit)*.22;
       gl_FragColor = vec4(c, 1.);
       #include <tonemapping_fragment>

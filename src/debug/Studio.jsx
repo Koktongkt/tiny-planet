@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import React, { useMemo, lazy, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { wind } from '../world.js'
-import { T, toon, q } from '../common.jsx'
+import { T, toon, q, INK_K } from '../common.jsx'
 import { PEOPLE } from '../peopleData.js'
 import { GhibliPerson } from '../GhibliPerson.jsx'
 const PersonLazy = lazy(() => import('../people.jsx').then(m => ({ default: m.Person })))
@@ -30,14 +30,19 @@ function Studio() {
   }` }), [])
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); wind.time.value += dt
-    T.sun.set(0.55, 0.75, 0.6).normalize(); T.day = 1; T.dusk = 0; T.night = 0
+    if (q.has('frontsun')) T.sun.set(0, 0.2, 1).normalize(); else T.sun.set(0.55, 0.75, 0.6).normalize() // ?frontsun: flat front light for measuring
+    T.day = 1; T.dusk = 0; T.night = 0
     for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * 9 * st.move; st.dist += dt * 0.27 * st.move }
     if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
     if (q.has('still')) { stOld.t = stNew.t = 0 } // ?still: freeze idle sway/look for matched before/after shots
     if (q.has('act')) { for (const s of [stOld, stNew]) { s.act = q.get('act'); s.actW = 1; s.move = 0 } }
     const a = ang + (q.has('spin') ? wind.time.value * +(q.get('spin') || 0.6) : 0) // ?spin=0.6: turntable
     const d = (compare ? 1.35 : 0.95) / (+q.get('zoom') || 1), cx = 0, ly = q.has('ly') ? +q.get('ly') : 0.2 // ?zoom=3&ly=0.33: face close-up
-    camera.position.set(cx + Math.sin(a) * d, ly + 0.1 / (+q.get('zoom') || 1), Math.cos(a) * d); camera.up.set(0, 1, 0); camera.lookAt(cx, ly, 0)
+    // ?fov=4: near-orthographic lens for measured overlays (distance scaled so the framing matches fov 30); ?level: eye-level camera
+    const fov = +q.get('fov') || 30, dk = Math.tan(Math.PI / 12) / Math.tan(fov * Math.PI / 360)
+    if (camera.fov !== fov) { camera.fov = fov; camera.far = Math.max(camera.far, 60 * dk); camera.updateProjectionMatrix() }
+    if (q.has('fov')) INK_K.value = gl.domElement.height / (2 * Math.tan(fov * Math.PI / 360)) // ink width stays in screen px under the long lens
+    camera.position.set(cx + Math.sin(a) * d * dk, ly + (q.has('level') ? 0 : 0.1 / (+q.get('zoom') || 1)), Math.cos(a) * d * dk); camera.up.set(0, 1, 0); camera.lookAt(cx, ly, 0)
   })
   return <>
     <mesh material={bg}><sphereGeometry args={[30, 32, 16]} /></mesh>
