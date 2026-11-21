@@ -11,10 +11,10 @@ import { OUT, GEO, cel } from '../home/kit.jsx'
 // ---------- shape ----------
 const ell = (x, y, z, c, r) => { const a = (x - c[0]) / r[0], b = (y - c[1]) / r[1], d = (z - c[2]) / r[2]; return (Math.sqrt(a * a + b * b + d * d) - 1) * Math.min(r[0], r[1], r[2]) }
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
-export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.26, 0.04], [0.86, 0.5, 0.72]], cheek: [[0.7, -0.36, 0.06], [0.38, 0.32, 0.42]], muzzle: [[0, -0.16, 0.68], [0.33, 0.23, 0.44]],
-  kJ: 0.28, kC: 0.16, kM: 0.1, kE: 0.1,
+export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.26, 0.04], [0.86, 0.5, 0.72]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.16, 0.68], [0.33, 0.23, 0.44]], chin: [[0, -0.4, 0.5], [0.28, 0.2, 0.32]],
+  kJ: 0.28, kC: 0.18, kM: 0.1, kCh: 0.14, kE: 0.1,
   // ears: a rounded cone (base radius r1, tip radius r2, height h) flattened front-to-back, tilted out and a little back
-  ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.42, r2: 0.13, h: 0.8, flat: 0.38 } }
+  ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.48, r2: 0.13, h: 0.74, flat: 0.38 } }
 const E = HEAD.ear, EARM = [-1, 1].map(s => new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-E.back, 0, -s * E.tilt)).setPosition(s * E.base[0], E.base[1], E.base[2]))
 const EARI = EARM.map(m => m.clone().invert()), _e = new THREE.Vector3()
 function roundCone(x, y, z) { // iq's round cone along +y, base at the origin
@@ -25,7 +25,7 @@ function roundCone(x, y, z) { // iq's round cone along +y, base at the origin
 const ear = (x, y, z, i) => { _e.set(x, y, z).applyMatrix4(EARI[i]); return roundCone(_e.x, _e.y, _e.z / E.flat) * E.flat }
 const sdf = (x, y, z) => { let d = smin(ell(x, y, z, ...HEAD.skull), ell(x, y, z, ...HEAD.jowl), HEAD.kJ)
   const [c, r] = HEAD.cheek; d = smin(d, Math.min(ell(x, y, z, [-c[0], c[1], c[2]], r), ell(x, y, z, c, r)), HEAD.kC)
-  d = smin(d, ell(x, y, z, ...HEAD.muzzle), HEAD.kM)
+  d = smin(d, ell(x, y, z, ...HEAD.muzzle), HEAD.kM); d = smin(d, ell(x, y, z, ...HEAD.chin), HEAD.kCh)
   return smin(d, Math.min(ear(x, y, z, 0), ear(x, y, z, 1)), HEAD.kE) }
 const grad = (x, y, z, out) => { const e = 1e-3; out.set(sdf(x + e, y, z) - sdf(x - e, y, z), sdf(x, y + e, z) - sdf(x, y - e, z), sdf(x, y, z + e) - sdf(x, y, z - e)).normalize(); return out }
 // first surface hit along a ray (o + t d), or null
@@ -38,8 +38,28 @@ function hit(o, d, t0, t1, step = 0.01) {
 }
 const headGeo = (() => { // star-shaped from an inside point: shoot each sphere vertex direction out to the surface
   const g = new THREE.SphereGeometry(1, 96, 72), p = g.attributes.position, nr = g.attributes.normal, C = [0, -0.1, 0.12], n = new THREE.Vector3()
-  for (let i = 0; i < p.count; i++) { const d = [p.getX(i), p.getY(i), p.getZ(i)], t = hit(C, d, 0, 2.6, 0.015) ?? 1
-    const x = C[0] + d[0] * t, y = C[1] + d[1] * t, z = C[2] + d[2] * t; p.setXYZ(i, x, y, z); grad(x, y, z, n); nr.setXYZ(i, n.x, n.y, n.z) }
+  // rays heading for an ear start from inside that ear (blended in smoothly), so the ear tips get sampled head-on
+  const EM = EARM.map(m => new THREE.Vector3(0, E.h * 0.3, 0).applyMatrix4(m)), ET = EARM.map(m => new THREE.Vector3(0, E.h, 0).applyMatrix4(m))
+  const EU = ET.map(t => t.clone().sub(new THREE.Vector3(...C)).normalize()), sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+  for (let i = 0; i < p.count; i++) { const d = [p.getX(i), p.getY(i), p.getZ(i)]
+    let o = C
+    for (let e = 0; e < 2; e++) { const w = sm(0.8, 0.97, d[0] * EU[e].x + d[1] * EU[e].y + d[2] * EU[e].z); if (w > 0) o = [C[0] + (EM[e].x - C[0]) * w, C[1] + (EM[e].y - C[1]) * w, C[2] + (EM[e].z - C[2]) * w] }
+    const t = hit(o, d, 0, 2.6, 0.01) ?? 1
+    p.setXYZ(i, o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t) }
+  // weld the seam / poles, then a few rounds of: move each vertex toward its neighbours' average, project back onto the
+  // surface (Newton steps along the shape gradient). Evens out the spacing where rays graze the ears.
+  const key = (i) => `${p.getX(i).toFixed(5)},${p.getY(i).toFixed(5)},${p.getZ(i).toFixed(5)}`, rep_ = new Map(), canon = new Int32Array(p.count)
+  for (let i = 0; i < p.count; i++) { const k = key(i); if (!rep_.has(k)) rep_.set(k, i); canon[i] = rep_.get(k) }
+  const nb = new Map(), ix = g.index.array, link = (a, b) => { a = canon[a]; b = canon[b]; if (a === b) return; if (!nb.has(a)) nb.set(a, new Set()); nb.get(a).add(b) }
+  for (let f = 0; f < ix.length; f += 3) { const [a, b, c] = [ix[f], ix[f + 1], ix[f + 2]]; link(a, b); link(b, a); link(b, c); link(c, b); link(a, c); link(c, a) }
+  const P = new Float32Array(p.array)
+  for (let it = 0; it < 8; it++) { const Q = new Float32Array(P)
+    for (const [v, ns] of nb) { let ax = 0, ay = 0, az = 0; for (const u of ns) { ax += P[u * 3]; ay += P[u * 3 + 1]; az += P[u * 3 + 2] } const m = ns.size
+      let x = P[v * 3] * 0.5 + ax / m * 0.5, y = P[v * 3 + 1] * 0.5 + ay / m * 0.5, z = P[v * 3 + 2] * 0.5 + az / m * 0.5
+      for (let k = 0; k < 4; k++) { const dd = sdf(x, y, z); grad(x, y, z, n); x -= n.x * dd; y -= n.y * dd; z -= n.z * dd }
+      Q[v * 3] = x; Q[v * 3 + 1] = y; Q[v * 3 + 2] = z }
+    P.set(Q) }
+  for (let i = 0; i < p.count; i++) { const c = canon[i], x = P[c * 3], y = P[c * 3 + 1], z = P[c * 3 + 2]; p.setXYZ(i, x, y, z); grad(x, y, z, n); nr.setXYZ(i, n.x, n.y, n.z) }
   g.deleteAttribute('uv'); g.computeBoundingSphere(); return g
 })()
 const NOSE = (() => { const y = -0.05, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); return [0, y, 2 - t] })()
@@ -59,8 +79,8 @@ function headMat(main, cream, pink) {
         base = mix(base, uCream, 1. - smoothstep(-w, w, dd));
         for (int i = 0; i < 2; i++) { // ear insides, in each ear's own frame: pink, cream fluff at the bottom
           vec3 e = (uEarI[i]*vec4(vO, 1.)).xyz; float t = e.y/${E.h.toFixed(3)};
-          float hw = mix(${E.r1.toFixed(3)}, ${E.r2.toFixed(3)}, t)*0.6, dx = abs(e.x) - hw*(1. - .25*t);
-          float k = (1. - smoothstep(-w, w, dx))*smoothstep(.1, .16, t)*(1. - smoothstep(.8, .86, t))*smoothstep(-.01, .02, e.z);
+          float hw = ${E.r1.toFixed(3)}*0.62*max(0., 1. - t/.9), dx = abs(e.x) - hw; // a tapering triangle up the ear
+          float k = (1. - smoothstep(-w, w, dx))*smoothstep(.1, .16, t)*smoothstep(-.01, .02, e.z);
           vec3 inner = mix(uCream, uPink, smoothstep(.2, .45, t))*(1. - .08*smoothstep(.3, 1., abs(e.x)/max(hw, 1e-3)));
           base = mix(base, inner, k); } }
     #endif
@@ -86,15 +106,15 @@ function paint(x, eyesOpen, mouthOpen) {
       el(cx, y, rx + 0.017, ry + 0.017); x.fillStyle = '#2a170e'; x.fill()
       el(cx, y, rx, ry); x.fillStyle = '#fffaf4'; x.fill()
       x.save(); el(cx, y, rx, ry); x.clip()
-      const IX = rx * 0.72, IY = ry * 0.98, iy = y - ry * 0.02
+      const IX = rx * 0.78, IY = ry * 0.98, iy = y - ry * 0.02, ix = cx - s * rx * 0.24
       const g = x.createLinearGradient(0, iy + IY, 0, iy - IY); g.addColorStop(0, '#24130b'); g.addColorStop(0.45, '#40220f'); g.addColorStop(0.8, '#74431f'); g.addColorStop(1, '#93592c')
-      el(cx, iy, IX + 0.008, IY + 0.008); x.fillStyle = '#24130b'; x.fill()
-      el(cx, iy, IX, IY); x.fillStyle = g; x.fill()
-      el(cx, iy + 0.012, IX * 0.62, IY * 0.6); x.fillStyle = 'rgba(22,11,6,.72)'; x.fill() // pupil
-      el(cx, iy - IY * 0.72, IX * 0.62, IY * 0.3); x.fillStyle = 'rgba(196,128,72,.42)'; x.fill() // warm lower glow
+      el(ix, iy, IX + 0.008, IY + 0.008); x.fillStyle = '#24130b'; x.fill()
+      el(ix, iy, IX, IY); x.fillStyle = g; x.fill()
+      el(ix, iy + 0.012, IX * 0.62, IY * 0.6); x.fillStyle = 'rgba(22,11,6,.72)'; x.fill() // pupil
+      el(ix, iy - IY * 0.72, IX * 0.62, IY * 0.3); x.fillStyle = 'rgba(196,128,72,.42)'; x.fill() // warm lower glow
       x.restore()
       x.beginPath(); x.ellipse(cx, y, rx + 0.01, ry + 0.01, 0, 0.1 * Math.PI, 0.9 * Math.PI); x.lineWidth = 0.034; x.strokeStyle = INK; x.lineCap = 'round'; x.stroke() // upper lid
-      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx - 0.03, iy + 0.06, 0.04, 0, 7); x.fill()
+      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ix + 0.03, iy + 0.06, 0.04, 0, 7); x.fill()
     } else {
       x.beginPath(); x.moveTo(cx - 0.14, y + 0.01); x.quadraticCurveTo(cx, y - 0.09, cx + 0.14, y + 0.01); x.lineWidth = 0.042; x.strokeStyle = INK; x.lineCap = 'round'; x.stroke()
     }
@@ -151,7 +171,7 @@ export function ShibaHead({ c, M, set }) {
   return <group scale={hr}>
     <Part geo={headGeo} mat={hm} />
     <mesh ref={set('face')} geometry={faceGeo} material={fm} renderOrder={2} />
-    <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.135, 0.085, 0.085]} /><mesh geometry={GEO.sph} material={OUT.pet} scale={[0.135, 0.085, 0.085]} />
+    <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.135, 0.085, 0.085]} />
       <mesh geometry={GEO.sph} material={M.shine} position={[-0.04, 0.035, 0.065]} scale={[0.035, 0.02, 0.012]} /></group>
   </group>
 }
