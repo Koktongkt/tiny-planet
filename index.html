@@ -13,10 +13,10 @@
 #ld .lay{position:absolute;inset:0;will-change:transform}#ld .lay svg{position:absolute;inset:0;width:100%;height:100%}#ld svg.defs{position:absolute;width:0;height:0}
 .bk{transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 .dr{animation:dr 19s ease-in-out infinite alternate}.dr.s{animation-duration:27s}@keyframes dr{to{transform:translateX(calc(28px*var(--s)))}}
-/* planet: the painted cut-out fades in once decoded, rises with progress and floats */
+/* planet: the painted cut-out fades in once decoded and stays put */
 #pw{position:relative;order:2;flex:0 0 auto;width:min(44vw,70vh);aspect-ratio:684/780;transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 #pw:before{content:"";position:absolute;inset:4% -6% -2%;border-radius:50%;background:radial-gradient(closest-side,#fffbe9b0,#fff6dc40 55%,#fff0 100%);animation:gl 6s ease-in-out infinite alternate}@keyframes gl{to{transform:scale(1.06);opacity:.75}}
-#pf{position:absolute;inset:0;animation:fl 7s ease-in-out infinite alternate}@keyframes fl{0%{transform:translateY(-1.2%) rotate(-1deg)}100%{transform:translateY(1.2%) rotate(1deg)}}
+#pf{position:absolute;inset:0}
 #pi{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.94);transition:opacity 1.4s ease,transform 1.8s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 18px 28px #3e5f9640)}#pi.in{opacity:1;transform:none}
 /* title card */
 #tx{position:relative;flex:0 1 auto;width:min(36vw,480px);text-align:center;transition:opacity 1.2s,transform 2s}
@@ -41,7 +41,7 @@
  #ft,#go{margin-top:clamp(18px,3vh,40px)}#st{font-size:14px;letter-spacing:.08em}#tip{font-size:14px}#go{font-size:22px}}
 @media (max-height:500px) and (min-aspect-ratio:1/1){#tt h1{font-size:clamp(38px,11vh,64px)}#tt p{font-size:15px;margin-top:.5em}#ft,#go{margin-top:14px}#st{font-size:13px;margin-top:.5em}#tip{font-size:12px;margin-top:.4em}#go{font-size:18px}}
 html,body{overscroll-behavior:none}#ld{touch-action:none}
-@media (prefers-reduced-motion:reduce){.dr,#pf,#pw:before,#go.on{animation:none!important}.bk,#pw,#pi,#tx,#go,#fill{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
+@media (prefers-reduced-motion:reduce){.dr,#pw:before,#go.on{animation:none!important}.bk,#pw,#pi,#tx,#go,#fill{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
 </style></head><body style="margin:0;overflow:hidden;background:#86b0e3">
 <div id="ld" role="progressbar" aria-label="Loading Tiny Planet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
@@ -72,7 +72,7 @@ function bank(id,x,y){BK[id]=[x,y];var n=$(id);if(n)n.style.transform="translate
 function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p);
  $("fill").style.transform="scaleX("+Math.max(.04,p).toFixed(4)+")";
  bank("L1",40-200*e,60*e);bank("R1",-40+200*e,60*e);bank("L2",20-140*e,30*e);bank("R2",-20+140*e,30*e);
- PLY=50-50*e;$("pw").style.transform="translate(0,"+(PLY*SC).toFixed(2)+"px)";ld.setAttribute("aria-valuenow",Math.round(p*100));
+ ld.setAttribute("aria-valuenow",Math.round(p*100));
  var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done)$("sl").textContent=L[c];window.__loader.p=p}
 var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(en){var n=en.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((S.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(x){}}
 function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="frame"&&v>=1)ready()}
@@ -87,7 +87,7 @@ addEventListener("keydown",key,true);$("go").onclick=enter;ld.addEventListener("
 var TIPS=["Press E near anything that shimmers to gather it.","A fishing rod is two wood and three reeds.","The crafting bench waits beside the house marked Home.","Fireflies and glowing moss come out only at night.","Everything grows back by morning; gather freely.","The meadow sheep will share their wool.","A rope bridge opens a path up the waterfall cliff.","Decor can be placed anywhere around Home."],ti=Math.floor(Math.random()*TIPS.length),tp=$("tip");
 tp.textContent=TIPS[ti++%TIPS.length];var tt=setInterval(function(){if(!d.body.contains(ld))return clearInterval(tt);tp.classList.add("h");setTimeout(function(){tp.textContent=TIPS[ti++%TIPS.length];tp.classList.remove("h")},rm?0:800)},6500);
 addEventListener("error",function(e){if(!done)$("sl").textContent="Something went wrong, please reload"});
-var PLY=50;fit();addEventListener("resize",fit);
+fit();addEventListener("resize",fit);
 window.__loader={stage:stage,p:0,P:S};draw();
 })()</script>
 <div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
