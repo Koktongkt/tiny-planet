@@ -23,6 +23,7 @@ export const HOME = {
 // she starts inside her house (unless a debug spot or another view was asked for)
 HOME.inside = VIEW.mode === 'follow' && !q.has('nogame') && !q.has('at') && !q.has('out') && !q.has('petsdemo') /* ?petsdemo is an outdoor pets view: starting inside left an empty-looking room */
 if (typeof window !== 'undefined') window.__home = HOME
+HOME.freeAt = (...a) => freeAt(...a); HOME.blocks = BLOCKS // debug + tests
 
 const _v = new THREE.Vector3()
 // the oval: f < 1 inside (shrunk by r so a body of radius r stays clear of the wall)
@@ -30,7 +31,8 @@ const oval = (x, z, r) => Math.pow(Math.abs(x) / (ROOM.A - r), ROOM.n) + Math.po
 // is a room-local floor point free (inside walls, outside furniture)?
 export function freeAt(x, z, r = 0.08, skip) {
   if (oval(x, z, r) > 1) return false
-  for (const b of BLOCKS) { if (b.id === skip) continue; if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) return false }
+  for (const b of BLOCKS) { if (b.id === skip) continue; if (!(x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r)) continue
+    if (!b.obb) return false; const dx = x - b.cx, dz = z - b.cz, lx = dx * b.c - dz * b.s, lz = dx * b.s + dz * b.c; if (Math.abs(lx) < b.hw + r && Math.abs(lz) < b.hd + r) return false }
   return true
 }
 // push a circle out of walls + furniture (axis-aligned boxes)
@@ -38,11 +40,20 @@ export function resolve(p, r = 0.08, skip) {
   const f = oval(p.x, p.z, r); if (f > 1) { const k = Math.pow(f, -1 / ROOM.n); p.x *= k; p.z *= k } // the oval is homogeneous: scale back onto it
   for (const b of BLOCKS) {
     if (b.id === skip) continue
+    if (b.obb) { resolveObb(p, r, b); continue }
     const cx = Math.min(b.x1, Math.max(b.x0, p.x)), cz = Math.min(b.z1, Math.max(b.z0, p.z)), dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz)
     if (d < r) { if (d > 1e-5) { p.x = cx + dx / d * r; p.z = cz + dz / d * r } else { // centre inside the box: leave by the nearest side
       const o = [[p.x - b.x0, -1, 0], [b.x1 - p.x, 1, 0], [p.z - b.z0, 0, -1], [b.z1 - p.z, 0, 1]].sort((a, c) => a[0] - c[0])[0]; p.x += o[1] * (o[0] + r); p.z += o[2] * (o[0] + r) } }
   }
   return p
+}
+// push a circle out of an oriented box (a prop turned at any angle): the same as an axis box, in the box's own frame
+function resolveObb(p, r, b) {
+  const dx = p.x - b.cx, dz = p.z - b.cz, lx = dx * b.c - dz * b.s, lz = dx * b.s + dz * b.c
+  const qx = Math.min(b.hw, Math.max(-b.hw, lx)), qz = Math.min(b.hd, Math.max(-b.hd, lz)); let ox = lx - qx, oz = lz - qz; const d = Math.hypot(ox, oz)
+  if (d >= r) return; let nx, nz
+  if (d > 1e-5) { nx = qx + ox / d * r; nz = qz + oz / d * r } else { const o = [[lx + b.hw, -1, 0], [b.hw - lx, 1, 0], [lz + b.hd, 0, -1], [b.hd - lz, 0, 1]].sort((a, c) => a[0] - c[0])[0]; nx = lx + o[1] * (o[0] + r); nz = lz + o[2] * (o[0] + r) }
+  p.x = b.cx + nx * b.c + nz * b.s; p.z = b.cz - nx * b.s + nz * b.c
 }
 // a point on the oval wall (inner face) at angle-ish parameter: the boundary point along direction (x, z), and its inward normal
 export function wallAt(dx, dz, out = {}) { const f = oval(dx, dz, 0), k = Math.pow(f, -1 / ROOM.n), x = dx * k, z = dz * k

@@ -167,10 +167,10 @@ class Builder {
   // ---- shorthands (sizes are full sizes unless noted) ----
   box(size, pos, name, o = {}) { return this.add(rbox(size, o.r ?? Math.min(...size) * 0.22), pos, name, o) } // rounded box, edge radius r
   puff(size, pos, name, o = {}) { return this.add(puffGeo(size, o.bulge ?? 0.35), pos, name, o) } // cushion / mattress / pouf top
-  pill([r, h], pos, name, o = {}) { return this.add(pillGeo(o.bevel ?? 0.22, o.seg ?? 24), pos, name, { ...o, scale: [r, h, r] }) } // rounded cylinder (radius, height)
+  pill([r, h], pos, name, o = {}) { return this.add(pillGeo(o.bevel ?? 0.22, o.seg ?? 24), pos, name, { ...o, scale: o.scale ?? [r, h, r] }) } // rounded cylinder (radius, height; o.scale overrides, e.g. for an oval)
   ball(r, pos, name, o = {}) { return this.add(sph(), pos, name, { ...o, scale: Array.isArray(r) ? r : [r, r, r] }) }
   dome(r, pos, name, o = {}) { return this.add(half(), pos, name, { ...o, scale: Array.isArray(r) ? r : [r, r, r] }) }
-  ring(r, t, pos, name, o = {}) { return this.add(tor(t / r), pos, name, { ...o, scale: [r, r, r] }) } // torus in the xy plane (rot it)
+  ring(r, t, pos, name, o = {}) { return this.add(tor(t / r), pos, name, { ...o, scale: o.scale ?? [r, r, r] }) } // torus in the xy plane (rot it; o.scale overrides)
   cone([r, h], pos, name, o = {}) { return this.add(cone(o.n ?? 16), pos, name, { ...o, scale: [r, h, r] }) }
   stick([r, h], pos, name, o = {}) { return this.add(capGeo(r, h), pos, name, o) } // capsule: legs, rods, handles (h = full length, ends included)
   arch(w, hr, d, pos, name, o = {}) { return this.add(archGeo(w, hr, d, o.bevel ?? Math.min(0.012, d / 3)), pos, name, o) }

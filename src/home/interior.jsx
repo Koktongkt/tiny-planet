@@ -48,9 +48,9 @@ P.flowerPot = against(147, 0.17, 0.17)
 const pol = (phi, r, yaw = 0) => { const [x, z] = polar(phi, r); return { x, z, yaw } }
 P.petBed = pol(-147, 0.98, 0.4)
 P.table = { x: 0, z: 0.06, yaw: 0 }
-P.poufL = { x: -0.37, z: 0.1, yaw: 0.2 }; P.poufR = { x: 0.38, z: 0.12, yaw: -0.3 }
+P.poufL = { x: -0.34, z: 0.1, yaw: 0.2 }; P.poufR = { x: 0.34, z: 0.1, yaw: -0.3 }
 P.stool = (() => { const [x, z] = local(P.desk, -0.02, 0.3); return { x, z, yaw: P.desk.yaw } })()
-P.rug = { x: 0.0, z: 0.1, yaw: 0 }
+P.rug = { x: 0.0, z: 0.09, yaw: 0 }
 P.runner = (() => { const [x, z] = local(P.bed, -0.42, 0.08); return { x, z, yaw: P.bed.yaw } })()
 // bath nook: back-right, behind a partition wall with an arch
 export const NOOK = { x0: 0.76, z1: -0.3 }
@@ -94,7 +94,9 @@ export const SPOTS = {
 }
 
 // furniture footprints for collision (rotated boxes -> their x/z bounds, trimmed a little so round walls don't over-block)
-const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size, c = Math.abs(Math.cos(pl.yaw)), s = Math.abs(Math.sin(pl.yaw)), hw = (w * c + d * s) / 2 * k, hd = (w * s + d * c) / 2 * k; return { id, x0: pl.x - hw, x1: pl.x + hw, z0: pl.z - hd, z1: pl.z + hd } }
+// oriented boxes (they turn with the prop), plus their x/z bounds for a quick reject
+const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size, c = Math.cos(pl.yaw), s = Math.sin(pl.yaw), hw = w / 2 * k, hd = d / 2 * k, ex = hw * Math.abs(c) + hd * Math.abs(s), ez = hw * Math.abs(s) + hd * Math.abs(c)
+  return { id, obb: true, cx: pl.x, cz: pl.z, c, s, hw, hd, x0: pl.x - ex, x1: pl.x + ex, z0: pl.z - ez, z1: pl.z + ez } }
 export const BLOCK_LIST = () => [
   fp('counter', P.counter), fp('fridge', P.fridge), fp('firewood', P.firewood), { ...fp('woodStove', P.stove, 0.7), id: 'stove' }, fp('desk', P.desk), fp('stool', P.stool, 0.8),
   fp('bigPlant', P.bigPlant, 0.75), fp('petBowls', P.petBowls, 0.7), { ...fp('petBed', P.petBed, 0.85), id: 'petbed', round: true }, fp('coatStand', P.coatStand, 0.7),
@@ -276,10 +278,28 @@ export function WindowLight() {
   return <mesh position={[x, 0.009, z]} rotation={[-Math.PI / 2, 0, P.counter.yaw + 0.25]} material={m} renderOrder={2}><planeGeometry args={[0.42, 0.34]} /></mesh>
 }
 
+// the bath nook's partition (plain side wall + arched front wall + the towel rail on it). Kept out of the merged static
+// set because it changes: when she walks into the bath the walls fade to see-through (their outlines hide) so you can
+// see her in there; they turn solid again when she walks out. They get their own material copies so nothing else fades.
+export const inBath = (hp) => hp.x > NOOK.x0 - 0.03 && hp.z < NOOK.z1 + 0.06
+export function BathWalls() {
+  const ref = useRef(), st = useRef(0), mats = useRef(null), nookFront = 1.6 - NOOK.x0
+  useFrame((_, dt) => { const g = ref.current; if (!g) return
+    if (!mats.current) { const fill = [], outl = []; g.traverse(m => { if (!m.isMesh) return; if (m.userData.outline || m.material.isShaderMaterial) { outl.push(m); return } if (m.material.transparent) return
+      m.material = m.material.clone(); m.material.transparent = true; fill.push(m) }); mats.current = { fill, outl } }
+    const want = HOME.inside && inBath(HOME.hp) ? 1 : 0; st.current += (want - st.current) * Math.min(1, dt * 6); const k = st.current
+    for (const m of mats.current.fill) { m.material.opacity = 1 - 0.72 * k; m.material.depthWrite = k < 0.02; m.renderOrder = k > 0.02 ? 6 : 0 }
+    for (const m of mats.current.outl) m.visible = k < 0.15 })
+  return <group ref={ref}>
+    <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
+    <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
+    <Prop id="towelRail" {...at(P.towelRail)} />
+  </group>
+}
+
 // ---------- everything static, placed ----------
 const at = (pl, y = 0) => ({ position: [pl.x, pl.y ?? y, pl.z], 'rotation-y': pl.yaw })
 export function Shell() {
-  const nookFront = 1.6 - NOOK.x0
   return <>
     <Walls /><NookTiles />
     <Prop id="counter" {...at(P.counter)} />
@@ -292,14 +312,12 @@ export function Shell() {
     <Alcove />
     <Prop id="desk" {...at(P.desk)} /><Prop id="pegboard" {...at(P.pegboard)} /><Prop id="stool" {...at(P.stool)} />
     <Prop id="petBed" {...at(P.petBed)} /><Prop id="petBowls" {...at(P.petBowls)} />
-    <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.55, rz: 0.46, shadow: false }} pal={{ rug: '#f2dcc0', ring: '#e2b98e' }} />
+    <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.52, rz: 0.4, shadow: false }} />
     <Prop id="roundTable" {...at(P.table)} opts={{ lantern: true }} /><Prop id="pouf" {...at(P.poufL)} /><Prop id="pouf" {...at(P.poufR)} />
     <Prop id="wardrobe" {...at(P.wardrobe)} /><Prop id="nightstand" {...at(P.nightstand)} /><Prop id="bed" {...at(P.bed)} /><Prop id="runner" {...at(P.runner)} />
     <Prop id="coatStand" {...at(P.coatStand)} />
     {/* bath nook: partition (plain side wall + arched front), tub, loo, towel, porthole frame */}
-    <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
-    <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
-    <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} /><Prop id="towelRail" {...at(P.towelRail)} />
+    <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} />
     {(() => { const pl = onWall(PORT, 0); return <group position={[pl.x, (OPEN[2].y0 + OPEN[2].ys) / 2, pl.z]} rotation-y={pl.yaw}><O geo={GEO.tor} mat={tm(W.light)} scale={[0.082, 0.082, 0.06]} out={OUT.fine} /></group> })()}
     {/* front entrance, as in the concept: lantern posts hugging the door frame, stone steps with a mat, daisy pots, bushes */}
     {[-1, 1].map(s => { const [x, z] = polar(180 + s * 10.4, R + 0.085); return <Prop key={s} id="lanternPost" position={[x, 0, z]} rotation-y={-s * 10.4 * D2R} /> })}
