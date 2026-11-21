@@ -11,7 +11,7 @@ import { ell, smin, starMesh, patchFur } from './sdfKit.js'
 import { legGeo, legOut } from './shibaBody.jsx'
 
 // ---------- torso, in body units (the rig scales x, y, z by cfg.body) ----------
-const T = { barrel: [[0, 0, 0], [0.9, 0.86, 1.0]], chest: [[0, 0.06, 0.52], [0.86, 0.94, 0.56]], rump: [[0, 0.02, -0.52], [0.92, 0.88, 0.56]], ruff: [[0, -0.2, 0.82], [0.66, 0.62, 0.34]], k: 0.3 }
+const T = { barrel: [[0, 0, 0], [0.9, 0.86, 1.0]], chest: [[0, 0.06, 0.52], [0.86, 0.94, 0.56]], rump: [[0, 0.02, -0.52], [0.92, 0.88, 0.56]], ruff: [[0, -0.12, 0.8], [0.5, 0.5, 0.32]], k: 0.3 }
 export const CROOT = { y: -0.8, r: [0.3, 0.33, 0.21], k: 0.22, front: [0.5, 0.58], hind: [0.5, -0.58] }
 const ROOTS = [[CROOT.front[0], CROOT.front[1]], [-CROOT.front[0], CROOT.front[1]], [CROOT.hind[0], CROOT.hind[1]], [-CROOT.hind[0], CROOT.hind[1]]]
 const tsdf = (x, y, z) => { let d = smin(ell(x, y, z, ...T.barrel), ell(x, y, z, ...T.chest), T.k); d = smin(d, ell(x, y, z, ...T.rump), T.k); d = smin(d, ell(x, y, z, ...T.ruff), 0.18) // fluffy chest
@@ -22,8 +22,8 @@ const torsoGeo = (() => { const C = [0, 0, 0], RD = ROOTS.map(([x, z]) => { cons
   return starMesh(tsdf, { C, w: 72, h: 56, step: 0.008, far: 2.2, relax: 6, origin }) })()
 const TORSO_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
   // chest ruff: a near-white fluffy bib, a V pointing down the chest with spiky fur-tuft edges and a thin tan line
-  float teeth = 0.13*abs(fract(ax*4.5 + .25) - .5)*2.;
-  float ruff = min(min(p.z - 0.18 + 0.25*ax - 0.1*abs(fract(p.y*5. + .25) - .5)*2., 0.6 - p.y), p.y - (-0.78 + 0.62*ax) - teeth);
+  float teeth = 0.1*abs(fract(ax*6. + .25) - .5)*2.;
+  float ruff = min(min(p.z - 0.42 + 0.3*ax - 0.07*abs(fract(p.y*6. + .25) - .5)*2., 0.6 - p.y), p.y - (-0.55 + 0.8*ax) - teeth); // front of the chest only
   w = fwidth(ruff)*1.2 + 1e-4; base = mix(base, uRuff, smoothstep(-w, w, ruff));
   float edge = smoothstep(-w, w, ruff)*(1. - smoothstep(.035 - w, .035 + w, ruff))*step(-0.6, p.y)*smoothstep(0., .1, p.z);
   base = mix(base, uStripe, edge*.55);
