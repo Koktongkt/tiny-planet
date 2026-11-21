@@ -6,11 +6,10 @@
 import * as THREE from 'three'
 import React, { useMemo } from 'react'
 import { fur, CEL_U } from '../GhibliPerson.jsx'
-import { OUT, GEO, cel } from '../home/kit.jsx'
+import { OUT, GEO } from '../home/kit.jsx'
+import { ell, smin, sstep, gradOf, hitOf, starMesh } from './sdfKit.js'
 
 // ---------- shape ----------
-const ell = (x, y, z, c, r) => { const a = (x - c[0]) / r[0], b = (y - c[1]) / r[1], d = (z - c[2]) / r[2]; return (Math.sqrt(a * a + b * b + d * d) - 1) * Math.min(r[0], r[1], r[2]) }
-const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.34, 0.08], [1.05, 0.56, 0.76]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.15, 0.72], [0.33, 0.22, 0.44]], chin: [[0, -0.5, 0.5], [0.4, 0.3, 0.4]],
   kJ: 0.28, kC: 0.18, kM: 0.1, kCh: 0.16, kE: 0.1,
   // ears: a rounded cone (base radius r1, tip radius r2, height h) flattened front-to-back, tilted out and a little back
@@ -27,41 +26,12 @@ const sdf = (x, y, z) => { let d = smin(ell(x, y, z, ...HEAD.skull), ell(x, y, z
   const [c, r] = HEAD.cheek; d = smin(d, Math.min(ell(x, y, z, [-c[0], c[1], c[2]], r), ell(x, y, z, c, r)), HEAD.kC)
   d = smin(d, ell(x, y, z, ...HEAD.muzzle), HEAD.kM); d = smin(d, ell(x, y, z, ...HEAD.chin), HEAD.kCh)
   return smin(d, Math.min(ear(x, y, z, 0), ear(x, y, z, 1)), HEAD.kE) }
-const grad = (x, y, z, out) => { const e = 1e-3; out.set(sdf(x + e, y, z) - sdf(x - e, y, z), sdf(x, y + e, z) - sdf(x, y - e, z), sdf(x, y, z + e) - sdf(x, y, z - e)).normalize(); return out }
-// first surface hit along a ray (o + t d), or null
-function hit(o, d, t0, t1, step = 0.01) {
-  let prev = t0, sp = sdf(o[0] + d[0] * t0, o[1] + d[1] * t0, o[2] + d[2] * t0)
-  for (let t = t0 + step; t <= t1; t += step) { const s = sdf(o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t)
-    if (Math.sign(s) !== Math.sign(sp)) { let a = prev, b = t; for (let n = 0; n < 20; n++) { const m = (a + b) / 2, sm = sdf(o[0] + d[0] * m, o[1] + d[1] * m, o[2] + d[2] * m); if (Math.sign(sm) === Math.sign(sp)) a = m; else b = m } return (a + b) / 2 }
-    prev = t; sp = s }
-  return null
-}
-const headGeo = (() => { // star-shaped from an inside point: shoot each sphere vertex direction out to the surface
-  const g = new THREE.SphereGeometry(1, 96, 72), p = g.attributes.position, nr = g.attributes.normal, C = [0, -0.1, 0.12], n = new THREE.Vector3()
-  // rays heading for an ear start from inside that ear (blended in smoothly), so the ear tips get sampled head-on
-  const EM = EARM.map(m => new THREE.Vector3(0, E.h * 0.3, 0).applyMatrix4(m)), ET = EARM.map(m => new THREE.Vector3(0, E.h, 0).applyMatrix4(m))
-  const EU = ET.map(t => t.clone().sub(new THREE.Vector3(...C)).normalize()), sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
-  for (let i = 0; i < p.count; i++) { const d = [p.getX(i), p.getY(i), p.getZ(i)]
-    let o = C
-    for (let e = 0; e < 2; e++) { const w = sm(0.8, 0.97, d[0] * EU[e].x + d[1] * EU[e].y + d[2] * EU[e].z); if (w > 0) o = [C[0] + (EM[e].x - C[0]) * w, C[1] + (EM[e].y - C[1]) * w, C[2] + (EM[e].z - C[2]) * w] }
-    const t = hit(o, d, 0, 2.6, 0.01) ?? 1
-    p.setXYZ(i, o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t) }
-  // weld the seam / poles, then a few rounds of: move each vertex toward its neighbours' average, project back onto the
-  // surface (Newton steps along the shape gradient). Evens out the spacing where rays graze the ears.
-  const key = (i) => `${p.getX(i).toFixed(5)},${p.getY(i).toFixed(5)},${p.getZ(i).toFixed(5)}`, rep_ = new Map(), canon = new Int32Array(p.count)
-  for (let i = 0; i < p.count; i++) { const k = key(i); if (!rep_.has(k)) rep_.set(k, i); canon[i] = rep_.get(k) }
-  const nb = new Map(), ix = g.index.array, link = (a, b) => { a = canon[a]; b = canon[b]; if (a === b) return; if (!nb.has(a)) nb.set(a, new Set()); nb.get(a).add(b) }
-  for (let f = 0; f < ix.length; f += 3) { const [a, b, c] = [ix[f], ix[f + 1], ix[f + 2]]; link(a, b); link(b, a); link(b, c); link(c, b); link(a, c); link(c, a) }
-  const P = new Float32Array(p.array)
-  for (let it = 0; it < 8; it++) { const Q = new Float32Array(P)
-    for (const [v, ns] of nb) { let ax = 0, ay = 0, az = 0; for (const u of ns) { ax += P[u * 3]; ay += P[u * 3 + 1]; az += P[u * 3 + 2] } const m = ns.size
-      let x = P[v * 3] * 0.5 + ax / m * 0.5, y = P[v * 3 + 1] * 0.5 + ay / m * 0.5, z = P[v * 3 + 2] * 0.5 + az / m * 0.5
-      for (let k = 0; k < 4; k++) { const dd = sdf(x, y, z); grad(x, y, z, n); x -= n.x * dd; y -= n.y * dd; z -= n.z * dd }
-      Q[v * 3] = x; Q[v * 3 + 1] = y; Q[v * 3 + 2] = z }
-    P.set(Q) }
-  for (let i = 0; i < p.count; i++) { const c = canon[i], x = P[c * 3], y = P[c * 3 + 1], z = P[c * 3 + 2]; p.setXYZ(i, x, y, z); grad(x, y, z, n); nr.setXYZ(i, n.x, n.y, n.z) }
-  g.deleteAttribute('uv'); g.computeBoundingSphere(); return g
-})()
+const grad = gradOf(sdf), hit = hitOf(sdf)
+// rays heading for an ear start from inside that ear (blended in smoothly), so the ear tips get sampled head-on
+const headGeo = (() => { const C = [0, -0.1, 0.12], V = (a) => new THREE.Vector3(...a)
+  const EM = EARM.map(m => new THREE.Vector3(0, E.h * 0.3, 0).applyMatrix4(m)), EU = EARM.map(m => new THREE.Vector3(0, E.h, 0).applyMatrix4(m).sub(V(C)).normalize())
+  const origin = (d) => { let o = C; for (let e = 0; e < 2; e++) { const w = sstep(0.8, 0.97, d[0] * EU[e].x + d[1] * EU[e].y + d[2] * EU[e].z); if (w > 0) o = [C[0] + (EM[e].x - C[0]) * w, C[1] + (EM[e].y - C[1]) * w, C[2] + (EM[e].z - C[2]) * w] } return o }
+  return starMesh(sdf, { C, w: 96, h: 72, step: 0.01, far: 2.6, relax: 8, origin }) })()
 const NOSE = (() => { const y = -0.05, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); return [0, y, 2 - t] })()
 
 // ---------- coat: orange with the cream urajiro mask (muzzle, cheeks, jowls, throat), arching up to the nose ----------

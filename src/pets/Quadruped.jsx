@@ -10,6 +10,7 @@ import { useFrame } from '@react-three/fiber'
 import { cel, OUT, GEO } from '../home/kit.jsx'
 import { fur, SHADOW } from '../GhibliPerson.jsx'
 import { ShibaHead } from './shibaHead.jsx'
+import { DogBody, ShibaTail } from './shibaBody.jsx'
 
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
@@ -129,31 +130,6 @@ function Leg({ c, M, front, sx, L, upper, lower, paw }) {
     <Part geo={GEO.cap} mat={lower} pos={[0, -L * 0.52, 0]} scl={[r * 0.95, L * 0.2, r * 1.0]} />
     <Part mat={paw} pos={[0, -L + r * 0.55, r * 0.3]} scl={[r * 1.12, r * 0.62, r * 1.3]} />
   </>
-}
-// ---------- Pip: chibi Shiba Inu (round9 concept sheet) ----------
-// orange back + head, cream chest / belly / legs / lower face, big triangular ears with cream insides, short round
-// muzzle, cream brow dots, a fat cream tail curl with an orange swirl over the rump.
-function DogBody({ c, M, set, legs }) {
-  const [bw, bh, bl] = c.body, L = c.legH + bh * 0.2
-  return <>
-    <Part gref={set('torso')} mat={M.main} scl={[bw, bh, bl]} />
-    <Part mat={M.cream} pos={[0, -bh * 0.46, bl * 0.12]} scl={[bw * 0.84, bh * 0.58, bl * 0.84]} />
-    <Part mat={M.cream} pos={[0, -bh * 0.02, bl * 0.62]} scl={[bw * 0.74, bh * 0.82, bl * 0.46]} />
-    {[-1, 1].map(sx => <Part key={'h' + sx} mat={M.main} pos={[sx * bw * 0.46, bh * 0.02, -bl * 0.42]} scl={[bw * 0.52, bh * 0.78, bl * 0.52]} />)}
-    {legs.map(([k, sx, fz]) => <group key={k} ref={set('leg' + k)} position={[sx * bw * 0.52, -bh * 0.35, fz * bl * 0.56]}>
-      <Leg c={c} M={M} front={fz > 0} sx={sx} L={L} upper={fz > 0 ? M.cream : M.main} lower={M.cream} paw={M.cream} />
-    </group>)}
-  </>
-}
-// fat curled tail sitting on the rump: a ring of cream fur clumps around an orange swirl, seen face-on from the side
-function ShibaTail({ c, M }) {
-  const r = c.tail.ring, k = 11, fat = c.tail.r
-  return <group rotation={[0.15, 0, 0]}>
-    {[...Array(k)].map((_, i) => { const a = i / k * Math.PI * 2, y = Math.sin(a) * r, z = -Math.cos(a) * r
-      return <Part key={i} mat={M.cream} pos={[0, y + r, z]} scl={[fat * 0.9, fat * 0.9, fat * 0.9]} out={i % 2 ? null : OUT.pet} /> })}
-    <Part mat={M.main} pos={[0, r, 0]} scl={[fat * 1.02, r * 0.48, r * 0.48]} />
-    <Part mat={M.cream} pos={[0, r * 1.04, -r * 0.08]} scl={[fat * 1.06, r * 0.2, r * 0.2]} out={null} />
-  </group>
 }
 // ---------- Mochi: chibi Siamese (round9 concept sheet) ----------
 // cream coat, dark-brown points (ears, face mask, socks, ringed tail), faint brown back stripes, fluffy chest ruff,
