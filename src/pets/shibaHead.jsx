@@ -10,7 +10,7 @@ import { OUT, GEO } from '../home/kit.jsx'
 import { ell, smin, sstep, gradOf, hitOf, starMesh } from './sdfKit.js'
 
 // ---------- shape ----------
-export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.34, 0.08], [1.05, 0.56, 0.76]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.12, 0.72], [0.33, 0.2, 0.36]], chin: [[0, -0.42, 0.5], [0.34, 0.26, 0.36]],
+export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.34, 0.08], [1.05, 0.56, 0.76]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.16, 0.72], [0.33, 0.22, 0.36]], chin: [[0, -0.42, 0.5], [0.34, 0.26, 0.36]],
   kJ: 0.28, kC: 0.18, kM: 0.14, kCh: 0.22, kE: 0.1,
   // ears: a rounded cone (base radius r1, tip radius r2, height h) flattened front-to-back, tilted out and a little back
   ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.44, r2: 0.12, h: 0.64, flat: 0.38 } }
@@ -141,7 +141,7 @@ export function ShibaHead({ c, M, set }) {
   return <group scale={hr}>
     <Part geo={headGeo} mat={hm} />
     <mesh ref={set('face')} geometry={faceGeo} material={fm} renderOrder={2} />
-    <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.135, 0.085, 0.085]} />
-      <mesh geometry={GEO.sph} material={M.shine} position={[-0.04, 0.035, 0.065]} scale={[0.035, 0.02, 0.012]} /></group>
+    <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.135, 0.085, 0.06]} />
+      <mesh geometry={GEO.sph} material={M.shine} position={[-0.04, 0.035, 0.045]} scale={[0.035, 0.02, 0.012]} /></group>
   </group>
 }
