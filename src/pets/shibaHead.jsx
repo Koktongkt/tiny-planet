@@ -30,7 +30,8 @@ const grad = gradOf(sdf), hit = hitOf(sdf)
 // rays heading for an ear start from inside that ear (blended in smoothly), so the ear tips get sampled head-on
 const headGeo = (() => { const C = [0, -0.1, 0.12], V = (a) => new THREE.Vector3(...a)
   const EM = EARM.map(m => new THREE.Vector3(0, E.h * 0.3, 0).applyMatrix4(m)), EU = EARM.map(m => new THREE.Vector3(0, E.h, 0).applyMatrix4(m).sub(V(C)).normalize())
-  const origin = (d) => { let o = C; for (let e = 0; e < 2; e++) { const w = sstep(0.8, 0.97, d[0] * EU[e].x + d[1] * EU[e].y + d[2] * EU[e].z); if (w > 0) o = [C[0] + (EM[e].x - C[0]) * w, C[1] + (EM[e].y - C[1]) * w, C[2] + (EM[e].z - C[2]) * w] } return o }
+  // blend both ears' pulls continuously (a hard switch between them left a crack down the middle of the head)
+  const origin = (d) => { const o = [...C]; for (let e = 0; e < 2; e++) { const w = sstep(0.8, 0.97, d[0] * EU[e].x + d[1] * EU[e].y + d[2] * EU[e].z); o[0] += (EM[e].x - C[0]) * w; o[1] += (EM[e].y - C[1]) * w; o[2] += (EM[e].z - C[2]) * w } return o }
   return starMesh(sdf, { C, w: 96, h: 72, step: 0.01, far: 2.6, relax: 8, origin }) })()
 const NOSE = (() => { const y = -0.05, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); return [0, y, 2 - t] })()
 
@@ -49,7 +50,7 @@ function headMat(main, cream, pink) {
         base = mix(base, uCream, 1. - smoothstep(-w, w, dd));
         for (int i = 0; i < 2; i++) { // ear insides, in each ear's own frame: pink, cream fluff at the bottom
           vec3 e = (uEarI[i]*vec4(vO, 1.)).xyz; float t = e.y/${E.h.toFixed(3)};
-          float hw = ${E.r1.toFixed(3)}*0.62*max(0., 1. - t/.9), dx = abs(e.x) - hw; // a tapering triangle up the ear
+          float hw = ${E.r1.toFixed(3)}*0.62*max(0., 1. - t/.9), dx = hw > .004 ? abs(e.x) - hw : 1.; // a tapering triangle up the ear (no zero-width hairline past its tip)
           float k = (1. - smoothstep(-w, w, dx))*smoothstep(.1, .16, t)*smoothstep(-.01, .02, e.z);
           vec3 inner = mix(uCream, uPink, smoothstep(.2, .45, t))*(1. - .08*smoothstep(.3, 1., abs(e.x)/max(hw, 1e-3)));
           base = mix(base, inner, k); } }

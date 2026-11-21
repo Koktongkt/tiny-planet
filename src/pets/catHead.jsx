@@ -27,23 +27,30 @@ const sdf = (x, y, z) => { const H = CHEAD; let d = smin(ell(x, y, z, ...H.skull
 const hit = hitOf(sdf)
 const headGeo = (() => { const C = [0, -0.08, 0.1], V = (a) => new THREE.Vector3(...a)
   const EM = EARM.map(m => new THREE.Vector3(0, E.h * 0.3, 0).applyMatrix4(m)), EU = EARM.map(m => new THREE.Vector3(0, E.h, 0).applyMatrix4(m).sub(V(C)).normalize())
-  const origin = (d) => { let o = C; for (let e = 0; e < 2; e++) { const w = sstep(0.8, 0.97, d[0] * EU[e].x + d[1] * EU[e].y + d[2] * EU[e].z); if (w > 0) o = [C[0] + (EM[e].x - C[0]) * w, C[1] + (EM[e].y - C[1]) * w, C[2] + (EM[e].z - C[2]) * w] } return o }
+  // blend both ears' pulls continuously (a hard switch between them left a crack down the middle of the head)
+  // (Mochi's ears are big and close together, so each ear's pull is kept narrow and the two never add up past one;
+  // overlapping pulls folded the surface between the ears)
+  const origin = (d) => { const ws = EU.map(u => sstep(0.9, 0.985, d[0] * u.x + d[1] * u.y + d[2] * u.z)), k = Math.min(1, 1 / Math.max(1e-6, ws[0] + ws[1])), o = [...C]
+    for (let e = 0; e < 2; e++) { const w = ws[e] * k; o[0] += (EM[e].x - C[0]) * w; o[1] += (EM[e].y - C[1]) * w; o[2] += (EM[e].z - C[2]) * w } return o }
   return starMesh(sdf, { C, w: 96, h: 72, step: 0.01, far: 2.6, relax: 8, origin }) })()
 const NOSE = (() => { const y = -0.11, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); return [0, y, 2 - t] })()
 
 // ---------- coat: cream with Siamese points ----------
 const HEAD_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
-  // diamond mask: a point on the forehead, widest around the eyes, narrowing to a point below the mouth (front only)
-  float u = (-0.02 - p.y)/0.5; float hw = p.y > -0.02 ? 0.8*pow(max(0., (0.46 - p.y)/0.48), 0.9) : 0.8*(1. - pow(clamp(u, 0., 1.), 1.6)); // rounder below the eyes
-  float m = min(hw - ax, p.z - 0.05); w = fwidth(m)*1.2 + 1e-4; float dark = smoothstep(-w, w, m);
+  // diamond mask: a point high on the forehead, around both eyes, rounding off around the nose and mouth (front only)
+  float u = (0.0 - p.y)/0.34; float hw = p.y > 0.46 ? -1. : p.y > 0.0 ? 0.62*pow((0.46 - p.y)/0.46, 0.9) : 0.62*(1. - pow(clamp(u, 0., 1.), 1.5));
+  if (hw < .004) hw = -1.; // the mask ends at its tips: no zero-width sliver running on up the head or down the chin // point high on the forehead, rounder below
+  // ...and where it reaches the eyes it wraps right round them
+  float eyeR = 1. - length(vec2((ax - 0.39) / 0.27, (p.y - 0.0) / 0.27));
+  float m = min(max(hw - ax, eyeR*0.27), p.z - 0.05); w = fwidth(m)*1.2 + 1e-4; float dark = smoothstep(-w, w, m);
   // whisker stripes on the cheeks: two tapered bands sloping down and out
   // (short: they start just outside the mask and taper to a point going back along the cheek)
   float sx = smoothstep(.56, .64, ax), sb = 0.5 - p.z, o = ax - .56;
-  for (int k = 0; k < 2; k++) { float yc = -0.18 - 0.15*float(k) - 0.18*o - 0.12*max(sb - .1, 0.), th = 0.055*(1. - smoothstep(.1, .62, sb))*smoothstep(-.02, .06, sb);
-    float b = th - abs(p.y - yc); w = fwidth(b)*1.2 + 1e-4; dark = max(dark, sx*smoothstep(-w, w, b)); }
+  for (int k = 0; k < 2; k++) { float yc = -0.16 - 0.14*float(k) - 0.18*o - 0.12*max(sb - .25, 0.), th = 0.055*(1. - smoothstep(.3, .8, sb))*smoothstep(.24, .32, sb);
+    float b = th > .004 ? th - abs(p.y - yc) : -1.; w = fwidth(b)*1.2 + 1e-4; dark = max(dark, sx*smoothstep(-w, w, b)); } // (a zero-width band would leave a hairline)
   // three stripes from the crown down the back of the head
-  float back = smoothstep(.15, .0, p.z)*step(.05, p.y);
-  for (int k = -1; k <= 1; k++) { float xc = 0.17*float(k)*(1. + 0.4*smoothstep(.2, -.6, p.z)); float b = 0.045*(1. - 0.5*smoothstep(-.2, -.75, p.z)) - abs(p.x - xc);
+  float back = (1. - smoothstep(.0, .15, p.z))*step(.05, p.y);
+  for (int k = -1; k <= 1; k++) { float xc = 0.17*float(k)*(1. + 0.4*(1. - smoothstep(-.6, .2, p.z))); float b = 0.045*(1. - 0.5*(1. - smoothstep(-.75, -.2, p.z))) - abs(p.x - xc);
     w = fwidth(b)*1.2 + 1e-4; dark = max(dark, back*smoothstep(-w, w, b)*smoothstep(-.85, -.6, p.z - p.y*.2)); }
   // ears: dark all over, pink inside with cream fluff at the base, a dark rim left around the pink
   vec3 pinkC = uPink;
@@ -52,9 +59,9 @@ const HEAD_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
     float q = length(vec2(e.x, e.z/${E.flat.toFixed(3)})), cb = ${((E.r1 - E.r2) / E.h).toFixed(4)}, ca = sqrt(1. - cb*cb), kk = -cb*q + ca*e.y;
     float de = (kk < 0. ? length(vec2(q, e.y)) - ${E.r1.toFixed(3)} : kk > ca*${E.h.toFixed(3)} ? length(vec2(q, e.y - ${E.h.toFixed(3)})) - ${E.r2.toFixed(3)} : ca*q + cb*e.y - ${E.r1.toFixed(3)})*${E.flat.toFixed(3)};
     float onEar = (1. - smoothstep(.015, .05, de))*smoothstep(.0, .08, t); dark = max(dark, onEar);
-    float hwI = ${E.r1.toFixed(3)}*0.64*max(0., 1. - t/.86), di = hwI - abs(e.x); w = fwidth(di)*1.2 + 1e-4;
+    float hwI = ${E.r1.toFixed(3)}*0.64*max(0., 1. - t/.86), di = hwI > .004 ? hwI - abs(e.x) : -1.; w = fwidth(di)*1.2 + 1e-4;
     float inner = smoothstep(-w, w, di)*smoothstep(.06, .12, t)*smoothstep(-.01, .02, e.z)*onEar;
-    float fluff = (1. - smoothstep(.2 + .05*sin(e.x*60.), .26 + .05*sin(e.x*60.), t))*smoothstep(.0, -.12, e.x*sign(-(uEarI[i]*vec4(0.,0.,0.,1.)).x));
+    float fluff = (1. - smoothstep(.2 + .05*sin(e.x*60.), .26 + .05*sin(e.x*60.), t))*(1. - smoothstep(-.12, .0, e.x*sign(-(uEarI[i]*vec4(0.,0.,0.,1.)).x)));
     base = mix(base, mix(pinkC, uCream2, fluff), inner); dark *= 1. - inner; }
   base = mix(base, uDark, dark);`
 const headMat = (c) => patchFur('mochiHead', c.col.main, { glsl: HEAD_GLSL, decl: 'uniform vec3 uDark, uPink, uCream2; uniform mat4 uEarI[2];',

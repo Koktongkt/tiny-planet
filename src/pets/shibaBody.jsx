@@ -24,9 +24,9 @@ const torsoGeo = (() => { const C = [0, 0, 0], RD = ROOTS.map(([x, z]) => { cons
   return starMesh(tsdf, { C, w: 72, h: 56, step: 0.008, far: 2.2, relax: 6, origin }) })()
 // cream where: belly band underneath, chest bib in front (between the orange shoulder stripes), pants under the tail
 const TORSO_GLSL = `vec3 p = vO; float ax = abs(p.x);
-  float belly = -0.56 - 0.6*smoothstep(-.15, -.45, p.z)*smoothstep(.25, .55, ax); // a slim belly band underneath; the orange flank runs down into the hind thighs
+  float belly = -0.56 - 0.6*(1. - smoothstep(-.45, -.15, p.z))*smoothstep(.25, .55, ax); // a slim belly band underneath; the orange flank runs down into the hind thighs
   float bib = (0.44 - 0.2*smoothstep(-.1, .7, p.y)) - ax;                      // bib narrows toward the top of the chest; orange shoulder stripes either side
-  bib = min(min(bib, p.z - 0.18 + 0.25*smoothstep(.2, -.6, p.y)), 0.45 - p.y); // ...only on the front of the chest, not over the shoulders
+  bib = min(min(bib, p.z - 0.18 + 0.25*(1. - smoothstep(-.6, .2, p.y))), 0.45 - p.y); // ...only on the front of the chest, not over the shoulders
   float pants = min(1. - length(vec2(ax/0.44, (p.y + 0.3)/0.55)), -0.6 - p.z);    // a soft arch under the tail, between the haunches
   float d = max(max(belly - p.y, bib), pants), w = fwidth(d)*1.2 + 1e-4;
   base = mix(base, uCream, smoothstep(-w, w, d));`
@@ -34,7 +34,7 @@ const torsoMat = (c) => patchFur('pipTorso', c.col.main, { glsl: TORSO_GLSL, dec
 
 // ---------- leg: a slightly tapered column ending in a round paw that pushes forward; top at y = 0, ground at y = -1 ----------
 // (its top sits inside the torso's leg root, which carries the smooth join into the body)
-const legGeo = (() => {
+export const legGeo = (() => {
   const pts = [], N = 30
   for (let i = 0; i <= N; i++) { const t = i / N, y = 0.08 - t * 1.08 // from just above the hip to the ground
     let r = 0.94 + 0.1 * t // a touch wider toward the paw
@@ -55,7 +55,7 @@ const LEG_GLSL = `vec3 p = vO; float toe = step(p.y, -0.78)*step(0.45, p.z);
 // (cream only on the inside). uSide = which way is 'outer' for this leg.
 const LEG_COAT = `float o = vO.x*uSide + 0.25*vO.z*(uHind > .5 ? -1. : 0.), y = vO.y;
   float d = uHind > .5
-    ? (0.5 + 0.35*o - 0.25*smoothstep(-.35, -.7, y)) - (-y)*1.0 - 0.0          // thigh: edge curves lower on the outside, round toward the hock
+    ? (0.5 + 0.35*o - 0.25*(1. - smoothstep(-.7, -.35, y))) - (-y)*1.0 - 0.0          // thigh: edge curves lower on the outside, round toward the hock
     : -1.;                                                                       // front legs stay cream (the shoulder stripe is on the torso)
   d = uHind > .5 ? d : d;
   float wc = fwidth(d)*1.2 + 1e-4; base = mix(base, uMain, smoothstep(-wc, wc, d));`
@@ -63,7 +63,7 @@ const legMat = (c, hind, side) => patchFur(`pipLeg${hind}${side}`, c.col.cream, 
   uniforms: { uMain: { value: new THREE.Color(c.col.main) }, uSide: { value: side }, uHind: { value: hind } } })
 // the legs' ink outline stops just inside the body, so there's no ring where leg meets torso; only the silhouette below
 const legOutC = {}
-const legOut = (cut) => legOutC[cut] || (legOutC[cut] = (() => { const m = OUT.pet.clone()
+export const legOut = (cut) => legOutC[cut] || (legOutC[cut] = (() => { const m = OUT.pet.clone()
   m.vertexShader = m.vertexShader.replace('void main(){', 'varying float vY; void main(){ vY = position.y;')
   m.fragmentShader = 'varying float vY;\n' + m.fragmentShader.replace('void main(){', `void main(){ if (vY > ${cut.toFixed(3)}) discard;`)
   return m })())

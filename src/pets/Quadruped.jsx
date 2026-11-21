@@ -1,9 +1,9 @@
 // Procedural, stylised quadruped rig shared by the cat and the dog. Same cel shader + ink hull as her and the
 // villagers, so the pets sit in the same picture. A brain writes pose targets into st.goal; this eases st.p
 // toward them (springy, so poses blend instead of popping) and layers gait, breathing, ears, eyes and tail on top.
-// Species diverge (round7): Mochi = feline anatomy (rounded skull, short muzzle + whisker pads, slit pupils, pointed
-// ears with inner tufts, slender S spine, long expressive tail); Pip = Shiba Inu (fox wedge face, cream urajiro over
-// red-sesame fur, small upright ears, almond eyes, curled ring tail over the back, compact body, springy trot).
+// Round 10/11 (Cozy Chibi pets): the look lives in per-species modules built on src/pets/sdfKit.js — smooth SDF-meshed
+// heads and torsos with shader coat patterns and painted face decals (shibaHead / shibaBody for Pip, catHead / catBody
+// for Mochi). This file keeps the motion: body, legs, head turn, face expression cell, tail chain.
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
@@ -12,6 +12,7 @@ import { fur, SHADOW } from '../GhibliPerson.jsx'
 import { ShibaHead } from './shibaHead.jsx'
 import { DogBody, ShibaTail } from './shibaBody.jsx'
 import { CatHead } from './catHead.jsx'
+import { CatBody, CatTail } from './catBody.jsx'
 
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
@@ -95,57 +96,17 @@ export function Quadruped({ cfg, st }) {
     if (R_.shadow) { R_.shadow.visible = !st.ride; const k = 1 / (1 + p.hop * 9); R_.shadow.scale.set(k * (1 + 0.25 * lie), 1, k) }
   })
   const seg = c.tail.seg, tailChain = (i) => i >= c.tail.n ? null : <group ref={set('t' + i)} position={[0, 0, i === 0 ? 0 : -seg]}>
-    <Part mat={i >= c.tail.n - (c.tail.tip ?? 0) ? M.tip || M.belly : c.tail.rings && i % 2 ? M.dark : M.main} pos={[0, 0, -seg * 0.5]} scl={[c.tail.r * (1 - i * c.tail.taper), c.tail.r * (1 - i * c.tail.taper), seg * 0.64]} />{tailChain(i + 1)}</group>
+    {!c.tail.tube && <Part mat={i >= c.tail.n - (c.tail.tip ?? 0) ? M.tip || M.belly : c.tail.rings && i % 2 ? M.dark : M.main} pos={[0, 0, -seg * 0.5]} scl={[c.tail.r * (1 - i * c.tail.taper), c.tail.r * (1 - i * c.tail.taper), seg * 0.64]} />}{tailChain(i + 1)}</group>
   return <group ref={lodRoot}>
     <group ref={set('shadow')}><mesh geometry={SHADOW.geo} material={SHADOW.mat} scale={[bw * 3.2, 1, bl * 2.7]} position={[0, 0.002, 0]} renderOrder={1} /></group>
     <group ref={set('body')}>
       {species === 'dog' ? <DogBody c={c} M={M} set={set} legs={legs} /> : <CatBody c={c} M={M} set={set} legs={legs} />}
       {species === 'dog'
         ? <group position={[0, bh * (c.tail.up ?? 0.62), -bl * (c.tail.back ?? 0.78)]}><group ref={set('curl')}><ShibaTail c={c} M={M} /></group></group>
-        : <group position={[0, bh * (c.tail.up ?? 0.25), -bl * (c.tail.back ?? 0.95)]}>{tailChain(0)}</group>}
+        : <group position={[0, bh * (c.tail.up ?? 0.25), -bl * (c.tail.back ?? 0.95)]}>{tailChain(0)}{c.tail.tube && <CatTail c={c} R={r} />}</group>}
       <group position={[0, bh * (c.headUp ?? 0.42), bl * (c.headFwd ?? 0.88)]}><group ref={set('head')}>
         {species === 'dog' ? <ShibaHead c={c} M={M} set={set} /> : <CatHead c={c} M={M} set={set} />}
       </group></group>
     </group>
   </group>
-}
-// ---------- shared chibi eye (round9, Cozy Chibi pets): big round dark-brown eye, near-black pupil, one large
-// shine upper-outer + a tiny one lower-inner. Sits on the head surface, turned to follow it.
-function Eye({ c, M, s, set, hr, pos }) {
-  const e = c.eye
-  return <group ref={set(s > 0 ? 'eyeL' : 'eyeR')} position={pos} rotation={[-0.08, s * 0.42, 0]}>
-    <mesh geometry={GEO.sph} material={M.lid} scale={[hr * e * 1.08, hr * e * 1.16, hr * 0.05]} position={[0, 0, -hr * 0.004]} />
-    <mesh geometry={GEO.sph} material={M.iris} scale={[hr * e * 0.98, hr * e * 1.06, hr * 0.06]} position={[0, 0, hr * 0.008]} />
-    <mesh ref={set(s > 0 ? 'pupilL' : 'pupilR')} geometry={GEO.sph} material={M.pupil} position={[0, -hr * e * 0.08, hr * 0.05]} />
-    <mesh geometry={GEO.sph} material={M.shine} position={[s * hr * e * 0.3, hr * e * 0.38, hr * 0.072]} scale={[hr * e * 0.34, hr * e * 0.34, hr * 0.02]} />
-    <mesh geometry={GEO.sph} material={M.shine} position={[-s * hr * e * 0.3, -hr * e * 0.42, hr * 0.068]} scale={[hr * e * 0.13, hr * e * 0.13, hr * 0.015]} />
-  </group>
-}
-const Blush = ({ M, hr, x, y, z }) => [-1, 1].map(s => <mesh key={'bl' + s} geometry={GEO.sph} material={M.blush} position={[s * hr * x, hr * y, hr * z]} rotation={[0, s * 0.85, 0]} scale={[hr * 0.15, hr * 0.095, hr * 0.03]} />)
-// a short, thick chibi leg: upper (haunch for hind legs), lower capsule, round paw. L = shoulder-to-ground length.
-function Leg({ c, M, front, sx, L, upper, lower, paw }) {
-  const r = c.legR
-  return <>
-    {front ? <Part mat={upper} pos={[0, -L * 0.05, 0]} scl={[r * 1.15, L * 0.38, r * 1.25]} />
-      : <Part mat={upper} pos={[sx * r * 0.15, -L * 0.02, -r * 0.25]} scl={[r * 1.45, L * 0.55, r * 1.6]} />}
-    <Part geo={GEO.cap} mat={lower} pos={[0, -L * 0.52, 0]} scl={[r * 0.95, L * 0.2, r * 1.0]} />
-    <Part mat={paw} pos={[0, -L + r * 0.55, r * 0.3]} scl={[r * 1.12, r * 0.62, r * 1.3]} />
-  </>
-}
-// ---------- Mochi: chibi Siamese (round9 concept sheet) ----------
-// cream coat, dark-brown points (ears, face mask, socks, ringed tail), faint brown back stripes, fluffy chest ruff,
-// big ears with pink insides and cream fluff.
-function CatBody({ c, M, set, legs }) {
-  const [bw, bh, bl] = c.body, L = c.legH + bh * 0.2
-  return <>
-    <Part gref={set('torso')} mat={M.main} scl={[bw, bh, bl]} />
-    <Part mat={M.main} pos={[0, bh * 0.02, -bl * 0.45]} scl={[bw * 1.02, bh * 0.92, bl * 0.55]} />
-    <Part mat={M.belly} pos={[0, -bh * 0.05, bl * 0.66]} scl={[bw * 0.72, bh * 0.8, bl * 0.42]} out={null} />
-    {/* chest ruff tufts */}
-    {[-1, 0, 1].map(sx => <Part key={'ru' + sx} geo={GEO.cone} mat={M.belly} pos={[sx * bw * 0.3, -bh * 0.45, bl * 0.9]} rot={[2.7, 0, sx * 0.35]} scl={[bw * 0.2, bh * 0.4, bw * 0.14]} out={null} />)}
-    {c.stripes && [-0.55, -0.2, 0.15].map((z, i) => <Part key={i} mat={M.stripe} pos={[0, bh * 0.62, z * bl]} rot={[0, 0, 0]} scl={[bw * 0.72, bh * 0.38, bl * 0.07]} out={null} />)}
-    {legs.map(([k, sx, fz]) => <group key={k} ref={set('leg' + k)} position={[sx * bw * 0.5, -bh * 0.35, fz * bl * 0.58]}>
-      <Leg c={c} M={M} front={fz > 0} sx={sx} L={L} upper={M.main} lower={M.dark} paw={M.dark} />
-    </group>)}
-  </>
 }
