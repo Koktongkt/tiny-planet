@@ -7,6 +7,7 @@ import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
 import { HOME, freeAt, resolve } from '../home/state.js'
+import { SPOTS, LAYOUT, BEAM_SPOT } from '../home/interior.jsx'
 import { GEO, cel, OUT, canvasTex } from '../home/kit.jsx'
 import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
@@ -15,9 +16,14 @@ import { Hearts, burst } from './fx.jsx'
 export const CAT_CFG = { s: 1.05, /* round9: Cozy Chibi Siamese (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'cat', body: [0.05, 0.046, 0.074], legH: 0.05, legR: 0.0135, stride: 0.045, head: 0.075, headY: 0.04, headUp: 0.45, headFwd: 0.86, eye: 0.22, ear: 1.05, earSplay: 0.18, whiskers: true, stripes: true, tongue: true, pupils: 'round',
   tail: { n: 6, seg: 0.019, r: 0.017, curl: 0.1, tip: 1, taper: 0.025, rings: true, tube: true, up: 0.3, back: 0.86 }, col: { main: '#f0cc98', belly: '#fff8ec', dark: '#6e4733', sock: '#7a4e36', tip: '#5e3b2a', stripe: '#a87650', inner: '#f39a90', nose: '#3a2218', lip: '#3a2218', tongue: '#ef7f7a', iris: '#4a2a18', pupil: '#140c08', lid: '#2a1a12', shine: '#ffffff', whisker: '#6e4733', blush: '#f5b0a4' } }
 // nap spots (room-local; y = surface height). from: floor point to hop up from. claim: she can be 'beaten' to it
-const SPOT = { beam: { x: -0.66, z: -0.16, y: 0, face: 2.2 }, bed: { x: 1.08, z: 0.5, y: 0.17, from: { x: 0.7, z: 0.5 }, face: -1.2, claim: 'the bed' }, sill: { x: -1.5, z: 0.2, y: 0.415, from: { x: -1.2, z: 0.2 } }, bedK: { x: 1.0, z: 0.4, y: 0.17, from: { x: 0.7, z: 0.4 } },
-  rug: { x: 0.05, z: 0.5, y: 0.006, face: 1.4, claim: 'the rug' }, chair: { x: -0.32, z: 0.12, y: 0.095, from: { x: -0.5, z: 0.24 }, face: 2.6, claim: 'the pouf' }, shelf: { x: -0.56, z: -1.02, y: 0.635, from: { x: -0.56, z: -0.72 }, face: 0.3, claim: null }, sillNap: { x: -1.5, z: 0.1, y: 0.415, from: { x: -1.2, z: 0.1 }, face: 0.2 },
-  basket: { x: -0.95, z: 0.55, y: 0.06, from: { x: -0.68, z: 0.45 }, face: 2.0, claim: 'his bed' } } // his own round bed (round8)
+// (round9: all from the prop layout of her round room, home/interior.jsx)
+const _w = SPOTS.window, _pb = SPOTS.petBed, _pbF = Math.hypot(_pb.x, _pb.z), _pl = LAYOUT.poufL
+const SPOT = { beam: { x: BEAM_SPOT.x, z: BEAM_SPOT.z, y: 0, face: 2.2 },
+  bed: { x: SPOTS.cat.bed.x, z: SPOTS.cat.bed.z, y: 0.17, from: SPOTS.cat.bed.from, face: -1.2, claim: 'the bed' }, bedK: { x: SPOTS.cat.knead.x, z: SPOTS.cat.knead.z, y: 0.17, from: SPOTS.cat.knead.from },
+  sill: { x: _w.x, z: _w.z, y: _w.y, from: _w.from, face: _w.face }, sillNap: { x: _w.x, z: _w.z, y: _w.y, from: _w.from, face: _w.face + 1.2 },
+  rug: { x: 0.05, z: 0.5, y: 0.012, face: 1.4, claim: 'the rug' }, chair: { x: _pl.x, z: _pl.z, y: 0.105, from: { x: _pl.x - 0.2, z: _pl.z + 0.16 }, face: 2.6, claim: 'the pouf' },
+  shelf: { x: SPOTS.shelf.x, z: SPOTS.shelf.z, y: SPOTS.shelf.y, from: SPOTS.shelf.from, face: 0.3, claim: null },
+  basket: { x: _pb.x, z: _pb.z, y: 0.065, from: { x: _pb.x * (1 - 0.3 / _pbF), z: _pb.z * (1 - 0.3 / _pbF) }, face: 2.0, claim: 'his bed' } }
 export const CAT_SCALE = 0.7 // round6: Mochi ~30% smaller so she reads as a pet next to her
 const pick = (w) => { let s = 0; for (const k in w) s += w[k]; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return Object.keys(w)[0] }
 const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a))
@@ -30,7 +36,7 @@ export function Cat() {
   const c = CAT
   const go = (state, dur, extra = {}) => { c.state = state; c.t = 0; c.dur = dur; c.target = null; Object.assign(c, { sub: 0 }, extra) }
   if (!c.init) { c.init = true
-    if (FORCE) { const s = FORCE; if (s === 'nap') Object.assign(c, { x: SPOT.beam.x, z: SPOT.beam.z, y: 0 }); if (s === 'bed' || s === 'knead') Object.assign(c, { x: SPOT.bed.x, z: SPOT.bed.z, y: 0.29 }); if (s === 'sill') Object.assign(c, { x: SPOT.sill.x, z: SPOT.sill.z, y: SPOT.sill.y, yaw: -Math.PI / 2 })
+    if (FORCE) { const s = FORCE; if (s === 'nap') Object.assign(c, { x: SPOT.beam.x, z: SPOT.beam.z, y: 0 }); if (s === 'bed' || s === 'knead') Object.assign(c, { x: SPOT.bed.x, z: SPOT.bed.z, y: 0.29 }); if (s === 'sill') Object.assign(c, { x: SPOT.sill.x, z: SPOT.sill.z, y: SPOT.sill.y, yaw: SPOT.sill.face })
       if (s === 'rub' || s === 'pet' || s === 'ignore') Object.assign(HOME.hp, { x: -0.3, z: -0.32, yaw: -1.9 }), Object.assign(c, { x: -0.58, z: -0.4, yaw: 1.3 }); if (s === 'chase' || s === 'bat') Object.assign(c, { x: -0.2, z: 0.6 }); const NF = ['bed', 'rug', 'chair', 'shelf', 'sillNap', 'basket']; if (NF.includes(s)) Object.assign(c, { x: SPOT[s].x, z: SPOT[s].z, y: SPOT[s].y, onFrom: SPOT[s].from }); if (q.get('petcam')) Object.assign(HOME.hp, { x: 0.6, z: 0.8, yaw: -2.2 })
       go(NF.includes(s) ? 'nap' : s === 'pet' ? 'petted' : s, 999, { where: NF.includes(s) ? s : 'beam', forced: true }); if (s === 'pet') c.dur = 999 }
   }
@@ -69,7 +75,7 @@ export function Cat() {
     // round7: she filled his bowl: he heads over and eats (unless forced / mid-cuddle)
     if (CAT.bowl > 0 && c.state !== 'eat' && !c.forced && c.state !== 'petted' && c.state !== 'stretch') go('eat', 30)
     const S = c.state
-    if (S === 'eat') { const b = CAT.bowlPos || { x: -0.62, z: 0.82 } // round7: eat from his bowl
+    if (S === 'eat') { const b = CAT.bowlPos || SPOTS.bowl // round7: eat from his bowl
       if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }, true); else if (walkTo(b.x - 0.12, b.z, 0.03, c.t < 1.5)) { face = Math.atan2(b.x - c.x, b.z - c.z); const chew = Math.sin(c.t * 10); g.crouch = 0.55; g.headPitch = 0.75 + chew * 0.06; g.mouth = Math.max(0, chew) * 0.3; g.eyes = 0.45; g.tailUp = 0.7; g.tailWag = 0.25; g.earBack = -0.1
         c.ate = (c.ate || 0) + dt; if (c.ate > 5.5) { c.ate = 0; CAT.bowl = 0; toast(`${c.name} licks the bowl clean and washes his face.`, 'fish', 2600); go('groom', 4) } } else { g.tailUp = 1.1 }
       if (c.t > c.dur) { CAT.bowl = 0; next() } }
@@ -83,7 +89,7 @@ export function Cat() {
     else if (S === 'stretch') { const k = c.t / c.dur; g.stretch = k < 0.55 ? 1 : 0; g.mouth = k > 0.35 && k < 0.7 ? 1 : 0; g.eyes = g.mouth ? 0.15 : 1; g.earBack = g.mouth * 0.5; g.tailUp = 0.9; g.headPitch = g.mouth ? -0.45 : 0
       if (c.t > c.dur) { if (c.after) { const a = c.after; c.after = null; if (a === 'petted') { go('petted', 3.5); burst(hearts.current, 6) } else go(a, 3) } else next() } }
     else if (S === 'groom') { if (!onFloor && c.y < 0.2) reach({ x: c.x, z: c.z, y: 0 }); g.sit = 1; const lick = Math.sin(c.t * 7) > 0; g.pawL = 0.85; g.headPitch = 0.35 + (lick ? 0.12 : 0); g.headYaw = -0.25; g.headTilt = 0.35; g.eyes = 0.35; g.mouth = lick ? 0.15 : 0; if (c.t > c.dur) next() }
-    else if (S === 'sill') { if (c.forced || reach(SPOT.sill)) { g.sit = 1; face = -Math.PI / 2; const bird = Math.sin(c.t * 0.23 + 1) > 0.55; g.headYaw = bird ? Math.sin(c.t * 2.1) * 0.35 : Math.sin(c.t * 0.4) * 0.5; g.headPitch = bird ? -0.25 : 0; g.tailUp = -0.4; g.tailWag = bird ? 0.8 : 0.35; g.tailSpeed = bird ? 9 : 1.6; g.earBack = bird ? -0.3 : 0; g.mouth = bird && Math.sin(c.t * 22) > 0.3 ? 0.35 : 0 /* chattering at a bird */; if (Math.sin(c.t * 0.9) > 0.92) g.headTilt = 0.3 } if (c.t > c.dur) next() }
+    else if (S === 'sill') { if (c.forced || reach(SPOT.sill)) { g.sit = 1; face = SPOT.sill.face; const bird = Math.sin(c.t * 0.23 + 1) > 0.55; g.headYaw = bird ? Math.sin(c.t * 2.1) * 0.35 : Math.sin(c.t * 0.4) * 0.5; g.headPitch = bird ? -0.25 : 0; g.tailUp = -0.4; g.tailWag = bird ? 0.8 : 0.35; g.tailSpeed = bird ? 9 : 1.6; g.earBack = bird ? -0.3 : 0; g.mouth = bird && Math.sin(c.t * 22) > 0.3 ? 0.35 : 0 /* chattering at a bird */; if (Math.sin(c.t * 0.9) > 0.92) g.headTilt = 0.3 } if (c.t > c.dur) next() }
     else if (S === 'knead') { if (c.forced || reach(SPOT.bedK)) { if (c.forced) Object.assign(c, { x: SPOT.bedK.x, z: SPOT.bedK.z, y: SPOT.bedK.y }); g.lie = 0.35; const a = Math.sin(c.t * 6); g.pawL = Math.max(0, a) * 0.45; g.pawR = Math.max(0, -a) * 0.45; g.eyes = 0.2; g.purr = 1; g.tailUp = 0.3; face = 1.2 } if (c.t > c.dur) go('nap', 10 + Math.random() * 8, { where: 'bed' }) }
     else if (S === 'chase') { const b = c.ball; if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }); else {
         const dx = b.x - c.x, dz = b.z - c.z, d = Math.hypot(dx, dz)

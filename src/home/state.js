@@ -4,37 +4,18 @@
 import * as THREE from 'three'
 import { q, VIEW } from '../common.jsx'
 
-// Round8 interior (docs: concept cutaway): a rounded-oval room (superellipse |x/A|^n + |z/B|^n = 1) seen from above the
-// cut-away front rim. Sized to her (she is ~0.41 room units tall): door 0.58, counters 0.22, bed top 0.15.
-export const ROOM = { A: 1.55, B: 1.1, n: 6, x0: -1.55, x1: 1.55, z0: -1.1, z1: 1.1, h: 1.05, rim: 0.13, y: 0, S: 1.25 } // S: the room group's scale (room units -> planet units)
-export const DOOR = { x: 0, z: 1.1, w: 0.3, h: 0.58 } // in the front rim, facing the camera (camera looks toward -z)
-// wall height along the oval: full at the back, sloping down to the low front rim (the cut-away)
-export const wallH = (z) => { const k = Math.min(1, Math.max(0, (z - 0.42) / 0.5)); return ROOM.h + (ROOM.rim - ROOM.h) * k * k * (3 - 2 * k) }
-// furniture footprints (room-local x/z boxes) used for her collision, the cat's steering and placement checks
-export const BLOCKS = [
-  { id: 'stove', x0: -1.3, x1: -0.84, z0: -1.1, z1: -0.6 },
-  { id: 'wood', x0: -0.86, x1: -0.58, z0: -1.1, z1: -0.84 },
-  { id: 'kitchen', x0: -0.5, x1: 0.38, z0: -1.1, z1: -0.82 },
-  { id: 'fridge', x0: 0.4, x1: 0.72, z0: -1.1, z1: -0.85 },
-  { id: 'desk', x0: -1.6, x1: -1.2, z0: -0.74, z1: -0.16 },
-  { id: 'stool', x0: -1.12, x1: -0.98, z0: -0.52, z1: -0.38 },
-  { id: 'table', x0: -0.16, x1: 0.26, z0: -0.11, z1: 0.31, round: true },
-  { id: 'poufL', x0: -0.42, x1: -0.22, z0: 0.02, z1: 0.22, round: true },
-  { id: 'poufR', x0: 0.32, x1: 0.52, z0: 0.02, z1: 0.22, round: true },
-  { id: 'plantA', x0: -1.6, x1: -1.18, z0: 0.38, z1: 0.62 },
-  { id: 'petbed', x0: -1.12, x1: -0.78, z0: 0.4, z1: 0.7, round: true },
-  { id: 'bathL', x0: 0.78, x1: 0.86, z0: -1.1, z1: -0.37 },
-  { id: 'bathF1', x0: 0.78, x1: 0.94, z0: -0.44, z1: -0.36 },
-  { id: 'bathF2', x0: 1.36, x1: 1.6, z0: -0.44, z1: -0.36 },
-  { id: 'wardrobe', x0: 1.3, x1: 1.6, z0: -0.36, z1: -0.04 },
-  { id: 'night', x0: 1.28, x1: 1.6, z0: -0.02, z1: 0.2 },
-  { id: 'bed', x0: 0.82, x1: 1.6, z0: 0.22, z1: 0.74 },
-  { id: 'coat', x0: 0.43, x1: 0.57, z0: 0.9, z1: 1.1 },
-  { id: 'plantB', x0: 0.76, x1: 0.92, z0: 0.8, z1: 0.98 },
-]
+// Round9 interior: a ROUND room (|x/A|^n + |z/B|^n = 1 with A = B, n = 2) seen from above its low front rim, furnished
+// with the chibi prop kit. Sized to her (she is ~0.39 room units tall): door 0.58, counter 0.24, bed top 0.16.
+export const ROOM = { A: 1.5, B: 1.5, n: 2, x0: -1.5, x1: 1.5, z0: -1.5, z1: 1.5, h: 1.05, rim: 0.13, y: 0, S: 1.25 } // S: the room group's scale (room units -> planet units)
+export const DOOR = { x: 0, z: 1.5, w: 0.3, h: 0.58 } // in the front rim, facing the camera (camera looks toward -z)
+// wall height round the room: full at the back, sloping down to the low front rim (the cut-away)
+export const wallH = (z) => { const k = Math.min(1, Math.max(0, (z - 0.5) / 0.65)); return ROOM.h + (ROOM.rim - ROOM.h) * k * k * (3 - 2 * k) }
+// furniture footprints (room-local x/z boxes) used for her collision, the cat's steering and placement checks;
+// filled by interior.jsx from the prop layout
+export const BLOCKS = []
 export const HOME = {
   inside: false, fade: 0, busy: false, playerObj: null, roomObj: null,
-  hp: { x: 0.3, z: 0.5, yaw: 0.5, target: null }, // her room-local position / facing (yaw 0 faces +z)
+  hp: { x: 0.15, z: 0.62, yaw: 0.4, target: null }, // her room-local position / facing (yaw 0 faces +z)
   near: [], // [(consider, playerLocal) => void] proximity hooks registered by room / cat / dog
   colliders: [], homeN: null, doorN: null, outN: null, houseQ: null, GAME: null,
   petCam: 0, camYaw: Math.PI, DOOR,

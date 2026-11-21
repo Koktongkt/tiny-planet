@@ -9,10 +9,11 @@ import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { HOME, ROOM, BLOCKS } from './state.js'
+import { HOME, ROOM } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { Box, W } from './interior.jsx'
-import { TUB, STOOL, TABLE, BED } from './interior.jsx'
+import { SPOTS } from './interior.jsx'
+import { Prop } from '../props/Prop.jsx'
 import { T, q } from '../common.jsx'
 import { G, emit, toast, newDay } from '../game/store.js'
 import { haveFor, RECIPES, ITEMS, playFood, finishDish } from '../game/craft.js'
@@ -20,17 +21,20 @@ import { startAct, POSES } from '../act.js'
 import { CAT } from '../pets/catState.js'
 
 // ---------- layout (room-local) ----------
-const BOWL = { x: -0.62, z: 0.82 } // Mochi's food bowl (water beside it), front-left by his bed
+// everything comes from the prop layout in interior.jsx
+const TUB = SPOTS.tub, STOOL = SPOTS.stool, TABLE = SPOTS.table, BED = SPOTS.bed, BOWL = SPOTS.bowl, COOK = SPOTS.cook
 CAT.bowlPos = BOWL
-const COOK = { x: 0.18, z: -0.96, y: 0.234 } // the pot on the cooktop
+const toward = (x, z, d) => { const r = Math.hypot(x, z) || 1; return [x - x / r * d, z - z / r * d] } // a point d closer to the room's centre
+const STOOL_DIR = [Math.sin(STOOL.face), Math.cos(STOOL.face)], READ_STAND = [STOOL.x - STOOL_DIR[0] * 0.2, STOOL.z - STOOL_DIR[1] * 0.2]
+const BED_SIDE = (() => { const [hx, hz] = BED.head; let px = -hz, pz = hx; if (px * -BED.x + pz * -BED.z < 0) { px = -px; pz = -pz } return [px, pz] })()
+const BED_STAND = [BED.x - BED.head[0] * 0.5 + BED_SIDE[0] * 0.12, BED.z - BED.head[1] * 0.5 + BED_SIDE[1] * 0.12], BED_HEAD = [BED.x + BED.head[0] * 0.24, BED.z + BED.head[1] * 0.24] // stand by the foot of the bed
+const BATH_STAND = [1.13, -0.46], FEED_STAND = toward(BOWL.x, BOWL.z, 0.25)
+const plant = (id, prop, pl, y, d, lim, cam) => ({ id, prop, x: pl.x, z: pl.z, y, yaw: pl.yaw || 0, s: 1, stand: toward(pl.x, pl.z, d), lim, cam })
 const PLANTS = [
-  { id: 'big', x: -1.32, z: 0.5, y: 0, s: 1.1, big: true, stand: [-1.06, 0.26], lim: 0.3, cam: { p: [-0.55, 1.05, 1.25], l: [-1.2, 0.2, 0.4] } },
-  { id: 'kitchen', x: -0.4, z: -0.99, y: 0.224, s: 0.5, stand: [-0.4, -0.7], lim: 0.24 },
-  { id: 'door', x: 0.84, z: 0.89, y: 0, s: 0.8, stand: [0.68, 0.7], lim: 0.22 },
+  plant('big', 'bigPlant', SPOTS.plants.big, 0, 0.32, 0.26),
+  plant('kitchen', 'plant', SPOTS.plants.counter, SPOTS.plants.counter.y, 0.4, 0.22),
+  plant('door', 'flowerPot', SPOTS.plants.door, 0, 0.26, 0.22),
 ]
-if (!BLOCKS.some(b => b.id === 'tub')) BLOCKS.push(
-  { id: 'tub', x0: TUB.x - TUB.r - 0.01, x1: TUB.x + TUB.r + 0.01, z0: TUB.z - TUB.r - 0.01, z1: TUB.z + TUB.r + 0.01, round: true },
-)
 
 // ---------- her poses for the activities (called from her rig: B bones, mix eases toward a target by w) ----------
 const seat = (B, mix, w, drop) => { B.root.position.y -= drop * w; for (const k of ['L', 'R']) { mix(B['th' + k], 'x', -1.5); mix(B['th' + k], 'z', 0); mix(B['sh' + k + 'n'], 'x', 1.45); mix(B['ft' + k], 'x', 0.05) } }
@@ -101,7 +105,8 @@ const morningA = (a) => { const P2 = Math.PI * 2; let k = Math.ceil((a + 1.2 + 0
 function skipTime(toMorning) { const rot = window.__rot; if (!rot) return; const a0 = rot.a, a1 = toMorning ? morningA(a0) : a0 + 2 / 24 * Math.PI * 2; rot.a = a1; T.h += (a1 - a0) / (Math.PI * 2) * 24; newDay(Math.max(0, Math.floor((a1 + Math.PI / 2) / (Math.PI * 2)))) }
 async function sleep(full) {
   const dur = full ? 6.2 : 5.2; if (!await begin('sleep', dur, 'sleep')) return
-  placeAt(0.7, BED.z, Math.PI / 2); pose({ x: 0.97, z: BED.z, y: BED.top + 0.03, yaw: -Math.PI / 2, tilt: -Math.PI / 2, rate: 3, cam: { p: [0.55, 1.15, 1.35], l: [1.15, 0.12, 0.42] } })
+  const [hx, hz] = BED.head; placeAt(BED_STAND[0], BED_STAND[1], Math.atan2(BED.head[0], BED.head[1]))
+  pose({ x: BED.x - hx * 0.15, z: BED.z - hz * 0.15, y: BED.top + 0.03, yaw: Math.atan2(-hx, -hz), tilt: -Math.PI / 2, rate: 3 })
   if (CAT.state !== 'petted' && !CAT.hop) Object.assign(CAT, { state: 'nap', t: 0, dur: 20, where: 'bed', target: null, forced: false }) // he joins her
   await wait(900); await fadeTo(1, 900); skipTime(full); await wait(full ? 700 : 300)
   await fadeTo(0, 900); toast(full ? `Good morning! Day ${G.s.day + 1} — the light is soft through the window.` : 'A short, cosy nap. You wake up rested.', full ? 'sun' : 'moon', 3400)
@@ -116,7 +121,7 @@ async function cook() {
   if (!haveFor(r).every(h => h.ok)) { toast(`To cook ${ITEMS[r.makes].name} you need ${need(r)}.`, r.makes, 3000); return }
   const auto = !!(G.s.settings && G.s.settings.autoCook)
   if (!await begin('cook', auto ? 0.9 : 4.2, 'cook')) return
-  placeAt(COOK.x, -0.7, Math.PI); pose({ x: COOK.x, z: -0.72, yaw: Math.PI, rate: 5, cam: { p: [0.3, 1.15, 0.4], l: [0.12, 0.2, -0.82] } }); A.pot = 1
+  placeAt(COOK.stand[0], COOK.stand[1], COOK.yaw); pose({ x: COOK.stand[0], z: COOK.stand[1], yaw: COOK.yaw, rate: 5 }); A.pot = 1
   const result = await playFood(r)
   if (result) finishDish(r, result, { activity: 'cook' })
   FX && FX.spark.emit(COOK.x, COOK.y + 0.2, COOK.z, 10, { spread: 0.1, up: 0.35, size: 0.05, life: 1 })
@@ -124,8 +129,8 @@ async function cook() {
 }
 async function bath() {
   if (!await begin('bath', 7.4, 'bath')) return
-  placeAt(TUB.x + 0.05, -0.52, Math.PI); await fadeTo(1, 380)
-  pose({ x: TUB.x, z: TUB.z + 0.02, y: 0.02, yaw: 0, rate: 60, cam: { p: [0.98, 1.2, 0.35], l: [TUB.x, 0.14, TUB.z] } }); HOME.pose.k = 1; A.soak = 1
+  placeAt(BATH_STAND[0], BATH_STAND[1], Math.PI); await fadeTo(1, 380)
+  pose({ x: TUB.x, z: TUB.z + 0.02, y: 0.03, yaw: -0.5, rate: 60, cam: { p: [0.55, 1.3, 0.35], l: [TUB.x, 0.14, TUB.z] } }); HOME.pose.k = 1; A.soak = 1
   await fadeTo(0, 420); toast('Ahh… a warm soak in the tub. ♨', 'water', 3200)
   await wait(5200); await fadeTo(1, 380); HOME.pose = null; A.soak = 0; toast('Warm and rosy-cheeked.', 'leaf', 2000)
   await fadeTo(0, 420); end()
@@ -148,7 +153,7 @@ async function tea() {
 }
 async function read() {
   if (!await begin('read', 6, 'read')) return
-  placeAt(STOOL.x + 0.18, STOOL.z, -Math.PI / 2); pose({ x: STOOL.x + 0.01, z: STOOL.z, y: STOOL.h - 0.075, yaw: -Math.PI / 2, rate: 5, cam: { p: [-0.55, 1.05, 0.55], l: [-1.15, 0.2, -0.45] } }); A.book = 1
+  placeAt(READ_STAND[0], READ_STAND[1], STOOL.face); pose({ x: STOOL.x - STOOL_DIR[0] * 0.01, z: STOOL.z - STOOL_DIR[1] * 0.01, y: STOOL.h - 0.075, yaw: STOOL.face, rate: 5 }); A.book = 1
   const T_ = ['"The Moving Castle" — you lose yourself for a few pages.', 'A field guide to mushrooms. You learn which ones glow.', 'An old book of sea stories. The harbour feels closer.', 'A cookbook: "rice, fish, a pinch of salt and patience."', 'Poems about the wind. Mochi pretends not to listen.']
   toast(T_[Math.floor(Math.random() * T_.length)], 'book', 3600)
   await wait(5600); A.book = 0; end()
@@ -165,7 +170,7 @@ async function water(pl) {
 async function feedCat() {
   if (CAT.bowl > 0) { toast(`${CAT.name}'s bowl is still full.`, 'fish', 2000); return }
   if (!await begin('feed', 1.3)) return
-  const fx0 = BOWL.x + 0.06, fz0 = BOWL.z - 0.24; placeAt(fx0, fz0, Math.atan2(BOWL.x - fx0, BOWL.z - fz0)); pose({ x: fx0, z: fz0, yaw: Math.atan2(BOWL.x - fx0, BOWL.z - fz0), rate: 8 })
+  const [fx0, fz0] = FEED_STAND; placeAt(fx0, fz0, Math.atan2(BOWL.x - fx0, BOWL.z - fz0)); pose({ x: fx0, z: fz0, yaw: Math.atan2(BOWL.x - fx0, BOWL.z - fz0), rate: 8 })
   setTimeout(() => { CAT.bowl = 1; FX && FX.spark.emit(BOWL.x, 0.08, BOWL.z, 5, { spread: 0.06, up: 0.2, size: 0.035, life: 0.8 }) }, 700)
   toast(`You fill ${CAT.name}'s bowl. He trots over, tail up.`, 'fish', 2600)
   await wait(1300); end()
@@ -177,26 +182,17 @@ if (!HOME.actHooked) { HOME.actHooked = true
   HOME.near.push((consider) => {
     if (!HOME.inside || HOME.busy || A.doing) return
     const hp = HOME.hp, d = (x, z) => Math.hypot(hp.x - x, hp.z - z)
-    consider({ kind: 'ext', inside: true, id: 'bed', icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => sleep(false) }, act: () => sleep(true) }, d(0.7, BED.z), 0.26)
-    const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: cook }, d(COOK.x, -0.7), 0.2)
-    consider({ kind: 'ext', inside: true, id: 'tub', icon: 'water', verb: 'Take', name: 'a bath', act: bath }, d(TUB.x + 0.05, -0.52), 0.24)
+    consider({ kind: 'ext', inside: true, id: 'bed', icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => sleep(false) }, act: () => sleep(true) }, d(BED_STAND[0], BED_STAND[1]), 0.26)
+    const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: cook }, d(COOK.stand[0], COOK.stand[1]), 0.22)
+    consider({ kind: 'ext', inside: true, id: 'tub', icon: 'water', verb: 'Take', name: 'a bath', act: bath }, d(BATH_STAND[0], BATH_STAND[1]), 0.3)
     consider({ kind: 'ext', inside: true, id: 'tea', icon: 'teacup', verb: 'Make', name: 'tea', act: tea }, d(TABLE.x, TABLE.z - 0.32), 0.2)
-    consider({ kind: 'ext', inside: true, id: 'read', icon: 'book', verb: 'Read', name: 'a book', act: read }, d(STOOL.x + 0.18, STOOL.z), 0.2)
+    consider({ kind: 'ext', inside: true, id: 'read', icon: 'book', verb: 'Read', name: 'a book', act: read }, d(READ_STAND[0], READ_STAND[1]), 0.22)
     for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
-    consider({ kind: 'ext', inside: true, id: 'feedcat', icon: 'fish', verb: 'Feed', name: CAT.name, act: feedCat }, d(BOWL.x + 0.06, BOWL.z - 0.24), 0.2)
+    consider({ kind: 'ext', inside: true, id: 'feedcat', icon: 'fish', verb: 'Feed', name: CAT.name, act: feedCat }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
   })
 }
 
 // ---------- props ----------
-// Mochi's bowls on a little mat (the kibble is shown by Dynamic) + the kibble sack
-function Bowls() {
-  return <group>
-    <mesh position={[BOWL.x + 0.07, 0.003, BOWL.z]} rotation={[-Math.PI / 2, 0, 0]} material={tm('#e9a46a')} scale={[0.27, 0.12, 1]}><planeGeometry args={[1, 1]} /></mesh>
-    <group position={[BOWL.x, 0, BOWL.z]}><Box geo={GEO.half} p={[0, 0.03, 0]} s={[0.045, -0.03, 0.045]} c={'#6f8fae'} out={OUT.fine} /><Box geo={GEO.cyl} p={[0, 0.002, 0]} s={[0.036, 0.004, 0.036]} c={'#5f7f9a'} out={null} /></group>
-    <group position={[BOWL.x + 0.13, 0, BOWL.z]}><Box geo={GEO.half} p={[0, 0.03, 0]} s={[0.045, -0.03, 0.045]} c={'#fbf8f2'} out={OUT.fine} /><mesh geometry={GEO.circ} material={tm('#bfe3f2')} position={[0, 0.024, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={0.036} /></group>
-    <group position={[BOWL.x + 0.29, 0, BOWL.z + 0.04]} rotation={[0, -0.4, 0]}><Box geo={GEO.pillow} p={[0, 0.06, 0]} s={[0.07, 0.12, 0.05]} c={'#e9d4b0'} /><Box p={[0, 0.08, 0.026]} s={[0.035, 0.025, 0.004]} c={'#d9655b'} out={null} /></group>
-  </group>
-}
 // teapot (tilts to pour) + her cup (follows her hand when she sips), pot on the stove while cooking, cat-bowl kibble,
 // a book in her hands, quilt over her in bed
 const _w = new THREE.Vector3(), _l = new THREE.Vector3()
@@ -215,8 +211,8 @@ function Dynamic() {
     if (Math.random() < dt * (A.soak ? 14 : 1.2)) fx.steam.emit(TUB.x + (Math.random() - 0.5) * 0.2, TUB.h, TUB.z + (Math.random() - 0.5) * 0.2, 1, { spread: 0.05, up: 0.09, size: A.soak ? 0.16 : 0.11, life: 2.4 })
     if (A.pot && Math.random() < dt * 10) fx.steam.emit(COOK.x, COOK.y + 0.13, COOK.z, 1, { spread: 0.04, up: 0.12, size: 0.09, life: 1.4 })
     if (A.pour && Math.random() < dt * 6) fx.steam.emit(TABLE.x + 0.08, TABLE.h + 0.05, TABLE.z - 0.04, 1, { spread: 0.02, up: 0.08, size: 0.05, life: 1.2 })
-    if (A.doing === 'sleep' && Math.random() < dt * 1.3) fx.z.emit(BED.x + 0.24, 0.36, BED.z - 0.05, 1, { spread: 0.02, up: 0.07, vx: 0.05, size: 0.06, life: 2.2 })
-    if (A.doing === 'read' && Math.random() < dt * 0.5) fx.spark.emit(STOOL.x - 0.05, 0.42, STOOL.z, 1, { spread: 0.15, up: 0.05, size: 0.03, life: 1.6 })
+    if (A.doing === 'sleep' && Math.random() < dt * 1.3) fx.z.emit(BED_HEAD[0], 0.36, BED_HEAD[1], 1, { spread: 0.02, up: 0.07, vx: 0.05, size: 0.06, life: 2.2 })
+    if (A.doing === 'read' && Math.random() < dt * 0.5) fx.spark.emit(STOOL.x, 0.42, STOOL.z, 1, { spread: 0.15, up: 0.05, size: 0.03, life: 1.6 })
     if (A.sip && Math.random() < dt * 5) { const o = HOME.playerObj; if (o) { toRoom(o, 0.02, 0.34, 0.07, _l); fx.steam.emit(_l.x, _l.y + 0.03, _l.z, 1, { spread: 0.01, up: 0.06, size: 0.04, life: 1 }) } }
     water.current.position.y = TUB.h - 0.03 + Math.sin(now * 1.3) * 0.004
     lid.current.position.y = A.pot ? 0.115 + Math.abs(Math.sin(now * 9)) * 0.008 : 0.082; lid.current.rotation.z = A.pot ? 0.35 : 0; lid.current.position.x = A.pot ? -0.03 : 0
@@ -232,7 +228,7 @@ function Dynamic() {
     for (const pl of PLANTS) { const g = pl.g; if (!g) continue; const happy = A.watered()[pl.id] === G.s.day ? 1 : 0; pl.h = (pl.h ?? happy) + (happy - (pl.h ?? happy)) * Math.min(1, dt * 2.5)
       const e = pl.perkT ? (performance.now() - pl.perkT) / 1000 : 9, bounce = e < 1.5 ? Math.sin(e * 9) * Math.exp(-e * 3) * 0.12 : 0
       g.scale.set(pl.s * (1.08 - 0.08 * pl.h - bounce * 0.5), pl.s * (0.78 + 0.22 * pl.h + bounce), pl.s * (1.08 - 0.08 * pl.h - bounce * 0.5)); g.rotation.z = (1 - pl.h) * 0.08
-      pl.mat.color.copy(pl.c0).lerp(pl.cd, 1 - pl.h) }
+    }
   })
   return <group ref={grp}>
     {Object.values(fx).map((e, i) => <primitive key={i} object={e.obj} />)}
@@ -252,30 +248,12 @@ function Dynamic() {
   </group>
 }
 const WATER = new THREE.MeshToonMaterial({ color: '#9fd6e8', transparent: true, opacity: 0.85 })
-// indoor plants: pot static, leaves one merged mesh per plant (so the perk-up costs 2 calls a plant)
+// indoor plants: chibi props in a group that droops when thirsty and springs up when watered
 function Plants() {
-  const P = useMemo(() => PLANTS.map(pl => {
-    const parts = [], m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e = new THREE.Euler(), n = pl.big ? 16 : pl.row ? 9 : 9
-    for (let i = 0; i < n; i++) { const a = i * 2.4, tilt = 0.35 + (i % 4) * 0.17, h = (pl.big ? 0.16 : 0.12) + (i % 3) * 0.06, ox = pl.row ? (Math.floor(i / 3) - 1) * 0.22 : 0
-      const stem = GEO.cyl.clone(); e.set(Math.cos(a) * tilt, 0, Math.sin(a) * tilt); q4.setFromEuler(e)
-      const tip = new THREE.Vector3(0, h, 0).applyQuaternion(q4)
-      stem.applyMatrix4(m4.compose(new THREE.Vector3(ox, 0.15, 0).add(tip.clone().multiplyScalar(0.5)), q4, new THREE.Vector3(0.006, h, 0.006))); parts.push(stem)
-      const lf = GEO.sph.clone(); e.set(Math.cos(a) * tilt + 0.3, a, Math.sin(a) * tilt); lf.applyMatrix4(m4.compose(new THREE.Vector3(ox, 0.15, 0).add(tip), new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(0.055, 0.014, 0.034))); parts.push(lf) }
-    for (const g of parts) { g.deleteAttribute('uv') }
-    const geo = mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g)); const c0 = new THREE.Color(W.leaf2), mat = tm(W.leaf2).clone(); pl.mat = mat; pl.c0 = c0; pl.cd = new THREE.Color('#a8b06a')
-    return { pl, geo, mat } }), [])
-  return <>{P.map(({ pl, geo, mat }) => <group key={pl.id} position={[pl.x, pl.y, pl.z]}>
-    <group ref={el => (pl.g = el)}><mesh geometry={geo} material={mat} /><mesh geometry={geo} material={OUT.fine} /></group>
-  </group>)}</>
-}
-function Pots() { // static pots (merged with the clutter)
-  return <>{PLANTS.map(pl => <group key={pl.id} position={[pl.x, pl.y, pl.z]} scale={pl.s}>
-    {(pl.row ? [-0.22, 0, 0.22] : [0]).map(ox => <group key={ox} position={[ox, 0, 0]}><Box geo={GEO.cyl} p={[0, 0.07, 0]} s={[0.08, 0.14, 0.08]} c={W.pot} /><Box geo={GEO.cyl} p={[0, 0.145, 0]} s={[0.088, 0.02, 0.088]} c={'#e8e0d2'} out={null} /></group>)}
-  </group>)}</>
+  return <>{PLANTS.map(pl => <group key={pl.id} position={[pl.x, pl.y, pl.z]} rotation-y={pl.yaw}><group ref={el => (pl.g = el)}><Prop id={pl.prop} /></group></group>)}</>
 }
 export default function Activities() {
   return <group>
-    <Merge><Bowls /><Pots /></Merge>
     <Plants /><Dynamic />
   </group>
 }
