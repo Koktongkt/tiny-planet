@@ -18,11 +18,10 @@ defineProp('bed', { name: 'Bed', size: [0.5, 0.34, 0.72], tags: ['bedroom'], pal
   // mattress, pillow, quilt with a folded-back sheet and fat stripes, flower cushion
   k.puff([0.45, 0.06, 0.62], [0, 0.12, 0], 'sheet', { bulge: 0.25 })
   k.puff([0.3, 0.065, 0.14], [0, 0.17, -0.22], 'pillow', { bulge: 0.6 })
-  k.puff([0.48, 0.045, 0.44], [0, 0.155, 0.1], 'quilt', { bulge: 0.3 })
+  k.puff([0.48, 0.045, 0.44], [0, 0.155, 0.1], 'quilt', { bulge: 0.3, pattern: 'gingham', tile: 5 })
   k.puff([0.48, 0.032, 0.07], [0, 0.17, -0.13], 'sheet', { bulge: 0.4 })
-  for (const x of [-0.15, 0, 0.15]) k.box([0.04, 0.01, 0.42], [x, 0.18, 0.105], 'stripe', { r: 0.004, out: false })
-  for (const z of [0.0, 0.2]) k.box([0.47, 0.01, 0.04], [0, 0.18, z], 'stripe', { r: 0.004, out: false })
-  for (const s of [-1, 1]) k.puff([0.012, 0.09, 0.42], [s * 0.24, 0.12, 0.1], 'quilt', { bulge: 0.1, out: false })
+  for (const s of [-1, 1]) k.puff([0.014, 0.09, 0.42], [s * 0.242, 0.12, 0.1], 'quilt', { bulge: 0.1, out: false, pattern: 'gingham', tile: 4 })
+  k.puff([0.46, 0.08, 0.014], [0, 0.12, 0.322], 'quilt', { bulge: 0.1, out: false, pattern: 'gingham', tile: 5 })
   for (let i = 0; i < 5; i++) { const a = i / 5 * PI * 2; k.ball([0.026, 0.014, 0.026], [0.1 + Math.sin(a) * 0.026, 0.21, -0.2 + Math.cos(a) * 0.026], 'flower') }
   k.ball([0.018, 0.016, 0.018], [0.1, 0.216, -0.2], 'cream', { out: false })
 })
@@ -54,10 +53,14 @@ defineProp('woodStove', { name: 'Wood stove', size: [0.42, 0.9, 0.42], tags: ['k
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.pill([0.018, 0.05], [sx * 0.08, 0.055, sz * 0.06], 'dark', { bevel: 0.4 })
   k.box([0.24, 0.22, 0.2], [0, 0.18, 0], 'body', { r: 0.06 })
   k.box([0.27, 0.035, 0.22], [0, 0.3, 0], 'dark', { r: 0.015 })
-  k.ring(0.062, 0.014, [0, 0.175, 0.1], 'trim', { out: false })
-  k.pill([0.058, 0.01], [0, 0.175, 0.098], 'flame', { rot: [PI / 2, 0, 0], glow: true })
-  k.ball([0.03, 0.022, 0.012], [-0.018, 0.16, 0.105], 'glow', { glow: true }); k.ball([0.022, 0.03, 0.012], [0.02, 0.165, 0.105], 'glow', { glow: true })
-  k.knob([0.085, 0.175, 0.105], 'trim', 0.014)
+  // firebox window: warm glowing back, two logs, licking flames, an arched brass frame
+  k.arch(0.13, 0.05, 0.02, [0, 0.1, 0.095], '#ff9a3c', { glow: true, bevel: 0 })
+  for (const [x, a] of [[-0.02, 0.35], [0.02, -0.35]]) k.stick([0.012, 0.09], [x, 0.112, 0.106], '#7a4426', { rot: [0, 0, PI / 2 + a], out: false })
+  for (const [x, h, c] of [[-0.03, 0.05, '#ffb347'], [0.0, 0.075, '#ffd36a'], [0.03, 0.055, '#ffb347'], [0.0, 0.04, '#fff0b8']]) k.cone([0.018, h], [x, 0.12 + h / 2, 0.108], c, { glow: true, n: 8 })
+  k.box([0.15, 0.016, 0.02], [0, 0.098, 0.112], 'trim', { r: 0.006, out: false })
+  for (const s of [-1, 1]) k.box([0.014, 0.07, 0.02], [s * 0.068, 0.132, 0.112], 'trim', { r: 0.006, out: false })
+  k.halo([0, 0.15, 0.16], 0.17, '#ffa050')
+  k.knob([0.092, 0.16, 0.112], 'trim', 0.014)
   k.pill([0.042, 0.52], [0, 0.57, -0.02], 'body', { bevel: 0.03 })
   for (const y of [0.45, 0.7]) k.pill([0.048, 0.025], [0, y, -0.02], 'dark', { bevel: 0.3, out: false })
   k.pill([0.05, 0.03], [0, 0.84, -0.02], 'dark', { bevel: 0.3 })
@@ -74,13 +77,17 @@ defineProp('fridge', { name: 'Fridge', size: [0.27, 0.5, 0.22], tags: ['kitchen'
   for (const s of [-1, 1]) k.ball(0.0035, [0.05 + s * 0.009, 0.412, 0.116], 'ink', { out: false })
 })
 
-defineProp('lantern', { name: 'Lantern', size: [0.09, 0.16, 0.09], tags: ['light', 'outdoor'], pal: { cage: 'ironDark', core: 'glow' }, opts: { hang: false } }, (k, o) => {
-  k.pill([0.04, 0.018], [0, 0.009, 0], 'cage', { bevel: 0.4 })
-  k.ball([0.03, 0.04, 0.03], [0, 0.058, 0], 'core', { glow: true })
-  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + PI / 4; k.stick([0.006, 0.085], [Math.sin(a) * 0.036, 0.058, Math.cos(a) * 0.036], 'cage') }
-  k.cone([0.058, 0.04], [0, 0.118, 0], 'cage', { n: 4, rot: [0, PI / 4, 0] })
-  k.ring(0.012, 0.004, [0, 0.148, 0], 'cage', { out: false })
-  if (o.hang) k.stick([0.003, 0.12], [0, 0.21, 0], 'cage', { out: false })
+defineProp('lantern', { name: 'Lantern', size: [0.09, 0.16, 0.09], tags: ['light', 'outdoor'], pal: { cage: 'ironDark', trim: 'brass', glass: '#ffd27a', core: '#fff3cf' }, opts: { hang: false } }, (k, o) => {
+  k.pill([0.042, 0.02], [0, 0.01, 0], 'cage', { bevel: 0.4 })
+  k.pill([0.036, 0.008], [0, 0.022, 0], 'trim', { bevel: 0.4, out: false })
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2; k.box([0.05, 0.072, 0.006], [Math.sin(a) * 0.031, 0.062, Math.cos(a) * 0.031], 'glass', { r: 0.002, rot: [0, a, 0], glow: true }) }
+  k.ball([0.016, 0.024, 0.016], [0, 0.06, 0], 'core', { glow: true })
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + PI / 4; k.stick([0.0065, 0.082], [Math.sin(a) * 0.037, 0.062, Math.cos(a) * 0.037], 'cage') }
+  k.pill([0.044, 0.01], [0, 0.102, 0], 'trim', { bevel: 0.4, out: false })
+  k.cone([0.06, 0.042], [0, 0.124, 0], 'cage', { n: 4, rot: [0, PI / 4, 0] })
+  k.ball(0.01, [0, 0.148, 0], 'trim', { out: false }); k.ring(0.012, 0.004, [0, 0.162, 0], 'cage', { out: false })
+  if (o.hang) k.stick([0.003, 0.12], [0, 0.23, 0], 'cage', { out: false })
+  k.halo([0, 0.062, 0], 0.11)
 })
 
 defineProp('plant', { name: 'Potted plant', size: [0.2, 0.3, 0.2], tags: ['plant', 'outdoor'], pal: { pot: 'pot', rim: 'potRim', soil: 'woodDark', leaf: 'leaf' }, opts: { flowers: false, big: false } }, (k, o) => {
@@ -107,6 +114,7 @@ defineProp('nightstand', { name: 'Nightstand + mushroom lamp', size: [0.19, 0.3,
   for (const sx of [-1, 1]) k.pill([0.02, 0.02], [sx * 0.06, 0.01, 0], 'knob', { bevel: 0.4, out: false })
   k.pill([0.018, 0.06], [-0.01, 0.21, 0], 'stem', { bevel: 0.4 })
   k.dome([0.058, 0.048, 0.058], [-0.01, 0.235, 0], 'cap', { glow: true })
+  k.halo([-0.01, 0.25, 0.02], 0.13)
   k.ring(0.056, 0.007, [-0.01, 0.236, 0], '#f4c070', { rot: [PI / 2, 0, 0] })
   for (const [x, z] of [[0.02, 0.025], [-0.035, 0.02], [0.0, -0.035]]) k.ball(0.009, [-0.01 + x, 0.27, z], 'white', { out: false })
   k.box([0.06, 0.02, 0.045], [0.05, 0.19, 0.04], 'leaf', { r: 0.006, rot: [0, 0.3, 0] })
