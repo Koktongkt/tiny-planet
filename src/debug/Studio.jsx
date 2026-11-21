@@ -16,6 +16,8 @@ const SPRITE = q.get('char') === 'sprite'
 const ChibiHer = lazy(() => import('../art/chibi/ChibiHer.jsx').then(m => ({ default: m.ChibiHer })))
 const CHIBI = q.get('chibi') !== '0' && !SPRITE
 const NEWCHAR = !q.has('oldchar')
+const SEQ = q.get('seq'), seqT = { t: 0, yaw: 0 }
+if (typeof window !== 'undefined') window.__seqT = seqT
 const ANGLES = { front: 0, three: 0.75, side: Math.PI / 2, back: Math.PI }
 function Studio() {
   const camera = useThree(s => s.camera), scene = useThree(s => s.scene)
@@ -32,11 +34,16 @@ function Studio() {
     dt = Math.min(dt, 0.05); wind.time.value += dt
     if (q.has('frontsun')) T.sun.set(0, 0.2, 1).normalize(); else T.sun.set(0.55, 0.75, 0.6).normalize() // ?frontsun: flat front light for measuring
     T.day = 1; T.dusk = 0; T.night = 0
-    for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * 9 * st.move; st.dist += dt * 0.27 * st.move }
+    // ?seq=walkrun: scripted idle -> walk (with a turn each way) -> run -> sudden stop -> settle, for the anim clips (both models)
+    let rate = 9, yawRate = 0
+    if (SEQ === 'walkrun') { const u = (seqT.t += dt), k = (a, b) => Math.min(1, Math.max(0, (u - a) / (b - a)))
+      const mv = k(1, 1.6) * (1 - k(7, 7.35)); rate = 7.4 + 2.6 * k(4.2, 4.8) * (1 - k(7, 7.35)); yawRate = u > 2.6 && u < 3.4 ? 1.6 : u > 3.4 && u < 4.2 ? -1.6 : 0
+      for (const st of [stOld, stNew]) { st.move = mv; st.turn = yawRate * mv } seqT.yaw += yawRate * mv * dt }
+    for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * rate * st.move; st.dist += dt * 0.27 * st.move }
     if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
     if (q.has('still')) { stOld.t = stNew.t = 0 } // ?still: freeze idle sway/look for matched before/after shots
     if (q.has('act')) { for (const s of [stOld, stNew]) { s.act = q.get('act'); s.actW = 1; s.move = 0 } }
-    const a = ang + (q.has('spin') ? wind.time.value * +(q.get('spin') || 0.6) : 0) // ?spin=0.6: turntable
+    const a = ang - seqT.yaw + (q.has('spin') ? wind.time.value * +(q.get('spin') || 0.6) : 0) // ?spin=0.6: turntable
     const d = (compare ? 1.35 : 0.95) / (+q.get('zoom') || 1), cx = 0, ly = q.has('ly') ? +q.get('ly') : 0.2 // ?zoom=3&ly=0.33: face close-up
     // ?fov=4: near-orthographic lens for measured overlays (distance scaled so the framing matches fov 30); ?level: eye-level camera
     const fov = +q.get('fov') || 30, dk = Math.tan(Math.PI / 12) / Math.tan(fov * Math.PI / 360)

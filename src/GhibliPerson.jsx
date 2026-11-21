@@ -196,7 +196,7 @@ const OUTLINE_VS = (body) => `#include <common>
   float sil = .5 + .85*length(n.xy), under = 1. + .7*max(0., -n.y);
   float crease = ${body ? 'smoothstep(.3, .75, aAO)' : '1.'}; // thin the hull in creases so it can't poke through
   mv.xyz += n*uT*sil*under*crease*(0.6 + 0.4*clamp(-mv.z*.35,0.,2.)); gl_Position = projectionMatrix*mv; }`
-const mkOutline = (body) => new THREE.ShaderMaterial({ side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4, uniforms: { uT: { value: 0.0042 }, uCol: { value: C('#3b2621') } },
+export const mkOutline = (body) => new THREE.ShaderMaterial({ side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4, uniforms: { uT: { value: 0.0042 }, uCol: { value: C('#3b2621') } },
   vertexShader: OUTLINE_VS(body), fragmentShader: `uniform vec3 uCol; void main(){ gl_FragColor = vec4(uCol,1.);
     #include <colorspace_fragment>
   }` })
@@ -551,6 +551,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       else if (POSES[a]) POSES[a](B, mix, st, t, w) // round7: home-activity poses (lazy chunk)
       else if (a === 'carry') { for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'x', -0.55); mix(B['up' + k], 'z', sd * -0.12); mix(B['fo' + k], 'x', -1.2) } mix(B.chest, 'x', -0.06) }
     }
+    if (cfg.ext?.life) cfg.ext.life(B, st, dt, t, R_, prev.current, state) // chibi her: procedural life layer (lazy chunk)
     const hairX = spring(sp.hairX, -0.12 * m - bobVel * 2.2 - sp.headX.v * 0.06, 28, 4.5, dt), hairZ = spring(sp.hairZ, -sp.headY.v * 0.05 + (st.turn || 0) * 0.1, 26, 4, dt)
     if (R_.hair) { R_.hair.rotation.x = hairX * 0.35; R_.hair.rotation.z = hairZ * 0.3 }
     if (R_.bobL) R_.bobL.rotation.x = spring(sp.bobL, 0.3 * m + bobVel * 3, 20, 3.5, dt) * (cfg.hair.style === 'long' ? 0.5 : 1)
@@ -558,6 +559,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     if (R_.cowlick) R_.cowlick.rotation.z = 0.3 + hairX * 1.4
     if (R_.scarf) { R_.scarf.rotation.x = spring(sp.scarf, -0.7 * m - bobVel * 6 + Math.sin(t * 6) * 0.08 * m, 16, 3, dt); R_.scarf.rotation.z = spring(sp.scarfZ, (st.turn || 0) * 0.5 + s * 0.2 * m, 14, 3, dt) }
     if (R_.bag) { R_.bag.rotation.x = spring(sp.bag, 0.2 * m - bobVel * 5, 18, 3, dt); R_.bag.rotation.z = spring(sp.bagZ, -s * 0.35 * m, 15, 2.5, dt) }
+    if (cfg.ext?.post) cfg.ext.post(R_, st, dt, t)
     prev.current.blinkT -= dt; const bl = prev.current.blinkT < 0.12 ? 0.12 : 1; if (prev.current.blinkT < 0) prev.current.blinkT = 2.5 + Math.random() * 2.5
     if (R_.eyeL) R_.eyeL.scale.y = R_.eyeR.scale.y = bl
   })
