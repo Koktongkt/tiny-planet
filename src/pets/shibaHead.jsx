@@ -11,8 +11,22 @@ import { OUT, GEO, cel } from '../home/kit.jsx'
 // ---------- shape ----------
 const ell = (x, y, z, c, r) => { const a = (x - c[0]) / r[0], b = (y - c[1]) / r[1], d = (z - c[2]) / r[2]; return (Math.sqrt(a * a + b * b + d * d) - 1) * Math.min(r[0], r[1], r[2]) }
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
-export const HEAD = { skull: [[0, 0.1, -0.06], [0.96, 0.72, 0.8]], jowl: [[0, -0.24, 0.02], [1.0, 0.5, 0.74]], muzzle: [[0, -0.16, 0.68], [0.33, 0.23, 0.44]], kJ: 0.3, kM: 0.1 }
-const sdf = (x, y, z) => smin(smin(ell(x, y, z, ...HEAD.skull), ell(x, y, z, ...HEAD.jowl), HEAD.kJ), ell(x, y, z, ...HEAD.muzzle), HEAD.kM)
+export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.26, 0.04], [0.86, 0.5, 0.72]], cheek: [[0.7, -0.36, 0.06], [0.38, 0.32, 0.42]], muzzle: [[0, -0.16, 0.68], [0.33, 0.23, 0.44]],
+  kJ: 0.28, kC: 0.16, kM: 0.1, kE: 0.1,
+  // ears: a rounded cone (base radius r1, tip radius r2, height h) flattened front-to-back, tilted out and a little back
+  ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.42, r2: 0.13, h: 0.8, flat: 0.38 } }
+const E = HEAD.ear, EARM = [-1, 1].map(s => new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-E.back, 0, -s * E.tilt)).setPosition(s * E.base[0], E.base[1], E.base[2]))
+const EARI = EARM.map(m => m.clone().invert()), _e = new THREE.Vector3()
+function roundCone(x, y, z) { // iq's round cone along +y, base at the origin
+  const b = (E.r1 - E.r2) / E.h, a = Math.sqrt(1 - b * b), qx = Math.hypot(x, z), k = -b * qx + a * y
+  if (k < 0) return Math.hypot(qx, y) - E.r1
+  if (k > a * E.h) return Math.hypot(qx, y - E.h) - E.r2
+  return a * qx + b * y - E.r1 }
+const ear = (x, y, z, i) => { _e.set(x, y, z).applyMatrix4(EARI[i]); return roundCone(_e.x, _e.y, _e.z / E.flat) * E.flat }
+const sdf = (x, y, z) => { let d = smin(ell(x, y, z, ...HEAD.skull), ell(x, y, z, ...HEAD.jowl), HEAD.kJ)
+  const [c, r] = HEAD.cheek; d = smin(d, Math.min(ell(x, y, z, [-c[0], c[1], c[2]], r), ell(x, y, z, c, r)), HEAD.kC)
+  d = smin(d, ell(x, y, z, ...HEAD.muzzle), HEAD.kM)
+  return smin(d, Math.min(ear(x, y, z, 0), ear(x, y, z, 1)), HEAD.kE) }
 const grad = (x, y, z, out) => { const e = 1e-3; out.set(sdf(x + e, y, z) - sdf(x - e, y, z), sdf(x, y + e, z) - sdf(x, y - e, z), sdf(x, y, z + e) - sdf(x, y, z - e)).normalize(); return out }
 // first surface hit along a ray (o + t d), or null
 function hit(o, d, t0, t1, step = 0.01) {
@@ -23,33 +37,35 @@ function hit(o, d, t0, t1, step = 0.01) {
   return null
 }
 const headGeo = (() => { // star-shaped from an inside point: shoot each sphere vertex direction out to the surface
-  const g = new THREE.SphereGeometry(1, 72, 54), p = g.attributes.position, nr = g.attributes.normal, C = [0, -0.1, 0.12], n = new THREE.Vector3()
-  for (let i = 0; i < p.count; i++) { const d = [p.getX(i), p.getY(i), p.getZ(i)], t = hit(C, d, 0, 2.5, 0.02) ?? 1
+  const g = new THREE.SphereGeometry(1, 96, 72), p = g.attributes.position, nr = g.attributes.normal, C = [0, -0.1, 0.12], n = new THREE.Vector3()
+  for (let i = 0; i < p.count; i++) { const d = [p.getX(i), p.getY(i), p.getZ(i)], t = hit(C, d, 0, 2.6, 0.015) ?? 1
     const x = C[0] + d[0] * t, y = C[1] + d[1] * t, z = C[2] + d[2] * t; p.setXYZ(i, x, y, z); grad(x, y, z, n); nr.setXYZ(i, n.x, n.y, n.z) }
   g.deleteAttribute('uv'); g.computeBoundingSphere(); return g
 })()
-const EAR = (() => { // a gumdrop: a sphere tapered toward the top, base at y = 0, rounded tip at y = 1
-  const g = new THREE.SphereGeometry(1, 24, 18), p = g.attributes.position
-  for (let i = 0; i < p.count; i++) { const t = (p.getY(i) + 1) / 2, k = 1 - 0.84 * Math.pow(t, 0.85); p.setXYZ(i, p.getX(i) * k, t, p.getZ(i) * k) }
-  g.computeVertexNormals(); return g })()
 const NOSE = (() => { const y = -0.05, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); return [0, y, 2 - t] })()
 
 // ---------- coat: orange with the cream urajiro mask (muzzle, cheeks, jowls, throat), arching up to the nose ----------
 let headMatC = null
-function headMat(main, cream) {
+function headMat(main, cream, pink) {
   if (headMatC) return headMatC
   const m = fur(main).clone(); m.defines = { FUR: 1, SHIBA: 1 }
-  m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(main) }, uCream: { value: new THREE.Color(cream) } }
+  m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(main) }, uCream: { value: new THREE.Color(cream) }, uPink: { value: new THREE.Color(pink) }, uEarI: { value: EARI } }
   m.fragmentShader = m.fragmentShader.replace('vec3 base = uColor*vCol;', `vec3 base = uColor*vCol;
     #ifdef SHIBA
       { float ax = abs(vO.x);
-        float b = -0.075 + 0.13*exp(-ax*ax*25.) - 0.03*exp(-(ax - .45)*(ax - .45)*25.); // front edge: just under the eyes, up to the nose
-        b -= 0.22*smoothstep(.55, 1., ax) + 0.5*(1. - smoothstep(-0.4, 0.35, vO.z));                                         // sweeps down the cheeks to the throat
+        float b = -0.055 + 0.11*exp(-ax*ax*25.) - 0.035*exp(-(ax - .44)*(ax - .44)*30.) + 0.03*smoothstep(.6, .95, ax); // front edge: just under the eyes, up to the nose, up onto the cheeks
+        b -= 0.45*(1. - smoothstep(-0.5, 0.15, vO.z));                                         // sweeps down the cheeks to the throat
         float dd = vO.y - b, w = fwidth(dd)*1.2 + 1e-4;
-        base = mix(base, uCream, 1. - smoothstep(-w, w, dd)); }
+        base = mix(base, uCream, 1. - smoothstep(-w, w, dd));
+        for (int i = 0; i < 2; i++) { // ear insides, in each ear's own frame: pink, cream fluff at the bottom
+          vec3 e = (uEarI[i]*vec4(vO, 1.)).xyz; float t = e.y/${E.h.toFixed(3)};
+          float hw = mix(${E.r1.toFixed(3)}, ${E.r2.toFixed(3)}, t)*0.6, dx = abs(e.x) - hw*(1. - .25*t);
+          float k = (1. - smoothstep(-w, w, dx))*smoothstep(.1, .16, t)*(1. - smoothstep(.8, .86, t))*smoothstep(-.01, .02, e.z);
+          vec3 inner = mix(uCream, uPink, smoothstep(.2, .45, t))*(1. - .08*smoothstep(.3, 1., abs(e.x)/max(hw, 1e-3)));
+          base = mix(base, inner, k); } }
     #endif
-    `).replace('uniform vec3 uColor;', 'uniform vec3 uColor; uniform vec3 uCream;')
-  if (!m.fragmentShader.includes('uniform vec3 uCream')) m.fragmentShader = 'uniform vec3 uCream;\n' + m.fragmentShader
+    `).replace('uniform vec3 uColor;', 'uniform vec3 uColor; uniform vec3 uCream; uniform vec3 uPink; uniform mat4 uEarI[2];')
+  if (!m.fragmentShader.includes('uniform vec3 uCream')) m.fragmentShader = 'uniform vec3 uCream; uniform vec3 uPink; uniform mat4 uEarI[2];\n' + m.fragmentShader
   headMatC = m; return m
 }
 
@@ -66,15 +82,19 @@ function paint(x, eyesOpen, mouthOpen) {
   // eyes
   for (const s of [-1, 1]) { const { y, rx, ry } = EYE, cx = s * EYE.x
     if (eyesOpen) {
-      el(cx, y, rx + 0.018, ry + 0.018); x.fillStyle = '#2a170e'; x.fill()
-      const g = x.createLinearGradient(0, y + ry, 0, y - ry); g.addColorStop(0, '#24130b'); g.addColorStop(0.42, '#3f2213'); g.addColorStop(0.78, '#71421f'); g.addColorStop(1, '#93592c')
-      el(cx, y, rx, ry); x.fillStyle = g; x.fill()
-      el(cx, y + 0.015, rx * 0.6, ry * 0.62); x.fillStyle = 'rgba(22,11,6,.72)'; x.fill() // pupil
-      x.save(); el(cx, y, rx, ry); x.clip(); el(cx + s * 0.01, y - ry * 0.78, rx * 0.62, ry * 0.32); x.fillStyle = 'rgba(196,128,72,.45)'; x.fill(); x.restore() // warm lower glow
-      // upper lid: a heavier ink arc over the top
-      x.beginPath(); x.ellipse(cx, y, rx + 0.012, ry + 0.012, 0, 0.12 * Math.PI, 0.88 * Math.PI); x.lineWidth = 0.034; x.strokeStyle = INK; x.lineCap = 'round'; x.stroke()
-      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx - 0.045, y + 0.07, 0.054, 0, 7); x.fill()
-      x.beginPath(); x.arc(cx + 0.06, y - 0.075, 0.022, 0, 7); x.fill()
+      // ink rim, cream-white eye, brown iris narrower than the eye so white shows on both sides, one highlight
+      el(cx, y, rx + 0.017, ry + 0.017); x.fillStyle = '#2a170e'; x.fill()
+      el(cx, y, rx, ry); x.fillStyle = '#fffaf4'; x.fill()
+      x.save(); el(cx, y, rx, ry); x.clip()
+      const IX = rx * 0.72, IY = ry * 0.98, iy = y - ry * 0.02
+      const g = x.createLinearGradient(0, iy + IY, 0, iy - IY); g.addColorStop(0, '#24130b'); g.addColorStop(0.45, '#40220f'); g.addColorStop(0.8, '#74431f'); g.addColorStop(1, '#93592c')
+      el(cx, iy, IX + 0.008, IY + 0.008); x.fillStyle = '#24130b'; x.fill()
+      el(cx, iy, IX, IY); x.fillStyle = g; x.fill()
+      el(cx, iy + 0.012, IX * 0.62, IY * 0.6); x.fillStyle = 'rgba(22,11,6,.72)'; x.fill() // pupil
+      el(cx, iy - IY * 0.72, IX * 0.62, IY * 0.3); x.fillStyle = 'rgba(196,128,72,.42)'; x.fill() // warm lower glow
+      x.restore()
+      x.beginPath(); x.ellipse(cx, y, rx + 0.01, ry + 0.01, 0, 0.1 * Math.PI, 0.9 * Math.PI); x.lineWidth = 0.034; x.strokeStyle = INK; x.lineCap = 'round'; x.stroke() // upper lid
+      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx - 0.03, iy + 0.06, 0.04, 0, 7); x.fill()
     } else {
       x.beginPath(); x.moveTo(cx - 0.14, y + 0.01); x.quadraticCurveTo(cx, y - 0.09, cx + 0.14, y + 0.01); x.lineWidth = 0.042; x.strokeStyle = INK; x.lineCap = 'round'; x.stroke()
     }
@@ -127,16 +147,11 @@ function Part({ geo = GEO.sph, mat, out = OUT.pet, pos, scl, rot }) {
   return <group position={pos} rotation={rot}><group scale={scl}><mesh geometry={geo} material={mat} />{out && <mesh geometry={geo} material={out} />}</group></group>
 }
 export function ShibaHead({ c, M, set }) {
-  const hr = c.head, fm = useMemo(faceMat, []), hm = headMat(c.col.main, c.col.cream)
+  const hr = c.head, fm = useMemo(faceMat, []), hm = headMat(c.col.main, c.col.cream, c.col.innerEar)
   return <group scale={hr}>
     <Part geo={headGeo} mat={hm} />
     <mesh ref={set('face')} geometry={faceGeo} material={fm} renderOrder={2} />
     <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.135, 0.085, 0.085]} /><mesh geometry={GEO.sph} material={OUT.pet} scale={[0.135, 0.085, 0.085]} />
       <mesh geometry={GEO.sph} material={M.shine} position={[-0.04, 0.035, 0.065]} scale={[0.035, 0.02, 0.012]} /></group>
-    {[-1, 1].map(s => <group key={'e' + s} ref={set(s > 0 ? 'earL' : 'earR')} position={[s * 0.6, 0.52, -0.14]}><group rotation={[0, 0, -s * 0.36]}>
-      <Part geo={EAR} mat={M.main} pos={[0, -0.04, 0]} rot={[-0.1, 0, 0]} scl={[0.58, 0.92 * c.ear, 0.18]} />
-      <mesh geometry={EAR} material={M.innerEar} position={[s * -0.02, 0.04, 0.11]} rotation={[-0.1, 0, 0]} scale={[0.4, 0.72 * c.ear, 0.07]} />
-      <mesh geometry={EAR} material={M.cream} position={[s * -0.07, 0.02, 0.15]} rotation={[-0.1, 0, s * 0.3]} scale={[0.15, 0.4 * c.ear, 0.04]} />
-    </group></group>)}
   </group>
 }
