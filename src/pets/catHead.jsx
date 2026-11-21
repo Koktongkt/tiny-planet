@@ -42,10 +42,10 @@ const HEAD_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
   // wing tip (no notch) and the underside runs in one smooth curve from the wing tips to the bottom point.
   float dD = p.y > 0.46 || p.y <= 0. ? -1. : 0.62*pow((0.46 - p.y)/0.46, 0.9) - ax;
   float dR = 0.27 - length(vec2(ax - 0.39, p.y));
-  float wg = p.y > -0.08 ? 0.8*sqrt(max(0., 1. - pow((p.y + 0.08)/0.13, 2.))) : 0.8*(1. - pow(clamp((-0.08 - p.y)/0.26, 0., 1.), 1.6));
+  float wg = p.y > -0.08 ? 0.7*sqrt(max(0., 1. - pow((p.y + 0.08)/0.1, 2.))) : 0.7*(1. - pow(clamp((-0.08 - p.y)/0.26, 0., 1.), 1.6));
   float dW = wg > .004 ? wg - ax : -1.; // (no zero-width sliver down the chin)
   float k1 = .06, h1 = clamp(.5 + .5*(dR - dD)/k1, 0., 1.), dDR = mix(dD, dR, h1) + k1*h1*(1. - h1);
-  float k2 = .16, h2 = clamp(.5 + .5*(dW - dDR)/k2, 0., 1.), hw = mix(dDR, dW, h2) + k2*h2*(1. - h2) + ax;
+  float k2 = .24, h2 = clamp(.5 + .5*(dW - dDR)/k2, 0., 1.), hw = mix(dDR, dW, h2) + k2*h2*(1. - h2) + ax;
   float m = min(hw - ax, p.z - 0.05); w = fwidth(m)*1.2 + 1e-4; float dark = smoothstep(-w, w, m);
   // whisker stripes on the cheeks: two tapered bands sloping down and out
   // (short: they start just outside the mask and taper to a point going back along the cheek)
