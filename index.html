@@ -1,9 +1,9 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#7ea8de"><title>Tiny Planet</title>
-<link rel="preload" href="./fonts/fredoka-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./fonts/fredoka-600.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="./fonts/fredoka-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./loader/planet.webp" as="image" type="image/webp" fetchpriority="high">
 <style>
 @font-face{font-family:TPSerif;src:url(./fonts/cormorant-500i.woff2) format("woff2");font-style:italic;font-weight:500;font-display:swap}
-@font-face{font-family:TPRound;src:url(./fonts/fredoka-600.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:TPRound;src:url(./fonts/fredoka-600.woff2) format("woff2");font-weight:600;font-display:swap}@font-face{font-family:TPRound;src:url(./fonts/fredoka-400.woff2) format("woff2");font-weight:400;font-display:swap}
 @property --r{syntax:"<length>";inherits:false;initial-value:0px}
 /* loading screen: a daytime sky, the title card on the left, the planet floating on the right (stacked on portrait screens) */
 #ld{position:fixed;inset:0;z-index:50;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:min(6vw,90px);padding:0 4vw;box-sizing:border-box;color:#fff;
@@ -14,22 +14,22 @@
 .bk{transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 .dr{animation:dr 19s ease-in-out infinite alternate}.dr.s{animation-duration:27s}@keyframes dr{to{transform:translateX(calc(28px*var(--s)))}}
 /* planet: the painted cut-out fades in once decoded, rises with progress and floats */
-#pw{position:relative;order:2;flex:0 0 auto;width:min(44vw,70vh);aspect-ratio:681/778;transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
+#pw{position:relative;order:2;flex:0 0 auto;width:min(44vw,70vh);aspect-ratio:684/780;transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 #pw:before{content:"";position:absolute;inset:4% -6% -2%;border-radius:50%;background:radial-gradient(closest-side,#fffbe9b0,#fff6dc40 55%,#fff0 100%);animation:gl 6s ease-in-out infinite alternate}@keyframes gl{to{transform:scale(1.06);opacity:.75}}
 #pf{position:absolute;inset:0;animation:fl 7s ease-in-out infinite alternate}@keyframes fl{0%{transform:translateY(-1.2%) rotate(-1deg)}100%{transform:translateY(1.2%) rotate(1deg)}}
 #pi{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.94);transition:opacity 1.4s ease,transform 1.8s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 18px 28px #3e5f9640)}#pi.in{opacity:1;transform:none}
 /* title card */
 #tx{position:relative;flex:0 1 auto;width:min(36vw,480px);text-align:center;transition:opacity 1.2s,transform 2s}
 #tt h1{position:relative;margin:0;font-weight:600;font-size:clamp(54px,7.4vw,128px);line-height:.92;letter-spacing:-.01em;text-shadow:0 2px 0 #d9e6f8,0 6px 26px #4d77b455}
-#tt h1 span{display:block}#tt h1 span:first-child{position:relative;display:inline-block}#tt .sp{position:absolute;left:-.02em;top:-.42em;width:.5em;height:.42em}
-#tt .sw{display:block;width:62%;height:auto;margin:.2em auto 0;overflow:visible}
-#tt p{margin:.9em 0 0;font-size:clamp(17px,1.6vw,26px);line-height:1.35;font-weight:600;letter-spacing:.01em;opacity:.95;text-shadow:0 1px 10px #4d77b455}
+#tt h1 span{display:block}#tt h1 span:first-child{position:relative;display:inline-block}#tt .sp{position:absolute;left:.02em;top:-.5em;width:.56em;height:.48em}
+#tt .sw{display:block;width:56%;height:auto;margin:.2em auto 0;overflow:visible}
+#tt p{margin:.9em 0 0;font-size:clamp(17px,1.6vw,26px);line-height:1.35;font-weight:400;letter-spacing:.01em;opacity:.95;text-shadow:0 1px 10px #4d77b455}
 #ft,#go{margin-top:clamp(26px,4.5vh,56px)}
 #ft{transition:opacity .8s}
 #bar{position:relative;height:clamp(14px,1.5vw,22px);border:2.5px solid #fff;border-radius:99px;overflow:hidden;box-shadow:0 2px 14px #4d77b433;background:#ffffff1f}
 #fill{position:absolute;inset:2px;border-radius:99px;background:linear-gradient(#ffe7a8,#f5cf7e);transform-origin:0 50%;transform:scaleX(0);transition:transform .5s ease-out}
 #st{display:block;margin-top:.9em;font-size:clamp(15px,1.3vw,20px);letter-spacing:.12em;opacity:.92;transition:opacity .6s}
-#tip{display:block;margin:.7em auto 0;max-width:30em;font-size:clamp(14px,1.15vw,18px);font-weight:600;letter-spacing:.01em;opacity:.78;transition:opacity .8s;min-height:2.6em;text-wrap:balance}#tip.h{opacity:0}
+#tip{display:block;margin:.7em auto 0;max-width:30em;font-size:clamp(14px,1.15vw,18px);font-weight:400;letter-spacing:.01em;opacity:.92;transition:opacity .8s;min-height:2.6em;text-shadow:0 1px 8px #4d77b466;text-wrap:balance}#tip.h{opacity:0}
 #go{position:absolute;left:50%;bottom:0;transform:translate(-50%,10px);opacity:0;pointer-events:none;font:inherit;font-size:clamp(20px,1.8vw,28px);color:#7a4a2e;background:linear-gradient(#fff8e6,#ffe7b4);border:0;border-radius:99px;padding:.55em 1.6em .6em;white-space:nowrap;cursor:pointer;box-shadow:0 4px 0 #e5b979,0 10px 26px #3e5f9640;transition:opacity 1.2s,transform 1.2s}
 #go.on{opacity:1;pointer-events:auto;transform:translate(-50%,-16px);animation:br 3.2s ease-in-out 1.2s infinite alternate}#go:hover,#go:focus-visible{background:linear-gradient(#fffdf4,#ffedc4)}#go:focus{outline:none}#go:focus-visible{outline:3px solid #fff;outline-offset:4px}
 #go small{display:block;font-size:.46em;letter-spacing:.2em;text-transform:uppercase;opacity:.6;margin-top:.2em}
@@ -53,10 +53,10 @@ html,body{overscroll-behavior:none}#ld{touch-action:none}
 <div class="lay bk" id="R2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c2)" opacity=".8"><circle cx="1560" cy="820" r="150"/><circle cx="1390" cy="890" r="120"/><circle cx="1690" cy="720" r="130"/><rect x="1240" y="890" width="560" height="200"/></g></svg></div></div>
 <div class="lay bk" id="L1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c1)"><circle cx="-30" cy="930" r="170"/><circle cx="170" cy="990" r="140"/><circle cx="300" cy="1040" r="110"/><rect x="-200" y="980" width="600" height="200"/></g></svg></div></div>
 <div class="lay bk" id="R1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c1)"><circle cx="1620" cy="920" r="180"/><circle cx="1430" cy="990" r="140"/><circle cx="1300" cy="1050" r="110"/><rect x="1200" y="990" width="600" height="200"/></g></svg></div></div>
-<div id="pw"><div id="pf"><img id="pi" src="./loader/planet.webp" alt="" width="681" height="778" decoding="async" fetchpriority="high" draggable="false"></div></div>
+<div id="pw"><div id="pf"><img id="pi" src="./loader/planet.webp" alt="" width="684" height="780" decoding="async" fetchpriority="high" draggable="false"></div></div>
 <div id="tx">
-<div id="tt"><h1><span><svg class="sp" viewBox="0 0 62 52" aria-hidden="true"><path d="M31 52C31 40 30 33 28 26" fill="none" stroke="#b6c46c" stroke-width="5" stroke-linecap="round"/><path d="M28 27C18 30 4 26 2 12C16 6 27 14 28 27Z" fill="#c2cf78"/><path d="M30 25C34 12 46 4 60 8C58 22 44 28 30 25Z" fill="#b6c46c"/></svg>Tiny</span> <span>Planet</span></h1>
-<svg class="sw" viewBox="0 0 260 40" aria-hidden="true"><path d="M6 34C70 14 140 8 212 16" fill="none" stroke="#f6d98e" stroke-width="7" stroke-linecap="round"/><path d="M238 6L242 18L254 22L242 26L238 38L234 26L222 22L234 18Z" fill="#f6d98e"/></svg>
+<div id="tt"><h1><span><svg class="sp" viewBox="0 0 62 52" aria-hidden="true"><path d="M29 48C17 46 6 36 8 20C12 10 24 14 28 26C30 34 31 42 29 48Z" fill="#f4c95d"/><path d="M33 48C45 46 56 36 54 20C50 10 38 14 34 26C32 34 31 42 33 48Z" fill="#f4c95d"/><circle cx="50" cy="50" r="2.4" fill="#fff6dc"/></svg>Tiny</span> <span>Planet</span></h1>
+<svg class="sw" viewBox="0 0 260 40" aria-hidden="true"><path d="M8 32C70 6 180 4 252 24" fill="none" stroke="#f6d27a" stroke-width="7" stroke-linecap="round"/></svg>
 <p>A cozy little world<br>of everyday adventures</p></div>
 <div id="ft"><div id="bar"><i id="fill"></i></div><span id="st"><span id="sl">Gathering the scripts</span>…</span><span id="tip"></span></div>
 <button id="go">Enter the world<small>press any key</small></button>
