@@ -15,8 +15,8 @@ const tsdf = (x, y, z) => { let d = smin(ell(x, y, z, ...T.barrel), ell(x, y, z,
 const torsoGeo = starMesh(tsdf, { C: [0, 0, 0], w: 64, h: 48, step: 0.01, far: 2, relax: 4 })
 // cream where: belly band underneath, chest bib in front (between the orange shoulder stripes), pants under the tail
 const TORSO_GLSL = `vec3 p = vO; float ax = abs(p.x);
-  float belly = -0.38 - 0.08*smoothstep(-.2, -.7, p.z);                        // belly line, dipping a little toward the hips
-  float bib = (0.58 - 0.25*smoothstep(-.1, .7, p.y)) - ax;                     // bib narrows toward the top of the chest
+  float belly = -0.56 - 0.6*smoothstep(-.15, -.45, p.z)*smoothstep(.25, .55, ax); // a slim belly band underneath; the orange flank runs down into the hind thighs
+  float bib = (0.44 - 0.2*smoothstep(-.1, .7, p.y)) - ax;                      // bib narrows toward the top of the chest; orange shoulder stripes either side
   bib = min(min(bib, p.z - 0.18 + 0.25*smoothstep(.2, -.6, p.y)), 0.45 - p.y); // ...only on the front of the chest, not over the shoulders
   float pants = min(1. - length(vec2(ax/0.44, (p.y + 0.3)/0.55)), -0.6 - p.z);    // a soft arch under the tail, between the haunches
   float d = max(max(belly - p.y, bib), pants), w = fwidth(d)*1.2 + 1e-4;
@@ -27,7 +27,7 @@ const torsoMat = (c) => patchFur('pipTorso', c.col.main, { glsl: TORSO_GLSL, dec
 const legGeo = (() => {
   const pts = [], N = 22
   for (let i = 0; i <= N; i++) { const t = i / N, y = 0.08 - t * 1.08 // from just above the hip to the ground
-    let r = 0.94 + 0.1 * t // a touch wider toward the paw
+    let r = 0.94 + 0.1 * t + 0.5 * (1 - Math.min(1, t / 0.45)) ** 2 // flares out at the top so the leg swells out of the body; a touch wider toward the paw
     if (y > 0) r *= Math.sqrt(Math.max(0, 1 - (y / 0.08) ** 2)) * 0.6 + 0.4 // rounded top (buried in the body)
     if (y < -0.82) { const u = (-0.82 - y) / 0.18; r = 1.06 * Math.sqrt(Math.max(0, 1 - u * u)) } // round sole
     pts.push(new THREE.Vector2(Math.max(r, 0.001), y)) }
@@ -41,14 +41,30 @@ const LEG_GLSL = `vec3 p = vO; float toe = step(p.y, -0.78)*step(0.45, p.z);
   float l = min(abs(abs(p.x) - 0.32), 1.);
   float w = fwidth(p.x)*1.5 + 1e-4;
   base = mix(base, base*0.42, toe*(1. - smoothstep(0.05 - w, 0.05 + w, l)));`
-const legMat = (c) => patchFur('pipLeg', c.col.cream, { glsl: LEG_GLSL })
+// orange carried onto the legs: front legs get the shoulder stripe down the outer upper leg, hind legs an orange thigh
+// (cream only on the inside). uSide = which way is 'outer' for this leg.
+const LEG_COAT = `float o = vO.x*uSide + 0.25*vO.z*(uHind > .5 ? -1. : 0.), y = vO.y;
+  float d = uHind > .5
+    ? (0.5 + 0.35*o - 0.25*smoothstep(-.35, -.7, y)) - (-y)*1.0 - 0.0          // thigh: edge curves lower on the outside, round toward the hock
+    : o - (0.05 + 1.1*smoothstep(-.15, -.68, y));                                // shoulder stripe: wide at the top, tapering to a point down the outer leg
+  d = uHind > .5 ? d : d;
+  float wc = fwidth(d)*1.2 + 1e-4; base = mix(base, uMain, smoothstep(-wc, wc, d));`
+const legMat = (c, hind, side) => patchFur(`pipLeg${hind}${side}`, c.col.cream, { glsl: LEG_GLSL + LEG_COAT, decl: 'uniform vec3 uMain; uniform float uSide, uHind;',
+  uniforms: { uMain: { value: new THREE.Color(c.col.main) }, uSide: { value: side }, uHind: { value: hind } } })
+// the legs' ink outline stops just inside the body, so there's no ring where leg meets torso; only the silhouette below
+const legOutC = {}
+const legOut = (cut) => legOutC[cut] || (legOutC[cut] = (() => { const m = OUT.pet.clone()
+  m.vertexShader = m.vertexShader.replace('void main(){', 'varying float vY; void main(){ vY = position.y;')
+  m.fragmentShader = 'varying float vY;\n' + m.fragmentShader.replace('void main(){', `void main(){ if (vY > ${cut.toFixed(3)}) discard;`)
+  return m })())
 
 export function DogBody({ c, M, set, legs }) {
-  const [bw, bh, bl] = c.body, L = c.legH + bh * 0.2, tm = torsoMat(c), lm = legMat(c)
+  const [bw, bh, bl] = c.body, L = c.legH + bh * 0.2, tm = torsoMat(c)
+  const cut = (hind) => -(bh * (hind ? 0.44 : 0.52)) / L // where the torso's underside crosses the leg, in leg units
   return <>
     <group ref={set('torso')} scale={[bw, bh, bl]}><mesh geometry={torsoGeo} material={tm} /><mesh geometry={torsoGeo} material={OUT.pet} /></group>
     {legs.map(([k, sx, fz]) => <group key={k} ref={set('leg' + k)} position={[sx * bw * (fz > 0 ? 0.5 : 0.54), -bh * 0.35, fz * bl * (fz > 0 ? 0.52 : 0.5)]}>
-      <group scale={[c.legR * (fz > 0 ? 1 : 1.08), L, c.legR * (fz > 0 ? 1 : 1.08)]}><mesh geometry={legGeo} material={lm} /><mesh geometry={legGeo} material={OUT.pet} /></group>
+      <group scale={[c.legR * (fz > 0 ? 1 : 1.08), L, c.legR * (fz > 0 ? 1 : 1.08)]}><mesh geometry={legGeo} material={legMat(c, fz > 0 ? 0 : 1, sx)} /><mesh geometry={legGeo} material={legOut(cut(fz < 0))} /></group>
     </group>)}
   </>
 }

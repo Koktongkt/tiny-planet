@@ -16,9 +16,9 @@ function Pet({ x, yaw, headYaw = 0 }) {
   const cfg = kind === 'pip' ? DOG_CFG : CAT_CFG
   return <group position={[x, 0, 0]} rotation={[0, yaw, 0]}><Quadruped cfg={cfg} st={st} /></group>
 }
-function Cam() { const cam = useThree(s => s.camera); useEffect(() => { if (HEAD) { cam.position.set(0, 0.16, 1.3); cam.lookAt(0, 0.135, 0) } else { cam.position.set(0, 0.18, q.has('one') ? 2.2 : 1.6); cam.lookAt(0, 0.09, 0) } cam.updateProjectionMatrix() }, []); return null }
-const V = HEAD ? [[-0.2, 0, 0], [0, 0.6, 0], [0.2, Math.PI / 2, 0]] : q.has('one') ? [[0, +(q.get('yaw') ?? 0.35), 0]] : [[-1.0, 0.75, 0], [-0.5, Math.PI / 2, 0], [0, 0, 0], [0.5, Math.PI, 0], [1.0, -0.6, 0.3]]
-createRoot(document.getElementById('root')).render(<Canvas dpr={2} camera={{ fov: HEAD ? 11 : q.has('one') ? 6 : 23, near: 0.1, far: 20 }} gl={{ antialias: true }}>
+function Cam() { const cam = useThree(s => s.camera); useEffect(() => { if (q.has('prof')) { cam.position.set(1.3, 0.15, 0.09); cam.lookAt(0, 0.14, 0.09) } else if (HEAD) { cam.position.set(0, 0.16, 1.3); cam.lookAt(0, 0.135, 0) } else { cam.position.set(0, 0.18, q.has('one') ? 2.2 : 1.6); cam.lookAt(0, 0.09, 0) } cam.updateProjectionMatrix() }, []); return null }
+const V = q.has('prof') ? [[0, 0, 0]] : HEAD ? [[-0.2, 0, 0], [0, 0.6, 0], [0.2, Math.PI / 2, 0]] : q.has('one') ? [[0, +(q.get('yaw') ?? 0.35), 0]] : [[-1.0, 0.75, 0], [-0.5, Math.PI / 2, 0], [0, 0, 0], [0.5, Math.PI, 0], [1.0, -0.6, 0.3]]
+createRoot(document.getElementById('root')).render(<Canvas dpr={2} camera={{ fov: q.has('prof') ? 7 : HEAD ? 11 : q.has('one') ? 6 : 23, near: 0.1, far: 20 }} gl={{ antialias: true }}>
   <color attach="background" args={['#fbf1e6']} /><hemisphereLight args={['#fff4e4', '#e8d8c0', 1.15]} /><directionalLight position={[1.5, 3, 4]} intensity={2.2} color="#fff3dc" />
   <Stats /><Cam />{V.map(([x, y, h], i) => <Pet key={i} x={x} yaw={y} headYaw={h} />)}
 </Canvas>)
