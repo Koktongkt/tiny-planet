@@ -108,16 +108,27 @@ defineProp('coatStand', { name: 'Coat stand', size: [0.26, 0.62, 0.12], tags: ['
   k.pill([0.09, 0.008], [0.08, 0.49, 0.06], 'hat', { rot: [1.25, 0, 0], bevel: 0.5 }); k.dome(0.05, [0.08, 0.493, 0.064], 'hat', { rot: [1.25, 0, 0] }); k.pill([0.051, 0.012], [0.08, 0.497, 0.067], 'band', { rot: [1.25, 0, 0], bevel: 0.3, out: false })
 })
 
-// an arched front door leaf: planks, a little window, ring knocker, iron straps. Hinge on its left edge at x = -w/2.
-defineProp('doorLeaf', { name: 'Door', size: [0.3, 0.58, 0.04], tags: ['entry'], pal: { wood: '#b0703f', plank: '#8a5634', pane: '#ffe2a6', iron: 'ironDark' }, opts: { w: 0.3, h: 0.58 } }, (k, o) => {
+// an arched front door leaf, as in the concept: vertical planks under a round top, a four-pane window in the upper
+// half, iron straps and a ring knocker. Hinge on its left edge at x = -w/2.
+defineProp('doorLeaf', { name: 'Door', size: [0.28, 0.5, 0.04], tags: ['entry'], pal: { wood: '#c07a44', plank: '#8a5634', pane: '#ffe2a6', mull: '#9a6038', iron: 'ironDark' }, opts: { w: 0.28, h: 0.5 } }, (k, o) => {
   const w = o.w, hr = o.h - w / 2
-  k.arch(w - 0.01, hr, 0.03, [0, 0, 0], 'wood', { bevel: 0.01, pattern: 'planks', tile: 1 })
-  for (const dx of [-0.075, 0, 0.075]) k.box([0.006, hr * 0.7, 0.004], [dx, hr * 0.35, 0.022], 'plank', { r: 0.002, out: false })
-  k.arch(0.13, 0.03, 0.01, [0, hr - 0.02, 0.018], 'pane', { glow: true, bevel: 0 })
-  k.box([0.012, 0.11, 0.012], [0, hr + 0.03, 0.026], 'plank', { r: 0.004, out: false }); k.box([0.13, 0.012, 0.012], [0, hr + 0.015, 0.026], 'plank', { r: 0.004, out: false })
-  k.archFrame(0.13, 0.03, 0.012, 0.01, [0, hr - 0.02, 0.024], 'plank', { out: false })
-  for (const y of [0.08, hr - 0.05]) k.box([0.1, 0.018, 0.008], [-w / 2 + 0.06, y, 0.022], 'iron', { r: 0.005, out: false })
-  k.ring(0.024, 0.006, [w * 0.28, hr * 0.5, 0.032], 'iron', { out: false }); k.ball(0.011, [w * 0.28, hr * 0.5 + 0.024, 0.026], 'iron', { out: false })
+  k.arch(w - 0.008, hr, 0.032, [0, 0, 0], 'wood', { bevel: 0.01, pattern: 'planks', tile: 1 })
+  for (const dx of [-w * 0.25, 0, w * 0.25]) k.box([0.005, hr * 0.62, 0.004], [dx, hr * 0.31, 0.023], 'plank', { r: 0.002, out: false })
+  // window: an arched opening with a cross of mullions (four warm panes)
+  const ww = w * 0.5, wy = hr - 0.02
+  k.arch(ww, 0.035, 0.006, [0, wy, 0.03], 'pane', { glow: true, bevel: 0 })
+  k.archFrame(ww, 0.035, 0.013, 0.012, [0, wy, 0.034], 'mull', { out: false })
+  k.box([0.012, 0.035 + ww / 2, 0.01], [0, wy + (0.035 + ww / 2) / 2, 0.037], 'mull', { r: 0.004, out: false }); k.box([ww, 0.012, 0.01], [0, wy + 0.045, 0.037], 'mull', { r: 0.004, out: false })
+  for (const y of [0.07, hr * 0.62]) k.box([w * 0.3, 0.016, 0.008], [-w / 2 + w * 0.17, y, 0.024], 'iron', { r: 0.005, out: false })
+  k.ring(0.022, 0.006, [w * 0.3, hr * 0.45, 0.034], 'iron', { out: false }); k.ball([0.012, 0.012, 0.008], [w * 0.3, hr * 0.45 + 0.022, 0.028], 'iron', { out: false })
+})
+
+// the door's surround: a fat rounded wooden arch hugging the door, on a stone threshold
+defineProp('doorFrame', { name: 'Door frame', size: [0.4, 0.56, 0.12], tags: ['entry', 'structure'], pal: { frame: '#d79a5c', inner: 'woodDark', sill: 'stone' }, opts: { w: 0.28, h: 0.5, f: 0.05, d: 0.11 } }, (k, o) => {
+  const hr = o.h - o.w / 2
+  k.archFrame(o.w + 0.004, hr, o.f, o.d, [0, 0, 0], 'frame')
+  k.archFrame(o.w - 0.004, hr, 0.012, o.d + 0.012, [0, 0, 0], 'inner', { out: false })
+  k.box([o.w + o.f * 2 + 0.03, 0.03, o.d + 0.05], [0, 0.0, 0.01], 'sill', { r: 0.012 })
 })
 
 // a chunky arched wall piece with a doorway (the front door's surround, or a room partition)
@@ -166,20 +177,23 @@ defineProp('petBowls', { name: 'Pet bowls', size: [0.36, 0.12, 0.14], tags: ['pe
 })
 
 // ---------- porch ----------
-defineProp('lanternPost', { name: 'Lantern post', size: [0.14, 0.36, 0.14], tags: ['outdoor', 'light'], pal: { stone: 'stone', cap: 'stoneDark', cage: 'ironDark', trim: 'brass', glass: '#ffd27a', core: '#fff3cf' } }, (k) => {
-  k.box([0.12, 0.16, 0.12], [0, 0.08, 0], 'stone', { r: 0.025, belly: 0.05 }); k.box([0.14, 0.022, 0.14], [0, 0.17, 0], 'cap', { r: 0.01 })
-  const y = 0.18; k.pill([0.05, 0.022], [0, y + 0.011, 0], 'cage', { bevel: 0.4 })
-  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2; k.box([0.06, 0.085, 0.006], [Math.sin(a) * 0.037, y + 0.07, Math.cos(a) * 0.037], 'glass', { r: 0.002, rot: [0, a, 0], glow: true }) }
-  k.ball([0.02, 0.03, 0.02], [y * 0, y + 0.068, 0], 'core', { glow: true })
-  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + PI / 4; k.stick([0.008, 0.096], [Math.sin(a) * 0.045, y + 0.07, Math.cos(a) * 0.045], 'cage') }
-  k.cone([0.074, 0.05], [0, y + 0.14, 0], 'cage', { n: 4, rot: [0, PI / 4, 0] }); k.ball(0.013, [0, y + 0.17, 0], 'trim', { out: false })
-  k.halo([0, y + 0.07, 0], 0.13, '#ffc870', { flicker: true })
+defineProp('lanternPost', { name: 'Lantern post', size: [0.13, 0.36, 0.13], tags: ['outdoor', 'light'], pal: { stone: 'stone', stone2: '#f4ebde', cap: 'stoneDark', cage: 'ironDark', trim: 'brass', glass: '#ffd27a', core: '#fff3cf' } }, (k) => {
+  k.box([0.12, 0.09, 0.12], [0, 0.045, 0], 'stone', { r: 0.022, belly: 0.05 }); k.box([0.105, 0.08, 0.105], [0, 0.128, 0], 'stone2', { r: 0.02, belly: 0.05 })
+  k.box([0.125, 0.02, 0.125], [0, 0.175, 0], 'cap', { r: 0.008 })
+  const y = 0.185; k.pill([0.045, 0.02], [0, y + 0.01, 0], 'cage', { bevel: 0.4 })
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2; k.box([0.055, 0.075, 0.006], [Math.sin(a) * 0.033, y + 0.062, Math.cos(a) * 0.033], 'glass', { r: 0.002, rot: [0, a, 0], glow: true, belly: 0.06 }) }
+  k.ball([0.018, 0.026, 0.018], [0, y + 0.06, 0], 'core', { glow: true })
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + PI / 4; k.stick([0.007, 0.086], [Math.sin(a) * 0.04, y + 0.062, Math.cos(a) * 0.04], 'cage') }
+  k.pill([0.048, 0.01], [0, y + 0.104, 0], 'trim', { bevel: 0.4, out: false })
+  k.cone([0.066, 0.045], [0, y + 0.128, 0], 'cage', { n: 4, rot: [0, PI / 4, 0] }); k.ball(0.012, [0, y + 0.155, 0], 'trim', { out: false })
+  k.halo([0, y + 0.06, 0], 0.13, '#ffc870', { flicker: true })
 })
 defineProp('bush', { name: 'Bush', size: [0.24, 0.16, 0.2], tags: ['outdoor', 'plant'], pal: { a: '#86a845', b: '#9bbb52', c: '#73953a' } }, (k) => {
   for (const [x, y, z, r, c] of [[0, 0.06, 0, 0.085, 'a'], [0.08, 0.045, 0.02, 0.065, 'b'], [-0.08, 0.045, 0.02, 0.065, 'c'], [0.02, 0.11, -0.02, 0.06, 'b'], [-0.04, 0.08, 0.05, 0.05, 'a']]) k.ball(r, [x, y, z], c)
 })
-defineProp('steps', { name: 'Stone steps', size: [0.56, 0.06, 0.3], tags: ['outdoor', 'entry'], pal: { a: 'stone', b: 'stoneDark' }, opts: { shadow: false } }, (k) => {
-  k.box([0.46, 0.06, 0.16], [0, -0.03, 0.08], 'a', { r: 0.02 }); k.box([0.56, 0.06, 0.15], [0, -0.085, 0.22], 'b', { r: 0.02 })
+defineProp('steps', { name: 'Stone steps', size: [0.5, 0.08, 0.32], tags: ['outdoor', 'entry'], pal: { a: '#f1e6d6', b: 'stoneDark', mat: '#fbf1e0', matEdge: '#e2c39a' }, opts: { shadow: false, mat: true } }, (k, o) => {
+  k.box([0.42, 0.05, 0.15], [0, -0.025, 0.075], 'a', { r: 0.02, belly: 0.03 }); k.box([0.5, 0.05, 0.15], [0, -0.07, 0.2], 'b', { r: 0.02, belly: 0.03 })
+  if (o.mat) { k.box([0.25, 0.008, 0.11], [0, 0.003, 0.075], 'matEdge', { r: 0.02, out: false, hi: 0 }); k.box([0.21, 0.01, 0.08], [0, 0.005, 0.075], 'mat', { r: 0.016, out: false, hi: 0 }) }
 })
 
 // a plain partition wall with a timber cap (pairs with archWall)

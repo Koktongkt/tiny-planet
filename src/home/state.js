@@ -7,7 +7,7 @@ import { q, VIEW } from '../common.jsx'
 // Round9 interior: a ROUND room (|x/A|^n + |z/B|^n = 1 with A = B, n = 2) seen from above its low front rim, furnished
 // with the chibi prop kit. Sized to her (she is ~0.39 room units tall): door 0.58, counter 0.24, bed top 0.16.
 export const ROOM = { A: 1.5, B: 1.5, n: 2, x0: -1.5, x1: 1.5, z0: -1.5, z1: 1.5, h: 1.05, rim: 0.13, y: 0, S: 1.25 } // S: the room group's scale (room units -> planet units)
-export const DOOR = { x: 0, z: 1.5, w: 0.3, h: 0.58 } // in the front rim, facing the camera (camera looks toward -z)
+export const DOOR = { x: 0, z: 1.5, w: 0.28, h: 0.5 } // in the front rim, facing the camera (camera looks toward -z)
 // wall height round the room: full at the back, sloping down to the low front rim (the cut-away)
 export const wallH = (z) => { const k = Math.min(1, Math.max(0, (z - 0.5) / 0.65)); return ROOM.h + (ROOM.rim - ROOM.h) * k * k * (3 - 2 * k) }
 // furniture footprints (room-local x/z boxes) used for her collision, the cat's steering and placement checks;

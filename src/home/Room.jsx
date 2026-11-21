@@ -10,7 +10,7 @@ import { HOME, ROOM, DOOR, resolve, freeAt, roomToWorld } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { T, q, VIEW, setViewMode } from '../common.jsx'
 import { R, height } from '../world.js'
-import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, DoorWay, LAMP, LAYOUT } from './interior.jsx'
+import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, DoorWay, Smoke, LAMP, LAYOUT } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
@@ -72,6 +72,7 @@ const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _X = new THREE.
 // clip a wall), easing after her and leaning toward the cat when he's close. Zoom / pitch from the touch + wheel controls.
 const camL = new THREE.Vector3(), lookL = new THREE.Vector3(), _goal = new THREE.Vector3(), _look = new THREE.Vector3()
 const WIDE = q.get('homecam') === 'wide' // debug: the whole room, concept-style
+const FREECAM = /,/.test(q.get('homecam') || '') ? q.get('homecam').split(',').map(Number) : null // debug: ?homecam=x,y,z,lookX,lookY,lookZ (room units)
 let fov0 = null
 HOME.camera = (camera, g, dt) => {
   if (!HOME.inside && HOME.snapOut > 0) { window.__snap = true; if (--HOME.snapOut === 0) setTimeout(() => { window.__snap = HOME.snap0 }, 0) } // land the follow camera behind her at once
@@ -85,8 +86,9 @@ HOME.camera = (camera, g, dt) => {
   _look.set(Math.max(-1.2, Math.min(1.2, fx)) * 0.8, 0.14 + CAT.y * w * 0.5, Math.max(-1.0, Math.min(1.3, fz)) * 0.85 - 0.04)
   _goal.set(_look.x * 0.7, _look.y + Math.sin(el) * D, _look.z + Math.cos(el) * D)
   if (WIDE) { _look.set(0, 0.0, -0.05); _goal.set(0, 3.7, 3.7) }
+  if (FREECAM) { _goal.set(FREECAM[0], FREECAM[1], FREECAM[2]); _look.set(FREECAM[3], FREECAM[4], FREECAM[5]) }
   if (PETCAM) { const a = window.__camA ?? (+PETCAM || 0.5), dd = window.__camD ?? 0.55; _goal.set(CAT.x + Math.sin(a) * dd, CAT.y + (window.__camH ?? 0.32 * dd / 0.55 * 0.8 + 0.06), CAT.z + Math.cos(a) * dd); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
-  const ps = HOME.pose; if (ps && !PETCAM && !WIDE && ps.cam !== false) { const pk = Math.min(1, ps.k) // activities frame the bed / tub / desk ...
+  const ps = HOME.pose; if (ps && !PETCAM && !WIDE && !FREECAM && ps.cam !== false) { const pk = Math.min(1, ps.k) // activities frame the bed / tub / desk ...
     if (ps.cam && ps.cam.p) { _goal.lerp(_a.fromArray(ps.cam.p), pk); _look.lerp(_b.fromArray(ps.cam.l), pk) }
     else { _b.set(ps.x * 0.85, 0.16 + (ps.y || 0), ps.z - 0.04); _look.lerp(_b, pk); _goal.lerp(_a.set(_b.x * 0.8, _b.y + 1.25, _b.z + 1.1), pk) } }
   const k = snapFrames > 0 ? 1 : 1 - Math.exp(-dt * 2.0); snapFrames-- // polish: softer interior cam
@@ -161,7 +163,7 @@ export function Room() {
   })
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
-    <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Lamp /><NightGlow />
+    <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><Lamp /><NightGlow />
     <Merge><Shell /></Merge>
     <React.Suspense fallback={null}><Activities /></React.Suspense>
     <InsideDecor />

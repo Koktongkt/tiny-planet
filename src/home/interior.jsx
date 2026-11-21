@@ -32,8 +32,9 @@ export const local = (pl, lx, lz) => { const c = Math.cos(pl.yaw), s = Math.sin(
 const P = {}
 P.counter = against(-8, 0.9, 0.27)
 P.fridge = against(23, 0.28, 0.22)
-P.firewood = against(-31, 0.26, 0.2)
 P.stove = against(-50, 0.42, 0.42)
+P.firewood = (() => { const [x, z] = local(P.stove, 0.31, -0.06); return { x, z, yaw: P.stove.yaw } })() // tucked right beside the stove
+export const FLUE = 0.39 // stove pipe: back through the wall to a chimney outside
 P.desk = against(-82, 0.56, 0.32)
 P.bigPlant = against(-131, 0.34, 0.34)
 P.petBowls = against(-158, 0.36, 0.14)
@@ -56,7 +57,7 @@ P.toilet = against(63, 0.16, 0.22)
 // walls: windows, shelves, pictures
 const KW = -13, LW = -112, PORT = 47
 P.kitchenWindow = onWall(KW, 0.4); P.leftWindow = onWall(LW, 0.4)
-P.jarShelf = onWall(10, 0.62, 0.5); P.bookShelf = onWall(-31, 0.58, 0.44); P.pegboard = onWall(-82, 0.36, 0.42)
+P.jarShelf = onWall(10, 0.62, 0.5); P.bookShelf = onWall(-37, 0.6, 0.44); P.pegboard = onWall(-82, 0.36, 0.42)
 P.picture = onWall(109, 0.42, 0.22); P.towelRail = { x: NOOK.x0 + 0.03, y: 0.32, z: -0.72, yaw: Math.PI / 2 }
 export const LAYOUT = P
 
@@ -65,7 +66,7 @@ export const OPEN = [
   { phi: LW, w: 0.34, y0: 0.4, ys: 0.62, arch: true }, // sunny window, left
   { phi: KW, w: 0.36, y0: 0.42, ys: 0.64, arch: true }, // kitchen window
   { phi: PORT, w: 0.15, y0: 0.56, ys: 0.7, round: true }, // bath porthole
-  { phi: 180, w: 0.34, y0: 0, ys: 9 }, // the doorway (the door has its own arched wall)
+  { phi: 180, w: 0.38, y0: 0, ys: 9 }, // the doorway (the door has its own arched frame)
 ]
 // spots other modules use (activities, the cat): all in room x/z
 const cook = local(P.counter, 0.19, 0), sink = local(P.counter, -0.12, 0), cookStand = local(P.counter, 0.19, 0.36)
@@ -142,7 +143,7 @@ function capBlocks() {
   for (let i = 1; i <= N; i++) { const p = ring[i % N]; acc += Math.hypot(p.x - ring[(i - 1) % N].x, p.z - ring[(i - 1) % N].z)
     if (acc < 0.2 && i < N) continue
     const ax = last.x - last.nx * T_ / 2, az = last.z - last.nz * T_ / 2, bx = p.x - p.nx * T_ / 2, bz = p.z - p.nz * T_ / 2, mx = (ax + bx) / 2, mz = (az + bz) / 2
-    if (!(mz > 0.5 && Math.abs(mx) < 0.34)) { const L = Math.hypot(bx - ax, bz - az), ha = wallH(last.z), hb = wallH(p.z)
+    if (!(mz > 0.5 && Math.abs(mx) < 0.22)) { const L = Math.hypot(bx - ax, bz - az), ha = wallH(last.z), hb = wallH(p.z)
       out.push({ p: [mx, (ha + hb) / 2 + 0.025, mz], s: [L + 0.012, 0.055, T_ + 0.045], rot: [0, Math.atan2(-(bz - az), bx - ax), Math.atan2(hb - ha, L)], post: k % 4 === 0 }) }
     last = p; acc = 0; k++ }
   return out
@@ -229,11 +230,20 @@ function NookTiles() {
 export function DoorWay() {
   const leaf = useRef()
   useFrame((_, dt) => { if (leaf.current) leaf.current.rotation.y += ((HOME.doorOpen ? 1.25 : 0) - leaf.current.rotation.y) * Math.min(1, dt * 6) })
-  const { x, z, w } = DOOR
+  const { x, z, w, h } = DOOR, zc = z + 0.035 // centred in the wall's thickness
   return <group>
-    <Prop id="archWall" opts={{ w: 0.54, h: 0.7, d: 0.1, openW: w + 0.01, openH: DOOR.h - w / 2 }} position={[x, 0, z - 0.03]} />
-    <group ref={leaf} position={[x - w / 2, 0, z - 0.06]}><Prop id="doorLeaf" opts={{ w, h: DOOR.h }} position={[w / 2, 0, 0]} /></group>
+    <Prop id="doorFrame" opts={{ w, h, f: 0.05, d: 0.12 }} position={[x, 0, zc]} />
+    <group ref={leaf} position={[x - w / 2, 0, zc - 0.03]}><Prop id="doorLeaf" opts={{ w, h }} position={[w / 2, 0, 0]} /></group>
   </group>
+}
+// wood smoke curling out of the chimney outside
+const smokeTex = (() => { let t; return () => { if (t) return t; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 2, 32, 32, 30); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.6, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); t = new THREE.CanvasTexture(c); return t } })()
+export function Smoke() {
+  const ref = useRef(), [cx, cz] = local(P.stove, 0, -0.02 - FLUE), y0 = 1.37
+  const puffs = useMemo(() => [...Array(7)].map((_, i) => ({ m: new THREE.SpriteMaterial({ map: smokeTex(), color: '#a89aa2', transparent: true, depthWrite: false, opacity: 0 }), o: i / 7 })), [])
+  useFrame(() => { const t = performance.now() / 1000, g = ref.current; if (!g) return
+    g.children.forEach((sp, i) => { const p = puffs[i], u = (t * 0.22 + p.o) % 1; sp.position.set(Math.sin(u * 4 + i) * 0.04 + u * 0.12, u * 0.55, Math.cos(u * 3 + i) * 0.03 - u * 0.05); sp.scale.setScalar(0.06 + u * 0.16); p.m.opacity = Math.min(1, u * 6) * (1 - u) * 0.85 * (1 - 0.4 * T.night) }) })
+  return <group ref={ref} position={[cx, y0, cz]}>{puffs.map((p, i) => <sprite key={i} material={p.m} />)}</group>
 }
 
 // ---------- everything static, placed ----------
@@ -243,7 +253,7 @@ export function Shell() {
   return <>
     <Walls /><NookTiles />
     <Prop id="counter" {...at(P.counter)} />
-    <Prop id="fridge" {...at(P.fridge)} /><Prop id="firewood" {...at(P.firewood)} /><Prop id="woodStove" {...at(P.stove)} />
+    <Prop id="fridge" {...at(P.fridge)} /><Prop id="firewood" {...at(P.firewood)} /><Prop id="woodStove" {...at(P.stove)} opts={{ flue: FLUE }} />
     <Prop id="jarShelf" {...at(P.jarShelf)} /><Prop id="bookShelf" {...at(P.bookShelf)} />
     <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4 }} /><Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39 }} />
     <Prop id="desk" {...at(P.desk)} /><Prop id="pegboard" {...at(P.pegboard)} /><Prop id="stool" {...at(P.stool)} />
@@ -253,15 +263,15 @@ export function Shell() {
     <Prop id="wardrobe" {...at(P.wardrobe)} /><Prop id="nightstand" {...at(P.nightstand)} /><Prop id="bed" {...at(P.bed)} /><Prop id="runner" {...at(P.runner)} />
     <Prop id="picture" {...at(P.picture)} /><Prop id="coatStand" {...at(P.coatStand)} />
     {/* bath nook: partition (plain side wall + arched front), tub, loo, towel, porthole frame */}
-    <Prop id="wallPanel" opts={{ w: 1.06, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.53]} rotation-y={Math.PI / 2} />
+    <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
     <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
     <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} /><Prop id="towelRail" {...at(P.towelRail)} />
     {(() => { const pl = onWall(PORT, 0); return <group position={[pl.x, (OPEN[2].y0 + OPEN[2].ys) / 2, pl.z]} rotation-y={pl.yaw}><O geo={GEO.tor} mat={tm(W.light)} scale={[0.082, 0.082, 0.06]} out={OUT.fine} /></group> })()}
-    {/* front: lantern posts on the rim, steps, daisy pots and bushes outside */}
-    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 15, R + 0.02); return <Prop key={s} id="lanternPost" position={[x, 0, z]} /> })}
-    <Prop id="steps" position={[0, 0, R + 0.16]} />
-    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 25, R + 0.13); return <Prop key={'f' + s} id="flowerPot" position={[x, 0, z]} /> })}
-    {[[-150, 0.18], [150, 0.18], [-118, 0.2], [118, 0.2], [-200, 0.25], [200, 0.25]].map(([a, d], i) => { const [x, z] = polar(a, R + d); return <Prop key={'b' + i} id="bush" position={[x, -0.02, z]} rotation-y={i} /> })}
+    {/* front entrance, as in the concept: lantern posts hugging the door frame, stone steps with a mat, daisy pots, bushes */}
+    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 10.5, R + 0.03); return <Prop key={s} id="lanternPost" position={[x, 0, z]} /> })}
+    <Prop id="steps" position={[0, 0, R + 0.08]} />
+    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 17, R + 0.17); return <Prop key={'f' + s} id="flowerPot" position={[x, 0, z]} rotation-y={s} /> })}
+    {[[-154, 0.2, 1], [154, 0.2, 1], [-125, 0.2, 0.9], [125, 0.2, 0.9], [-203, 0.24, 0.8], [203, 0.24, 0.8]].map(([a, d, k], i) => { const [x, z] = polar(a, R + d); return <Prop key={'b' + i} id="bush" position={[x, -0.02, z]} rotation-y={i} scale={k} /> })}
   </>
 }
 // the hanging lantern: a bracket out of the back wall, the lantern sways from its tip (Room.jsx)
