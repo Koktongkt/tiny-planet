@@ -38,15 +38,19 @@ const NOSE = (() => { const y = -0.11, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); r
 // ---------- coat: cream with Siamese points ----------
 const HEAD_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
   // diamond mask: a point high on the forehead, around both eyes, rounding off around the nose and mouth (front only)
-  float u = (0.0 - p.y)/0.34; float hw = p.y > 0.46 ? -1. : p.y > 0.0 ? 0.62*pow((0.46 - p.y)/0.46, 0.9) : 0.62*(1. - pow(clamp(u, 0., 1.), 1.5));
+  float hw = p.y > 0.46 ? -1. : p.y > 0.0 ? 0.62*pow((0.46 - p.y)/0.46, 0.9) : 0.;
+  // under the eyes it flares out into a wing past each eye's outer corner, then sweeps back in to the point below the mouth
+  float wing = p.y > -0.08 ? 0.8*sqrt(max(0., 1. - pow((p.y + 0.08)/0.11, 2.))) : 0.8*(1. - pow(clamp((-0.08 - p.y)/0.26, 0., 1.), 1.25));
+  hw = max(hw, p.y < 0.03 ? wing : 0.);
   if (hw < .004) hw = -1.; // the mask ends at its tips: no zero-width sliver running on up the head or down the chin // point high on the forehead, rounder below
   // ...and where it reaches the eyes it wraps right round them
   float eyeR = 1. - length(vec2((ax - 0.39) / 0.27, (p.y - 0.0) / 0.27));
   float m = min(max(hw - ax, eyeR*0.27), p.z - 0.05); w = fwidth(m)*1.2 + 1e-4; float dark = smoothstep(-w, w, m);
   // whisker stripes on the cheeks: two tapered bands sloping down and out
   // (short: they start just outside the mask and taper to a point going back along the cheek)
-  float sx = smoothstep(.56, .64, ax), sb = 0.5 - p.z, o = ax - .56;
-  for (int k = 0; k < 2; k++) { float yc = -0.16 - 0.14*float(k) - 0.18*o - 0.12*max(sb - .25, 0.), th = 0.055*(1. - smoothstep(.3, .8, sb))*smoothstep(.24, .32, sb);
+  // (bold, starting just under the mask's wing and sloping down and out past the edge of the face)
+  float sx = smoothstep(.56, .62, ax), o = ax - .56;
+  for (int k = 0; k < 2; k++) { float yc = -0.21 - 0.13*float(k) - 0.14*o, th = 0.062*(1. - 0.45*smoothstep(0., .5, o))*smoothstep(-.3, -.1, p.z);
     float b = th > .004 ? th - abs(p.y - yc) : -1.; w = fwidth(b)*1.2 + 1e-4; dark = max(dark, sx*smoothstep(-w, w, b)); } // (a zero-width band would leave a hairline)
   // three stripes from the crown down the back of the head
   float back = (1. - smoothstep(.0, .15, p.z))*step(.05, p.y);
@@ -85,7 +89,7 @@ function paint(x, eyesOpen, mouthOpen) {
 }
 const FACE = faceDecal(sdf, { X0, X1, Y0, Y1, paint })
 // whiskers: two thin strokes a side, continuing the cheek stripes past the outline
-const WHISK = [-1, 1].flatMap(s => [0, 1].map(k => { const x = s * 0.98, y = -0.17 - 0.15 * k - 0.07, t = hit([x * 1.2, y, 0.3], [-s, 0, 0], 0, 1.5); return { s, k, p: [x * 1.2 - s * (t ?? 0.2), y, 0.3] } }))
+const WHISK = [-1, 1].flatMap(s => [0, 1].map(k => { const x = s * 0.98, y = -0.21 - 0.13 * k - 0.14 * 0.45, t = hit([x * 1.2, y, 0.3], [-s, 0, 0], 0, 1.5); return { s, k, p: [x * 1.2 - s * (t ?? 0.2), y, 0.3] } }))
 
 export function CatHead({ c, M, set }) {
   const hr = c.head, fm = useMemo(FACE.mat, []), hm = headMat(c)
@@ -93,6 +97,6 @@ export function CatHead({ c, M, set }) {
     <mesh geometry={headGeo} material={hm} /><mesh geometry={headGeo} material={OUT.pet} />
     <mesh ref={set('face')} geometry={FACE.geo} material={fm} renderOrder={2} />
     <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.075, 0.05, 0.04]} /></group>
-    {c.whiskers && WHISK.map(({ s, k, p }) => <mesh key={s + '' + k} geometry={GEO.box} material={M.whisker} position={[p[0] + s * 0.12, p[1] - 0.03, p[2]]} rotation={[0, s * 0.25, -s * (0.1 + 0.12 * k)]} scale={[0.3, 0.02, 0.02]} />)}
+    {c.whiskers && WHISK.map(({ s, k, p }) => <mesh key={s + '' + k} geometry={GEO.box} material={M.dark} position={[p[0] + s * 0.08, p[1] - 0.02, p[2]]} rotation={[0, s * 0.25, -s * (0.14 + 0.1 * k)]} scale={[0.24, 0.032, 0.032]} />)}
   </group>
 }
