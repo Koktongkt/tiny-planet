@@ -94,7 +94,7 @@ test('indoor controls: walk, turn, go out of the door', async ({ page }) => {
   expect(Math.abs(await page.evaluate(() => window.__home.hp.yaw) - h1.yaw)).toBeGreaterThan(0.2)
   await hold(page, ['w'], 5000) // walk into a wall: stays in the room
   const h2 = await page.evaluate(() => window.__home.hp); expect(Math.abs(h2.x)).toBeLessThan(1.6); expect(Math.abs(h2.z)).toBeLessThan(1.6)
-  await page.evaluate(() => { const H = window.__home; H.hp.x = 0.78; H.hp.z = -0.85; H.hp.target = null })
+  await page.evaluate(() => { const H = window.__home; H.hp.x = H.DOOR.x; H.hp.z = H.DOOR.z - 0.16; H.hp.target = null })
   await page.waitForFunction(() => window.__game.G.near?.id === 'door' || /door/i.test(window.__game.G.near?.verb + window.__game.G.near?.name), null, { timeout: 20_000 }).catch(() => {})
   await page.keyboard.press('e')
   await page.waitForFunction(() => !window.__home.inside, null, { timeout: 30_000 })

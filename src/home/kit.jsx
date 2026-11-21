@@ -20,7 +20,7 @@ export const GEO = (() => {
   const g = {}
   g.sph = new THREE.SphereGeometry(1, 20, 14); g.sphL = new THREE.SphereGeometry(1, 12, 8)
   g.box = new THREE.BoxGeometry(1, 1, 1); g.cyl = new THREE.CylinderGeometry(1, 1, 1, 16); g.cyl6 = new THREE.CylinderGeometry(1, 1, 1, 8)
-  g.cone = new THREE.ConeGeometry(1, 1, 14); g.cap = new THREE.CapsuleGeometry(1, 1, 4, 10)
+  g.cone = new THREE.ConeGeometry(1, 1, 14); g.cone4 = new THREE.ConeGeometry(1, 1, 4); g.cap = new THREE.CapsuleGeometry(1, 1, 4, 10)
   g.half = new THREE.SphereGeometry(1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2); g.tor = new THREE.TorusGeometry(1, 0.25, 8, 22)
   g.plane = new THREE.PlaneGeometry(1, 1); g.circ = new THREE.CircleGeometry(1, 28)
   const rb = new THREE.BoxGeometry(1, 1, 1, 3, 3, 3), p = rb.attributes.position, v = new THREE.Vector3() // soft "pillow" box
