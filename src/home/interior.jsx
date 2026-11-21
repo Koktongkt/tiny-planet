@@ -48,9 +48,9 @@ P.flowerPot = against(147, 0.17, 0.17)
 const pol = (phi, r, yaw = 0) => { const [x, z] = polar(phi, r); return { x, z, yaw } }
 P.petBed = pol(-147, 0.98, 0.4)
 P.table = { x: 0, z: 0.06, yaw: 0 }
-P.poufL = { x: -0.37, z: 0.1, yaw: 0.2 }; P.poufR = { x: 0.38, z: 0.12, yaw: -0.3 }
+P.poufL = { x: -0.34, z: 0.1, yaw: 0.2 }; P.poufR = { x: 0.34, z: 0.1, yaw: -0.3 }
 P.stool = (() => { const [x, z] = local(P.desk, -0.02, 0.3); return { x, z, yaw: P.desk.yaw } })()
-P.rug = { x: 0.0, z: 0.1, yaw: 0 }
+P.rug = { x: 0.0, z: 0.09, yaw: 0 }
 P.runner = (() => { const [x, z] = local(P.bed, -0.42, 0.08); return { x, z, yaw: P.bed.yaw } })()
 // bath nook: back-right, behind a partition wall with an arch
 export const NOOK = { x0: 0.76, z1: -0.3 }
@@ -94,7 +94,9 @@ export const SPOTS = {
 }
 
 // furniture footprints for collision (rotated boxes -> their x/z bounds, trimmed a little so round walls don't over-block)
-const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size, c = Math.abs(Math.cos(pl.yaw)), s = Math.abs(Math.sin(pl.yaw)), hw = (w * c + d * s) / 2 * k, hd = (w * s + d * c) / 2 * k; return { id, x0: pl.x - hw, x1: pl.x + hw, z0: pl.z - hd, z1: pl.z + hd } }
+// oriented boxes (they turn with the prop), plus their x/z bounds for a quick reject
+const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size, c = Math.cos(pl.yaw), s = Math.sin(pl.yaw), hw = w / 2 * k, hd = d / 2 * k, ex = hw * Math.abs(c) + hd * Math.abs(s), ez = hw * Math.abs(s) + hd * Math.abs(c)
+  return { id, obb: true, cx: pl.x, cz: pl.z, c, s, hw, hd, x0: pl.x - ex, x1: pl.x + ex, z0: pl.z - ez, z1: pl.z + ez } }
 export const BLOCK_LIST = () => [
   fp('counter', P.counter), fp('fridge', P.fridge), fp('firewood', P.firewood), { ...fp('woodStove', P.stove, 0.7), id: 'stove' }, fp('desk', P.desk), fp('stool', P.stool, 0.8),
   fp('bigPlant', P.bigPlant, 0.75), fp('petBowls', P.petBowls, 0.7), { ...fp('petBed', P.petBed, 0.85), id: 'petbed', round: true }, fp('coatStand', P.coatStand, 0.7),
@@ -310,7 +312,7 @@ export function Shell() {
     <Alcove />
     <Prop id="desk" {...at(P.desk)} /><Prop id="pegboard" {...at(P.pegboard)} /><Prop id="stool" {...at(P.stool)} />
     <Prop id="petBed" {...at(P.petBed)} /><Prop id="petBowls" {...at(P.petBowls)} />
-    <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.55, rz: 0.46, shadow: false }} pal={{ rug: '#f2dcc0', ring: '#e2b98e' }} />
+    <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.52, rz: 0.4, shadow: false }} />
     <Prop id="roundTable" {...at(P.table)} opts={{ lantern: true }} /><Prop id="pouf" {...at(P.poufL)} /><Prop id="pouf" {...at(P.poufR)} />
     <Prop id="wardrobe" {...at(P.wardrobe)} /><Prop id="nightstand" {...at(P.nightstand)} /><Prop id="bed" {...at(P.bed)} /><Prop id="runner" {...at(P.runner)} />
     <Prop id="coatStand" {...at(P.coatStand)} />

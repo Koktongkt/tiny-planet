@@ -194,10 +194,12 @@ defineProp('picture', { name: 'Framed picture', size: [0.22, 0.18, 0.03], tags: 
 })
 
 // ---------- soft floor things ----------
-defineProp('roundRug', { name: 'Round rug', size: [1.2, 0.02, 0.96], tags: ['living'], pal: { rug: '#f4e4cf', ring: '#e6c9a8' }, opts: { rx: 0.6, rz: 0.48, shadow: false } }, (k, o) => {
-  k.pill([1, 0.012], [0, 0.006, 0], 'ring', { bevel: 0.45, seg: 48, scale: [o.rx, 0.012, o.rz], out: false, hi: 0 })
-  k.pill([1, 0.014], [0, 0.008, 0], 'rug', { bevel: 0.45, seg: 48, scale: [o.rx - 0.04, 0.014, o.rz - 0.04], out: false, hi: 0 })
-  k.ring(1, 0.012, [0, 0.016, 0], 'ring', { rot: [PI / 2, 0, 0], scale: [(o.rx - 0.14), (o.rz - 0.14), 0.4], out: false })
+defineProp('roundRug', { name: 'Round rug', size: [1.0, 0.03, 0.8], tags: ['living'], pal: { field: '#f1d9cc', rim: '#fcf5ec', edge: '#ead2c0' }, opts: { rx: 0.5, rz: 0.4, shadow: false } }, (k, o) => {
+  // as in the concept: a soft pinky-beige oval with a fat, puffy cream rim
+  const t = 0.032 // rim tube radius
+  k.pill([1, 0.008], [0, 0.004, 0], 'edge', { bevel: 0.5, seg: 56, scale: [o.rx + 0.006, 0.008, o.rz + 0.006], out: false, hi: 0 })
+  k.pill([1, 0.012], [0, 0.007, 0], 'field', { bevel: 0.5, seg: 56, scale: [o.rx - t, 0.012, o.rz - t], out: false, hi: 0, shade: 0 })
+  k.ring(1, t / o.rz, [0, 0.012, 0], 'rim', { rot: [Math.PI / 2, 0, 0], scale: [o.rx - t, o.rz - t, 0.55], out: true, hi: 0.12, shade: 0.06 })
 })
 defineProp('runner', { name: 'Runner rug', size: [0.22, 0.02, 0.4], tags: ['living'], pal: { rug: '#f4e4cf', edge: '#e6c9a8' }, opts: { shadow: false } }, (k) => {
   k.box([0.22, 0.012, 0.4], [0, 0.006, 0], 'edge', { r: 0.005, out: false, hi: 0 }); k.box([0.18, 0.014, 0.36], [0, 0.008, 0], 'rug', { r: 0.005, out: false, hi: 0 })
