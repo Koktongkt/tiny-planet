@@ -115,7 +115,14 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
   await page.getByRole('button', { name: 'Hop off', exact: true }).tap()
   await expect(page.locator('.tp-ride')).toHaveCount(0)
   expect(await page.evaluate(() => [...document.querySelectorAll('.key')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.textContent))).toEqual([])
-  await page.waitForFunction(() => window.__dog?.n, null, { timeout: 30_000 })
+  // Wait until Pip has actually hopped out of the crate. While she is riding, his mesh is
+  // parented to the seat but D.n stays at his last ground position. Snapping the player to
+  // that stale n, then letting hopOffSpot run, places him ~0.50m aside — past the 0.42m
+  // pet-chip radius — so .tp-chip never appears. __dog.n exists as soon as the module loads.
+  await page.waitForFunction(() => {
+    const D = window.__dog
+    return !!(D && D.n && D.init && !D.onBike && !(D.hop > 0) && D.state !== 'onBike')
+  }, null, { timeout: 30_000 })
   await page.evaluate(() => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
   const pet = page.locator('.tp-chip').first()
   await expect(pet).toBeVisible({ timeout: 20_000 })
