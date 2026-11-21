@@ -7,7 +7,9 @@ import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { Character, TRAVELLER, CEL_U, M, Merge } from '../../GhibliPerson.jsx'
+import { Character, TRAVELLER, CEL_U, M, Merge, mkOutline } from '../../GhibliPerson.jsx'
+import { makeLife, lifeStep, lifePost, HAIR_OFF, EXCITED_ACTS } from './life.js'
+import { approach } from './lifeCore.js'
 import { T, q } from '../../common.jsx'
 
 const HR = [0.068 / 1.17, 0.0584 / 1.17, 0.0648 / 1.17]
@@ -17,67 +19,37 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 // Pass 2: redrawn against the concept B close-up. Region of the face the decal covers, in head-frame units (planar front
 // projection); 4 expressions in a 2x2 atlas.
 const FX = 0.052, FY0 = -0.047, FY1 = 0.019
-export const FACES = ['happy', 'blink', 'sleepy', 'excited']
+export const FACES = ['happy', 'blink', 'sleepy', 'excited', 'focus']
+// anim1: the atlas now only holds brows, nose and mouth (cells: happy, focus, sleepy, excited). Eyes and blush are drawn
+// analytically in the face shader (same shapes/colours as pass 8) so lids can blink partway, irises can dart, the lower lid
+// can squint, the blush can pulse and expressions crossfade instead of swapping.
+const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3 }
 // pass 6 (KT): features a touch smaller, higher and closer together. FT scales the tweak (1 = chosen, 1.5 = 'stronger').
 const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
 const EYE = { x: 0.0278 - FDX, y: -0.0153 + FDY, rx: 0.0116 * FS, ry: 0.0127 * FS }
+const BLUSH = { x: 0.0383 - FDX, y: -0.0319 + FDY + 0.0004 * FT, r: 0.0105 }
 const IRIS = { top: '#1e1410', mid: '#2a1a12', edge: '#1a110d', glow: '#6b4430' }
 function drawFaces(W) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
-  const g = c.getContext('2d'), s = W / (2 * FX), INK = '#1e1410', BROW = '#3b2621'
+  const g = c.getContext('2d'), s = W / (2 * FX), BROW = '#3b2621'
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
-  const sst = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t) }
-  // lid(x,y,RX,RY,o): o = +1 outer side is +x (viewer-right eye), -1 outer side is -x. Tapered filled band hugging the eye ellipse.
-  const lid = (x, y, RX, RY, o) => {
-    const N = 40, th0 = -0.35, th1 = -Math.PI - 0.45, W = RY * 0.2, P = [], Q = []
-    for (let i = 0; i <= N; i++) { const u = i / N, th = th0 + (th1 - th0) * u
-      const w = W * sst(0, 0.16, u) * (1 - sst(0.6, 1, u)) * (0.78 + 0.32 * sst(0.25, 0.62, u)), c = Math.cos(th), sn = Math.sin(th)
-      P.push([x - o * (RX + w * 0.35) * c, y + (RY + w * 0.35) * sn]); Q.push([x - o * (RX - w * 0.65) * c, y + (RY - w * 0.65) * sn]) }
-    g.fillStyle = INK; g.beginPath(); g.moveTo(...P[0]); P.forEach(q => g.lineTo(...q)); Q.reverse().forEach(q => g.lineTo(...q)); g.closePath(); g.fill() }
-  FACES.forEach((name, k) => {
+  ;['happy', 'focus', 'sleepy', 'excited'].forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
-    // blush: round, saturated pink ovals under the outer eyes, soft rim
-    for (const sd of [-1, 1]) { const x = X(sd * (0.0383 - FDX)), y = Y(-0.0319 + FDY + 0.0004 * FT), r = 0.0105 * s, gr = g.createRadialGradient(x, y, 0, x, y, r)
-      gr.addColorStop(0, 'rgba(244,146,140,.9)'); gr.addColorStop(0.62, 'rgba(244,146,140,.8)'); gr.addColorStop(1, 'rgba(244,146,140,0)'); g.fillStyle = gr; g.beginPath(); el(x, y, r, r * 0.86); g.fill() }
-    // brows: short, thick, softly arched, round ends, tucked just under the bangs
-    const by = (name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : 0.0098) + 0.0004 * FT // eye tops rise only ~0.001 (smaller eyes), brows stay under the bang tips
+    // brows: short, thick, softly arched, round ends, tucked just under the bangs (focus: a touch lower and flatter)
+    const by = (name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : name === 'focus' ? 0.0093 : 0.0098) + 0.0004 * FT, arc = name === 'focus' ? 0.0022 : 0.0031
     g.strokeStyle = BROW; g.lineWidth = 0.0034 * s
-    for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0015)); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + 0.0031), X(sd * (0.0328 - bx)), Y(by - 0.0012)); g.stroke() }
-    // eyes
-    for (const sd of [-1, 1]) {
-      const big = name === 'excited' ? 1.05 : 1, x = X(sd * EYE.x), y = Y(EYE.y), RX = EYE.rx * s * big, RY = EYE.ry * s * big
-      if (name === 'blink' || name === 'sleepy') { // closed: a thick downward-curved lash line, tapered ends
-        const yy = y + RY * (name === 'sleepy' ? 0.2 : 0.1), w = RX * (name === 'sleepy' ? 0.92 : 0.98)
-        g.fillStyle = INK; g.beginPath(); g.moveTo(x - w, yy); g.quadraticCurveTo(x, yy + RY * 0.9, x + w, yy); g.quadraticCurveTo(x, yy + RY * 0.46, x - w, yy); g.fill(); continue }
-      g.fillStyle = '#fffaf4'; g.beginPath(); el(x, y, RX, RY); g.fill() // white
-      g.save(); g.beginPath(); el(x, y, RX, RY); g.clip()
-      // pass 8 (KT): iris pushed toward the nose and narrowed so a clear white crescent shows on the outer side (~22% of the eye width at
-      // mid-height, tapering top and bottom); dark iris + warm lower glow from pass 7; ONE big round highlight upper right
-      const ix = x - sd * RX * 0.22, iy = y + RY * 0.02, IX = RX * 0.78, IY = RY * 0.97
-      g.fillStyle = IRIS.edge; g.beginPath(); el(ix, iy, IX, IY); g.fill()
-      let gr = g.createLinearGradient(0, iy - IY, 0, iy + IY); gr.addColorStop(0, IRIS.top); gr.addColorStop(0.55, IRIS.mid); gr.addColorStop(1, IRIS.mid)
-      g.fillStyle = gr; g.beginPath(); el(ix, iy, IX * 0.9, IY * 0.92); g.fill()
-      g.save(); g.beginPath(); el(ix, iy, IX * 0.9, IY * 0.92); g.clip()
-      gr = g.createRadialGradient(ix, iy + IY * 0.7, 0, ix, iy + IY * 0.7, IX * 0.66); gr.addColorStop(0, 'rgba(107,68,48,.85)'); gr.addColorStop(0.45, 'rgba(107,68,48,.5)'); gr.addColorStop(1, 'rgba(107,68,48,0)')
-      g.fillStyle = gr; g.beginPath(); el(ix, iy + IY * 0.7, IX * 0.66, IY * 0.4); g.fill()
-      g.restore()
-      g.fillStyle = '#fff'; g.beginPath(); el(ix + IX * 0.3, iy - IY * 0.36, RX * 0.34, RX * 0.34); g.fill() // the one highlight, top right
-      g.restore()
-      // soft skin boundary under the eye (no heavy line along the bottom / lower outer side)
-      g.strokeStyle = 'rgba(58,34,26,.28)'; g.lineWidth = 0.0005 * s; g.beginPath(); el(x, y, RX, RY); g.stroke()
-      // thick upper lid: from the nose-side top, over the top, down the outer side, tapering out a little below mid-height
-      lid(x, y, RX, RY, sd)
-    }
+    for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0015 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0012)); g.stroke() }
     // nose: a tiny warm dot
     g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT), 0.0017 * s, 0.0011 * s); g.fill()
-    // mouth: small soft u (happy / blink), little frown (sleepy), open D with tongue (excited)
+    // mouth: small soft u (happy), small flat smile (focus), little frown (sleepy), open D with tongue (excited)
     const my = -0.0351 + FDY + 0.0008 * FT // mouth rises a bit more than the eyes: tighter cluster
     if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
     else { g.strokeStyle = '#c0533f'; g.lineWidth = 0.0021 * s; g.beginPath()
       if (name === 'sleepy') { g.moveTo(X(-0.0042), Y(my - 0.0012)); g.quadraticCurveTo(X(0), Y(my + 0.0026), X(0.0042), Y(my - 0.0012)) }
+      else if (name === 'focus') { g.moveTo(X(-0.0054), Y(my + 0.0004)); g.quadraticCurveTo(X(0), Y(my - 0.0022), X(0.0054), Y(my + 0.0004)) }
       else { g.moveTo(X(-0.0068), Y(my + 0.0013)); g.quadraticCurveTo(X(0), Y(my - 0.0044), X(0.0068), Y(my + 0.0013)) }
       g.stroke() }
     g.restore()
@@ -85,15 +57,60 @@ function drawFaces(W) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t
 }
 let atlas = null
+const lin = (hex) => { const c = new THREE.Color(hex); return `vec3(${c.r.toFixed(5)},${c.g.toFixed(5)},${c.b.toFixed(5)})` } // sRGB hex -> linear (like the sRGB atlas)
+const f5 = (x) => x.toFixed(6)
+const FACE_FS = `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
+  vec4 cellTex(float k, vec2 u){ vec2 cl = vec2(mod(k, 2.), floor(k*.5)); return texture2D(map, vec2((cl.x + u.x)*.5, (1. - cl.y + u.y)*.5)); }
+  float cov(float d){ return clamp(.5 - d/max(fwidth(d), 1e-7), 0., 1.); } // d < 0 inside, ~1px AA at any distance
+  float eSD(vec2 d, vec2 R){ vec2 q = d/R; float k = max(length(q), 1e-5); return (k - 1.)/max(length(q/(R*k)), 1e-5); } // ~signed distance to an ellipse
+  void over(inout vec4 c, vec3 col, float a){ c.rgb = col*a + c.rgb*(1. - a); c.a = a + c.a*(1. - a); } // premultiplied
+  void eye(inout vec4 c, vec2 p, float sd){
+    vec2 E = vec2(sd*${f5(EYE.x)}, ${f5(EYE.y)}), R = vec2(${f5(EYE.rx)}, ${f5(EYE.ry)})*uBig;
+    float o = uOpen, k = smoothstep(.1, .3, o), ry = R.y*max(o, .03);
+    vec2 Es = vec2(E.x, E.y - R.y + ry), Rs = vec2(R.x, ry), d = p - Es;   // the upper lid comes down; the bottom stays put
+    vec4 e = vec4(0.);
+    if (k > 0.) {
+      float dS = eSD(d, Rs), yb = E.y - R.y + R.y*uSquint, aS = cov(dS)*cov(yb - p.y);
+      over(e, ${lin('#fffaf4')}, aS);
+      vec2 I0 = vec2(E.x - sd*R.x*.22 + uGaze.x*R.x*.2, E.y - R.y*.02 + uGaze.y*R.y*.12), IR = R*vec2(.78, .97), IR2 = IR*vec2(.9, .92);
+      over(e, ${lin(IRIS.edge)}, aS*cov(eSD(p - I0, IR)));
+      float aI = aS*cov(eSD(p - I0, IR2)), gy = clamp((I0.y + IR.y - p.y)/(2.*IR.y)/.55, 0., 1.);
+      over(e, mix(${lin(IRIS.top)}, ${lin(IRIS.mid)}, gy), aI);
+      vec2 G = I0 - vec2(0., .7*IR.y); float rr = length(p - G)/(.66*IR.x);
+      float ga = rr < .45 ? mix(.85, .5, rr/.45) : mix(.5, 0., clamp((rr - .45)/.55, 0., 1.));
+      over(e, ${lin(IRIS.glow)}, ga*aI*cov(eSD(p - G, vec2(.66*IR.x, .4*IR.y))));
+      over(e, vec3(1.), aS*cov(length(p - I0 - vec2(.3*IR.x, .36*IR.y)) - R.x*.34)); // the one highlight, moves with the iris
+      over(e, ${lin('#3a221a')}, .28*cov(abs(dS) - .00025)*cov(yb - p.y));       // soft skin boundary
+      // thick tapered upper lid hugging the (closing) eye: nose-side top, over the top, down the outer side
+      vec2 q = vec2(-sd*d.x/Rs.x, -d.y/Rs.y); float th = atan(q.y, q.x); if (th > -.35) th -= 6.2831853;
+      float u = (th + .35)/(-3.14159265 - .1), W = R.y*.2;
+      float w = W*smoothstep(0., .16, u)*(1. - smoothstep(.6, 1., u))*(.78 + .32*smoothstep(.25, .62, u));
+      if (u > 0. && u < 1.) over(e, ${lin('#1e1410')}, cov(dS - .35*w)*cov(-.65*w - dS));
+      e *= k;
+    }
+    if (k < 1.) { // shut: a thick downward-curved lash line with tapered ends (blink / sleepy)
+      float yy = E.y - R.y*mix(.1, .2, uLash), lw = R.x*mix(.98, .92, uLash), xn = (p.x - E.x)/lw, f = max(1. - xn*xn, 0.);
+      float a = cov(p.y - (yy - .23*R.y*f))*cov((yy - .45*R.y*f) - p.y)*cov(abs(p.x - E.x) - lw);
+      vec4 l = vec4(0.); over(l, ${lin('#1e1410')}, a); e += l*(1. - k);
+    }
+    c = e + c*(1. - e.a);
+  }
+  void main(){ vec2 u = clamp(vUv, .004, .996), p = vec2((u.x*2. - 1.)*${f5(FX)}, ${f5(FY0)} + u.y*${f5(FY1 - FY0)});
+    vec4 c = vec4(0.);
+    for (int i = 0; i < 2; i++) { float sd = i == 0 ? -1. : 1.; vec2 B = p - vec2(sd*${f5(BLUSH.x)}, ${f5(BLUSH.y)}); float rr = length(B)/${f5(BLUSH.r)};
+      float a = (rr < .62 ? mix(.9, .8, rr/.62) : mix(.8, 0., clamp((rr - .62)/.38, 0., 1.)))*cov(eSD(B, vec2(${f5(BLUSH.r)}, ${f5(BLUSH.r * 0.86)})));
+      over(c, ${lin('#f4928c')}, clamp(a*uBlush, 0., .97)); }
+    vec4 t = mix(cellTex(uCellA, u), cellTex(uCellB, u), uMix); over(c, t.a > 0. ? t.rgb : vec3(0.), t.a);
+    eye(c, p, -1.); eye(c, p, 1.);
+    if (c.a < .01) discard;
+    gl_FragColor = vec4(c.rgb/c.a*(uLight*.92 + uAmb), c.a);
+    #include <colorspace_fragment>
+  }`
 const faceMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
-  uniforms: { map: { value: atlas || (atlas = drawFaces(TOUCH ? 640 : 1024)) }, uCell: { value: 0 }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
+  uniforms: { map: { value: atlas || (atlas = drawFaces(TOUCH ? 640 : 1024)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
+    uBlush: { value: 1 }, uBig: { value: 1 }, uLash: { value: 0 }, uGaze: { value: new THREE.Vector2() }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: `uniform sampler2D map; uniform float uCell; uniform vec3 uLight, uAmb; varying vec2 vUv;
-    void main(){ vec2 u = clamp(vUv, .004, .996), cell = vec2(mod(uCell, 2.), floor(uCell*.5));
-      vec4 c = texture2D(map, vec2((cell.x + u.x)*.5, (1. - cell.y + u.y)*.5)); if (c.a < .01) discard;
-      gl_FragColor = vec4(c.rgb*(uLight*.92 + uAmb), c.a);
-      #include <colorspace_fragment>
-    }` })
+  fragmentShader: FACE_FS })
 // head shape in the head frame (same SDF as the baked body: head ellipsoid smooth-unioned with two mochi cheeks)
 const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide jaw ellipsoid (two cheek blobs left a dip / double bump at the chin), softer blend
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
@@ -110,17 +127,28 @@ const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx
     if (ok[a] && ok[b] && ok[c] && ok[d]) idx.push(a, b, d, a, d, c) }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g })()
 
-const EXCITED = new Set(['wave', 'play', 'reel', 'pick', 'pet', 'photo_wave', 'photo_peace', 'photo_hold_fish', 'photo_twirl', 'photo_kneel'])
 function ChibiFace({ st, lod }) {
-  const mat = useMemo(faceMat, []), s = useRef({ blinkT: 2, idle: 0 })
-  useFrame((_, dt) => { dt = Math.min(dt, 0.05); const o = s.current
-    o.idle = st.move > 0.05 || st.act ? 0 : o.idle + dt
-    o.blinkT -= dt; if (o.blinkT < 0) o.blinkT = 2.4 + Math.random() * 2.6
+  const mat = useMemo(faceMat, []), s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
+  useFrame(({ clock }, dt) => { dt = Math.min(dt, 0.05); const o = s.current, U = mat.uniforms, L = st.life
     const forced = (typeof window !== 'undefined' && window.__chibiFace) || q.get('face')
-    let e = st.act === 'nap' || (T.night > 0.7 && o.idle > 4) || o.idle > 25 ? 'sleepy' : st.act && EXCITED.has(st.act) && (st.actW ?? 1) > 0.3 ? 'excited' : 'happy'
-    if (o.blinkT < 0.12 && e !== 'sleepy') e = 'blink'
-    if (forced && FACES.includes(forced)) e = forced
-    mat.uniforms.uCell.value = FACES.indexOf(e) })
+    let mood, open
+    if (L) { mood = L.mood; open = L.open }
+    else { // no life layer (should not happen): the old schedule
+      o.idle = st.move > 0.05 || st.act ? 0 : o.idle + dt; o.blinkT -= dt; if (o.blinkT < 0) o.blinkT = 2.4 + Math.random() * 2.6
+      mood = st.act === 'nap' || (T.night > 0.7 && o.idle > 4) || o.idle > 25 ? 'sleepy' : st.act && EXCITED_ACTS.has(st.act) && (st.actW ?? 1) > 0.3 ? 'excited' : 'happy'
+      open = o.blinkT < 0.12 ? 0 : 1 }
+    // sleepy: drowsy half-lids at night, fully shut on a nap or a long idle
+    const shut = st.act === 'nap' || (L && L.idle > 25), moT = mood === 'sleepy' ? (shut ? 0 : 0.42) : 1
+    o.mo = approach(o.mo, moT, moT < o.mo ? 1.6 : 6, dt)
+    let cell = CELL[mood] ?? 0, gx = L ? L.gx : 0, gy = L ? L.gy : 0, squint = L ? L.squint : 0, blush = L ? 1 + 0.32 * L.blush * (0.75 + 0.25 * Math.sin(clock.elapsedTime * 2.6)) : 1
+    open = Math.min(open, 1) * o.mo
+    let lashT = mood === 'sleepy' ? 1 : 0, bigT = mood === 'excited' ? 1.05 : 1
+    if (forced && FACES.includes(forced)) { cell = CELL[forced]; gx = gy = squint = 0; blush = 1; open = forced === 'blink' || forced === 'sleepy' ? 0 : 1; lashT = forced === 'sleepy' ? 1 : 0; bigT = forced === 'excited' ? 1.05 : 1
+      o.A = o.B = cell; o.mix = 1; o.lash = lashT; o.big = bigT }
+    if (cell !== o.B) { if (o.mix >= 0.5) o.A = o.B; o.B = cell; o.mix = 0 }
+    o.mix = approach(o.mix, 1, 9, dt); o.lash = approach(o.lash, lashT, 6, dt); o.big = approach(o.big, bigT, 8, dt)
+    U.uCellA.value = o.A; U.uCellB.value = o.B; U.uMix.value = o.mix; U.uOpen.value = open; U.uLash.value = o.lash; U.uBig.value = o.big
+    U.uGaze.value.set(gx, gy); U.uSquint.value = squint; U.uBlush.value = blush })
   return <group ref={lod(2)}><mesh geometry={faceGeo} material={mat} renderOrder={2} /></group>
 }
 
@@ -201,12 +229,23 @@ const HAIR_GEO = (() => {
     // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
     // pass 9 (KT): lower (centre near the blush/mouth line) and fuller/rounder, as on the concept. PT scales the change (1 chosen, 1.5 'stronger').
     ...[-1, 1].map(d => part(ball, [d * (0.0615 - 0.0015 * PT), -0.027 - 0.004 * PT, -0.02 + 0.006 * PT], [0.021 * (1 + 0.21 * PT), 0.024 * (1 + 0.08 * PT), 0.022 * (1 + 0.16 * PT)]))]
+  // life layer: aW = (part, weight) for the secondary springs (0/1 side puffs, 2 top bun, 3 front + side locks); 0 weight = rigid
+  const W = (g, f) => { const p = g.attributes.position, a = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { const r = f(p.getX(i), p.getY(i), p.getZ(i)); a[i * 2] = r[0]; a[i * 2 + 1] = r[1] } g.setAttribute('aW', new THREE.BufferAttribute(a, 2)); return g }
+  const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+  W(parts[0], (x, y, z) => [3, sm(0.03, -0.04, y) * sm(-0.01, 0.035, z)]); W(parts[1], () => [3, 0])
+  W(parts[2], (x, y) => [2, sm(0.058, 0.085, y)]); W(parts[3], () => [2, 0.35])
+  W(parts[4], (x) => [0, sm(-0.04, -0.085, x)]); W(parts[5], (x) => [1, sm(0.04, 0.085, x)])
   const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
+const HOFF = `attribute vec2 aW; uniform vec3 uOff[4];
+  vec3 hoff(){ vec3 o = aW.x < .5 ? uOff[0] : aW.x < 1.5 ? uOff[1] : aW.x < 2.5 ? uOff[2] : uOff[3]; return o*aW.y; }
+`
+// the hair's own ink hull gets the same spring offsets, so the outline follows the moving buns (still 1 draw)
+const hairInk = (() => { const m = mkOutline(false); m.uniforms.uOff = { value: HAIR_OFF }; m.vertexShader = HOFF + m.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += hoff();'); return m })()
 let hairShader = null
 const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMaterial({
-  uniforms: { uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim, uHair: { value: new THREE.Color('#432c22') }, uBand: { value: new THREE.Color('#7a5641') }, uSkin: { value: new THREE.Color(skin) } },
-  vertexShader: `attribute float aSkin; varying vec3 vN, vV, vO; varying float vSkin;
-    void main(){ vO = position; vSkin = aSkin; vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`,
+  uniforms: { uOff: { value: HAIR_OFF }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim, uHair: { value: new THREE.Color('#432c22') }, uBand: { value: new THREE.Color('#7a5641') }, uSkin: { value: new THREE.Color(skin) } },
+  vertexShader: HOFF + `attribute float aSkin; varying vec3 vN, vV, vO; varying float vSkin;
+    void main(){ vO = position; vSkin = aSkin; vec4 mv = modelViewMatrix*vec4(position + hoff(),1.); vN = normalize(normalMatrix*normal); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`,
   fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin; varying vec3 vN, vV, vO; varying float vSkin;
     void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
       float ndl = dot(N, L), lit = smoothstep(-.04, .12, ndl), sk = step(.5, vSkin);
@@ -224,7 +263,7 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
       #include <colorspace_fragment>
     }` }))
 function ChibiHair({ set }) {
-  return <group ref={set('hair')}><Merge><M geo={HAIR_GEO} mat={chibiHairMat(CHIBI.outfit.skin)} /></Merge></group>
+  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={chibiHairMat(CHIBI.outfit.skin)} /><mesh geometry={HAIR_GEO} material={hairInk} /></group>
 }
 
 // satchel (concept B): a chunky soft leather bag with a rounded flap over the front (one geometry, so still 1 cel + 1 ink)
@@ -236,6 +275,7 @@ const BAG_GEO = (() => {
   const body = soft(new THREE.BoxGeometry(0.046, 0.038, 0.024, 4, 4, 3), 0.008)
   const flap = soft(new THREE.BoxGeometry(0.048, 0.024, 0.007, 4, 2, 1), 0.0034); flap.translate(0, 0.006, 0.0125); flap.rotateX(-0.06)
   const g = mergeGeometries([mergeVertices(body), mergeVertices(flap)]); g.computeBoundingSphere(); return g })()
+const LIFE_OFF = q.has('still') && !q.has('life')
 export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
   // taller soft barrel torso, thick straight trouser legs, chunky round boots, short arms hanging close to the body
@@ -245,8 +285,13 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
     armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.22, bootL: 0.98, hand: 1.2, cheek: CHEEK },
   hair: { style: 'chibi', c: '#3b2a22' },
   outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4', bibW: 0.042, waistUp: 0.04, shoeY: 0.036 },
-  walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.02, arm: 0.6, lean: 0.05, twist: 0.1, sway: 0.06, idle: 'contra' },
-  ext: { Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
+  walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }, // life pass: a bouncier chibi walk
+  ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
+    const P = window.__herProf, t0 = P ? performance.now() : 0
+    if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
+    if (P) { P.ms += performance.now() - t0; P.n++ } }, // window.__herProf = { ms: 0, n: 0 }: CPU time of the life layer (perf runs)
+  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
+    Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
 const RIDE_S = 0.8
