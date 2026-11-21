@@ -35,7 +35,14 @@ export const GLOW = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped
 const canvas = (n, draw) => { const c = document.createElement('canvas'); c.width = c.height = n; draw(c.getContext('2d'), n); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t }
 const gingham = canvas(64, (x, n) => { x.fillStyle = '#fff'; x.fillRect(0, 0, n, n); x.fillStyle = 'rgba(150,95,40,.22)'; x.fillRect(0, 0, n / 2, n); x.fillRect(0, 0, n, n / 2); x.fillStyle = 'rgba(150,95,40,.2)'; x.fillRect(0, 0, n / 2, n / 2); x.fillStyle = 'rgba(255,255,255,.7)'; x.fillRect(n / 2 - 1, 0, 2, n); x.fillRect(0, n / 2 - 1, n, 2) })
 gingham.wrapS = gingham.wrapT = THREE.RepeatWrapping; gingham.anisotropy = 4
-export const PATTERNS = { gingham: new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: RAMP, map: gingham, emissive: new THREE.Color('#3a2418'), emissiveIntensity: 0.18 }) }
+const grid = canvas(64, (x, n) => { x.fillStyle = '#fff'; x.fillRect(0, 0, n, n); x.strokeStyle = 'rgba(255,255,255,.0)'; x.fillStyle = 'rgba(40,70,50,.28)'; x.fillRect(0, 0, n, 3); x.fillRect(0, 0, 3, n) })
+grid.wrapS = grid.wrapT = THREE.RepeatWrapping
+const tiles = canvas(64, (x, n) => { x.fillStyle = '#fff'; x.fillRect(0, 0, n, n); x.fillStyle = 'rgba(60,110,70,.16)'; x.fillRect(0, 0, n / 2, n / 2); x.fillRect(n / 2, n / 2, n / 2, n / 2); x.fillStyle = 'rgba(255,255,255,.9)'; x.fillRect(0, 0, n, 2); x.fillRect(0, 0, 2, n); x.fillRect(0, n / 2 - 1, n, 2); x.fillRect(n / 2 - 1, 0, 2, n) })
+tiles.wrapS = tiles.wrapT = THREE.RepeatWrapping
+const planks = canvas(128, (x, n) => { x.fillStyle = '#fff'; x.fillRect(0, 0, n, n); x.fillStyle = 'rgba(120,70,40,.32)'; for (let r = 0; r < 4; r++) { x.fillRect(0, r * n / 4, n, 2); x.fillRect(((r * 53) % n), r * n / 4, 2, n / 4) } x.strokeStyle = 'rgba(150,95,55,.12)'; x.lineWidth = 2; for (let r = 0; r < 4; r++) for (let k = 0; k < 2; k++) { x.beginPath(); x.moveTo(6, r * n / 4 + 9 + k * 11); x.bezierCurveTo(n * 0.3, r * n / 4 + 6 + k * 11, n * 0.6, r * n / 4 + 14 + k * 11, n - 6, r * n / 4 + 9 + k * 11); x.stroke() } })
+planks.wrapS = planks.wrapT = THREE.RepeatWrapping
+const patMat = (map) => new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: RAMP, map, emissive: new THREE.Color('#3a2418'), emissiveIntensity: 0.18 })
+export const PATTERNS = { gingham: patMat(gingham), grid: patMat(grid), tiles: patMat(tiles), planks: patMat(planks) }
 const radial = (stops) => canvas(128, (x, n) => { const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); stops.forEach(([o, c]) => g.addColorStop(o, c)); x.fillStyle = g; x.fillRect(0, 0, n, n) })
 // grounding: a soft warm contact shadow under every prop
 export const SHADOW = new THREE.MeshBasicMaterial({ map: radial([[0, 'rgba(90,50,40,.42)'], [0.55, 'rgba(90,50,40,.24)'], [1, 'rgba(90,50,40,0)']]), transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 })
@@ -135,7 +142,8 @@ class Builder {
     // painted colour: a touch darker toward the part's own base (soft occlusion) and a creamy sheen where it faces up
     const c = this.c(name), sh = o.shade ?? 0.14, hi = o.glow ? 0 : (o.hi ?? 0.16), n = geo.attributes.normal, cols = new Float32Array(p.count * 3)
     for (let i = 0; i < p.count; i++) { const k = 1 - sh * (1 - ts[i]) ** 1.5, up = Math.max(0, Math.min(1, (n.getY(i) - 0.45) / 0.5)), h = hi * up * up
-      cols[i * 3] = c.r * k + (1 - c.r * k) * h; cols[i * 3 + 1] = c.g * k + (1 - c.g * k) * h * 0.92; cols[i * 3 + 2] = c.b * k + (1 - c.b * k) * h * 0.8 }
+      // the sheen brightens toward a warm cream but never to white (white tops would trip the bloom pass and haze the room)
+      const m = 1 + h * 1.1; cols[i * 3] = Math.min(0.94, c.r * k * m); cols[i * 3 + 1] = Math.min(0.9, c.g * k * m); cols[i * 3 + 2] = Math.min(0.84, c.b * k * m) }
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3))
     const item = { geo, out: o.out !== false && !o.glow }
     if (o.glow) this.glow.push(item); else if (o.pattern) (this.pattern[o.pattern] = this.pattern[o.pattern] || []).push(item); else this.parts.push(item)
@@ -195,7 +203,7 @@ const made = new Map()
 export function makeProp(id, o = {}) {
   const def = CATALOG[id]; if (!def) throw new Error('unknown prop ' + id)
   const key = id + JSON.stringify(o)
-  if (!made.has(key)) { const k = new Builder({ ...def.pal, ...(o.pal || {}) }); def.build(k, { ...def.opts, ...o }); made.set(key, k.bake(def.size, { ...def.opts, ...o })) }
+  if (!made.has(key)) { const k = new Builder({ ...def.pal, ...(o.pal || {}) }); def.build(k, { ...def.opts, ...o }); made.set(key, k.bake(def.size, { ...(def.tags.includes('wall') || def.tags.includes('structure') ? { shadow: false } : {}), ...def.opts, ...o })) }
   const src = made.get(key), g = new THREE.Group(); src.children.forEach(m => { const c = m.clone(); c.onBeforeRender = m.onBeforeRender; g.add(c) }); g.userData.prop = id; return g
 }
 // floor footprint (x/z box around the origin, after a yaw of 0 / 90 / 180 / 270 deg) for collision lists like home BLOCKS

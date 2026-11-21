@@ -10,7 +10,8 @@ import { HOME, ROOM, DOOR, resolve, freeAt, roomToWorld } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { T, q, VIEW, setViewMode } from '../common.jsx'
 import { R, height } from '../world.js'
-import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, Stove, DoorWay, Lantern } from './interior.jsx'
+import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, DoorWay, Smoke, LAMP, LAYOUT } from './interior.jsx'
+import { Prop } from '../props/Prop.jsx'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
 import { CAT } from '../pets/catState.js'
@@ -71,6 +72,7 @@ const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _X = new THREE.
 // clip a wall), easing after her and leaning toward the cat when he's close. Zoom / pitch from the touch + wheel controls.
 const camL = new THREE.Vector3(), lookL = new THREE.Vector3(), _goal = new THREE.Vector3(), _look = new THREE.Vector3()
 const WIDE = q.get('homecam') === 'wide' // debug: the whole room, concept-style
+const FREECAM = /,/.test(q.get('homecam') || '') ? q.get('homecam').split(',').map(Number) : null // debug: ?homecam=x,y,z,lookX,lookY,lookZ (room units)
 let fov0 = null
 HOME.camera = (camera, g, dt) => {
   if (!HOME.inside && HOME.snapOut > 0) { window.__snap = true; if (--HOME.snapOut === 0) setTimeout(() => { window.__snap = HOME.snap0 }, 0) } // land the follow camera behind her at once
@@ -79,13 +81,14 @@ HOME.camera = (camera, g, dt) => {
   if (fov0 == null) { fov0 = camera.fov; camera.fov = 46; camera.updateProjectionMatrix(); camera.layers.set(LAYER) }
   const hp = HOME.hp, z = Math.min(1, Math.max(0.6, CAM.zoom))
   const dc = Math.hypot(CAT.x - hp.x, CAT.z - hp.z), w = dc < 0.9 ? 0.4 * (1 - dc / 0.9) : 0, fx = hp.x + (CAT.x - hp.x) * w, fz = hp.z + (CAT.z - hp.z) * w
-  const nearDoor = Math.min(1, Math.max(0, (hp.z - 0.35) / 0.5)) // by the front rim the door wall would hide her: look down more steeply
-  const el = 0.9 + 0.12 * CAM.pitch + 0.38 * nearDoor, D = (2.3 + 1.3 * (z - 0.6)) * (camera.aspect < 1 ? 1.3 : 1) // elevation (rad) + distance, room units (further back on a tall phone screen)
-  _look.set(Math.max(-1.0, Math.min(1.0, fx)) * 0.8, 0.14 + CAT.y * w * 0.5, Math.max(-0.75, Math.min(0.75, fz)) * 0.85 - 0.04)
+  const nearDoor = Math.min(1, Math.max(0, (hp.z - 0.55) / 0.65)) // by the front rim the door wall would hide her: look down more steeply
+  const el = 0.9 + 0.12 * CAM.pitch + 0.5 * nearDoor, D = (2.55 + 1.3 * (z - 0.6)) * (camera.aspect < 1 ? 1.3 : 1) // elevation (rad) + distance, room units (further back on a tall phone screen)
+  _look.set(Math.max(-1.2, Math.min(1.2, fx)) * 0.8, 0.14 + CAT.y * w * 0.5, Math.max(-1.0, Math.min(1.3, fz)) * 0.85 - 0.04)
   _goal.set(_look.x * 0.7, _look.y + Math.sin(el) * D, _look.z + Math.cos(el) * D)
-  if (WIDE) { _look.set(0, 0.0, -0.12); _goal.set(0, 3.3, 3.25) }
+  if (WIDE) { _look.set(0, 0.0, -0.05); _goal.set(0, 3.7, 3.7) }
+  if (FREECAM) { _goal.set(FREECAM[0], FREECAM[1], FREECAM[2]); _look.set(FREECAM[3], FREECAM[4], FREECAM[5]) }
   if (PETCAM) { const a = window.__camA ?? (+PETCAM || 0.5), dd = window.__camD ?? 0.55; _goal.set(CAT.x + Math.sin(a) * dd, CAT.y + (window.__camH ?? 0.32 * dd / 0.55 * 0.8 + 0.06), CAT.z + Math.cos(a) * dd); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
-  const ps = HOME.pose; if (ps && !PETCAM && !WIDE && ps.cam !== false) { const pk = Math.min(1, ps.k) // activities frame the bed / tub / desk ...
+  const ps = HOME.pose; if (ps && !PETCAM && !WIDE && !FREECAM && ps.cam !== false) { const pk = Math.min(1, ps.k) // activities frame the bed / tub / desk ...
     if (ps.cam && ps.cam.p) { _goal.lerp(_a.fromArray(ps.cam.p), pk); _look.lerp(_b.fromArray(ps.cam.l), pk) }
     else { _b.set(ps.x * 0.85, 0.16 + (ps.y || 0), ps.z - 0.04); _look.lerp(_b, pk); _goal.lerp(_a.set(_b.x * 0.8, _b.y + 1.25, _b.z + 1.1), pk) } }
   const k = snapFrames > 0 ? 1 : 1 - Math.exp(-dt * 2.0); snapFrames-- // polish: softer interior cam
@@ -103,11 +106,12 @@ function NightGlow() {
   const [lamp, stove] = useMemo(() => { const t = glowTex(); const mk = (c) => new THREE.MeshBasicMaterial({ map: t, color: c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }); return [mk('#ffb860'), mk('#ff8a3a')] }, [])
   useFrame(() => { const t = performance.now() / 1000, k = HOME.inside ? Math.min(1, T.night + 0.4 * T.dusk) : 0; lamp.opacity = 0.42 * k; stove.opacity = k * (0.5 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.04) })
   return <group>
-    <mesh position={[0.05, 0.007, 0.12]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.5, 1.2]} /></mesh>
-    <mesh position={[0.3, 0.008, -0.62]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.0, 0.7]} /></mesh>
-    <mesh position={[1.24, 0.008, 0.12]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.6, 0.6]} /></mesh>
-    <mesh position={[-1.02, 0.009, -0.6]} rotation={[-Math.PI / 2, 0, 0]} material={stove} renderOrder={2}><planeGeometry args={[0.7, 0.6]} /></mesh>
-    {[-1, 1].map(s => <mesh key={s} position={[DOOR.x + s * 0.32, 0.009, DOOR.z - 0.16]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.45, 0.4]} /></mesh>)}
+    <mesh position={[0, 0.007, 0.1]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.6, 1.3]} /></mesh>
+    <mesh position={[LAMP.lx, 0.008, LAMP.lz + 0.3]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.0, 0.7]} /></mesh>
+    <mesh position={[LAYOUT.nightstand.x - 0.1, 0.008, LAYOUT.nightstand.z]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.6, 0.6]} /></mesh>
+    <mesh position={[LAYOUT.desk.x + 0.15, 0.008, LAYOUT.desk.z]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.6, 0.6]} /></mesh>
+    <mesh position={[LAYOUT.stove.x + 0.12, 0.009, LAYOUT.stove.z + 0.15]} rotation={[-Math.PI / 2, 0, 0]} material={stove} renderOrder={2}><planeGeometry args={[0.8, 0.7]} /></mesh>
+    {[-1, 1].map(s => <mesh key={s} position={[DOOR.x + s * 0.38, 0.009, DOOR.z - 0.2]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.5, 0.45]} /></mesh>)}
   </group>
 }
 // the hanging lantern in front of the kitchen wall + the room's one warm point light (no new lights: a new light would
@@ -116,9 +120,9 @@ function Lamp() {
   const light = useRef(), sway = useRef()
   useFrame(() => { const t = performance.now() / 1000; if (light.current) light.current.intensity = HOME.inside ? (0.9 + 2.4 * T.night + 0.7 * T.dusk) * (1 + Math.sin(t * 9) * 0.01) : 0; if (sway.current) sway.current.rotation.z = Math.sin(t * 0.7) * 0.04 })
   return <group>
-    <Box p={[0.32, 1.035, -0.98]} s={[0.035, 0.035, 0.2]} c={W.dark} />
-    <group ref={sway} position={[0.32, 1.03, -0.9]}><Lantern p={[0, -0.27, 0]} s={1.3} hang /></group>
-    <pointLight ref={light} position={[0.05, 0.85, -0.05]} color="#ffc98a" distance={3.6} decay={1.5} intensity={0} />
+    <group position={[LAMP.x, LAMP.y, LAMP.z]} rotation-y={LAMP.yaw}><Box p={[0, 0.015, 0.09]} s={[0.035, 0.035, 0.2]} c={W.dark} /></group>
+    <group ref={sway} position={[LAMP.lx, LAMP.y, LAMP.lz]}><Prop id="lantern" opts={{ hang: true }} position={[0, -0.27, 0]} scale={1.3} /></group>
+    <pointLight ref={light} position={[0.05, 0.85, -0.05]} color="#ffc98a" distance={3.8} decay={1.4} intensity={0} />
   </group>
 }
 // crafted decor placed inside (persisted in the same save as outdoor decor, with an `in: [x, z]` room position)
@@ -159,8 +163,8 @@ export function Room() {
   })
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
-    <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Lamp /><NightGlow />
-    <Merge><Shell /><Stove /></Merge>
+    <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><Lamp /><NightGlow />
+    <Merge><Shell /></Merge>
     <React.Suspense fallback={null}><Activities /></React.Suspense>
     <InsideDecor />
     <React.Suspense fallback={null}><Cat /></React.Suspense>

@@ -36,7 +36,6 @@ defineProp('roundTable', { name: 'Round table', size: [0.42, 0.24, 0.42], tags: 
   for (let i = 0; i < 3; i++) { const a = i / 3 * PI * 2 + 0.5; k.stick([0.026, 0.13], [Math.sin(a) * 0.105, 0.055, Math.cos(a) * 0.105], 'leg', { rot: [-Math.cos(a) * 0.25, 0, Math.sin(a) * 0.25], taper: -0.25 }) }
   k.box([0.3, 0.01, 0.12], [0, 0.162, 0], 'cloth', { r: 0.004, rot: [0, 0.3, 0], pattern: 'gingham', tile: 3 })
   if (o.vase !== false) { k.pill([0.032, 0.05], [-0.02, 0.19, -0.04], 'white', { bevel: 0.45, belly: 0.25 })
-    k.leaf([-0.02, 0.22, -0.04], 0.05, 0.8, 0.7); k.leaf([-0.02, 0.22, -0.04], 0.045, -2.2, 0.6, 'leafLight')
     for (let i = 0; i < 5; i++) { const a = i * 1.3; k.daisy([-0.02 + Math.sin(a) * 0.03 * (i ? 1 : 0), 0.255 + (i % 2) * 0.014, -0.04 + Math.cos(a) * 0.03 * (i ? 1 : 0)], 0.026) } }
 })
 
@@ -52,7 +51,7 @@ defineProp('stool', { name: 'Stool', size: [0.16, 0.14, 0.16], tags: ['living'],
   k.ring(0.042, 0.009, [0, 0.05, 0], 'leg', { rot: [PI / 2, 0, 0], out: false })
 })
 
-defineProp('woodStove', { name: 'Wood stove', size: [0.42, 0.9, 0.42], tags: ['kitchen', 'warm', 'light'], pal: { body: 'iron', dark: 'ironDark', hearth: 'stone', trim: 'brass' } }, (k) => {
+defineProp('woodStove', { name: 'Wood stove', size: [0.42, 0.9, 0.42], tags: ['kitchen', 'warm', 'light'], pal: { body: 'iron', dark: 'ironDark', hearth: 'stone', trim: 'brass' }, opts: { flue: 0 } }, (k, o) => {
   k.pill([0.21, 0.03], [0, 0.015, 0.02], 'hearth', { bevel: 0.45, seg: 32 })
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.pill([0.02, 0.05], [sx * 0.08, 0.055, sz * 0.06], 'dark', { bevel: 0.4, taper: -0.3 })
   k.box([0.24, 0.22, 0.2], [0, 0.18, 0], 'body', { r: 0.06, belly: 0.1 })
@@ -67,10 +66,16 @@ defineProp('woodStove', { name: 'Wood stove', size: [0.42, 0.9, 0.42], tags: ['k
   k.archFrame(0.13, 0.04, 0.014, 0.012, [0, 0.1, 0.12], 'trim', { out: false })
   k.knob([0.095, 0.15, 0.112], 'trim', 0.018)
   k.halo([0, 0.15, 0.17], 0.17, '#ffa050', { flicker: true })
-  // chimney with collars
-  k.pill([0.042, 0.52], [0, 0.57, -0.02], 'body', { bevel: 0.03 })
-  for (const y of [0.45, 0.7]) k.pill([0.05, 0.025], [0, y, -0.02], 'dark', { bevel: 0.3, out: false })
-  k.pill([0.052, 0.03], [0, 0.84, -0.02], 'dark', { bevel: 0.3 })
+  // flue: up from the stove, then (opts.flue > 0) an elbow back through the wall and a chimney outside with a cap
+  const fl = o.flue || 0, top = fl ? 0.76 : 0.84
+  k.pill([0.042, top - 0.31], [0, 0.31 + (top - 0.31) / 2, -0.02], 'body', { bevel: 0.03 })
+  for (const y of [0.45, 0.66]) k.pill([0.05, 0.025], [0, y, -0.02], 'dark', { bevel: 0.3, out: false })
+  if (!fl) k.pill([0.052, 0.03], [0, 0.84, -0.02], 'dark', { bevel: 0.3 })
+  else { k.ball(0.05, [0, top, -0.02], 'body')
+    k.pill([0.042, fl], [0, top, -0.02 - fl / 2], 'body', { rot: [PI / 2, 0, 0], bevel: 0.03 }); k.pill([0.052, 0.025], [0, top, -0.06], 'dark', { rot: [PI / 2, 0, 0], bevel: 0.3, out: false })
+    k.ball(0.05, [0, top, -0.02 - fl], 'body'); k.pill([0.042, 0.52], [0, top + 0.26, -0.02 - fl], 'body', { bevel: 0.03 })
+    k.pill([0.056, 0.03], [0, top + 0.5, -0.02 - fl], 'dark', { bevel: 0.3 }); k.cone([0.075, 0.06], [0, top + 0.57, -0.02 - fl], 'dark', { n: 4, rot: [0, PI / 4, 0] })
+    for (const s of [-1, 1]) k.stick([0.006, 0.05], [s * 0.04, top + 0.53, -0.02 - fl], 'dark', { out: false }) }
 })
 
 defineProp('fridge', { name: 'Fridge', size: [0.28, 0.5, 0.22], tags: ['kitchen'], pal: { body: 'cream', seam: '#d9c6a6', handle: '#cdbb9e', cat: '#f7c97a', ear: '#f2a8a0' } }, (k) => {
