@@ -97,7 +97,8 @@ export function CatHead({ c, M, set }) {
   return <group scale={hr}>
     <mesh geometry={headGeo} material={hm} /><mesh geometry={headGeo} material={OUT.pet} />
     <mesh ref={set('face')} geometry={FACE.geo} material={fm} renderOrder={2} />
-    <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.075, 0.05, 0.04]} /></group>
+    <group position={NOSE}><mesh geometry={GEO.sph} material={M.nose} scale={[0.1, 0.065, 0.05]} /><mesh geometry={GEO.sph} material={OUT.pet} scale={[0.1, 0.065, 0.05]} />
+      <mesh geometry={GEO.sph} material={M.shine} position={[-0.03, 0.025, 0.04]} scale={[0.026, 0.016, 0.01]} /></group>
     {c.whiskers && WHISK.map(({ s, k, p }) => <mesh key={s + '' + k} geometry={GEO.box} material={M.dark} position={[p[0] + s * 0.08, p[1] - 0.02, p[2]]} rotation={[0, s * 0.25, -s * (0.14 + 0.1 * k)]} scale={[0.24, 0.032, 0.032]} />)}
   </group>
 }
