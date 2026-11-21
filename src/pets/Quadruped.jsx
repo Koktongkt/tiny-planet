@@ -11,6 +11,7 @@ import { cel, OUT, GEO } from '../home/kit.jsx'
 import { fur, SHADOW } from '../GhibliPerson.jsx'
 import { ShibaHead } from './shibaHead.jsx'
 import { DogBody, ShibaTail } from './shibaBody.jsx'
+import { CatHead } from './catHead.jsx'
 
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
@@ -146,27 +147,5 @@ function CatBody({ c, M, set, legs }) {
     {legs.map(([k, sx, fz]) => <group key={k} ref={set('leg' + k)} position={[sx * bw * 0.5, -bh * 0.35, fz * bl * 0.58]}>
       <Leg c={c} M={M} front={fz > 0} sx={sx} L={L} upper={M.main} lower={M.dark} paw={M.dark} />
     </group>)}
-  </>
-}
-function CatHead({ c, M, set }) {
-  const hr = c.head
-  return <>
-    <Part mat={M.main} scl={[hr * 1.06, hr * 0.92, hr * 0.88]} />
-    {[-1, 1].map(s => <Part key={'ch' + s} geo={GEO.cone} mat={M.main} pos={[s * hr * 0.98, -hr * 0.28, hr * 0.05]} rot={[0, 0, s * 2.05]} scl={[hr * 0.2, hr * 0.3, hr * 0.2]} out={null} />)}
-    {/* dark Siamese mask: a soft patch over the muzzle that narrows up between the eyes */}
-    <mesh geometry={GEO.sph} material={M.dark} position={[0, -hr * 0.16, hr * 0.54]} scale={[hr * 0.46, hr * 0.42, hr * 0.38]} />
-    <mesh geometry={GEO.sph} material={M.dark} position={[0, hr * 0.14, hr * 0.68]} rotation={[-0.25, 0, 0]} scale={[hr * 0.2, hr * 0.36, hr * 0.2]} />
-    <mesh geometry={GEO.sph} material={M.dark} position={[0, -hr * 0.3, hr * 0.72]} scale={[hr * 0.24, hr * 0.16, hr * 0.15]} />
-    <mesh geometry={GEO.cone} material={M.nose} position={[0, -hr * 0.22, hr * 0.9]} rotation={[Math.PI + 0.35, 0, 0]} scale={[hr * 0.08, hr * 0.06, hr * 0.05]} />
-    <group ref={set('mouth')} position={[0, -hr * 0.4, hr * 0.85]}><mesh geometry={GEO.sph} material={M.lip} scale={[hr * 0.09, hr * 0.04, hr * 0.04]} /></group>
-    {c.tongue && <group ref={set('tongue')} position={[0, -hr * 0.42, hr * 0.87]}><mesh geometry={GEO.sph} material={M.tongue} scale={[hr * 0.065, hr * 0.1, hr * 0.04]} /></group>}
-    {[-1, 1].map(s => <Eye key={s} c={c} M={M} s={s} set={set} hr={hr} pos={[s * hr * 0.4, hr * 0.02, hr * 0.76]} />)}
-    <Blush M={M} hr={hr} x={0.66} y={-0.22} z={0.6} />
-    {[-1, 1].map(s => <group key={'e' + s} ref={set(s > 0 ? 'earL' : 'earR')} position={[s * hr * 0.56, hr * 0.55, -hr * 0.04]}>
-      <Part geo={GEO.cone} mat={M.dark} pos={[0, hr * c.ear * 0.5, 0]} scl={[hr * c.ear * 0.52, hr * c.ear * 1.25, hr * c.ear * 0.26]} />
-      <mesh geometry={GEO.cone} material={M.inner} position={[0, hr * c.ear * 0.42, hr * c.ear * 0.1]} scale={[hr * c.ear * 0.34, hr * c.ear * 0.9, hr * c.ear * 0.08]} />
-      {[-1, 1].map(k => <mesh key={k} geometry={GEO.cone} material={M.belly} position={[k * hr * c.ear * 0.1, hr * c.ear * 0.18, hr * c.ear * 0.14]} rotation={[0.2, 0, -k * 0.4]} scale={[hr * c.ear * 0.09, hr * c.ear * 0.4, hr * c.ear * 0.05]} />)}
-    </group>)}
-    {c.whiskers && [-1, 1].flatMap(s => [0, 1].map(j => <mesh key={s + '' + j} geometry={GEO.box} material={M.whisker} position={[s * hr * 0.62, -hr * (0.26 + j * 0.08), hr * 0.66]} rotation={[0, s * 0.5, s * (0.12 - j * 0.24)]} scale={[hr * 0.6, hr * 0.012, hr * 0.012]} />))}
   </>
 }

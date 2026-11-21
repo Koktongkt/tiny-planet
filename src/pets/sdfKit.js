@@ -49,3 +49,56 @@ export function patchFur(key, hex, { glsl = '', decl = '', uniforms = {}, vertex
   m.fragmentShader = decl + '\n' + m.fragmentShader.replace('vec3 base = uColor*vCol;', `vec3 base = uColor*vCol;\n{ ${glsl} }\n`)
   patched.set(key, m); return m
 }
+
+// Painted face decal (same technique as her face): a 2x2 canvas atlas [eyes open | shut] x [mouth open | shut] drawn
+// by `paint(ctx, eyesOpen, mouthOpen)` in head units (y up), and a grid over the face region [X0..X1]x[Y0..Y1] shot
+// onto the head from the front and lifted off it a hair. mat() makes one material per pet instance (its own uCell).
+export function faceDecal(sdf, { X0, X1, Y0, Y1, paint, lift = 0.012, NX = 48, NY = 34 }) {
+  const hit = hitOf(sdf), grad = gradOf(sdf)
+  let atlas = null
+  const tex = () => { if (atlas) return atlas
+    const CW = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 384 : 512
+    const CH = Math.round(CW * (Y1 - Y0) / (X1 - X0)), c = document.createElement('canvas'); c.width = CW * 2; c.height = CH * 2; const x = c.getContext('2d')
+    for (let i = 0; i < 4; i++) { const cx = i % 2, cy = i >> 1 // cell (col, row): col = mouth shut, row = eyes shut
+      x.save(); x.beginPath(); x.rect(cx * CW, cy * CH, CW, CH); x.clip()
+      x.setTransform(CW / (X1 - X0), 0, 0, -CH / (Y1 - Y0), cx * CW - X0 * CW / (X1 - X0), cy * CH + Y1 * CH / (Y1 - Y0))
+      paint(x, cy === 0, cx === 0); x.restore() }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter
+    return (atlas = t) }
+  const mat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+    uniforms: { map: { value: tex() }, uCell: { value: 0 }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `uniform sampler2D map; uniform float uCell; uniform vec3 uLight, uAmb; varying vec2 vUv;
+      void main(){ vec2 u = clamp(vUv, .004, .996), cell = vec2(mod(uCell, 2.), floor(uCell*.5));
+        vec4 c = texture2D(map, vec2((cell.x + u.x)*.5, (1. - cell.y + u.y)*.5)); if (c.a < .01) discard;
+        gl_FragColor = vec4(c.rgb*(uLight*.92 + uAmb), c.a);
+        #include <colorspace_fragment>
+      }` })
+  const pos = [], uv = [], ok = [], idx = [], n = new THREE.Vector3()
+  for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = X0 + u * (X1 - X0), y = Y0 + v * (Y1 - Y0)
+    const t = hit([x, y, 2], [0, 0, -1], 0, 2.6); let z = 0
+    if (t !== null) { z = 2 - t; grad(x, y, z, n) }
+    pos.push(x + n.x * lift, y + n.y * lift, z + n.z * lift); uv.push(u, v); ok.push(t !== null && n.z > 0.02) }
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1
+    if (ok[a] && ok[b] && ok[c] && ok[d]) idx.push(a, b, d, a, d, c) }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeBoundingSphere()
+  return { geo, mat }
+}
+// a cream-white eye with a brown iris pushed toward the nose (white on the outer side only), ink rim, upper lid, one
+// highlight; or a closed lash. s = -1 / +1 for the eye on the -x / +x side. Shared by Pip and Mochi.
+export function paintEye(x, s, cx, y, rx, ry, open, ink = '#3a2216') {
+  const el = (ex, ey, erx, ery) => { x.beginPath(); x.ellipse(ex, ey, erx, ery, 0, 0, Math.PI * 2) }
+  if (!open) { x.beginPath(); x.moveTo(cx - rx * 0.98, y + 0.01); x.quadraticCurveTo(cx, y - ry * 0.55, cx + rx * 0.98, y + 0.01); x.lineWidth = 0.042; x.strokeStyle = ink; x.lineCap = 'round'; x.stroke(); return }
+  el(cx, y, rx + 0.017, ry + 0.017); x.fillStyle = '#2a170e'; x.fill()
+  el(cx, y, rx, ry); x.fillStyle = '#fffaf4'; x.fill()
+  x.save(); el(cx, y, rx, ry); x.clip()
+  const IX = rx * 0.78, IY = ry * 0.98, iy = y - ry * 0.02, ix = cx - s * rx * 0.24
+  const g = x.createLinearGradient(0, iy + IY, 0, iy - IY); g.addColorStop(0, '#24130b'); g.addColorStop(0.45, '#40220f'); g.addColorStop(0.8, '#74431f'); g.addColorStop(1, '#93592c')
+  el(ix, iy, IX + 0.008, IY + 0.008); x.fillStyle = '#24130b'; x.fill()
+  el(ix, iy, IX, IY); x.fillStyle = g; x.fill()
+  el(ix, iy + 0.012, IX * 0.62, IY * 0.6); x.fillStyle = 'rgba(22,11,6,.72)'; x.fill() // pupil
+  el(ix, iy - IY * 0.72, IX * 0.62, IY * 0.3); x.fillStyle = 'rgba(196,128,72,.42)'; x.fill() // warm lower glow
+  x.restore()
+  x.beginPath(); x.ellipse(cx, y, rx + 0.01, ry + 0.01, 0, 0.1 * Math.PI, 0.9 * Math.PI); x.lineWidth = 0.034; x.strokeStyle = ink; x.lineCap = 'round'; x.stroke() // upper lid
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ix + rx * 0.21, iy + ry * 0.37, rx * 0.28, 0, 7); x.fill()
+}
