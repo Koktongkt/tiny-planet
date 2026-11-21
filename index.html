@@ -1,106 +1,93 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#e9c3a0"><title>Tiny Planet</title>
-<link rel="preload" href="./fonts/cormorant-500i.woff2" as="font" type="font/woff2" crossorigin>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#7ea8de"><title>Tiny Planet</title>
+<link rel="preload" href="./fonts/fredoka-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./loader/planet.webp" as="image" type="image/webp" fetchpriority="high">
 <style>
 @font-face{font-family:TPSerif;src:url(./fonts/cormorant-500i.woff2) format("woff2");font-style:italic;font-weight:500;font-display:swap}
-@property --r{syntax:"<percentage>";inherits:false;initial-value:0%}
-#ld{position:fixed;inset:0;z-index:50;overflow:hidden;color:#4a3328;font:italic 500 16px TPSerif,"Cormorant Garamond",Garamond,Georgia,serif;background:linear-gradient(#e7c9ab 0,#f3d09f 30%,#f6bb8b 56%,#e89d84 77%,#c98c96 100%);-webkit-user-select:none;user-select:none;--r:0%}
-#ld:after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.5;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .3 0 0 0 .26 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E")}
-#ld.out{-webkit-mask:radial-gradient(circle at 50% 56%,transparent var(--r),#000 calc(var(--r) + 14%));mask:radial-gradient(circle at 50% 56%,transparent var(--r),#000 calc(var(--r) + 14%));animation:iris 2.2s cubic-bezier(.6,0,.3,1) forwards;pointer-events:none}
-@keyframes iris{to{--r:140%}}
-#ld svg{position:absolute;inset:0;width:100%;height:100%}#ld svg.defs{width:0;height:0;position:absolute}
-/* every animated piece is its own composited layer: filtered SVG is rasterised once, then only transform/opacity change */
-.lay{position:absolute;inset:0;will-change:transform}.wa{will-change:opacity}.pl,.glow{transform-origin:var(--ox) var(--oy)}.glow{transform-origin:calc(var(--ox) + 800px*var(--s)) calc(var(--oy) + 560px*var(--s))}
-.bk,.pl{transition:transform 2.6s cubic-bezier(.3,0,.2,1)}.ink{transition:stroke-dashoffset 1.4s ease}.wa{opacity:0;transition:opacity 2s ease}
-.out .pl{transform:translate(0,calc(-60px*var(--s))) scale(1.18)!important;transition-duration:2.2s}
+@font-face{font-family:TPRound;src:url(./fonts/fredoka-600.woff2) format("woff2");font-weight:600;font-display:swap}
+@property --r{syntax:"<length>";inherits:false;initial-value:0px}
+/* loading screen: a daytime sky, the title card on the left, the planet floating on the right (stacked on portrait screens) */
+#ld{position:fixed;inset:0;z-index:50;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:min(6vw,90px);padding:0 4vw;box-sizing:border-box;color:#fff;
+ font:600 16px TPRound,Fredoka,"Varela Round","Arial Rounded MT Bold",system-ui,sans-serif;background:linear-gradient(#73a1dc 0,#86b0e3 45%,#a9c8ec 100%);-webkit-user-select:none;user-select:none;--r:0px;--ix:50%;--iy:50%}
+#ld.out{-webkit-mask:radial-gradient(circle at var(--ix) var(--iy),transparent var(--r),#000 calc(var(--r) + 18vmax));mask:radial-gradient(circle at var(--ix) var(--iy),transparent var(--r),#000 calc(var(--r) + 18vmax));animation:iris 2.2s cubic-bezier(.6,0,.3,1) forwards;pointer-events:none}
+@keyframes iris{to{--r:180vmax}}
+#ld .lay{position:absolute;inset:0;will-change:transform}#ld .lay svg{position:absolute;inset:0;width:100%;height:100%}#ld svg.defs{position:absolute;width:0;height:0}
+.bk{transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 .dr{animation:dr 19s ease-in-out infinite alternate}.dr.s{animation-duration:27s}@keyframes dr{to{transform:translateX(calc(28px*var(--s)))}}
-.sd{animation:sd 22s linear infinite;opacity:0}@keyframes sd{0%{transform:translate(0,0) rotate(0);opacity:0}8%{opacity:.85}90%{opacity:.7}100%{transform:translate(520px,-380px) rotate(40deg);opacity:0}}
-.glow{animation:gl 6s ease-in-out infinite alternate}@keyframes gl{to{transform:scale(1.06);opacity:.85}}
-#tt{position:absolute;left:0;right:0;top:8.5%;text-align:center;transition:opacity 1.2s,transform 2s}
-#tt h1{margin:0;font-weight:500;font-size:clamp(48px,6.8vw,92px);line-height:1;letter-spacing:.005em;text-shadow:0 1px 22px #fff2d090}
-#tt div{margin-top:12px;font-size:15px;letter-spacing:.36em;text-transform:uppercase;opacity:.62}
-#ft{position:absolute;left:0;right:0;bottom:7%;text-align:center;font-size:14px;letter-spacing:.3em;text-transform:uppercase;transition:opacity .8s}
-#st{opacity:.66;transition:opacity .6s}#st b{font-weight:500;opacity:.55;margin-right:.9em}#ft i{display:inline-block;width:42px;height:1px;background:currentColor;vertical-align:middle;margin:0 16px;opacity:.5}
-#tip{display:block;margin-top:12px;font-size:17px;letter-spacing:.02em;text-transform:none;opacity:.7;transition:opacity .8s;min-height:1.3em}#tip.h{opacity:0}
-#go{position:absolute;left:50%;bottom:calc(7% + 54px);transform:translate(-50%,8px);opacity:0;pointer-events:none;font:inherit;font-size:30px;letter-spacing:.03em;color:#4a3328;background:none;border:0;padding:6px 22px 8px;cursor:pointer;transition:opacity 1.2s,transform 1.2s}
-#go:after{content:"";position:absolute;left:22px;right:22px;bottom:2px;height:1px;background:#4a3328;opacity:.5;transform:scaleX(.3);transition:transform .8s}
-#go.on{opacity:1;pointer-events:auto;transform:translate(-50%,0);animation:br 3.2s ease-in-out 1.2s infinite alternate}#go.on:after{transform:scaleX(1)}#go:hover:after,#go:focus-visible:after{opacity:.9}#go:focus{outline:none}
-#go small{display:block;font-size:12px;letter-spacing:.3em;text-transform:uppercase;opacity:.5;margin-top:4px}
-@keyframes br{to{opacity:.72}}
-.out #tt,.out #ft,.out #go{opacity:0!important}
-/* small screens: title card fits phones in portrait and short landscape */
-@media (max-width:600px){#tt{top:calc(env(safe-area-inset-top,0px) + 7%)}#tt h1{font-size:clamp(40px,13vw,64px)}#tt div{font-size:11px;letter-spacing:.24em;margin-top:8px}
- #ft{bottom:calc(env(safe-area-inset-bottom,0px) + 5%);font-size:11px;letter-spacing:.2em;padding:0 14px}#ft i{width:22px;margin:0 8px}#tip{font-size:15px;letter-spacing:0}
- #go{font-size:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 5% + 64px);white-space:nowrap}}
-@media (max-height:500px){#tt{top:5%}#tt h1{font-size:clamp(34px,9vh,56px)}#tt div{font-size:10px;margin-top:6px}#ft{bottom:4%;font-size:10px}#tip{font-size:13px;margin-top:6px}#go{font-size:22px;bottom:calc(4% + 44px)}#go small{font-size:10px}}
+/* planet: the painted cut-out fades in once decoded, rises with progress and floats */
+#pw{position:relative;order:2;flex:0 0 auto;width:min(44vw,70vh);aspect-ratio:681/778;transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
+#pw:before{content:"";position:absolute;inset:4% -6% -2%;border-radius:50%;background:radial-gradient(closest-side,#fffbe9b0,#fff6dc40 55%,#fff0 100%);animation:gl 6s ease-in-out infinite alternate}@keyframes gl{to{transform:scale(1.06);opacity:.75}}
+#pf{position:absolute;inset:0;animation:fl 7s ease-in-out infinite alternate}@keyframes fl{0%{transform:translateY(-1.2%) rotate(-1deg)}100%{transform:translateY(1.2%) rotate(1deg)}}
+#pi{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.94);transition:opacity 1.4s ease,transform 1.8s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 18px 28px #3e5f9640)}#pi.in{opacity:1;transform:none}
+/* title card */
+#tx{position:relative;flex:0 1 auto;width:min(36vw,480px);text-align:center;transition:opacity 1.2s,transform 2s}
+#tt h1{position:relative;margin:0;font-weight:600;font-size:clamp(54px,7.4vw,128px);line-height:.92;letter-spacing:-.01em;text-shadow:0 2px 0 #d9e6f8,0 6px 26px #4d77b455}
+#tt h1 span{display:block}#tt h1 span:first-child{position:relative;display:inline-block}#tt .sp{position:absolute;left:-.02em;top:-.42em;width:.5em;height:.42em}
+#tt .sw{display:block;width:62%;height:auto;margin:.2em auto 0;overflow:visible}
+#tt p{margin:.9em 0 0;font-size:clamp(17px,1.6vw,26px);line-height:1.35;font-weight:600;letter-spacing:.01em;opacity:.95;text-shadow:0 1px 10px #4d77b455}
+#ft,#go{margin-top:clamp(26px,4.5vh,56px)}
+#ft{transition:opacity .8s}
+#bar{position:relative;height:clamp(14px,1.5vw,22px);border:2.5px solid #fff;border-radius:99px;overflow:hidden;box-shadow:0 2px 14px #4d77b433;background:#ffffff1f}
+#fill{position:absolute;inset:2px;border-radius:99px;background:linear-gradient(#ffe7a8,#f5cf7e);transform-origin:0 50%;transform:scaleX(0);transition:transform .5s ease-out}
+#st{display:block;margin-top:.9em;font-size:clamp(15px,1.3vw,20px);letter-spacing:.12em;opacity:.92;transition:opacity .6s}
+#tip{display:block;margin:.7em auto 0;max-width:30em;font-size:clamp(14px,1.15vw,18px);font-weight:600;letter-spacing:.01em;opacity:.78;transition:opacity .8s;min-height:2.6em;text-wrap:balance}#tip.h{opacity:0}
+#go{position:absolute;left:50%;bottom:0;transform:translate(-50%,10px);opacity:0;pointer-events:none;font:inherit;font-size:clamp(20px,1.8vw,28px);color:#7a4a2e;background:linear-gradient(#fff8e6,#ffe7b4);border:0;border-radius:99px;padding:.55em 1.6em .6em;white-space:nowrap;cursor:pointer;box-shadow:0 4px 0 #e5b979,0 10px 26px #3e5f9640;transition:opacity 1.2s,transform 1.2s}
+#go.on{opacity:1;pointer-events:auto;transform:translate(-50%,-16px);animation:br 3.2s ease-in-out 1.2s infinite alternate}#go:hover,#go:focus-visible{background:linear-gradient(#fffdf4,#ffedc4)}#go:focus{outline:none}#go:focus-visible{outline:3px solid #fff;outline-offset:4px}
+#go small{display:block;font-size:.46em;letter-spacing:.2em;text-transform:uppercase;opacity:.6;margin-top:.2em}
+@keyframes br{to{box-shadow:0 4px 0 #e5b979,0 10px 34px #fff8}}
+.out #tx,.out #go{opacity:0!important}.out #pw{transform:scale(1.12)!important;transition-duration:2.2s}
+/* portrait: planet on top, title card below */
+@media (max-aspect-ratio:1/1){#ld{flex-direction:column;gap:2vh;padding:calc(env(safe-area-inset-top,0px) + 3vh) 18px calc(env(safe-area-inset-bottom,0px) + 3vh)}
+ #pw{width:min(74vw,40vh);order:-1}#tx{width:min(88vw,460px)}#tt h1{font-size:clamp(46px,12.5vw,84px)}#tt h1 span{display:inline}#tt p{font-size:clamp(15px,4.2vw,22px)}
+ #ft,#go{margin-top:clamp(18px,3vh,40px)}#st{font-size:14px;letter-spacing:.08em}#tip{font-size:14px}#go{font-size:22px}}
+@media (max-height:500px) and (min-aspect-ratio:1/1){#tt h1{font-size:clamp(38px,11vh,64px)}#tt p{font-size:15px;margin-top:.5em}#ft,#go{margin-top:14px}#st{font-size:13px;margin-top:.5em}#tip{font-size:12px;margin-top:.4em}#go{font-size:18px}}
 html,body{overscroll-behavior:none}#ld{touch-action:none}
-@media (prefers-reduced-motion:reduce){.dr,.sd,.glow,#go.on{animation:none!important}.sd{display:none}.bk,.pl,.ink,.wa,#tt,#go{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
-</style></head><body style="margin:0;overflow:hidden;background:#e9c3a0">
+@media (prefers-reduced-motion:reduce){.dr,#pf,#pw:before,#go.on{animation:none!important}.bk,#pw,#pi,#tx,#go,#fill{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
+</style></head><body style="margin:0;overflow:hidden;background:#86b0e3">
 <div id="ld" role="progressbar" aria-label="Loading Tiny Planet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
-<filter id="wc" x="-20%" y="-40%" width="140%" height="180%"><feTurbulence type="fractalNoise" baseFrequency=".012 .03" numOctaves="4" seed="11"/><feDisplacementMap in="SourceGraphic" scale="60"/><feGaussianBlur stdDeviation="2.5"/></filter>
-<filter id="bl" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency=".02" numOctaves="3" seed="7"/><feDisplacementMap in="SourceGraphic" scale="30"/><feGaussianBlur stdDeviation="4"/></filter>
-<filter id="sf" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter><filter id="ed"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="2"/><feDisplacementMap in="SourceGraphic" scale="2"/></filter>
-<radialGradient id="sun"><stop offset="0" stop-color="#fff7da"/><stop offset=".3" stop-color="#ffe4a8" stop-opacity=".85"/><stop offset="1" stop-color="#ffd08a" stop-opacity="0"/></radialGradient>
-<linearGradient id="c1" x2="0" y2="1"><stop offset="0" stop-color="#fff2de"/><stop offset="1" stop-color="#f1b99c"/></linearGradient>
-<linearGradient id="c2" x2="0" y2="1"><stop offset="0" stop-color="#f8d4bd"/><stop offset="1" stop-color="#d99094"/></linearGradient>
-<linearGradient id="c3" x2="0" y2="1"><stop offset="0" stop-color="#ecbcb5"/><stop offset="1" stop-color="#a97f9d"/></linearGradient>
-<radialGradient id="sea" cx=".38" cy=".3"><stop offset="0" stop-color="#cfe6c8"/><stop offset="1" stop-color="#7fae9e"/></radialGradient>
-<clipPath id="dc"><circle cx="300" cy="330" r="171"/></clipPath>
+<filter id="cb" x="-20%" y="-30%" width="140%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
+<linearGradient id="c1" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f4e9f3"/></linearGradient>
+<linearGradient id="c2" x2="0" y2="1"><stop offset="0" stop-color="#f3f0fa"/><stop offset="1" stop-color="#d8d4ee"/></linearGradient>
 </defs></svg>
-<div class="lay glow"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><circle cx="800" cy="560" r="440" fill="url(#sun)"/></svg></div>
-<div class="lay"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g id="seeds"></g></svg></div>
-<div class="lay pl" id="pl">
-<div class="lay wa" data-a=".12"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g filter="url(#sf)"><circle cx="300" cy="330" r="250" fill="#fff3d2" opacity=".28"/></g></g></svg></div>
-<div class="lay wa" data-a=".2"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><circle cx="300" cy="330" r="172" fill="url(#sea)"/></g></g></g></svg></div>
-<div class="lay wa" data-a=".42"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><ellipse cx="240" cy="250" rx="150" ry="80" fill="#c8dd98" opacity=".7"/><ellipse cx="380" cy="300" rx="100" ry="55" fill="#e8d79a" opacity=".45"/><ellipse cx="300" cy="460" rx="170" ry="55" fill="#93b08e" opacity=".45"/></g></g></g></svg></div>
-<div class="lay wa" data-a=".6"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><path d="M140 362C210 330 250 392 310 378S400 326 470 356V384C400 354 360 402 310 402S210 358 140 388Z" fill="#7ec3dc" opacity=".85"/></g></g></g></svg></div>
-<div class="lay wa" data-a=".8"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g clip-path="url(#dc)"><g filter="url(#bl)"><circle cx="230" cy="230" r="150" fill="#ffe2a6" opacity=".35"/><circle cx="420" cy="470" r="160" fill="#8a6f94" opacity=".2"/></g></g></g></svg></div>
-<div class="lay wa" data-a=".72"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g filter="url(#bl)"><circle cx="300" cy="150" r="30" fill="#e88a7a" opacity=".5"/><circle cx="452" cy="205" r="24" fill="#f2b7c4" opacity=".5"/><circle cx="152" cy="212" r="26" fill="#8fbf7a" opacity=".55"/><circle cx="128" cy="300" r="22" fill="#b0a094" opacity=".5"/></g></g></svg></div>
-<div class="lay wa" data-a=".9"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><circle cx="300" cy="330" r="174" fill="none" stroke="#fff1c4" stroke-width="3.5" stroke-dasharray="420 1200" transform="rotate(-150 300 330)"/></g></svg></div>
-<div class="lay"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g transform="translate(500 228)"><g id="art" filter="url(#ed)"></g></g></svg></div>
-</div>
-<div class="lay bk" id="L3"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c3)" opacity=".86" d="M-200 640C40 560 220 600 380 560C520 520 640 580 760 620C820 700 700 760 640 820L-200 1000Z"/></svg></div></div>
-<div class="lay bk" id="R3"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c3)" opacity=".86" d="M1800 600C1560 540 1380 590 1220 560C1080 540 960 600 860 650C800 720 920 780 980 840L1800 1000Z"/></svg></div></div>
-<div class="lay bk" id="L2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c2)" d="M-200 470C-40 400 160 430 300 400C450 370 560 430 690 470C760 560 700 640 600 700C400 760 100 740-200 800Z"/></svg></div></div>
-<div class="lay bk" id="R2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c2)" d="M1800 450C1640 390 1460 420 1300 400C1150 380 1040 440 930 490C860 570 920 650 1020 700C1200 760 1500 740 1800 800Z"/></svg></div></div>
-<div class="lay bk" id="L1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c1)" d="M-200 760C0 700 200 720 380 690C540 660 690 700 820 760C880 840 760 900 600 950L-200 1100Z"/></svg></div></div>
-<div class="lay bk" id="R1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path filter="url(#wc)" fill="url(#c1)" d="M1800 740C1600 690 1420 710 1240 690C1080 670 930 720 800 780C760 860 860 920 1000 960L1800 1100Z"/></svg></div></div>
-<div id="tt"><h1>Tiny Planet</h1><div>a little world at golden hour</div></div>
+<div class="lay bk" id="L2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c2)" opacity=".8"><circle cx="40" cy="860" r="150"/><circle cx="220" cy="900" r="130"/><circle cx="-80" cy="760" r="120"/><rect x="-200" y="900" width="560" height="200"/></g></svg></div></div>
+<div class="lay bk" id="R2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c2)" opacity=".8"><circle cx="1560" cy="820" r="150"/><circle cx="1390" cy="890" r="120"/><circle cx="1690" cy="720" r="130"/><rect x="1240" y="890" width="560" height="200"/></g></svg></div></div>
+<div class="lay bk" id="L1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c1)"><circle cx="-30" cy="930" r="170"/><circle cx="170" cy="990" r="140"/><circle cx="300" cy="1040" r="110"/><rect x="-200" y="980" width="600" height="200"/></g></svg></div></div>
+<div class="lay bk" id="R1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c1)"><circle cx="1620" cy="920" r="180"/><circle cx="1430" cy="990" r="140"/><circle cx="1300" cy="1050" r="110"/><rect x="1200" y="990" width="600" height="200"/></g></svg></div></div>
+<div id="pw"><div id="pf"><img id="pi" src="./loader/planet.webp" alt="" width="681" height="778" decoding="async" fetchpriority="high" draggable="false"></div></div>
+<div id="tx">
+<div id="tt"><h1><span><svg class="sp" viewBox="0 0 62 52" aria-hidden="true"><path d="M31 52C31 40 30 33 28 26" fill="none" stroke="#b6c46c" stroke-width="5" stroke-linecap="round"/><path d="M28 27C18 30 4 26 2 12C16 6 27 14 28 27Z" fill="#c2cf78"/><path d="M30 25C34 12 46 4 60 8C58 22 44 28 30 25Z" fill="#b6c46c"/></svg>Tiny</span> <span>Planet</span></h1>
+<svg class="sw" viewBox="0 0 260 40" aria-hidden="true"><path d="M6 34C70 14 140 8 212 16" fill="none" stroke="#f6d98e" stroke-width="7" stroke-linecap="round"/><path d="M238 6L242 18L254 22L242 26L238 38L234 26L222 22L234 18Z" fill="#f6d98e"/></svg>
+<p>A cozy little world<br>of everyday adventures</p></div>
+<div id="ft"><div id="bar"><i id="fill"></i></div><span id="st"><span id="sl">Gathering the scripts</span>…</span><span id="tip"></span></div>
 <button id="go">Enter the world<small>press any key</small></button>
-<div id="ft"><span id="st"><i></i><b id="sn">i</b><span id="sl">Gathering the scripts</span><i></i></span><span id="tip"></span></div>
+</div>
 </div>
 <script>(function(){
-var d=document,$=function(i){return d.getElementById(i)},NS="http://www.w3.org/2000/svg",ld=$("ld"),q=location.search,done=0,rm=matchMedia("(prefers-reduced-motion: reduce)").matches;
-// hand-inked planet: every stroke has pathLength=1 so it can draw itself with real progress
-var cx=300,cy=330,r=170,K="#4a3328",A=[];function P(dd,w,o){A.push('<path class="ink" pathLength="1" d="'+dd+'" fill="none" stroke="'+K+'" stroke-width="'+(w||2.2)+'" stroke-linecap="round" stroke-linejoin="round"'+(o||"")+'/>')}
-function rim(a,dd){A.push('<g transform="rotate('+a+' 300 330) translate(300 160) scale(1.25)"><path class="ink" pathLength="1" d="'+dd+'" fill="none" stroke="'+K+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></g>')}
-P("M130 330C130 236 206 160 300 159S472 236 470 332",2.6);P("M470 332C469 424 394 500 300 500S128 425 131 327",2.6);
-P("M168 268C220 300 250 250 300 270S380 330 446 300",1.5);P("M150 360C210 330 250 390 310 372S400 320 462 352",1.9);P("M156 372C214 344 252 402 312 386S402 334 460 366",1.1,' opacity=".6"');
-var H="M-16 0V-22H16V0M-21-20L0-38L21-20M8-31V-40H13V-26M-5 0V-10H4V0M7-15H12V-10H7Z",T="M0 0V-14M-11-22C-14-32-4-40 0-36C6-42 15-33 11-24C14-16 4-12 0-15C-6-11-14-15-11-22Z",F="M0 0V-8M-9-8L0-34L9-8Z",M="M-6 0L-3-34H3L6 0M0-34L-14-50M0-34L16-46M0-34L13-20M0-34L-15-22",C="M-18 2L-14-30L4-36L16-28L18 2M-2-34C-2-20 2-10 0 2",G="M-10 0V-22M10 0V-22M-15-22H15M-12-17H12";
-[[-6,H],[-28,T],[-38,F],[-47,T],[18,T],[30,F],[52,M],[-72,C],[78,G],[-90,F],[100,T]].forEach(function(x){rim(x[0],x[1])});P("M410 120q8-7 14 0q6-7 14 0",1.4);P("M440 96q6-5 10 0q5-5 10 0",1.2);
-$("art").innerHTML=A.join("");var inks=[].slice.call(d.querySelectorAll(".ink")),was=[].slice.call(d.querySelectorAll(".wa"));inks.forEach(function(e){e.style.strokeDasharray="1 1";e.style.strokeDashoffset=1});
-// dandelion seeds drifting up through the light
-var sd=$("seeds");for(var i=0;i<9;i++){var g=d.createElementNS(NS,"g");g.setAttribute("class","sd");g.style.animationDelay=(-i*2.6)+"s";g.style.animationDuration=(18+i%4*3)+"s";var x=180+i*140,y=900-i%3*90,s='<g transform="translate('+x+' '+y+') scale('+(.7+i%3*.25)+')"><path d="M0 0v16" stroke="#fff8e8" stroke-width="1.2"/>';for(var k=0;k<9;k++){var a=k/9*6.28;s+='<path d="M0 0L'+(Math.cos(a)*9).toFixed(1)+' '+(Math.sin(a)*9-3).toFixed(1)+'" stroke="#fffaf0" stroke-width=".9" opacity=".9"/>'}g.innerHTML=s+'<circle r="1.6" fill="#fff6e0"/></g>';sd.appendChild(g)}
-var W={js:20,fonts:1,world:31,bake:7,shaders:4,frame:37},L={js:"Gathering the scripts",fonts:"Setting the type",world:"Shaping the planet",bake:"Waking the traveller",shaders:"Mixing the paints",frame:"Painting the first light"},O=["js","fonts","world","bake","shaders","frame"],RN=["i","ii","iii","iv","v","vi"],S={};
-var SC=1,BK={};function fit(){var W=innerWidth,H=innerHeight;SC=Math.max(W/1600,H/1000);ld.style.setProperty("--s",SC);ld.style.setProperty("--ox",(W-1600*SC)/2+"px");ld.style.setProperty("--oy",(H-1000*SC)/2+"px");for(var k in BK)bank(k,BK[k][0],BK[k][1])}
+var d=document,$=function(i){return d.getElementById(i)},ld=$("ld"),q=location.search,done=0,rm=matchMedia("(prefers-reduced-motion: reduce)").matches;
+// the planet art fades in once it has decoded; until then the sky, title and bar already show
+var pi=$("pi");function shown(){pi.classList.add("in")}if(pi.complete&&pi.naturalWidth)shown();else{pi.onload=function(){(pi.decode?pi.decode():Promise.resolve()).then(shown,shown)}}
+var W={js:20,fonts:1,world:31,bake:7,shaders:4,frame:37},L={js:"Gathering the scripts",fonts:"Setting the type",world:"Shaping the planet",bake:"Waking the traveller",shaders:"Mixing the paints",frame:"Painting the first light"},O=["js","fonts","world","bake","shaders","frame"],S={};
+var SC=1,BK={};function fit(){SC=Math.max(innerWidth/1600,innerHeight/1000);ld.style.setProperty("--s",SC);for(var k in BK)bank(k,BK[k][0],BK[k][1])}
 function bank(id,x,y){BK[id]=[x,y];var n=$(id);if(n)n.style.transform="translate("+(x*SC).toFixed(2)+"px,"+(y*SC).toFixed(2)+"px)"}
 function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p);
- inks.forEach(function(el,i){var s=.02+i/inks.length*.78,t=Math.min(1,Math.max(0,(p-s)/.16));el.style.strokeDashoffset=1-t});
- was.forEach(function(w){w.style.opacity=Math.min(1,Math.max(0,(p-+w.getAttribute("data-a"))/.16))});
- bank("L1",90-630*e,150*e);bank("R1",-90+630*e,150*e);bank("L2",-430*e,-30*e);bank("R2",430*e,-30*e);bank("L3",-90-270*e,60+40*e);bank("R3",90+270*e,60+40*e);
- PLY=70-70*e;$("pl").style.transform="translate(0,"+(PLY*SC).toFixed(2)+"px)";ld.setAttribute("aria-valuenow",Math.round(p*100));
- var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done){$("sl").textContent=L[c];$("sn").textContent=RN[O.indexOf(c)]}window.__loader.p=p}
+ $("fill").style.transform="scaleX("+Math.max(.04,p).toFixed(4)+")";
+ bank("L1",40-200*e,60*e);bank("R1",-40+200*e,60*e);bank("L2",20-140*e,30*e);bank("R2",-20+140*e,30*e);
+ PLY=50-50*e;$("pw").style.transform="translate(0,"+(PLY*SC).toFixed(2)+"px)";ld.setAttribute("aria-valuenow",Math.round(p*100));
+ var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done)$("sl").textContent=L[c];window.__loader.p=p}
 var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(en){var n=en.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((S.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(x){}}
 function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="frame"&&v>=1)ready()}
-function ready(){if(done)return;done=1;if((/[?&]touch=1/.test(q)||matchMedia("(pointer: coarse)").matches)&&!/[?&]touch=0/.test(q))$("go").querySelector("small").textContent="tap anywhere";$("st").style.opacity=0;var b=$("go");setTimeout(function(){b.classList.add("on");b.focus({preventScroll:true})},rm?0:700);if(/[?&]enter/.test(q))setTimeout(enter,rm?0:900)}
-function enter(){if(!done||ld.classList.contains("out"))return;removeEventListener("keydown",key,true);ld.classList.add("out");if(rm)ld.style.opacity=0;
- var e=1.9;bank("L1",-540*e,150*e);bank("R1",540*e,150*e);bank("L2",-430*e,-30*e);bank("R2",430*e,-30*e);bank("L3",-270*e,40*e);bank("R3",270*e,40*e);setTimeout(function(){ld.remove()},rm?450:2300)}
+function ready(){if(done)return;done=1;if((/[?&]touch=1/.test(q)||matchMedia("(pointer: coarse)").matches)&&!/[?&]touch=0/.test(q))$("go").querySelector("small").textContent="tap anywhere";$("ft").style.opacity=0;var b=$("go");setTimeout(function(){b.classList.add("on");b.focus({preventScroll:true})},rm?0:700);if(/[?&]enter/.test(q))setTimeout(enter,rm?0:900)}
+function enter(){if(!done||ld.classList.contains("out"))return;removeEventListener("keydown",key,true);
+ // the iris opens from the planet, wherever the layout put it
+ var r=$("pw").getBoundingClientRect();ld.style.setProperty("--ix",(r.left+r.width/2).toFixed(0)+"px");ld.style.setProperty("--iy",(r.top+r.height*.55).toFixed(0)+"px");
+ ld.classList.add("out");if(rm)ld.style.opacity=0;
+ bank("L1",-700,200);bank("R1",700,200);bank("L2",-600,80);bank("R2",600,80);setTimeout(function(){ld.remove()},rm?450:2300)}
 function key(e){if(done&&!e.metaKey&&!e.ctrlKey){e.preventDefault();e.stopPropagation();enter()}}
 addEventListener("keydown",key,true);$("go").onclick=enter;ld.addEventListener("pointerup",function(){if(done)enter()});
 var TIPS=["Press E near anything that shimmers to gather it.","A fishing rod is two wood and three reeds.","The crafting bench waits beside the house marked Home.","Fireflies and glowing moss come out only at night.","Everything grows back by morning; gather freely.","The meadow sheep will share their wool.","A rope bridge opens a path up the waterfall cliff.","Decor can be placed anywhere around Home."],ti=Math.floor(Math.random()*TIPS.length),tp=$("tip");
 tp.textContent=TIPS[ti++%TIPS.length];var tt=setInterval(function(){if(!d.body.contains(ld))return clearInterval(tt);tp.classList.add("h");setTimeout(function(){tp.textContent=TIPS[ti++%TIPS.length];tp.classList.remove("h")},rm?0:800)},6500);
-addEventListener("error",function(e){if(!done){$("sl").textContent="Something went wrong, please reload";$("sn").textContent="!"}});
-var PLY=70;fit();addEventListener("resize",function(){fit();if(!ld.classList.contains("out"))$("pl").style.transform="translate(0,"+(PLY*SC).toFixed(2)+"px)"});
+addEventListener("error",function(e){if(!done)$("sl").textContent="Something went wrong, please reload"});
+var PLY=50;fit();addEventListener("resize",fit);
 window.__loader={stage:stage,p:0,P:S};draw();
 })()</script>
 <div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
