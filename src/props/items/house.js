@@ -148,11 +148,42 @@ function archWallGeo(w, h, d, ow, oh) { const s = new THREE.Shape(), r = w / 2, 
   const p = new THREE.Path(); p.moveTo(-ri, 0); p.lineTo(ri, 0); p.lineTo(ri, oh); p.absarc(0, oh, ri, 0, PI, false); p.lineTo(-ri, 0); s.holes.push(p)
   const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2, curveSegments: 20 }); g.translate(0, 0, -d / 2); g.computeVertexNormals(); return g }
 
-defineProp('archWindow', { name: 'Arched window', size: [0.44, 0.48, 0.12], tags: ['structure', 'wall'], pal: { frame: 'woodLight', sill: 'wood', bar: 'woodLight' }, opts: { w: 0.36, h: 0.42 } }, (k, o) => {
+defineProp('archWindow', { name: 'Arched window', size: [0.44, 0.48, 0.12], tags: ['structure', 'wall'], pal: { frame: 'woodLight', sill: 'wood', bar: 'woodLight', curtain: 'cream', tie: '#f2b04a', rod: 'woodDark', leaf: 'leaf' }, opts: { w: 0.36, h: 0.42, curtains: false, sillPlant: false } }, (k, o) => {
   const hr = o.h - o.w / 2
   k.archFrame(o.w, hr, 0.04, 0.05, [0, 0, 0.02], 'frame')
   k.box([0.022, o.h - 0.01, 0.016], [0, (o.h - 0.01) / 2, 0.01], 'bar', { r: 0.006, out: false }); k.box([o.w, 0.02, 0.016], [0, hr * 0.85, 0.01], 'bar', { r: 0.006, out: false })
   k.box([o.w + 0.12, 0.028, 0.11], [0, -0.02, 0.05], 'sill', { r: 0.012 })
+  if (o.curtains) { // cream curtains gathered with tie-backs under a rod with round finials, as on the concept's kitchen window
+    const ry = o.h + 0.05, rw = o.w + 0.22; k.stick([0.009, rw], [0, ry, 0.07], 'rod', { rot: [0, 0, Math.PI / 2] }); for (const s of [-1, 1]) k.ball(0.017, [s * rw / 2, ry, 0.07], 'rod')
+    for (const s of [-1, 1]) { const x = s * (o.w / 2 + 0.03)
+      k.puff([0.075, ry - 0.02, 0.025], [x, (ry - 0.02) / 2 + 0.01, 0.075], 'curtain', { bulge: 0.2, belly: -0.35 }); k.puff([0.08, 0.025, 0.035], [x, ry * 0.42, 0.08], 'tie', { bulge: 0.3 }) } }
+  if (o.sillPlant) { k.pill([0.028, 0.045], [o.w * 0.28, 0.017, 0.06], 'pot', { bevel: 0.3, belly: 0.1 }); k.clump([o.w * 0.28, 0.04, 0.06], 6, 0.045, { e: 0.6 }); k.daisy([o.w * 0.28 - 0.01, 0.085, 0.06], 0.03); k.daisy([o.w * 0.28 + 0.02, 0.075, 0.07], 0.026) }
+})
+
+// a wall timber: a squat round-edged post up the inside of the round wall, with a little corbel at the top
+defineProp('timber', { name: 'Wall timber', size: [0.07, 1.0, 0.05], tags: ['structure', 'wall'], pal: { wood: '#b27040', dark: 'woodDark' }, opts: { h: 1.0 } }, (k, o) => {
+  k.box([0.06, o.h, 0.035], [0, o.h / 2, 0.018], 'wood', { r: 0.012, hi: 0.05 })
+  k.box([0.075, 0.05, 0.06], [0, o.h - 0.06, 0.03], 'dark', { r: 0.012 }); k.box([0.075, 0.04, 0.05], [0, 0.02, 0.025], 'dark', { r: 0.012 })
+})
+
+// the bed alcove's half-wall: a plaster wall whose top sweeps down in a quarter circle (tall at the room's wall,
+// low at its free end), with a timber trim along the curve. len along +x, faces +z / -z.
+defineProp('alcoveWall', { name: 'Alcove wall', size: [0.52, 0.85, 0.07], tags: ['structure'], pal: { wall: '#f6d6c0', trim: '#c98552', cap: '#a8683c' }, opts: { len: 0.52, h: 0.85, low: 0.3, d: 0.07, shadow: false } }, (k, o) => {
+  const { len, h, low, d } = o, s = new THREE.Shape(), N = 16
+  const pt = (t) => [len * Math.cos(t), low + (h - low) * Math.sin(t)] // quarter ellipse: (len, low) round to (0, h)
+  s.moveTo(0, 0); s.lineTo(len, 0); s.lineTo(len, low); for (let i = 1; i <= N; i++) s.lineTo(...pt(i / N * Math.PI / 2)); s.lineTo(0, 0)
+  const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 }); g.translate(0, 0, -d / 2); g.computeVertexNormals()
+  k.add(g, [0, 0, 0], 'wall', { hi: 0.05 })
+  for (let i = 0; i < N; i++) { const p0 = pt(i / N * Math.PI / 2), p1 = pt((i + 1) / N * Math.PI / 2)
+    const L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]); k.box([L + 0.012, 0.035, d + 0.03], [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + 0.008, 0], 'trim', { r: 0.01, rot: [0, 0, Math.atan2(p1[1] - p0[1], p1[0] - p0[0])], out: i % 2 === 0 }) }
+  k.box([0.05, low + 0.03, d + 0.03], [len, (low + 0.03) / 2, 0], 'trim', { r: 0.012 })
+  k.box([len + 0.02, 0.03, d + 0.03], [len / 2, 0.015, 0], 'cap', { r: 0.01, out: false })
+})
+
+// a small rectangular mat for in front of things (kitchen, desk, bowls)
+defineProp('mat', { name: 'Floor mat', size: [0.36, 0.01, 0.22], tags: ['living'], pal: { mat: '#f6e7d2', edge: '#e6b98a' }, opts: { w: 0.36, d: 0.22, shadow: false } }, (k, o) => {
+  k.box([o.w, 0.008, o.d], [0, 0.004, 0], 'edge', { r: 0.03, out: false, hi: 0 }); k.box([o.w - 0.04, 0.01, o.d - 0.04], [0, 0.006, 0], 'mat', { r: 0.024, out: false, hi: 0 })
+  for (let i = 0; i < 6; i++) for (const s of [-1, 1]) k.ball([0.008, 0.003, 0.008], [(i - 2.5) * (o.w - 0.08) / 5, 0.012, s * (o.d / 2 - 0.035)], 'edge', { out: false })
 })
 
 defineProp('picture', { name: 'Framed picture', size: [0.22, 0.18, 0.03], tags: ['wall', 'decor'], pal: { frame: 'woodDark', sky: '#cfe6ff', hill: '#9fd17a', sun: '#ffd36e', roof: '#d9655b' } }, (k) => {

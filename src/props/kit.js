@@ -16,7 +16,7 @@ import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferG
 
 // ---------- palette: named swatches shared by every prop (items refer to these names, or to raw hex) ----------
 export const PAL = {
-  wood: '#d39a5e', woodLight: '#e8bc84', woodDark: '#9c6338', trim: '#7d4a2c',
+  wood: '#d8955a', woodLight: '#ecbb80', woodDark: '#9c6338', trim: '#7d4a2c',
   cream: '#fff4e2', linen: '#f6e6cc', white: '#fffaf2', paper: '#fbf1dc',
   quilt: '#f7c95a', quiltDark: '#eba63e', orange: '#f29a46', peach: '#f6c3a0', rose: '#f3a3a8', sky: '#9fd0ee',
   leaf: '#7fb84f', leafLight: '#a6d36a', leafDark: '#5d9a3e', pot: '#fbf6ee', potRim: '#eadfcc',

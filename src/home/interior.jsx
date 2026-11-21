@@ -40,8 +40,10 @@ P.bigPlant = against(-131, 0.34, 0.34)
 P.petBowls = against(-158, 0.36, 0.14)
 P.coatStand = against(158, 0.26, 0.12)
 P.wardrobe = against(90, 0.38, 0.24)
-P.nightstand = against(109, 0.19, 0.18)
-P.bed = against(128, 0.5, 0.72)
+P.nightstand = against(112, 0.19, 0.18)
+P.bed = against(130, 0.5, 0.72)
+// the bed alcove: a half-wall with a quarter-round top, from the round wall toward the middle (like the concept)
+export const ALCOVE = { phi: 103, len: 0.5 }
 P.flowerPot = against(147, 0.17, 0.17)
 const pol = (phi, r, yaw = 0) => { const [x, z] = polar(phi, r); return { x, z, yaw } }
 P.petBed = pol(-147, 0.98, 0.4)
@@ -58,7 +60,10 @@ P.toilet = against(63, 0.16, 0.22)
 const KW = -13, LW = -112, PORT = 47
 P.kitchenWindow = onWall(KW, 0.4); P.leftWindow = onWall(LW, 0.4)
 P.jarShelf = onWall(10, 0.62, 0.5); P.bookShelf = onWall(-37, 0.6, 0.44); P.pegboard = onWall(-82, 0.36, 0.42)
-P.picture = onWall(109, 0.42, 0.22); P.towelRail = { x: NOOK.x0 + 0.03, y: 0.32, z: -0.72, yaw: Math.PI / 2 }
+ P.towelRail = { x: NOOK.x0 + 0.03, y: 0.32, z: -0.72, yaw: Math.PI / 2 }
+P.kitchenMat = (() => { const [x, z] = local(P.counter, -0.06, 0.35); return { x, z, yaw: P.counter.yaw } })()
+P.deskMat = (() => { const [x, z] = local(P.desk, -0.02, 0.36); return { x, z, yaw: P.desk.yaw } })()
+P.shelfPlant = (() => { const [x, z] = local(P.jarShelf, 0.215, 0.06); return { x, y: P.jarShelf.y + 0.012, z, yaw: P.jarShelf.yaw } })()
 export const LAYOUT = P
 
 // openings in the round wall (arc width w in room units around phi)
@@ -73,6 +78,7 @@ const cook = local(P.counter, 0.19, 0), sink = local(P.counter, -0.12, 0), cookS
 export const SPOTS = {
   cook: { x: cook[0], z: cook[1], y: 0.238, stand: cookStand, yaw: P.counter.yaw + Math.PI },
   sink: { x: sink[0], z: sink[1] },
+  bath: { stand: [NOOK.x0 + (1.6 - NOOK.x0) / 2 - 0.05, NOOK.z1 - 0.15] },
   table: { x: P.table.x, z: P.table.z, h: 0.158 },
   stool: { x: P.stool.x, z: P.stool.z, h: 0.142, face: P.desk.yaw + Math.PI },
   bed: { ...P.bed, top: 0.16, head: [Math.sin(-P.bed.yaw), -Math.cos(-P.bed.yaw)] }, // head points at the wall
@@ -96,6 +102,7 @@ export const BLOCK_LIST = () => [
   { ...fp('roundTable', P.table, 0.95), id: 'table', round: true }, { ...fp('pouf', P.poufL, 0.85), id: 'poufL', round: true }, { ...fp('pouf', P.poufR, 0.85), id: 'poufR', round: true },
   { id: 'bathSide', x0: NOOK.x0 - 0.04, x1: NOOK.x0 + 0.04, z0: -1.6, z1: NOOK.z1 + 0.03 },
   { id: 'bathFront1', x0: NOOK.x0 - 0.04, x1: 0.95, z0: NOOK.z1 - 0.04, z1: NOOK.z1 + 0.04 }, { id: 'bathFront2', x0: 1.31, x1: 1.6, z0: NOOK.z1 - 0.04, z1: NOOK.z1 + 0.04 },
+  (() => { const [ax, az] = polar(ALCOVE.phi, R), [bx, bz] = polar(ALCOVE.phi, R - ALCOVE.len); return { id: 'alcove', x0: Math.min(ax, bx) - 0.05, x1: Math.max(ax, bx) + 0.05, z0: Math.min(az, bz) - 0.05, z1: Math.max(az, bz) + 0.05 } })(),
   { id: 'tub', x0: P.tub.x - 0.16, x1: P.tub.x + 0.16, z0: P.tub.z - 0.16, z1: P.tub.z + 0.16, round: true }, fp('toilet', P.toilet, 0.85),
 ]
 
@@ -135,7 +142,9 @@ function wallGeos() {
     if (!(hole && hole.o.phi === 180)) quad(outer, no, Pv(A.x, hA, A.z), Pv(B.x, hB, B.z), Pv(oB.x, hB, oB.z), Pv(oA.x, hA, oA.z), Pv(0, 1, 0))
   }
   const mk = (p, n) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3)); return g }
-  return [mk(inner, ni), mk(outer, no)]
+  const gi = mk(inner, ni), lo = new THREE.Color('#efc3a6'), hi = new THREE.Color('#fde8da'), c = new THREE.Color(), cols = new Float32Array(inner.length) // warm peach, lighter up high (the concept's glow)
+  for (let i = 0; i < inner.length; i += 3) { c.copy(lo).lerp(hi, Math.min(1, Math.max(0, inner[i + 1] / ROOM.h)) ** 0.8); c.toArray(cols, i) } gi.setAttribute('color', new THREE.BufferAttribute(cols, 3))
+  return [gi, mk(outer, no)]
 }
 // chunky timber cap along the top of the wall, with a squat post every few blocks (the concept's rim)
 function capBlocks() {
@@ -148,10 +157,11 @@ function capBlocks() {
     last = p; acc = 0; k++ }
   return out
 }
+const WALL_IN = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp })
 function Walls() {
   const [gi, go] = useMemo(wallGeos, []), caps = useMemo(capBlocks, [])
   return <group>
-    <mesh geometry={gi} material={tm(W.wall, 0.05)} />
+    <mesh geometry={gi} material={WALL_IN} />
     <mesh geometry={go} material={tm(W.wallOut, 0.1)} />
     {caps.map((c, i) => <group key={i} position={c.p} rotation={[...c.rot, 'YZX']}>
       <O geo={GEO.box} mat={tm(W.cap)} scale={c.s} out={OUT.room} />
@@ -246,6 +256,26 @@ export function Smoke() {
   return <group ref={ref} position={[cx, y0, cz]}>{puffs.map((p, i) => <sprite key={i} material={p.m} />)}</group>
 }
 
+// the bed alcove half-wall, with a little shelf, a picture and a plant on the bed side
+function Alcove() {
+  const [x, z] = polar(ALCOVE.phi, R + 0.02), dx = -Math.sin(ALCOVE.phi * D2R), dz = Math.cos(ALCOVE.phi * D2R), rot = Math.atan2(-dz, dx) // local +x runs in toward the middle
+  return <group position={[x, 0, z]} rotation-y={rot}>
+    <Prop id="alcoveWall" opts={{ len: ALCOVE.len + 0.02, h: 0.85, low: 0.3, d: 0.07, shadow: false }} />
+    <group position={[0.2, 0.3, -0.04]} rotation-y={Math.PI}><Prop id="bookShelf" opts={{}} scale={[0.55, 1, 0.7]} /></group>
+    <group position={[0.17, 0.52, -0.045]} rotation-y={Math.PI}><Prop id="picture" /></group>
+    <group position={[0.4, 0.3, -0.05]} rotation-y={Math.PI} scale={0.6}><Prop id="flowerPot" opts={{ shadow: false }} /></group>
+  </group>
+}
+// sunlight through the kitchen window: a soft four-pane patch on the floor in front of the counter (daytime)
+const paneTex = () => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.filter = 'blur(4px)'; x.fillStyle = '#fff'
+  for (const [px, py] of [[18, 18], [68, 18], [18, 68], [68, 68]]) { x.beginPath(); x.roundRect(px, py, 42, 42, 8); x.fill() } const t = new THREE.CanvasTexture(c); return t }
+export function WindowLight() {
+  const m = useMemo(() => new THREE.MeshBasicMaterial({ map: paneTex(), color: '#ffe6a8', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), [])
+  useFrame(() => { m.opacity = 0.55 * Math.max(0, T.day - T.night) })
+  const [x, z] = local(P.counter, -0.14, 0.5)
+  return <mesh position={[x, 0.009, z]} rotation={[-Math.PI / 2, 0, P.counter.yaw + 0.25]} material={m} renderOrder={2}><planeGeometry args={[0.42, 0.34]} /></mesh>
+}
+
 // ---------- everything static, placed ----------
 const at = (pl, y = 0) => ({ position: [pl.x, pl.y ?? y, pl.z], 'rotation-y': pl.yaw })
 export function Shell() {
@@ -255,13 +285,17 @@ export function Shell() {
     <Prop id="counter" {...at(P.counter)} />
     <Prop id="fridge" {...at(P.fridge)} /><Prop id="firewood" {...at(P.firewood)} /><Prop id="woodStove" {...at(P.stove)} opts={{ flue: FLUE }} />
     <Prop id="jarShelf" {...at(P.jarShelf)} /><Prop id="bookShelf" {...at(P.bookShelf)} />
-    <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4 }} /><Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39 }} />
+    <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4, curtains: true, sillPlant: true }} /><Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39, sillPlant: true }} />
+    <Prop id="mat" {...at(P.kitchenMat)} opts={{ w: 0.42, d: 0.2, shadow: false }} /><Prop id="mat" {...at(P.deskMat)} opts={{ w: 0.36, d: 0.26, shadow: false }} />
+    <group position={[P.shelfPlant.x, P.shelfPlant.y, P.shelfPlant.z]} rotation-y={P.shelfPlant.yaw} scale={0.75}><Prop id="plant" opts={{ shadow: false }} /></group>
+    {[-64, -100, 34, 72].map(ph => { const pl = onWall(ph, 0), z = polar(ph, R)[1]; return <Prop key={ph} id="timber" opts={{ h: wallH(z) - 0.02 }} {...at(pl)} /> })}
+    <Alcove />
     <Prop id="desk" {...at(P.desk)} /><Prop id="pegboard" {...at(P.pegboard)} /><Prop id="stool" {...at(P.stool)} />
     <Prop id="petBed" {...at(P.petBed)} /><Prop id="petBowls" {...at(P.petBowls)} />
     <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.55, rz: 0.46, shadow: false }} pal={{ rug: '#f2dcc0', ring: '#e2b98e' }} />
-    <Prop id="roundTable" {...at(P.table)} /><Prop id="pouf" {...at(P.poufL)} /><Prop id="pouf" {...at(P.poufR)} />
+    <Prop id="roundTable" {...at(P.table)} opts={{ lantern: true }} /><Prop id="pouf" {...at(P.poufL)} /><Prop id="pouf" {...at(P.poufR)} />
     <Prop id="wardrobe" {...at(P.wardrobe)} /><Prop id="nightstand" {...at(P.nightstand)} /><Prop id="bed" {...at(P.bed)} /><Prop id="runner" {...at(P.runner)} />
-    <Prop id="picture" {...at(P.picture)} /><Prop id="coatStand" {...at(P.coatStand)} />
+    <Prop id="coatStand" {...at(P.coatStand)} />
     {/* bath nook: partition (plain side wall + arched front), tub, loo, towel, porthole frame */}
     <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
     <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
