@@ -10,7 +10,7 @@ import { HOME, ROOM, DOOR, resolve, freeAt, roomToWorld } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { T, q, VIEW, setViewMode } from '../common.jsx'
 import { R, height } from '../world.js'
-import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, WindowLight, DoorWay, Smoke, LAMP, LAYOUT } from './interior.jsx'
+import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, WindowLight, DoorWay, Smoke, BathWalls, LAMP, LAYOUT } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
@@ -164,7 +164,7 @@ export function Room() {
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
     <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><WindowLight /><Lamp /><NightGlow />
-    <Merge><Shell /></Merge>
+    <Merge><Shell /></Merge><BathWalls />
     <React.Suspense fallback={null}><Activities /></React.Suspense>
     <InsideDecor />
     <React.Suspense fallback={null}><Cat /></React.Suspense>

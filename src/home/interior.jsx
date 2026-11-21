@@ -276,10 +276,28 @@ export function WindowLight() {
   return <mesh position={[x, 0.009, z]} rotation={[-Math.PI / 2, 0, P.counter.yaw + 0.25]} material={m} renderOrder={2}><planeGeometry args={[0.42, 0.34]} /></mesh>
 }
 
+// the bath nook's partition (plain side wall + arched front wall + the towel rail on it). Kept out of the merged static
+// set because it changes: when she walks into the bath the walls fade to see-through (their outlines hide) so you can
+// see her in there; they turn solid again when she walks out. They get their own material copies so nothing else fades.
+export const inBath = (hp) => hp.x > NOOK.x0 - 0.03 && hp.z < NOOK.z1 + 0.06
+export function BathWalls() {
+  const ref = useRef(), st = useRef(0), mats = useRef(null), nookFront = 1.6 - NOOK.x0
+  useFrame((_, dt) => { const g = ref.current; if (!g) return
+    if (!mats.current) { const fill = [], outl = []; g.traverse(m => { if (!m.isMesh) return; if (m.userData.outline || m.material.isShaderMaterial) { outl.push(m); return } if (m.material.transparent) return
+      m.material = m.material.clone(); m.material.transparent = true; fill.push(m) }); mats.current = { fill, outl } }
+    const want = HOME.inside && inBath(HOME.hp) ? 1 : 0; st.current += (want - st.current) * Math.min(1, dt * 6); const k = st.current
+    for (const m of mats.current.fill) { m.material.opacity = 1 - 0.72 * k; m.material.depthWrite = k < 0.02; m.renderOrder = k > 0.02 ? 6 : 0 }
+    for (const m of mats.current.outl) m.visible = k < 0.15 })
+  return <group ref={ref}>
+    <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
+    <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
+    <Prop id="towelRail" {...at(P.towelRail)} />
+  </group>
+}
+
 // ---------- everything static, placed ----------
 const at = (pl, y = 0) => ({ position: [pl.x, pl.y ?? y, pl.z], 'rotation-y': pl.yaw })
 export function Shell() {
-  const nookFront = 1.6 - NOOK.x0
   return <>
     <Walls /><NookTiles />
     <Prop id="counter" {...at(P.counter)} />
@@ -297,9 +315,7 @@ export function Shell() {
     <Prop id="wardrobe" {...at(P.wardrobe)} /><Prop id="nightstand" {...at(P.nightstand)} /><Prop id="bed" {...at(P.bed)} /><Prop id="runner" {...at(P.runner)} />
     <Prop id="coatStand" {...at(P.coatStand)} />
     {/* bath nook: partition (plain side wall + arched front), tub, loo, towel, porthole frame */}
-    <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
-    <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
-    <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} /><Prop id="towelRail" {...at(P.towelRail)} />
+    <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} />
     {(() => { const pl = onWall(PORT, 0); return <group position={[pl.x, (OPEN[2].y0 + OPEN[2].ys) / 2, pl.z]} rotation-y={pl.yaw}><O geo={GEO.tor} mat={tm(W.light)} scale={[0.082, 0.082, 0.06]} out={OUT.fine} /></group> })()}
     {/* front entrance, as in the concept: lantern posts hugging the door frame, stone steps with a mat, daisy pots, bushes */}
     {[-1, 1].map(s => { const [x, z] = polar(180 + s * 10.4, R + 0.085); return <Prop key={s} id="lanternPost" position={[x, 0, z]} rotation-y={-s * 10.4 * D2R} /> })}
