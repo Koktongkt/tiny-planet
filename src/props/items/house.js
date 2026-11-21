@@ -47,7 +47,7 @@ defineProp('firewood', { name: 'Firewood', size: [0.26, 0.2, 0.2], tags: ['kitch
 })
 
 // ---------- desk corner ----------
-defineProp('desk', { name: 'Desk', size: [0.56, 0.42, 0.32], tags: ['study'], pal: { top: 'woodLight', body: 'wood', panel: 'woodLight', knob: 'woodDark', mat: '#6aa883', lamp: 'brass' } }, (k) => {
+defineProp('desk', { name: 'Desk', size: [0.56, 0.44, 0.32], tags: ['study'], pal: { top: 'woodLight', body: 'wood', panel: 'woodLight', knob: 'woodDark', mat: '#6aa883', lamp: 'brass' } }, (k) => {
   k.box([0.56, 0.026, 0.32], [0, 0.235, 0], 'top', { r: 0.014 })
   k.box([0.18, 0.21, 0.28], [-0.18, 0.11, 0], 'body', { r: 0.03, belly: 0.04 })
   for (const y of [0.065, 0.16]) { panel(k, [0.15, 0.075, 0.016], [-0.18, y, 0.142], 'panel'); k.knob([-0.18, y, 0.155], 'knob', 0.013) }
@@ -55,9 +55,14 @@ defineProp('desk', { name: 'Desk', size: [0.56, 0.42, 0.32], tags: ['study'], pa
   k.box([0.2, 0.006, 0.15], [0.05, 0.25, 0.04], 'mat', { r: 0.004, rot: [0, 0.12, 0], pattern: 'grid', tile: 5, out: false })
   k.puff([0.11, 0.06, 0.09], [-0.16, 0.282, -0.06], '#f2e2c4', { bulge: 0.15 }); k.box([0.115, 0.012, 0.095], [-0.16, 0.317, -0.06], '#e2cda8', { r: 0.004 })
   k.pill([0.022, 0.06], [0.2, 0.278, 0.09], 'orange', { bevel: 0.3 }); for (const [dx, c] of [[-0.008, '#d9655b'], [0.008, '#5f8fc4'], [0, '#ffd36e']]) k.stick([0.004, 0.07], [0.2 + dx, 0.31, 0.09 + dx], c, { rot: [dx * 10, 0, dx * 14], out: false })
-  // brass desk lamp
-  k.pill([0.04, 0.014], [0.18, 0.255, -0.09], 'lamp', { bevel: 0.4 }); k.stick([0.007, 0.13], [0.17, 0.31, -0.09], 'lamp', { rot: [0, 0, 0.3] }); k.stick([0.007, 0.1], [0.12, 0.38, -0.09], 'lamp', { rot: [0, 0, -1.1] })
-  k.dome([0.04, 0.035, 0.04], [0.08, 0.375, -0.09], 'lamp', { rot: [0, 0, PI * 0.8] }); k.ball(0.016, [0.075, 0.36, -0.09], '#fff3cf', { glow: true }); k.halo([0.07, 0.33, -0.06], 0.1)
+  // brass gooseneck desk lamp, as in the concept: round foot, an S-curved neck, a dome shade over a big glowing bulb
+  const lx = 0.17, lz = -0.08, ly = 0.248
+  k.pill([0.042, 0.016], [lx, ly + 0.008, lz], 'lamp', { bevel: 0.45 }); k.ball([0.016, 0.01, 0.016], [lx, ly + 0.02, lz], 'lamp', { out: false })
+  const neck = [[lx, ly + 0.02], [lx + 0.004, ly + 0.07], [lx + 0.006, ly + 0.11], [lx - 0.006, ly + 0.15], [lx - 0.03, ly + 0.175], [lx - 0.06, ly + 0.178], [lx - 0.085, ly + 0.165]]
+  for (let i = 0; i < neck.length - 1; i++) { const [x0, y0] = neck[i], [x1, y1] = neck[i + 1], L = Math.hypot(x1 - x0, y1 - y0); k.stick([0.008, L + 0.016], [(x0 + x1) / 2, (y0 + y1) / 2, lz], 'lamp', { rot: [0, 0, Math.atan2(x0 - x1, y1 - y0)] }) }
+  const sx = lx - 0.1, sy = ly + 0.15
+  k.dome([0.05, 0.042, 0.05], [sx, sy, lz], '#a8793a', { rot: [0, 0, 0.35] }); k.ball([0.011, 0.012, 0.011], [sx + 0.014, sy + 0.04, lz], '#a8793a', { out: false })
+  k.ball([0.034, 0.03, 0.034], [sx - 0.004, sy - 0.004, lz], '#fff1c4', { glow: true }); k.halo([sx - 0.006, sy - 0.03, lz], 0.13)
 })
 
 defineProp('pegboard', { name: 'Pegboard', size: [0.42, 0.28, 0.05], tags: ['study', 'wall'], pal: { board: '#e6b47c', frame: 'woodDark', tool: '#6a6270' } }, (k) => {
@@ -241,4 +246,33 @@ defineProp('steps', { name: 'Stone steps', size: [0.48, 0.06, 0.24], tags: ['out
 // a plain partition wall with a timber cap (pairs with archWall)
 defineProp('wallPanel', { name: 'Wall panel', size: [0.6, 0.8, 0.06], tags: ['structure'], pal: { wall: '#f8dcc4', cap: '#b06c3c' }, opts: { w: 0.6, h: 0.8, d: 0.06, shadow: false } }, (k, o) => {
   k.box([o.w, o.h, o.d], [0, o.h / 2, 0], 'wall', { r: 0.012, hi: 0.06 }); k.box([o.w + 0.03, 0.05, o.d + 0.04], [0, o.h - 0.02, 0], 'cap', { r: 0.018 })
+})
+
+// a brass lantern hanging off a little wall bracket (bath, porch); back on z = 0
+defineProp('wallLantern', { name: 'Wall lantern', size: [0.1, 0.26, 0.14], tags: ['light', 'wall'], pal: { arm: 'woodDark' } }, (k) => {
+  k.box([0.03, 0.05, 0.016], [0, 0.22, 0.008], 'arm', { r: 0.006 }); k.box([0.016, 0.016, 0.1], [0, 0.235, 0.055], 'arm', { r: 0.006 }); k.ring(0.01, 0.003, [0, 0.222, 0.1], 'arm', { out: false })
+  lanternBody(k, [0, 0.07, 0.1], 0.9)
+})
+// the shared brass lantern body (also used by 'lantern'): warm glass panes with a bright diamond on each, a dome roof
+export function lanternBody(k, [x, y, z], s = 1, hang = true) {
+  const S = (v) => v * s
+  k.pill([S(0.04), S(0.016)], [x, y + S(0.008), z], '#8f5a32', { bevel: 0.4 })
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2; k.box([S(0.05), S(0.07), 0.005], [x + Math.sin(a) * S(0.031), y + S(0.052), z + Math.cos(a) * S(0.031)], '#ffcf72', { r: 0.002, rot: [0, a, 0], glow: true, belly: 0.06 })
+    k.box([S(0.02), S(0.02), 0.003], [x + Math.sin(a) * S(0.035), y + S(0.052), z + Math.cos(a) * S(0.035)], '#fffbe8', { rot: [0, a, PI / 4], glow: true, r: 0.001 }) }
+  k.ball([S(0.016), S(0.022), S(0.016)], [x, y + S(0.05), z], '#fff6d8', { glow: true })
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + PI / 4; k.stick([S(0.007), S(0.08)], [x + Math.sin(a) * S(0.037), y + S(0.052), z + Math.cos(a) * S(0.037)], '#b9763e') }
+  k.pill([S(0.045), S(0.012)], [x, y + S(0.094), z], '#b9763e', { bevel: 0.4 }); k.dome([S(0.034), S(0.028), S(0.034)], [x, y + S(0.1), z], '#b9763e')
+  k.pill([S(0.012), S(0.016)], [x, y + S(0.132), z], '#8f5a32', { bevel: 0.4, out: false }); if (hang) k.ring(S(0.011), S(0.0035), [x, y + S(0.15), z], '#8f5a32', { out: false })
+  k.halo([x, y + S(0.05), z], S(0.12), '#ffc870', { flicker: true })
+}
+
+// a cozy red reading armchair: puffy rolled arms, a tufted rounded back, a cream seat cushion, stubby feet, a throw
+defineProp('armchair', { name: 'Reading armchair', size: [0.32, 0.34, 0.3], tags: ['living'], pal: { body: '#d9524a', top: '#e8695c', seat: '#f7e7d2', foot: 'woodDark', button: '#a8382f', throw: 'quilt' } }, (k) => {
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.pill([0.018, 0.04], [sx * 0.11, 0.02, sz * 0.1], 'foot', { bevel: 0.4, taper: -0.3 })
+  k.puff([0.3, 0.09, 0.28], [0, 0.085, 0.005], 'body', { bulge: 0.25, belly: 0.06 })
+  k.puff([0.3, 0.22, 0.08], [0, 0.22, -0.11], 'body', { bulge: 0.15, belly: 0.08 }); k.ball([0.15, 0.06, 0.045], [0, 0.32, -0.11], 'top')
+  for (const [x, y] of [[-0.07, 0.25], [0, 0.27], [0.07, 0.25], [-0.035, 0.2], [0.035, 0.2]]) k.ball([0.01, 0.01, 0.005], [x, y, -0.068], 'button', { out: false })
+  for (const s of [-1, 1]) { k.puff([0.065, 0.13, 0.27], [s * 0.125, 0.14, 0.0], 'body', { bulge: 0.2 }); k.pill([0.038, 0.27], [s * 0.125, 0.205, 0.0], 'top', { rot: [PI / 2, 0, 0], bevel: 0.2 }) }
+  k.puff([0.2, 0.05, 0.21], [0, 0.148, 0.02], 'seat', { bulge: 0.6 })
+  k.puff([0.12, 0.012, 0.2], [0.1, 0.2, -0.05], 'throw', { bulge: 0.2, rot: [0.15, 0.35, 0.5], pattern: 'gingham', tile: 3, out: false })
 })
