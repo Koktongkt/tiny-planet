@@ -35,6 +35,7 @@ defineProp('roundTable', { name: 'Round table', size: [0.42, 0.24, 0.42], tags: 
   k.pill([0.16, 0.025], [0, 0.105, 0], 'leg', { bevel: 0.3, out: false })
   for (let i = 0; i < 3; i++) { const a = i / 3 * PI * 2 + 0.5; k.stick([0.026, 0.13], [Math.sin(a) * 0.105, 0.055, Math.cos(a) * 0.105], 'leg', { rot: [-Math.cos(a) * 0.25, 0, Math.sin(a) * 0.25], taper: -0.25 }) }
   k.box([0.3, 0.01, 0.12], [0, 0.162, 0], 'cloth', { r: 0.004, rot: [0, 0.3, 0], pattern: 'gingham', tile: 3 })
+  if (o.lantern) { k.pill([0.024, 0.012], [0.1, 0.168, 0.04], 'woodDark', { bevel: 0.4 }); k.pill([0.022, 0.04], [0.1, 0.193, 0.04], '#ffcf72', { glow: true, bevel: 0.2, belly: 0.1 }); k.dome([0.024, 0.018, 0.024], [0.1, 0.212, 0.04], 'woodDark'); k.halo([0.1, 0.195, 0.04], 0.08) }
   if (o.vase !== false) { k.pill([0.032, 0.05], [-0.02, 0.19, -0.04], 'white', { bevel: 0.45, belly: 0.25 })
     for (let i = 0; i < 5; i++) { const a = i * 1.3; k.daisy([-0.02 + Math.sin(a) * 0.03 * (i ? 1 : 0), 0.255 + (i % 2) * 0.014, -0.04 + Math.cos(a) * 0.03 * (i ? 1 : 0)], 0.026) } }
 })

@@ -28,7 +28,7 @@ const toward = (x, z, d) => { const r = Math.hypot(x, z) || 1; return [x - x / r
 const STOOL_DIR = [Math.sin(STOOL.face), Math.cos(STOOL.face)], READ_STAND = [STOOL.x - STOOL_DIR[0] * 0.2, STOOL.z - STOOL_DIR[1] * 0.2]
 const BED_SIDE = (() => { const [hx, hz] = BED.head; let px = -hz, pz = hx; if (px * -BED.x + pz * -BED.z < 0) { px = -px; pz = -pz } return [px, pz] })()
 const BED_STAND = [BED.x - BED.head[0] * 0.5 + BED_SIDE[0] * 0.12, BED.z - BED.head[1] * 0.5 + BED_SIDE[1] * 0.12], BED_HEAD = [BED.x + BED.head[0] * 0.24, BED.z + BED.head[1] * 0.24] // stand by the foot of the bed
-const BATH_STAND = [1.13, -0.46], FEED_STAND = toward(BOWL.x, BOWL.z, 0.25)
+const BATH_STAND = SPOTS.bath.stand, FEED_STAND = toward(BOWL.x, BOWL.z, 0.25)
 const plant = (id, prop, pl, y, d, lim, cam) => ({ id, prop, x: pl.x, z: pl.z, y, yaw: pl.yaw || 0, s: 1, stand: toward(pl.x, pl.z, d), lim, cam })
 const PLANTS = [
   plant('big', 'bigPlant', SPOTS.plants.big, 0, 0.32, 0.26),

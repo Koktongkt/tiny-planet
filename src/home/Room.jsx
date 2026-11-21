@@ -10,7 +10,7 @@ import { HOME, ROOM, DOOR, resolve, freeAt, roomToWorld } from './state.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { T, q, VIEW, setViewMode } from '../common.jsx'
 import { R, height } from '../world.js'
-import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, DoorWay, Smoke, LAMP, LAYOUT } from './interior.jsx'
+import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, WindowLight, DoorWay, Smoke, LAMP, LAYOUT } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { PAD, CAM } from '../touch.jsx'
 import { G, emit, toast } from '../game/store.js'
@@ -82,10 +82,10 @@ HOME.camera = (camera, g, dt) => {
   const hp = HOME.hp, z = Math.min(1, Math.max(0.6, CAM.zoom))
   const dc = Math.hypot(CAT.x - hp.x, CAT.z - hp.z), w = dc < 0.9 ? 0.4 * (1 - dc / 0.9) : 0, fx = hp.x + (CAT.x - hp.x) * w, fz = hp.z + (CAT.z - hp.z) * w
   const nearDoor = Math.min(1, Math.max(0, (hp.z - 0.55) / 0.65)) // by the front rim the door wall would hide her: look down more steeply
-  const el = 0.9 + 0.12 * CAM.pitch + 0.5 * nearDoor, D = (2.55 + 1.3 * (z - 0.6)) * (camera.aspect < 1 ? 1.3 : 1) // elevation (rad) + distance, room units (further back on a tall phone screen)
+  const el = 0.66 + 0.12 * CAM.pitch + 0.55 * nearDoor, D = (2.75 + 1.3 * (z - 0.6)) * (camera.aspect < 1 ? 1.3 : 1) // elevation (rad) + distance, room units (further back on a tall phone screen)
   _look.set(Math.max(-1.2, Math.min(1.2, fx)) * 0.8, 0.14 + CAT.y * w * 0.5, Math.max(-1.0, Math.min(1.3, fz)) * 0.85 - 0.04)
   _goal.set(_look.x * 0.7, _look.y + Math.sin(el) * D, _look.z + Math.cos(el) * D)
-  if (WIDE) { _look.set(0, 0.0, -0.05); _goal.set(0, 3.7, 3.7) }
+  if (WIDE) { _look.set(0, 0.12, -0.15); _goal.set(0, 2.75, 4.45) }
   if (FREECAM) { _goal.set(FREECAM[0], FREECAM[1], FREECAM[2]); _look.set(FREECAM[3], FREECAM[4], FREECAM[5]) }
   if (PETCAM) { const a = window.__camA ?? (+PETCAM || 0.5), dd = window.__camD ?? 0.55; _goal.set(CAT.x + Math.sin(a) * dd, CAT.y + (window.__camH ?? 0.32 * dd / 0.55 * 0.8 + 0.06), CAT.z + Math.cos(a) * dd); _look.set(CAT.x, CAT.y + 0.07, CAT.z) }
   const ps = HOME.pose; if (ps && !PETCAM && !WIDE && !FREECAM && ps.cam !== false) { const pk = Math.min(1, ps.k) // activities frame the bed / tub / desk ...
@@ -104,7 +104,7 @@ HOME.sun = () => { if (HOME.roomObj) T.sun.copy(_a.set(-0.8, 0.55 - 0.85 * T.nig
 const glowTex = () => canvasTex(128, 128, (x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.45, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h) })
 function NightGlow() {
   const [lamp, stove] = useMemo(() => { const t = glowTex(); const mk = (c) => new THREE.MeshBasicMaterial({ map: t, color: c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }); return [mk('#ffb860'), mk('#ff8a3a')] }, [])
-  useFrame(() => { const t = performance.now() / 1000, k = HOME.inside ? Math.min(1, T.night + 0.4 * T.dusk) : 0; lamp.opacity = 0.42 * k; stove.opacity = k * (0.5 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.04) })
+  useFrame(() => { const t = performance.now() / 1000, k = HOME.inside ? Math.min(1, 0.22 + T.night + 0.4 * T.dusk) : 0; lamp.opacity = 0.42 * k; stove.opacity = k * (0.5 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.04) })
   return <group>
     <mesh position={[0, 0.007, 0.1]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.6, 1.3]} /></mesh>
     <mesh position={[LAMP.lx, 0.008, LAMP.lz + 0.3]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.0, 0.7]} /></mesh>
@@ -163,7 +163,7 @@ export function Room() {
   })
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
-    <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><Lamp /><NightGlow />
+    <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><WindowLight /><Lamp /><NightGlow />
     <Merge><Shell /></Merge>
     <React.Suspense fallback={null}><Activities /></React.Suspense>
     <InsideDecor />
