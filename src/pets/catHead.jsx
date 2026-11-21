@@ -37,15 +37,16 @@ const NOSE = (() => { const y = -0.11, t = hit([0, y, 2], [0, 0, -1], 0, 2.5); r
 
 // ---------- coat: cream with Siamese points ----------
 const HEAD_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
-  // diamond mask: a point high on the forehead, around both eyes, rounding off around the nose and mouth (front only)
-  float hw = p.y > 0.46 ? -1. : p.y > 0.0 ? 0.62*pow((0.46 - p.y)/0.46, 0.9) : 0.;
-  // under the eyes it flares out into a wing past each eye's outer corner, then sweeps back in to the point below the mouth
-  float wing = p.y > -0.08 ? 0.8*sqrt(max(0., 1. - pow((p.y + 0.08)/0.11, 2.))) : 0.8*(1. - pow(clamp((-0.08 - p.y)/0.26, 0., 1.), 1.25));
-  hw = max(hw, p.y < 0.03 ? wing : 0.);
-  if (hw < .004) hw = -1.; // the mask ends at its tips: no zero-width sliver running on up the head or down the chin // point high on the forehead, rounder below
-  // ...and where it reaches the eyes it wraps right round them
-  float eyeR = 1. - length(vec2((ax - 0.39) / 0.27, (p.y - 0.0) / 0.27));
-  float m = min(max(hw - ax, eyeR*0.27), p.z - 0.05); w = fwidth(m)*1.2 + 1e-4; float dark = smoothstep(-w, w, m);
+  // the mask: a point high on the forehead, a dark ring round each eye, and a wing past each eye's outer corner that
+  // curves back in to the point below the mouth. The three are blended with a soft union, so the ring flows into the
+  // wing tip (no notch) and the underside runs in one smooth curve from the wing tips to the bottom point.
+  float dD = p.y > 0.46 || p.y <= 0. ? -1. : 0.62*pow((0.46 - p.y)/0.46, 0.9) - ax;
+  float dR = 0.27 - length(vec2(ax - 0.39, p.y));
+  float wg = p.y > -0.08 ? 0.8*sqrt(max(0., 1. - pow((p.y + 0.08)/0.13, 2.))) : 0.8*(1. - pow(clamp((-0.08 - p.y)/0.26, 0., 1.), 1.6));
+  float dW = wg > .004 ? wg - ax : -1.; // (no zero-width sliver down the chin)
+  float k1 = .06, h1 = clamp(.5 + .5*(dR - dD)/k1, 0., 1.), dDR = mix(dD, dR, h1) + k1*h1*(1. - h1);
+  float k2 = .16, h2 = clamp(.5 + .5*(dW - dDR)/k2, 0., 1.), hw = mix(dDR, dW, h2) + k2*h2*(1. - h2) + ax;
+  float m = min(hw - ax, p.z - 0.05); w = fwidth(m)*1.2 + 1e-4; float dark = smoothstep(-w, w, m);
   // whisker stripes on the cheeks: two tapered bands sloping down and out
   // (short: they start just outside the mask and taper to a point going back along the cheek)
   // (bold, starting just under the mask's wing and sloping down and out past the edge of the face)
