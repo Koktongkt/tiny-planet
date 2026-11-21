@@ -36,7 +36,8 @@ P.stove = against(-50, 0.42, 0.42)
 P.firewood = (() => { const [x, z] = local(P.stove, 0.31, -0.06); return { x, z, yaw: P.stove.yaw } })() // tucked right beside the stove
 export const FLUE = 0.39 // stove pipe: back through the wall to a chimney outside
 P.desk = against(-82, 0.56, 0.32)
-P.bigPlant = against(-131, 0.34, 0.34)
+P.armchair = (() => { const pl = against(-112, 0.32, 0.3, 0.12); return { ...pl, yaw: pl.yaw - 0.18 } })() // the reading chair under the sunny window, out from the wall and turned a little toward the room
+P.bigPlant = against(-133, 0.34, 0.34)
 P.petBowls = against(-158, 0.36, 0.14)
 P.coatStand = against(158, 0.26, 0.12)
 P.wardrobe = against(90, 0.38, 0.24)
@@ -81,6 +82,7 @@ export const SPOTS = {
   bath: { stand: [NOOK.x0 + (1.6 - NOOK.x0) / 2 - 0.05, NOOK.z1 - 0.15] },
   table: { x: P.table.x, z: P.table.z, h: 0.158 },
   stool: { x: P.stool.x, z: P.stool.z, h: 0.142, face: P.desk.yaw + Math.PI },
+  chair: { x: P.armchair.x, z: P.armchair.z, h: 0.17, face: P.armchair.yaw },
   bed: { ...P.bed, top: 0.16, head: [Math.sin(-P.bed.yaw), -Math.cos(-P.bed.yaw)] }, // head points at the wall
   cat: (() => { const h = [Math.sin(-P.bed.yaw), -Math.cos(-P.bed.yaw)]; let px = -h[1], pz = h[0]; if (px * -P.bed.x + pz * -P.bed.z < 0) { px = -px; pz = -pz }
     const on = (along, side) => [P.bed.x + h[0] * along + px * side, P.bed.z + h[1] * along + pz * side], f = (along) => { const [x, z] = on(along, 0.42); return { x, z } }
@@ -98,7 +100,7 @@ export const SPOTS = {
 const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size, c = Math.cos(pl.yaw), s = Math.sin(pl.yaw), hw = w / 2 * k, hd = d / 2 * k, ex = hw * Math.abs(c) + hd * Math.abs(s), ez = hw * Math.abs(s) + hd * Math.abs(c)
   return { id, obb: true, cx: pl.x, cz: pl.z, c, s, hw, hd, x0: pl.x - ex, x1: pl.x + ex, z0: pl.z - ez, z1: pl.z + ez } }
 export const BLOCK_LIST = () => [
-  fp('counter', P.counter), fp('fridge', P.fridge), fp('firewood', P.firewood), { ...fp('woodStove', P.stove, 0.7), id: 'stove' }, fp('desk', P.desk), fp('stool', P.stool, 0.8),
+  fp('counter', P.counter), fp('fridge', P.fridge), fp('firewood', P.firewood), { ...fp('woodStove', P.stove, 0.7), id: 'stove' }, fp('desk', P.desk), fp('stool', P.stool, 0.8), fp('armchair', P.armchair, 0.9),
   fp('bigPlant', P.bigPlant, 0.75), fp('petBowls', P.petBowls, 0.7), { ...fp('petBed', P.petBed, 0.85), id: 'petbed', round: true }, fp('coatStand', P.coatStand, 0.7),
   fp('wardrobe', P.wardrobe), { ...fp('nightstand', P.nightstand), id: 'night' }, fp('bed', P.bed, 0.95), fp('flowerPot', P.flowerPot, 0.8),
   { ...fp('roundTable', P.table, 0.95), id: 'table', round: true }, { ...fp('pouf', P.poufL, 0.85), id: 'poufL', round: true }, { ...fp('pouf', P.poufR, 0.85), id: 'poufR', round: true },
@@ -311,13 +313,13 @@ export function Shell() {
     {[-64, -100, 34, 72].map(ph => { const pl = onWall(ph, 0), z = polar(ph, R)[1]; return <Prop key={ph} id="timber" opts={{ h: wallH(z) - 0.02 }} {...at(pl)} /> })}
     <Alcove />
     <Prop id="desk" {...at(P.desk)} /><Prop id="pegboard" {...at(P.pegboard)} /><Prop id="stool" {...at(P.stool)} />
-    <Prop id="petBed" {...at(P.petBed)} /><Prop id="petBowls" {...at(P.petBowls)} />
+    <Prop id="armchair" {...at(P.armchair)} /><Prop id="petBed" {...at(P.petBed)} /><Prop id="petBowls" {...at(P.petBowls)} />
     <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.52, rz: 0.4, shadow: false }} />
     <Prop id="roundTable" {...at(P.table)} opts={{ lantern: true }} /><Prop id="pouf" {...at(P.poufL)} /><Prop id="pouf" {...at(P.poufR)} />
     <Prop id="wardrobe" {...at(P.wardrobe)} /><Prop id="nightstand" {...at(P.nightstand)} /><Prop id="bed" {...at(P.bed)} /><Prop id="runner" {...at(P.runner)} />
     <Prop id="coatStand" {...at(P.coatStand)} />
     {/* bath nook: partition (plain side wall + arched front), tub, loo, towel, porthole frame */}
-    <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} />
+    <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} /><Prop id="wallLantern" {...at(onWall(58, 0.5))} />
     {(() => { const pl = onWall(PORT, 0); return <group position={[pl.x, (OPEN[2].y0 + OPEN[2].ys) / 2, pl.z]} rotation-y={pl.yaw}><O geo={GEO.tor} mat={tm(W.light)} scale={[0.082, 0.082, 0.06]} out={OUT.fine} /></group> })()}
     {/* front entrance, as in the concept: lantern posts hugging the door frame, stone steps with a mat, daisy pots, bushes */}
     {[-1, 1].map(s => { const [x, z] = polar(180 + s * 10.4, R + 0.085); return <Prop key={s} id="lanternPost" position={[x, 0, z]} rotation-y={-s * 10.4 * D2R} /> })}

@@ -2,6 +2,7 @@
 // Chunky on purpose: thick tops, stubby round legs, big knobs, puffy cushions, every edge rounded, bodies that bulge a
 // little (belly / taper), and details drawn big enough to read from the game camera.
 import { defineProp } from '../kit.js'
+import { lanternBody } from './house.js'
 
 const PI = Math.PI
 const legs4 = (k, w, d, h, r = 0.026, name = 'woodDark', y0 = 0) => { for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.pill([r, h], [sx * w / 2, y0 + h / 2, sz * d / 2], name, { bevel: 0.35, taper: -0.2 }) }
@@ -93,17 +94,9 @@ defineProp('fridge', { name: 'Fridge', size: [0.28, 0.5, 0.22], tags: ['kitchen'
   k.box([0.06, 0.07, 0.004], [0.03, 0.2, 0.108], 'paper', { r: 0.003, rot: [0, 0, 0.08], out: false }); k.ball([0.012, 0.011, 0.006], [0.03, 0.233, 0.112], 'rose', { out: false })
 })
 
-defineProp('lantern', { name: 'Lantern', size: [0.09, 0.16, 0.09], tags: ['light', 'outdoor'], pal: { cage: 'ironDark', trim: 'brass', glass: '#ffd27a', core: '#fff3cf' }, opts: { hang: false } }, (k, o) => {
-  k.pill([0.044, 0.02], [0, 0.01, 0], 'cage', { bevel: 0.4 })
-  k.pill([0.038, 0.009], [0, 0.023, 0], 'trim', { bevel: 0.4, out: false })
-  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2; k.box([0.05, 0.072, 0.006], [Math.sin(a) * 0.031, 0.062, Math.cos(a) * 0.031], 'glass', { r: 0.002, rot: [0, a, 0], glow: true, belly: 0.08 }) }
-  k.ball([0.016, 0.024, 0.016], [0, 0.06, 0], 'core', { glow: true })
-  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + PI / 4; k.stick([0.007, 0.082], [Math.sin(a) * 0.037, 0.062, Math.cos(a) * 0.037], 'cage') }
-  k.pill([0.046, 0.011], [0, 0.102, 0], 'trim', { bevel: 0.4, out: false })
-  k.cone([0.062, 0.044], [0, 0.125, 0], 'cage', { n: 4, rot: [0, PI / 4, 0] })
-  k.ball(0.012, [0, 0.15, 0], 'trim', { out: false }); k.ring(0.013, 0.0045, [0, 0.165, 0], 'cage', { out: false })
-  if (o.hang) k.stick([0.003, 0.12], [0, 0.23, 0], 'cage', { out: false })
-  k.halo([0, 0.062, 0], 0.11, '#ffc870', { flicker: true })
+defineProp('lantern', { name: 'Lantern', size: [0.09, 0.16, 0.09], tags: ['light', 'outdoor'], opts: { hang: false } }, (k, o) => {
+  lanternBody(k, [0, 0, 0], 1, true)
+  if (o.hang) k.stick([0.003, 0.12], [0, 0.23, 0], 'ironDark', { out: false })
 })
 
 // pot used by the plants: soft belly, rolled rim, dark soil

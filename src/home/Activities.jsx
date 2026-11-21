@@ -22,10 +22,10 @@ import { CAT } from '../pets/catState.js'
 
 // ---------- layout (room-local) ----------
 // everything comes from the prop layout in interior.jsx
-const TUB = SPOTS.tub, STOOL = SPOTS.stool, TABLE = SPOTS.table, BED = SPOTS.bed, BOWL = SPOTS.bowl, COOK = SPOTS.cook
+const TUB = SPOTS.tub, STOOL = SPOTS.chair /* reading happens in the red armchair */, TABLE = SPOTS.table, BED = SPOTS.bed, BOWL = SPOTS.bowl, COOK = SPOTS.cook
 CAT.bowlPos = BOWL
 const toward = (x, z, d) => { const r = Math.hypot(x, z) || 1; return [x - x / r * d, z - z / r * d] } // a point d closer to the room's centre
-const STOOL_DIR = [Math.sin(STOOL.face), Math.cos(STOOL.face)], READ_STAND = [STOOL.x - STOOL_DIR[0] * 0.2, STOOL.z - STOOL_DIR[1] * 0.2]
+const STOOL_DIR = [Math.sin(STOOL.face), Math.cos(STOOL.face)], READ_STAND = [STOOL.x + STOOL_DIR[0] * 0.3, STOOL.z + STOOL_DIR[1] * 0.3] // in front of the chair
 const BED_SIDE = (() => { const [hx, hz] = BED.head; let px = -hz, pz = hx; if (px * -BED.x + pz * -BED.z < 0) { px = -px; pz = -pz } return [px, pz] })()
 const BED_STAND = [BED.x - BED.head[0] * 0.5 + BED_SIDE[0] * 0.12, BED.z - BED.head[1] * 0.5 + BED_SIDE[1] * 0.12], BED_HEAD = [BED.x + BED.head[0] * 0.24, BED.z + BED.head[1] * 0.24] // stand by the foot of the bed
 const BATH_STAND = SPOTS.bath.stand, FEED_STAND = toward(BOWL.x, BOWL.z, 0.25)
@@ -153,7 +153,7 @@ async function tea() {
 }
 async function read() {
   if (!await begin('read', 6, 'read')) return
-  placeAt(READ_STAND[0], READ_STAND[1], STOOL.face); pose({ x: STOOL.x - STOOL_DIR[0] * 0.01, z: STOOL.z - STOOL_DIR[1] * 0.01, y: STOOL.h - 0.075, yaw: STOOL.face, rate: 5 }); A.book = 1
+  placeAt(READ_STAND[0], READ_STAND[1], STOOL.face); pose({ x: STOOL.x + STOOL_DIR[0] * 0.02, z: STOOL.z + STOOL_DIR[1] * 0.02, y: STOOL.h - 0.085, yaw: STOOL.face, rate: 5 }); A.book = 1
   const T_ = ['"The Moving Castle" — you lose yourself for a few pages.', 'A field guide to mushrooms. You learn which ones glow.', 'An old book of sea stories. The harbour feels closer.', 'A cookbook: "rice, fish, a pinch of salt and patience."', 'Poems about the wind. Mochi pretends not to listen.']
   toast(T_[Math.floor(Math.random() * T_.length)], 'book', 3600)
   await wait(5600); A.book = 0; end()
