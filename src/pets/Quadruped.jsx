@@ -9,6 +9,7 @@ import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { cel, OUT, GEO } from '../home/kit.jsx'
 import { fur, SHADOW } from '../GhibliPerson.jsx'
+import { ShibaHead } from './shibaHead.jsx'
 
 export const POSE0 = { sit: 0, lie: 0, curl: 0, stretch: 0, crouch: 0, roll: 0, headPitch: 0, headYaw: 0, headTilt: 0, earBack: 0, eyes: 1, mouth: 0, tongue: 0, tailUp: 0.3, tailWag: 0.2, tailSpeed: 4, pawL: 0, pawR: 0, sniff: 0, bodyYaw: 0, hop: 0, purr: 0, happy: 0, pant: 0 }
 export const newPet = () => ({ p: { ...POSE0 }, goal: { ...POSE0 }, v: {}, speed: 0, phase: 0, run: 0, t: 0, blink: 2, twL: 0, twR: 0, rate: {} })
@@ -73,9 +74,10 @@ export function Quadruped({ cfg, st }) {
         e.rotation.set(-0.5 * p.earBack + Math.sin(tw * 9) * 0.35 * tw, 0, s * (c.earSplay + 0.5 * p.earBack))
       }
     }
-    const eo = Math.max(0.08, Math.min(p.eyes, blink)); R_.eyeL.scale.y = R_.eyeR.scale.y = eo
+    const eo = Math.max(0.08, Math.min(p.eyes, blink)); if (R_.eyeL) R_.eyeL.scale.y = R_.eyeR.scale.y = eo
+    if (R_.face) R_.face.material.uniforms.uCell.value = (eo > 0.45 ? 0 : 2) + (p.tongue > 0.3 || p.mouth > 0.22 || p.pant > 0.2 ? 0 : 1) // painted face: [eyes open|shut] x [mouth open|shut]
     if (R_.pupilL) { const e = c.eye, pv = c.pupils === 'vert' ? [hr * e * 0.2, hr * e * 0.7 * eo, hr * 0.02] : [hr * e * 0.56, hr * e * 0.6 * eo, hr * 0.02]; R_.pupilL.scale.set(...pv); R_.pupilR.scale.set(...pv) }
-    R_.mouth.scale.set(1, 0.3 + 2.4 * (p.mouth + Math.max(0, Math.sin(t * 14)) * 0.25 * p.pant), 1); if (R_.tongue) { R_.tongue.visible = p.tongue > 0.1; R_.tongue.position.y = -hr * (0.42 + 0.12 * p.tongue); R_.tongue.scale.set(1, 0.6 + 0.9 * p.tongue + 0.35 * p.pant * Math.max(0, Math.sin(t * 14)), 1) }
+    if (R_.mouth) R_.mouth.scale.set(1, 0.3 + 2.4 * (p.mouth + Math.max(0, Math.sin(t * 14)) * 0.25 * p.pant), 1); if (R_.tongue) { R_.tongue.visible = p.tongue > 0.1; R_.tongue.position.y = -hr * (0.42 + 0.12 * p.tongue); R_.tongue.scale.set(1, 0.6 + 0.9 * p.tongue + 0.35 * p.pant * Math.max(0, Math.sin(t * 14)), 1) }
     // tail: a springy chain; up/curl from mood, side-to-side wag
     const n = c.tail.n, wag = p.tailWag, wf = p.tailSpeed
     for (let i = 0; i < n; i++) { const s = R_['t' + i]; if (!s) continue
@@ -152,26 +154,6 @@ function ShibaTail({ c, M }) {
     <Part mat={M.main} pos={[0, r, 0]} scl={[fat * 1.02, r * 0.48, r * 0.48]} />
     <Part mat={M.cream} pos={[0, r * 1.04, -r * 0.08]} scl={[fat * 1.06, r * 0.2, r * 0.2]} out={null} />
   </group>
-}
-function ShibaHead({ c, M, set }) {
-  const hr = c.head
-  return <>
-    <Part mat={M.main} scl={[hr * 1.0, hr * 0.9, hr * 0.88]} />
-    {/* cream lower face: cheeks + chin, then a short round muzzle */}
-    <Part mat={M.cream} pos={[0, -hr * 0.36, hr * 0.12]} scl={[hr * 0.9, hr * 0.54, hr * 0.7]} />
-    <Part mat={M.cream} pos={[0, -hr * 0.3, hr * 0.7]} scl={[hr * 0.3, hr * 0.21, hr * 0.22]} />
-    <Part mat={M.nose} pos={[0, -hr * 0.2, hr * 0.97]} scl={[hr * 0.1, hr * 0.072, hr * 0.06]} out={null} />
-    <mesh geometry={GEO.sph} material={M.shine} position={[-hr * 0.025, -hr * 0.17, hr * 1.025]} scale={[hr * 0.03, hr * 0.018, hr * 0.01]} />
-    <group ref={set('mouth')} position={[0, -hr * 0.4, hr * 0.9]}><mesh geometry={GEO.sph} material={M.lip} scale={[hr * 0.11, hr * 0.045, hr * 0.05]} /></group>
-    {c.tongue && <group ref={set('tongue')} position={[0, -hr * 0.42, hr * 0.92]}><mesh geometry={GEO.sph} material={M.inner} scale={[hr * 0.075, hr * 0.11, hr * 0.045]} /></group>}
-    {[-1, 1].map(s => <mesh key={'br' + s} geometry={GEO.sph} material={M.cream} position={[s * hr * 0.3, hr * 0.33, hr * 0.78]} rotation={[-0.35, s * 0.35, 0]} scale={[hr * 0.1, hr * 0.065, hr * 0.04]} />)}
-    {[-1, 1].map(s => <Eye key={s} c={c} M={M} s={s} set={set} hr={hr} pos={[s * hr * 0.37, hr * 0.03, hr * 0.79]} />)}
-    <Blush M={M} hr={hr} x={0.62} y={-0.2} z={0.62} />
-    {[-1, 1].map(s => <group key={'e' + s} ref={set(s > 0 ? 'earL' : 'earR')} position={[s * hr * 0.55, hr * 0.56, -hr * 0.04]}>
-      <Part geo={GEO.cone} mat={M.main} pos={[0, hr * c.ear * 0.42, 0]} rot={[-0.1, 0, 0]} scl={[hr * c.ear * 0.54, hr * c.ear * 1.15, hr * c.ear * 0.3]} />
-      <mesh geometry={GEO.cone} material={M.cream} position={[0, hr * c.ear * 0.34, hr * c.ear * 0.13]} rotation={[-0.1, 0, 0]} scale={[hr * c.ear * 0.36, hr * c.ear * 0.7, hr * c.ear * 0.1]} />
-    </group>)}
-  </>
 }
 // ---------- Mochi: chibi Siamese (round9 concept sheet) ----------
 // cream coat, dark-brown points (ears, face mask, socks, ringed tail), faint brown back stripes, fluffy chest ruff,
