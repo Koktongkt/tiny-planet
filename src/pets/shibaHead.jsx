@@ -11,7 +11,7 @@ import { OUT, GEO, cel } from '../home/kit.jsx'
 // ---------- shape ----------
 const ell = (x, y, z, c, r) => { const a = (x - c[0]) / r[0], b = (y - c[1]) / r[1], d = (z - c[2]) / r[2]; return (Math.sqrt(a * a + b * b + d * d) - 1) * Math.min(r[0], r[1], r[2]) }
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
-export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.3, 0.06], [0.86, 0.56, 0.72]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.15, 0.72], [0.33, 0.22, 0.44]], chin: [[0, -0.5, 0.5], [0.4, 0.3, 0.4]],
+export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.34, 0.08], [1.05, 0.56, 0.76]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.15, 0.72], [0.33, 0.22, 0.44]], chin: [[0, -0.5, 0.5], [0.4, 0.3, 0.4]],
   kJ: 0.28, kC: 0.18, kM: 0.1, kCh: 0.16, kE: 0.1,
   // ears: a rounded cone (base radius r1, tip radius r2, height h) flattened front-to-back, tilted out and a little back
   ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.44, r2: 0.12, h: 0.64, flat: 0.38 } }
