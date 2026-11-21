@@ -11,10 +11,10 @@ import { OUT, GEO, cel } from '../home/kit.jsx'
 // ---------- shape ----------
 const ell = (x, y, z, c, r) => { const a = (x - c[0]) / r[0], b = (y - c[1]) / r[1], d = (z - c[2]) / r[2]; return (Math.sqrt(a * a + b * b + d * d) - 1) * Math.min(r[0], r[1], r[2]) }
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
-export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.26, 0.04], [0.86, 0.5, 0.72]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.16, 0.68], [0.33, 0.23, 0.44]], chin: [[0, -0.4, 0.5], [0.28, 0.2, 0.32]],
-  kJ: 0.28, kC: 0.18, kM: 0.1, kCh: 0.14, kE: 0.1,
+export const HEAD = { skull: [[0, 0.1, -0.06], [0.94, 0.72, 0.8]], jowl: [[0, -0.3, 0.06], [0.86, 0.56, 0.72]], cheek: [[0.62, -0.2, 0.08], [0.38, 0.3, 0.42]], muzzle: [[0, -0.15, 0.72], [0.33, 0.22, 0.44]], chin: [[0, -0.5, 0.5], [0.4, 0.3, 0.4]],
+  kJ: 0.28, kC: 0.18, kM: 0.1, kCh: 0.16, kE: 0.1,
   // ears: a rounded cone (base radius r1, tip radius r2, height h) flattened front-to-back, tilted out and a little back
-  ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.48, r2: 0.13, h: 0.74, flat: 0.38 } }
+  ear: { base: [0.56, 0.5, -0.14], tilt: 0.3, back: 0.12, r1: 0.44, r2: 0.12, h: 0.64, flat: 0.38 } }
 const E = HEAD.ear, EARM = [-1, 1].map(s => new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-E.back, 0, -s * E.tilt)).setPosition(s * E.base[0], E.base[1], E.base[2]))
 const EARI = EARM.map(m => m.clone().invert()), _e = new THREE.Vector3()
 function roundCone(x, y, z) { // iq's round cone along +y, base at the origin
@@ -90,7 +90,7 @@ function headMat(main, cream, pink) {
 }
 
 // ---------- painted face: 2x2 atlas [eyes open | closed] x [mouth open | closed] ----------
-const X0 = -1.05, X1 = 1.05, Y0 = -0.8, Y1 = 0.62, INK = '#3a2216'
+const X0 = -1.05, X1 = 1.05, Y0 = -0.9, Y1 = 0.62, INK = '#3a2216'
 export const EYE = { x: 0.44, y: 0.06, rx: 0.142, ry: 0.162 }
 function paint(x, eyesOpen, mouthOpen) {
   const el = (cx, cy, rx, ry, rot = 0) => { x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2) }
