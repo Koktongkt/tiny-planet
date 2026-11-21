@@ -12,7 +12,7 @@
 //   <Prop id="pouf" position={[x, 0, z]} />                          // React wrapper (props/Prop.jsx)
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 // ---------- palette: named swatches shared by every prop (items refer to these names, or to raw hex) ----------
 export const PAL = {
@@ -42,6 +42,7 @@ export const SHADOW = new THREE.MeshBasicMaterial({ map: radial([[0, 'rgba(90,50
 // warm halo billboard around lamps / fire (additive)
 const HALO_TEX = radial([[0, 'rgba(255,255,255,.9)'], [0.25, 'rgba(255,255,255,.35)'], [1, 'rgba(255,255,255,0)']])
 const haloMats = new Map()
+function flicker() { const t = performance.now() / 1000, k = 1 + Math.sin(t * 7.3 + this.id) * 0.06 + Math.sin(t * 13.1) * 0.04; this.scale.setScalar(this.userData.r * 2 * k) }
 const haloMat = (c) => { if (!haloMats.has(c)) haloMats.set(c, new THREE.SpriteMaterial({ map: HALO_TEX, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, opacity: 0.55 })); return haloMats.get(c) }
 // view-space inverted-hull outline (same trick as the characters), chunky and soft brown
 const OUT_VS = `uniform float uT; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); vec3 n = normalize(normalMatrix*normal);
@@ -78,10 +79,45 @@ function puffGeo(s, bulge) { return cache(`puff${s.map(x => x.toFixed(3))}|${bul
 function archGeo(w, hr, d, bevel) { return cache(`arch${w},${hr},${d},${bevel}`, () => { const s = new THREE.Shape(), r = w / 2; s.moveTo(-r, 0); s.lineTo(r, 0); s.lineTo(r, hr); s.absarc(0, hr, r, 0, Math.PI, false); s.lineTo(-r, 0)
   const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 20 }); g.translate(0, 0, -d / 2); g.computeVertexNormals(); return g }) }
 
+// a pothos-style heart leaf: base (stem end) at the origin, tip at +y (length 1), face toward +z, gently cupped
+// and curling back at the tip. Smooth normals so it shades like a soft cushion of a leaf.
+function leafGeo() { return cache('leaf', () => { const s = new THREE.Shape(); s.moveTo(0, 0.12); s.bezierCurveTo(-0.2, -0.06, -0.62, 0.02, -0.55, 0.4); s.bezierCurveTo(-0.5, 0.72, -0.2, 0.9, 0, 1); s.bezierCurveTo(0.2, 0.9, 0.5, 0.72, 0.55, 0.4); s.bezierCurveTo(0.62, 0.02, 0.2, -0.06, 0, 0.12)
+  let g = new THREE.ExtrudeGeometry(s, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.04, bevelSegments: 2, curveSegments: 10 }); g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g, 1e-4)
+  const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i); p.setZ(i, p.getZ(i) - 0.015 - 0.22 * x * x + 0.12 * y * y) }
+  g.computeVertexNormals(); return g }) }
+// an arched frame (ring), w wide inside, hr to the spring of the arch, frame f thick, depth d, centred on z
+function archFrameGeo(w, hr, f, d) { return cache(`archf${w},${hr},${f},${d}`, () => { const o = new THREE.Shape(), r = w / 2 + f; o.moveTo(-r, -f); o.lineTo(r, -f); o.lineTo(r, hr); o.absarc(0, hr, r, 0, Math.PI, false); o.lineTo(-r, -f)
+  const h = new THREE.Path(), ri = w / 2; h.moveTo(-ri, 0); h.lineTo(ri, 0); h.lineTo(ri, hr); h.absarc(0, hr, ri, 0, Math.PI, false); h.lineTo(-ri, 0); o.holes.push(h)
+  const g = new THREE.ExtrudeGeometry(o, { depth: d, bevelEnabled: true, bevelThickness: d * 0.3, bevelSize: f * 0.3, bevelSegments: 2, curveSegments: 20 }); g.translate(0, 0, -d / 2); g.computeVertexNormals(); return g }) }
+
+// ---------- animated cartoon fire: posterised bands (deep orange -> amber -> butter -> cream core) that lick and sway ----------
+const FIRE_T = { value: 0 }
+export const FIRE_MAT = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide, uniforms: { uT: FIRE_T },
+  vertexShader: 'varying vec2 vUv; varying float vS; void main(){ vUv = uv; vS = modelMatrix[3].x * 7.1 + modelMatrix[3].z * 3.7 + position.x * 2.3; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+  fragmentShader: `uniform float uT; varying vec2 vUv; varying float vS;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h(i), h(i + vec2(1., 0.)), f.x), mix(h(i + vec2(0., 1.)), h(i + vec2(1., 1.)), f.x), f.y); }
+    void main(){
+      float t = uT + vS, y = vUv.y, x = (vUv.x - .5) * 2.;
+      float nz = n(vec2(vUv.x * 3.5 + vS, y * 2.6 - t * 2.3)) * .6 + n(vec2(vUv.x * 8. - vS, y * 5.5 - t * 3.6)) * .4;
+      x += (nz - .5) * .55 * y + sin(t * 2.1 + y * 3.) * .06 * y;
+      float tongues = .5 + .5 * cos(x * 3.4 + sin(t * 1.3) * .5);
+      float f = (1. - y) * (1. - x * x) * (.72 + .55 * tongues) - (nz - .5) * .4 * y - y * .12;
+      float a = smoothstep(.07, .12, f); if (a < .01) discard;
+      vec3 c = vec3(.92, .3, .1);
+      c = mix(c, vec3(1., .56, .16), smoothstep(.24, .29, f));
+      c = mix(c, vec3(1., .84, .4), smoothstep(.43, .48, f));
+      c = mix(c, vec3(1., .97, .82), smoothstep(.62, .67, f));
+      gl_FragColor = vec4(c, a);
+      #include <colorspace_fragment>
+    }` })
+const fireGeo = () => cache('fire', () => new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0))
+const tickFire = () => { FIRE_T.value = performance.now() / 1000 }
+
 // ---------- the builder ----------
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3()
 class Builder {
-  constructor(pal) { this.pal = pal; this.parts = []; this.glow = []; this.pattern = {}; this.halos = [] }
+  constructor(pal) { this.pal = pal; this.parts = []; this.glow = []; this.pattern = {}; this.halos = []; this.fires = [] }
   c(name) { return col(this.pal[name] ?? name) }
   // add geometry g with transform; o: { rot, scale, out (outline? default true), glow, shade (0..1 bottom darkening),
   //   hi (0..1 sheen on up-facing surfaces), pattern ('gingham'), tile (pattern repeats across the part) }
@@ -91,6 +127,9 @@ class Builder {
     if (keepUV) { const uv = geo.attributes.uv; if (!uv) throw new Error('pattern part needs uvs'); const t = o.tile ?? 6; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * t, uv.getY(i) * t) }
     geo.computeBoundingBox(); const bb = geo.boundingBox, p = geo.attributes.position, ts = new Float32Array(p.count)
     for (let i = 0; i < p.count; i++) ts[i] = (p.getY(i) - bb.min.y) / Math.max(1e-6, bb.max.y - bb.min.y)
+    // chibi shaping in the part's own space: belly (bulges out at mid height), taper (+ wider at the top, - at the bottom)
+    if (o.belly || o.taper) { const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2
+      for (let i = 0; i < p.count; i++) { const t = ts[i], f = (1 + (o.taper || 0) * (t - 0.5) * 2) * (1 + (o.belly || 0) * Math.sin(Math.PI * Math.min(1, Math.max(0, t)))); p.setX(i, cx + (p.getX(i) - cx) * f); p.setZ(i, cz + (p.getZ(i) - cz) * f) } }
     _e.set(...(o.rot || [0, 0, 0]), o.order || 'XYZ'); _q.setFromEuler(_e); const s = o.scale ?? 1; _s.set(...(Array.isArray(s) ? s : [s, s, s]))
     geo.applyMatrix4(_m.compose(_v.set(...pos), _q, _s))
     // painted colour: a touch darker toward the part's own base (soft occlusion) and a creamy sheen where it faces up
@@ -102,8 +141,21 @@ class Builder {
     if (o.glow) this.glow.push(item); else if (o.pattern) (this.pattern[o.pattern] = this.pattern[o.pattern] || []).push(item); else this.parts.push(item)
     return this
   }
+  archFrame(w, hr, f, d, pos, name, o = {}) { return this.add(archFrameGeo(w, hr, f, d), pos, name, o) }
+  // one heart leaf: base at pos, length l, pointing along azimuth a (0 = +z) with elevation e (radians above horizontal), roll r
+  leaf(pos, l, a, e, name = 'leaf', o = {}) { return this.add(leafGeo(), pos, name, { out: true, ...o, scale: [l * (o.w ?? 1), l, l], rot: [Math.PI / 2 - e, a, o.roll || 0], order: 'YXZ' }) }
+  // a pothos clump: n leaves on a mound, pointing up and out
+  clump(pos, n, l, o = {}) { for (let i = 0; i < n; i++) { const a = i * 2.39996 + (o.phase || 0), e = (o.e ?? 0.75) + (i % 3) * 0.18 - (i / n) * 0.25, ll = l * (0.8 + (i % 4) * 0.08)
+      this.leaf([pos[0] + Math.sin(a) * l * 0.12, pos[1] + (i % 2) * l * 0.12, pos[2] + Math.cos(a) * l * 0.12], ll, a, e, i % 3 === 0 ? (o.alt || 'leafLight') : (o.name || 'leaf'), { roll: Math.sin(i * 1.7) * 0.3 }) } return this }
+  // a trailing vine over the pot rim: leaves along a drooping curve that get smaller toward the tip
+  vine(pos, a, len, n, l, o = {}) { for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, out = Math.sin(t * 1.3) * len * 0.45, dn = t * t * len
+      const p = [pos[0] + Math.sin(a) * out, pos[1] - dn, pos[2] + Math.cos(a) * out], side = i % 2 ? 0.75 : -0.75
+      this.stick([0.0035, len / n * 1.25], [p[0], p[1] + len / n * 0.4, p[2]], o.stem || 'leafDark', { rot: [Math.cos(a) * -0.5, 0, Math.sin(a) * 0.5], out: false })
+      this.leaf(p, l * (1 - t * 0.4), a + side * 0.8, -0.1 - t * 0.5, i % 3 === 1 ? (o.alt || 'leafLight') : (o.name || 'leaf'), { roll: side * 0.4, w: 1, out: o.out ?? false }) } return this }
+  // an animated flame sheet (base at pos, facing +z; cross for a free-standing fire seen from any side)
+  fire(pos, w, h, o = {}) { this.fires.push({ pos, w, h, cross: !!o.cross }); return this }
   // a soft additive glow around a light source (a camera-facing sprite; one draw call)
-  halo(pos, r, color = '#ffc870') { this.halos.push({ pos, r, color }); return this }
+  halo(pos, r, color = '#ffc870', o = {}) { this.halos.push({ pos, r, color, flicker: !!o.flicker }); return this }
   // ---- shorthands (sizes are full sizes unless noted) ----
   box(size, pos, name, o = {}) { return this.add(rbox(size, o.r ?? Math.min(...size) * 0.22), pos, name, o) } // rounded box, edge radius r
   puff(size, pos, name, o = {}) { return this.add(puffGeo(size, o.bulge ?? 0.35), pos, name, o) } // cushion / mattress / pouf top
@@ -119,7 +171,7 @@ class Builder {
   leaves(pos, n, l, name = 'leaf', o = {}) { for (let i = 0; i < n; i++) { const a = i * 2.39996 + (o.phase || 0), tilt = (o.tilt ?? 0.9) + (i % 3) * 0.15, rr = l * 0.5 * Math.sin(tilt)
       this.ball([l * 0.26, l * 0.5, l * 0.11], [pos[0] + Math.sin(a) * rr, pos[1] + (o.up ?? 0) + Math.cos(tilt) * l * 0.5 + (i % 2) * l * 0.08, pos[2] + Math.cos(a) * rr], i % 3 === 0 ? (o.alt || 'leafLight') : name, { rot: [tilt, a, 0], order: 'YXZ', out: o.out ?? true }) } return this }
   // a daisy (white petals + yellow eye) facing up
-  daisy(pos, r = 0.02, petal = 'white', eye = 'quilt') { for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; this.ball([r * 0.5, r * 0.2, r * 0.28], [pos[0] + Math.sin(a) * r * 0.55, pos[1], pos[2] + Math.cos(a) * r * 0.55], petal, { rot: [0, a, 0], out: false }) } return this.ball([r * 0.36, r * 0.22, r * 0.36], [pos[0], pos[1] + r * 0.08, pos[2]], eye, { out: false }) }
+  daisy(pos, r = 0.02, petal = 'white', eye = 'quilt') { for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; this.ball([r * 0.46, r * 0.16, r * 0.26], [pos[0] + Math.sin(a) * r * 0.55, pos[1], pos[2] + Math.cos(a) * r * 0.55], petal, { rot: [0, a, 0], out: false }) } return this.ball([r * 0.36, r * 0.22, r * 0.36], [pos[0], pos[1] + r * 0.08, pos[2]], eye, { out: false }) }
   bake(size, o = {}) {
     const g = new THREE.Group()
     if (o.shadow !== false && size) { const sm = new THREE.Mesh(shadowGeo(), SHADOW); sm.scale.set(size[0] * 1.25 + 0.04, 1, size[2] * 1.25 + 0.04); sm.position.y = 0.003; sm.renderOrder = -1; g.add(sm) }
@@ -128,7 +180,8 @@ class Builder {
     const outl = [...this.parts, ...Object.values(this.pattern).flat()].filter(p => p.out).map(p => { const c = p.geo.clone(); if (c.attributes.uv) c.deleteAttribute('uv'); return c })
     if (outl.length) { const om = new THREE.Mesh(mergeGeometries(outl), OUTLINE); om.userData.outline = true; g.add(om) }
     if (this.glow.length) g.add(new THREE.Mesh(mergeGeometries(this.glow.map(p => p.geo)), GLOW))
-    for (const h of this.halos) { const sp = new THREE.Sprite(haloMat(h.color)); sp.position.set(...h.pos); sp.scale.setScalar(h.r * 2); sp.renderOrder = 5; g.add(sp) }
+    for (const f of this.fires) for (const ry of f.cross ? [0, Math.PI / 2] : [0]) { const m = new THREE.Mesh(fireGeo(), FIRE_MAT); m.position.set(...f.pos); m.scale.set(f.w, f.h, 1); m.rotation.y = ry; m.renderOrder = 4; m.onBeforeRender = tickFire; g.add(m) }
+    for (const h of this.halos) { const sp = new THREE.Sprite(haloMat(h.color)); sp.position.set(...h.pos); sp.scale.setScalar(h.r * 2); sp.renderOrder = 5; if (h.flicker) { sp.userData.r = h.r; sp.onBeforeRender = flicker } g.add(sp) }
     g.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false } })
     return g
   }
@@ -143,7 +196,7 @@ export function makeProp(id, o = {}) {
   const def = CATALOG[id]; if (!def) throw new Error('unknown prop ' + id)
   const key = id + JSON.stringify(o)
   if (!made.has(key)) { const k = new Builder({ ...def.pal, ...(o.pal || {}) }); def.build(k, { ...def.opts, ...o }); made.set(key, k.bake(def.size, { ...def.opts, ...o })) }
-  const src = made.get(key), g = new THREE.Group(); src.children.forEach(m => g.add(m.clone())); g.userData.prop = id; return g
+  const src = made.get(key), g = new THREE.Group(); src.children.forEach(m => { const c = m.clone(); c.onBeforeRender = m.onBeforeRender; g.add(c) }); g.userData.prop = id; return g
 }
 // floor footprint (x/z box around the origin, after a yaw of 0 / 90 / 180 / 270 deg) for collision lists like home BLOCKS
 export function footprint(id, x, z, yaw = 0, pad = 0) { const [w, , d] = CATALOG[id].size, q = Math.round(yaw / (Math.PI / 2)) & 1, hw = (q ? d : w) / 2 + pad, hd = (q ? w : d) / 2 + pad; return { id, x0: x - hw, x1: x + hw, z0: z - hd, z1: z + hd } }
