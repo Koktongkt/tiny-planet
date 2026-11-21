@@ -66,7 +66,7 @@ export const OPEN = [
   { phi: LW, w: 0.34, y0: 0.4, ys: 0.62, arch: true }, // sunny window, left
   { phi: KW, w: 0.36, y0: 0.42, ys: 0.64, arch: true }, // kitchen window
   { phi: PORT, w: 0.15, y0: 0.56, ys: 0.7, round: true }, // bath porthole
-  { phi: 180, w: 0.38, y0: 0, ys: 9 }, // the doorway (the door has its own arched frame)
+  { phi: 180, w: 0.42, y0: 0, ys: 9 }, // the doorway (the door has its own arched frame)
 ]
 // spots other modules use (activities, the cat): all in room x/z
 const cook = local(P.counter, 0.19, 0), sink = local(P.counter, -0.12, 0), cookStand = local(P.counter, 0.19, 0.36)
@@ -143,8 +143,8 @@ function capBlocks() {
   for (let i = 1; i <= N; i++) { const p = ring[i % N]; acc += Math.hypot(p.x - ring[(i - 1) % N].x, p.z - ring[(i - 1) % N].z)
     if (acc < 0.2 && i < N) continue
     const ax = last.x - last.nx * T_ / 2, az = last.z - last.nz * T_ / 2, bx = p.x - p.nx * T_ / 2, bz = p.z - p.nz * T_ / 2, mx = (ax + bx) / 2, mz = (az + bz) / 2
-    if (!(mz > 0.5 && Math.abs(mx) < 0.22)) { const L = Math.hypot(bx - ax, bz - az), ha = wallH(last.z), hb = wallH(p.z)
-      out.push({ p: [mx, (ha + hb) / 2 + 0.025, mz], s: [L + 0.012, 0.055, T_ + 0.045], rot: [0, Math.atan2(-(bz - az), bx - ax), Math.atan2(hb - ha, L)], post: k % 4 === 0 }) }
+    if (!(mz > 0.5 && Math.abs(mx) < 0.23)) { const L = Math.hypot(bx - ax, bz - az), ha = wallH(last.z), hb = wallH(p.z)
+      out.push({ p: [mx, (ha + hb) / 2 + 0.025, mz], s: [L + 0.012, 0.055, T_ + 0.045], rot: [0, Math.atan2(-(bz - az), bx - ax), Math.atan2(hb - ha, L)], post: k % 4 === 0 && !(mz > 0.5 && Math.abs(mx) < 0.6) /* no posts crowding the door */ }) }
     last = p; acc = 0; k++ }
   return out
 }
@@ -169,7 +169,7 @@ const planks = () => { const c = document.createElement('canvas'); c.width = c.h
 const shapeOf = (grow = 0) => { const s = new THREE.Shape(); ring.forEach((p, i) => { const x = p.x - p.nx * grow, z = p.z - p.nz * grow; if (i) s.lineTo(x, -z); else s.moveTo(x, -z) }); return s }
 export function Floor({ onDown }) {
   const [geo, mat, base] = useMemo(() => { const g = new THREE.ShapeGeometry(shapeOf(0.01), 1); g.rotateX(-Math.PI / 2)
-    const b = new THREE.ExtrudeGeometry(shapeOf(0.22), { depth: 0.16, bevelEnabled: false, curveSegments: 4 }); b.rotateX(-Math.PI / 2); b.translate(0, -0.166, 0); b.computeVertexNormals()
+    const b = new THREE.ExtrudeGeometry(shapeOf(0.3), { depth: 0.16, bevelEnabled: false, curveSegments: 4 }); b.rotateX(-Math.PI / 2); b.translate(0, -0.166, 0); b.computeVertexNormals()
     return [g, new THREE.MeshToonMaterial({ map: planks(), gradientMap: toonRamp }), b] }, [])
   return <group><mesh geometry={geo} material={mat} onPointerDown={onDown} /><O geo={base} mat={tm('#e2c3a0')} out={OUT.room} /></group>
 }
@@ -232,8 +232,8 @@ export function DoorWay() {
   useFrame((_, dt) => { if (leaf.current) leaf.current.rotation.y += ((HOME.doorOpen ? 1.25 : 0) - leaf.current.rotation.y) * Math.min(1, dt * 6) })
   const { x, z, w, h } = DOOR, zc = z + 0.035 // centred in the wall's thickness
   return <group>
-    <Prop id="doorFrame" opts={{ w, h, f: 0.05, d: 0.12 }} position={[x, 0, zc]} />
-    <group ref={leaf} position={[x - w / 2, 0, zc - 0.03]}><Prop id="doorLeaf" opts={{ w, h }} position={[w / 2, 0, 0]} /></group>
+    <Prop id="doorFrame" opts={{ w, h, f: 0.045, d: 0.055 }} position={[x, 0, zc]} />
+    <group ref={leaf} position={[x - w / 2, 0, zc]}><Prop id="doorLeaf" opts={{ w, h }} position={[w / 2, 0, 0]} /></group>
   </group>
 }
 // wood smoke curling out of the chimney outside
@@ -268,9 +268,9 @@ export function Shell() {
     <Prop id="tub" {...at(P.tub)} /><Prop id="toilet" {...at(P.toilet)} /><Prop id="towelRail" {...at(P.towelRail)} />
     {(() => { const pl = onWall(PORT, 0); return <group position={[pl.x, (OPEN[2].y0 + OPEN[2].ys) / 2, pl.z]} rotation-y={pl.yaw}><O geo={GEO.tor} mat={tm(W.light)} scale={[0.082, 0.082, 0.06]} out={OUT.fine} /></group> })()}
     {/* front entrance, as in the concept: lantern posts hugging the door frame, stone steps with a mat, daisy pots, bushes */}
-    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 10.5, R + 0.03); return <Prop key={s} id="lanternPost" position={[x, 0, z]} /> })}
-    <Prop id="steps" position={[0, 0, R + 0.08]} />
-    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 17, R + 0.17); return <Prop key={'f' + s} id="flowerPot" position={[x, 0, z]} rotation-y={s} /> })}
+    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 10.4, R + 0.085); return <Prop key={s} id="lanternPost" position={[x, 0, z]} rotation-y={-s * 10.4 * D2R} /> })}
+    <Prop id="steps" opts={{ w: 0.44, mat: true }} position={[0, 0, R + 0.075]} />
+    {[-1, 1].map(s => { const [x, z] = polar(180 + s * 19, R + 0.15); return <Prop key={'f' + s} id="flowerPot" position={[x, 0, z]} rotation-y={s} /> })}
     {[[-154, 0.2, 1], [154, 0.2, 1], [-125, 0.2, 0.9], [125, 0.2, 0.9], [-203, 0.24, 0.8], [203, 0.24, 0.8]].map(([a, d, k], i) => { const [x, z] = polar(a, R + d); return <Prop key={'b' + i} id="bush" position={[x, -0.02, z]} rotation-y={i} scale={k} /> })}
   </>
 }
