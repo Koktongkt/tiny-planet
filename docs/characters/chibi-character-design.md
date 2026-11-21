@@ -149,3 +149,16 @@ Share the face painter and hair builder; swap locks, clump positions and colours
 - **Studio gaps.** `?act=` has not been reliably switching `photo_*` poses; do not claim those were verified unless you have frames. Bike checks were on the branch's then-current `bicycle.glb`.
 - **Side locks** can still read as flat dark panels in close-up; the concept wraps more softly. Fix later if KT asks, not as a drive-by.
 - Worktrees only; commit and stop; KT's yes, then Codor pushes.
+
+## 6. Pets (round 9: Cozy Chibi pets)
+
+Concept: [`ref/pets-chibi-concept.jpg`](ref/pets-chibi-concept.jpg) (top row Pip, bottom row Mochi). In-engine vs concept: [`ref/pets-round9-compare.jpg`](ref/pets-round9-compare.jpg).
+
+![Pets concept](ref/pets-chibi-concept.jpg)
+
+Both pets are still the procedural `Quadruped` rig (`src/pets/Quadruped.jsx`, cel `fur()` + `OUT.pet` ink hull), retuned to chibi proportions through `DOG_CFG` / `CAT_CFG`: big head (~45% of height), short thick legs with round paws, round barrel body. Shared chibi eye: big round dark-brown eye, near-black pupil, one large shine upper-outer plus a tiny one lower-inner; soft pink blush under the outer eyes.
+
+- **Pip (Shiba).** Orange `#e98f3e` back, head and haunches; cream `#f8e2bf` lower face, chest, belly and all four legs; cream brow dots; short round muzzle, black nose, open smile + tongue; tall triangular ears with cream insides; fat cream tail curl with an orange swirl sitting on the rump. No collar (the concept has none).
+- **Mochi (Siamese).** Cream `#efd6b0` coat, dark-brown `#6e4733` points: ears (pink insides + cream fluff), face mask over the muzzle narrowing up between the eyes, socks / paws, ringed tail with a dark tip; faint brown back stripes; cream chest ruff; short dark whisker marks. Tail rises from the rump and lowers when she sits or lies.
+- New optional cfg knobs: `headUp`, `headFwd`, `tail.up`, `tail.back`, `tail.rings`, `col.blush`, `col.stripe`, `col.tongue`. Pip's in-mouth fetch stick sits at `(0, 0.095, 0.134)` to match the new muzzle.
+- Perf: fewer draws than before (cat petting 258 → 234 calls, dog sit 379 → 356 in `shoot-pets.mjs`); startup entry unchanged (72.55 KB gz-9). Eye shines, blush and brow dots are below the pet LOD size and hide past ~1.7 units, as before.

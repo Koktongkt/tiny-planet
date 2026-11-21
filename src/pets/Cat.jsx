@@ -12,8 +12,8 @@ import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
 import { Hearts, burst } from './fx.jsx'
 
-export const CAT_CFG = { s: 1.05, species: 'cat', body: [0.05, 0.052, 0.08], legH: 0.046, legR: 0.012, stride: 0.05, head: 0.056, headY: 0.045, snout: 0.008, eye: 0.235, ear: 0.72, earSplay: 0.3, whiskers: true, stripes: true, tufts: true, pupils: 'vert',
-  tail: { n: 10, seg: 0.03, r: 0.0105, curl: 0.08, tip: 2, taper: 0.03 }, col: { main: '#f2a65e', belly: '#fff7ec', dark: '#c8682a', tip: '#c8682a', inner: '#f4a3a0', nose: '#e8857e', lip: '#6a3a30', iris: '#e8b23a', pupil: '#0e0a08', lid: '#3a2a22', shine: '#ffffff', whisker: '#6a4a3e' } }
+export const CAT_CFG = { s: 1.05, /* round9: Cozy Chibi Siamese (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'cat', body: [0.05, 0.046, 0.074], legH: 0.032, legR: 0.0135, stride: 0.045, head: 0.062, headY: 0.034, headUp: 0.45, headFwd: 0.86, eye: 0.22, ear: 1.05, earSplay: 0.18, whiskers: true, stripes: true, tongue: true, pupils: 'round',
+  tail: { n: 7, seg: 0.019, r: 0.0145, curl: 0.06, tip: 1, taper: 0.025, rings: true, up: 0.3, back: 0.92 }, col: { main: '#efd6b0', belly: '#f7e7cc', dark: '#6e4733', tip: '#5e3b2a', stripe: '#c9a07a', inner: '#f2a7a0', nose: '#3a2218', lip: '#3a2218', tongue: '#ef7f7a', iris: '#4a2a18', pupil: '#140c08', lid: '#2a1a12', shine: '#ffffff', whisker: '#6e4733', blush: '#f5b0a4' } }
 // nap spots (room-local; y = surface height). from: floor point to hop up from. claim: she can be 'beaten' to it
 const SPOT = { beam: { x: -0.62, z: 0.25, y: 0, face: 2.2 }, bed: { x: -0.92, z: -0.5, y: 0.29, from: { x: -0.5, z: -0.48 }, face: 0.8, claim: 'the bed' }, sill: { x: -1.2, z: 0.15, y: 0.44, from: { x: -0.98, z: 0.15 } }, bedK: { x: -1.0, z: -0.3, y: 0.29, from: { x: -0.5, z: -0.3 } },
   rug: { x: 0.12, z: 0.5, y: 0.006, face: 1.4, claim: 'the rug' }, chair: { x: -0.14, z: 0.26, y: 0.225, from: { x: -0.34, z: 0.34 }, face: 2.6, claim: 'the stool' }, shelf: { x: -0.12, z: -0.9, y: 0.865, from: { x: -0.12, z: -0.66 }, face: 0, claim: null }, sillNap: { x: -1.2, z: 0.05, y: 0.44, from: { x: -0.98, z: 0.05 }, face: 0.2 } }

@@ -17,8 +17,8 @@ import { G, add, toast } from '../game/store.js'
 import { ITEMS } from '../game/items.js'
 import { Bubble, Puffs, Hearts, burst } from './fx.jsx'
 
-export const DOG_CFG = { s: 1.0, /* round6 size kept; round7: a Shiba Inu */ species: 'dog', floppy: false, body: [0.05, 0.058, 0.112], legH: 0.1, legR: 0.0155, stride: 0.08, head: 0.056, headY: 0.05, snout: 0.1, eye: 0.115, ear: 0.52, earSplay: 0.2, spring: 1.9, collar: true, tongue: true, pupils: 'round',
-  tail: { n: 0, seg: 0.03, r: 0.017, ring: 0.026, taper: 0 }, col: { main: '#d9772f', dark: '#b05a24', dark2: '#9a4a1e', cream: '#fbecd6', belly: '#fbecd6', inner: '#e98a86', nose: '#1a1410', lip: '#2a1a14', iris: '#3a2214', pupil: '#0e0a08', lid: '#2a1a14', shine: '#ffffff', collar: '#2f6f8a', tag: '#ffd36e' } }
+export const DOG_CFG = { s: 1.0, /* round9: Cozy Chibi Shiba (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'dog', floppy: false, body: [0.056, 0.052, 0.086], legH: 0.036, legR: 0.0155, stride: 0.055, head: 0.064, headY: 0.034, headUp: 0.5, headFwd: 0.9, eye: 0.22, ear: 0.92, earSplay: 0.22, spring: 1.6, collar: false, tongue: true, pupils: 'round',
+  tail: { n: 0, seg: 0.03, r: 0.019, ring: 0.024, taper: 0, up: 0.95, back: 0.6 }, col: { main: '#e98f3e', dark: '#c8702e', dark2: '#c8702e', cream: '#f8e2bf', belly: '#f8e2bf', inner: '#ef7f7a', nose: '#2a1a14', lip: '#3a2018', iris: '#4a2a18', pupil: '#140c08', lid: '#2a1a12', shine: '#ffffff', blush: '#f7b3a6' } }
 const _t = new THREE.Vector3(), _a = new THREE.Vector3(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3()
 const tan = (n, v, out) => out.copy(v).addScaledVector(n, -n.dot(v)).normalize()
 // nearby colliders: the planet has hundreds (every tree), so the dog keeps a short list around itself, refreshed at
@@ -285,7 +285,7 @@ export function Dog() {
     <group ref={root}>
       <group ref={rig} scale={DOG_CFG.s}><Quadruped cfg={DOG_CFG} st={st} /></group>
       {PetsDemo && <Suspense fallback={null}><PetsDemo /></Suspense>}
-      <group ref={stickM} position={[0, 0.117, 0.142]} rotation={[0, Math.PI / 2, 0]} visible={false}><Stick /></group>
+      <group ref={stickM} position={[0, 0.095, 0.134]} rotation={[0, Math.PI / 2, 0]} visible={false}><Stick /></group>
       <group position={[0.04, 0.23, 0.06]}><Bubble bref={bub} scale={0.68} /></group>
       <Puffs pref={puff} color="#b08a5e" n={14} /><Puffs pref={drops} color="#bfe8f5" n={16} />
       <Hearts gref={hearts} y={0.17} size={0.09} />
