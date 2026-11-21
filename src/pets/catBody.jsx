@@ -11,7 +11,7 @@ import { ell, smin, starMesh, patchFur } from './sdfKit.js'
 import { legGeo, legOut } from './shibaBody.jsx'
 
 // ---------- torso, in body units (the rig scales x, y, z by cfg.body) ----------
-const T = { barrel: [[0, 0, 0], [0.9, 0.86, 1.0]], chest: [[0, 0.06, 0.52], [0.86, 0.94, 0.56]], rump: [[0, 0.02, -0.52], [0.92, 0.88, 0.56]], ruff: [[0, -0.12, 0.8], [0.5, 0.5, 0.32]], k: 0.3 }
+const T = { barrel: [[0, 0, 0], [0.9, 0.86, 1.0]], chest: [[0, 0.06, 0.52], [0.86, 0.94, 0.56]], rump: [[0, 0.02, -0.52], [0.92, 0.88, 0.56]], ruff: [[0, -0.2, 0.82], [0.66, 0.62, 0.34]], k: 0.3 }
 export const CROOT = { y: -0.8, r: [0.3, 0.33, 0.21], k: 0.22, front: [0.5, 0.58], hind: [0.5, -0.58] }
 const ROOTS = [[CROOT.front[0], CROOT.front[1]], [-CROOT.front[0], CROOT.front[1]], [CROOT.hind[0], CROOT.hind[1]], [-CROOT.hind[0], CROOT.hind[1]]]
 const tsdf = (x, y, z) => { let d = smin(ell(x, y, z, ...T.barrel), ell(x, y, z, ...T.chest), T.k); d = smin(d, ell(x, y, z, ...T.rump), T.k); d = smin(d, ell(x, y, z, ...T.ruff), 0.18) // fluffy chest
@@ -21,12 +21,12 @@ const torsoGeo = (() => { const C = [0, 0, 0], RD = ROOTS.map(([x, z]) => { cons
   const origin = (d) => { for (const [v, o] of RD) { const w = d[0] * v.x + d[1] * v.y + d[2] * v.z; if (w > 0.93) { const k = Math.min(1, (w - 0.93) / 0.05); return [o[0] * k, o[1] * k, o[2] * k] } } return C }
   return starMesh(tsdf, { C, w: 72, h: 56, step: 0.008, far: 2.2, relax: 6, origin }) })()
 const TORSO_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
-  // chest ruff: a small V of fluff on the chest, coat-coloured, shown by its spiky fur-tuft outline
-  float teeth = 0.1*abs(fract(ax*6. + .25) - .5)*2.;
-  float ruff = min(min(p.z - 0.3 + 0.3*ax - 0.08*abs(fract(p.y*6. + .25) - .5)*2., 0.6 - p.y), p.y - (-0.56 + 0.75*ax) - teeth);
-  w = fwidth(ruff)*1.2 + 1e-4;
-  float edge = smoothstep(-w, w, ruff)*(1. - smoothstep(.045 - w, .045 + w, ruff))*step(-0.6, p.y)*smoothstep(0., .1, p.z);
-  base = mix(base, uOutline, edge); // same coat colour inside, only the tufted outline is drawn
+  // chest ruff: a near-white fluffy bib, a V pointing down the chest with spiky fur-tuft edges and a thin tan line
+  float teeth = 0.13*abs(fract(ax*4.5 + .25) - .5)*2.;
+  float ruff = min(min(p.z - 0.18 + 0.25*ax - 0.1*abs(fract(p.y*5. + .25) - .5)*2., 0.6 - p.y), p.y - (-0.78 + 0.62*ax) - teeth);
+  w = fwidth(ruff)*1.2 + 1e-4; base = mix(base, uRuff, smoothstep(-w, w, ruff));
+  float edge = smoothstep(-w, w, ruff)*(1. - smoothstep(.035 - w, .035 + w, ruff))*step(-0.6, p.y)*smoothstep(0., .1, p.z);
+  base = mix(base, uStripe, edge*.55);
   // stripes: soft brown bands over the back, tapering to points down the flanks
   float st = 0.;
   for (int k = 0; k < 3; k++) { float zc = -0.05 - 0.27*float(k) - 0.12*(0.8 - p.y), hw = 0.075*smoothstep(-0.25, 0.75, p.y)*(1. - 0.25*float(k == 2));
@@ -34,8 +34,8 @@ const TORSO_GLSL = `vec3 p = vO; float ax = abs(p.x), w;
   base = mix(base, uStripe, st*step(-0.3, p.y));
   // the socks start on the torso's leg roots, a little below the belly line
   float sk = -0.98 + 0.025*sin(p.x*40.) - p.y; w = fwidth(sk)*1.2 + 1e-4; base = mix(base, uDark, smoothstep(-w, w, sk));`
-const torsoMat = (c) => patchFur('mochiTorso', c.col.main, { glsl: TORSO_GLSL, decl: 'uniform vec3 uRuff, uStripe, uDark, uOutline;',
-  uniforms: { uRuff: { value: new THREE.Color(c.col.belly) }, uStripe: { value: new THREE.Color(c.col.stripe) }, uDark: { value: new THREE.Color(c.col.sock) }, uOutline: { value: new THREE.Color('#6a4630') } } })
+const torsoMat = (c) => patchFur('mochiTorso', c.col.main, { glsl: TORSO_GLSL, decl: 'uniform vec3 uRuff, uStripe, uDark;',
+  uniforms: { uRuff: { value: new THREE.Color(c.col.belly) }, uStripe: { value: new THREE.Color(c.col.stripe) }, uDark: { value: new THREE.Color(c.col.sock) } } })
 // legs: dark-brown socks (they start on the torso's leg root, which is painted to match)
 // (the whole leg below the torso's root is sock)
 const LEG_GLSL = `float d = -0.3 - vO.y; float w = fwidth(d)*1.2 + 1e-4; base = mix(base, uDark, smoothstep(-w, w, d));`
