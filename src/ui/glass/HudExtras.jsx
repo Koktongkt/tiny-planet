@@ -1,6 +1,7 @@
 // Glass HUD extras (desktop): the quest tracker under the identity bar and the hotbar along the bottom.
 // Phones keep Grandma's note in the Menu and the bag on the corner button, so these stay desktop-only for now.
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { VIEW, subscribeView } from '../../common.jsx'
 import { G, emit, toast } from '../../game/store.js'
 import { ITEMS } from '../../game/craft.js'
 import { TOOLS, DECOR } from '../../game/items.js'
@@ -48,6 +49,9 @@ export function fireHot(i, sbm, page = G.ui.hotPage || 0) {
   return true
 }
 export function Hotbar({ sbm }) {
+  const [mode, setMode] = useState(VIEW.mode)
+  useEffect(() => subscribeView(setMode), [])
+  if (mode !== 'follow') return null // planet view: nothing to hold
   const all = hotSlots(), pages = Math.max(1, Math.ceil(all.length / HOT_N)), p = Math.min(G.ui.hotPage || 0, pages - 1)
   const setPage = (n) => { G.ui.hotPage = n; emit() }
   const slots = all.slice(p * HOT_N, p * HOT_N + HOT_N)

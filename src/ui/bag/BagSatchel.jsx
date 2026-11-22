@@ -14,6 +14,15 @@ import frame2x from '../../assets/ui/bag-frame@2x.webp'
 import './bag.css'
 
 const W = 1672, H = 941, MIN_SCALE = 0.5
+// One art file per screen (2x on sharp screens) so the preload and the panel always use the same image.
+const FRAME = typeof devicePixelRatio !== 'undefined' && devicePixelRatio >= 1.5 ? frame2x : frame1x
+const ART = { ready: false, img: null }
+/** fetch + decode the bag art ahead of time (called once the game is idle) so the first open doesn't flash */
+export function preloadBag() {
+  if (ART.img) return
+  const img = new Image(); img.decoding = 'async'; img.src = FRAME; ART.img = img // the reference keeps it cached
+  ;(img.decode ? img.decode() : new Promise(r => { img.onload = r })).then(() => { ART.ready = true }, () => { ART.ready = true })
+}
 const fitScale = () => Math.min((innerWidth - 16) / W, (innerHeight - 16) / H)
 /** true while the satchel is big enough to read; below that (portrait phones) the plain list Bag is used */
 export function useSatchelFits() {
@@ -108,14 +117,15 @@ function Discoveries({ d, onClose }) {
 
 export function BagSatchel({ sbm, onReset }) {
   const [tab, setTab] = useState('gathered'), [selId, setSel] = useState(null), [disc, setDisc] = useState(false)
+  const [shown, setShown] = useState(ART.ready) // first open before the preload finished: fade in once the art is decoded
   const [s, setS] = useState(fitScale)
   useEffect(() => { const f = () => setS(fitScale()); addEventListener('resize', f); return () => removeEventListener('resize', f) }, [])
   const L = lists(), list = L[tab], sel = list.find(x => x.id === selId) || list[0] || null
   const d = discoveries()
   const slots = Math.max(15, Math.ceil(list.length / 5) * 5)
   return <div className="sb-veil" onPointerDown={e => { if (e.target === e.currentTarget) setPanel(null) }}>
-    <div className="sb-bag" style={{ '--s': Math.min(1, s) }} role="dialog" aria-label="Bag">
-      <img className="sb-art" src={frame1x} srcSet={`${frame1x} 1x, ${frame2x} 2x`} alt="" draggable="false" />
+    <div className={'sb-bag' + (shown ? '' : ' sb-wait')} style={{ '--s': Math.min(1, s) }} role="dialog" aria-label="Bag">
+      <img className="sb-art" src={FRAME} alt="" draggable="false" decoding="sync" onLoad={() => { ART.ready = true; setShown(true) }} ref={el => { if (el && el.complete && el.naturalWidth && !shown) { ART.ready = true; setShown(true) } }} />
       {TABS.map(t => { const c = t.id === 'tools' ? L.tools.filter(x => !x.ghost).length : L[t.id].length
         return <button key={t.id} className={'sb-tb' + (tab === t.id ? ' on' : '')} style={{ left: t.x, width: t.w }} onClick={() => { setTab(t.id); setSel(null) }} aria-pressed={tab === t.id}>{I[t.icon]}{t.label} <i>{c}</i></button> })}
       <div className="sb-grid">

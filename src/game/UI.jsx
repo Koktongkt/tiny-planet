@@ -12,8 +12,9 @@ import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
 import '../ui/glass/glass.css'
 import { WX, GL, GLYPH_DEFS } from '../ui/glass/glyphs.js'
+import PLANET_ART from '../assets/ui/planet-btn.webp'
 import { weatherFor } from '../talk/state.js'
-import { BagSatchel, useSatchelFits } from '../ui/bag/BagSatchel.jsx'
+import { BagSatchel, useSatchelFits, preloadBag } from '../ui/bag/BagSatchel.jsx'
 import { QuestTracker, Hotbar, fireHot, HOT_N } from '../ui/glass/HudExtras.jsx'
 import { armAudio } from '../audio/arm.js'
 import { rideShows } from '../ui/ridePlace.js'
@@ -30,6 +31,9 @@ idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady 
   // waits for the first scene frame + 4 s so it never competes with the boot on slow phones
   const afterFrame = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit() }), 3000), 4000) : setTimeout(afterFrame, 250))
   afterFrame()
+  // the satchel art (225-410 KB) loads + decodes quietly a few seconds after the first frame, so opening the bag is instant
+  const bagArt = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(preloadBag, 4000), 2500) : setTimeout(bagArt, 300))
+  bagArt()
 }))
 const SCM = { m: null }
 const StageCPanels = lazy(() => import('../systems/PanelsC.jsx'))
@@ -187,6 +191,16 @@ const MapGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hi
 const PinGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><path d="M16 5.5a7 7 0 0 0-7 7c0 5.2 7 14 7 14s7-8.8 7-14a7 7 0 0 0-7-7z" fill="#d9655b" stroke="#4a3a35" strokeWidth="1.7" /><circle cx="16" cy="12.2" r="2.2" fill="#fffaf0" /></svg>
 const GlobeGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="#4a3a35" strokeWidth="1.8" /><path d="M7.5 16h17M16 7c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9s1.2-6.4 3.6-9z" fill="none" stroke="#4a3a35" strokeWidth="1.5" /></svg>
 const Gl = ({ id }) => <Svg className="g-gl" html={GL[id]} />
+// desktop, bottom-left: the Tiny Planet icon in a gold ring toggles planet view (same as V); in planet view it says how to get back
+// (src/assets/ui/planet-btn.webp: the clean planet art, drawn above the ring so nothing crops it)
+function PlanetBtn() {
+  const [mode, setMode] = useState(VIEW.mode)
+  useEffect(() => subscribeView(setMode), [])
+  const walk = mode === 'follow', label = walk ? 'Planet view' : 'Back to walking'
+  return <button className={'g-planet' + (walk ? '' : ' on')} onClick={() => tapKey('v', 'KeyV')} aria-label={label} title={label + ' (V)'}>
+    <span className="g-ring g-planet-ring" /><img className="g-planet-art" src={PLANET_ART} alt="" draggable="false" />
+    <span className="g-planet-lb g-glass">{label}</span><em className="g-kc">V</em></button>
+}
 function DeskButtons() {
   const n = Object.values(G.s.inv).reduce((a, b) => a + b, 0)
   return <div className="tp-btns g-top"><button className="tp-btn g-glass tp-bagbtn" onClick={() => setPanel('bag')} aria-label="Bag" title="Bag (B)"><Gl id="bag" /><span>Bag</span>{n > 0 && <i>{n}</i>}<em className="g-kc">B</em></button>
@@ -259,7 +273,7 @@ export function GameUI() {
     <IconDefs /><span className="g-defs" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPH_DEFS }} />
     <Clock /><RideChip />
     {TOUCH ? <PhoneCorners /> : <DeskButtons />}
-    {!TOUCH && <QuestTracker />}{!TOUCH && <Hotbar sbm={SBM} />}
+    {!TOUCH && <QuestTracker />}{!TOUCH && <Hotbar sbm={SBM} />}{!TOUCH && <PlanetBtn />}
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
     {G.ui.cook && <Suspense fallback={null}><CookOverlay /></Suspense>}
     {panel === 'bag' && <BagPanel />}{panel === 'recipes' && <Recipes />}

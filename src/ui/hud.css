@@ -4,9 +4,6 @@
   padding:8px 16px 10px 14px;border-radius:14px 18px 12px 16px;background:radial-gradient(ellipse at 30% 20%,#fbf4e3f0,#f2e5c8e6);
   box-shadow:0 0 0 1.5px #4a3a3555,0 3px 12px rgba(74,58,53,.18);transform:rotate(-.6deg);transition:padding .6s ease}
 .tp-name{font-size:30px;font-weight:500;line-height:1.05}
-.tp-hint{font-size:14px;line-height:1.45;opacity:.82;margin-top:2px;animation:tp-hint-in .6s ease}
-.tp-hint.quiet,html:has(.tpt-note) .tp-hint{display:none} /* the note teaches the same keys; the label shrinks to just the name */
-@keyframes tp-hint-in{from{opacity:0}}
 /* the minimap folds down to a smaller corner card while the note takes the right side, and lifts on hover */
 .mm-wrap:not(.mm-touch) .mm-map{transition:transform .5s ease,opacity .5s ease;transform-origin:0 100%}
 html:has(.tpt-note) .mm-wrap:not(.mm-touch) .mm-map{transform:rotate(-.6deg) scale(.72);opacity:.88}
