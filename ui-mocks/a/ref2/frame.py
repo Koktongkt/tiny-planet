@@ -22,11 +22,31 @@ def fill(shapes, top, bot, y0, y1, feather=2.0, grain=3, holes=()):
 GAPS = [428, 577, 725, 874]
 gt = med([(x, 343) for x in GAPS] + [(x, 347) for x in GAPS]); gb = med([(x, 748) for x in GAPS] + [(x, 744) for x in GAPS])
 fill([((264, 340, 1022, 752), 22)], gt, gb, 340, 752)
-ct = med([(1100, 330), (1400, 330), (1240, 268), (1090, 400)]); cb = med([(1090, 640), (1420, 640), (1250, 650)])
-fill([([(1086,322),(1404,322),(1414,340),(1425,500),(1432,640),(1433,730),(1420,746),(1080,746),(1070,730),(1070,340)], 'poly'), ((1086, 306, 1400, 350), 14), ((1128, 262, 1332, 312), 12), ((1061, 650, 1110, 745), 10)], ct, cb, 262, 746, 1.6, 2)
+ct = med([(1100, 330), (1380, 330), (1240, 268), (1090, 400)]); cb = med([(1090, 640), (1400, 640), (1250, 650)])
+# card: erase only inside its stitched border (the stitch runs ~12px in from the slanted right edge) ...
+fill([([(1086,300),(1340,300),(1388,312),(1398,330),(1409,420),(1414,500),(1420,600),(1422,652),(1072,652),(1072,330)], 'poly'),
+      ((1128, 262, 1332, 312), 12)], ct, cb, 262, 746, 1.2, 2)
+# ... then the button band, where the buttons sit right on the stitch: erase all of it and sew the stitch back
+fill([([(1068,648),(1441,648),(1442,738),(1430,747),(1080,747),(1068,735)], 'poly')], cb, med([(1150, 744), (1300, 744)]), 648, 747, 1.0, 2)
+DASH = (215, 162, 118)
+def sew(pts, dash=9, gap=7, w=3):
+    d = ImageDraw.Draw(im); segs = list(zip(pts, pts[1:])); carry = 0.0; on = True
+    for (x0, y0), (x1, y1) in segs:
+        L = ((x1 - x0) ** 2 + (y1 - y0) ** 2) ** .5; t = 0.0
+        while t < L:
+            step = min((dash if on else gap) - carry, L - t)
+            if on:
+                a = (x0 + (x1 - x0) * t / L, y0 + (y1 - y0) * t / L); b = (x0 + (x1 - x0) * (t + step) / L, y0 + (y1 - y0) * (t + step) / L)
+                d.line([a, b], fill=DASH + (255,), width=w)
+            t += step; carry += step
+            if carry >= (dash if on else gap) - 1e-6: carry = 0.0; on = not on
+sew([(1434,646),(1436,690),(1437,715),(1435,730),(1428,743),(1415,750),(1400,752)])   # right side + corner
+sew([(1066,726),(1071,738),(1083,747),(1100,751)])               # left side + corner
 ft = med([(940, 789), (960, 789), (1150, 789)]); fb = med([(940, 820), (960, 820), (1150, 820)])
 fill([((302, 785, 900, 826), 18)], ft, fb, 785, 826, 1.5, 2)
-# baked active-tab pointers on the panel rim (live tabs draw their own)
+# baked active-tab pointers on the panel rim (live tabs draw their own): copy the clean rim from just beside them
 for cx in (404, 942):
-    fill([((cx - 18, 317, cx + 18, 340), 6)], med([(cx - 40, 322), (cx + 40, 322)]), med([(cx - 40, 336), (cx + 40, 336)]), 317, 340, 1.5, 2)
+    for y in range(316, 346):
+        for x in range(cx - 22, cx + 23):
+            px[x, y] = px[x - 48, y]
 im.save(sys.argv[2])

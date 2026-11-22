@@ -7,9 +7,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import { q, VIEW, subscribeView, subscribeStick } from './common.jsx'
 import { emitStick } from './signals.js'
 import './touch.css'
+import { GL } from './ui/glass/glyphs.js'
+const Glyph = ({ id }) => <span className="g-pg" dangerouslySetInnerHTML={{ __html: GL[id] }} />
 const tq = q.get('touch')
 export const TOUCH = tq === '1' || (tq !== '0' && typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && matchMedia('(hover: none)').matches)))
-export const PAD = { x: 0, y: 0, mag: 0, run: false, active: false }
+export const PAD = { x: 0, y: 0, mag: 0, run: false, runLock: false, active: false } // runLock: the Run toggle button
 export const CAM = { yaw: 0, pitch: 0, zoom: 1, drag: false } // yaw: radians the player turns by (camera follows); pitch / zoom scale the follow camera
 const buzz = (ms = 8) => { try { navigator.vibrate && navigator.vibrate(ms) } catch {} }
 const key = (type, k, code) => window.dispatchEvent(new KeyboardEvent(type, { key: k, code, bubbles: true, cancelable: true }))
@@ -42,6 +44,13 @@ function Btn({ cls, label, icon, onPress, aria }) {
   return <button className={'tp-btn paper ' + cls} aria-label={aria || label} onPointerDown={press} onPointerUp={rel} onPointerCancel={rel} onPointerLeave={rel} onContextMenu={e => e.preventDefault()}>
     <span className="ic" aria-hidden="true">{icon}</span></button>
 }
+// Run: a toggle (the stick still runs when pushed to its edge); while on, any stick walk is a run
+function RunBtn() {
+  const [on, setOn] = useState(PAD.runLock)
+  const press = (e) => { e.preventDefault(); e.stopPropagation(); buzz(10); PAD.runLock = !PAD.runLock; setOn(PAD.runLock) }
+  return <button className={'tp-btn paper tp-run' + (on ? ' on' : '')} aria-label={on ? 'Stop running' : 'Run'} aria-pressed={on} onPointerDown={press} onContextMenu={e => e.preventDefault()}>
+    <span className="ic" aria-hidden="true">{<Glyph id="run" />}</span></button>
+}
 function RotateHint() {
   const [show, setShow] = useState(false)
   useEffect(() => { const mq = matchMedia('(orientation: portrait) and (max-width: 520px)'); let t; const f = () => { clearTimeout(t); if (mq.matches && !sessionStorage.getItem('tp.rot')) { setShow(true); t = setTimeout(() => setShow(false), 7000) } else setShow(false) }; f(); mq.addEventListener?.('change', f); return () => { clearTimeout(t); mq.removeEventListener?.('change', f) } }, [])
@@ -50,6 +59,7 @@ function RotateHint() {
 }
 // hand-drawn line icons (single ink stroke, slightly uneven like a brush pen); no text on the pad
 const ICON = {
+  run: <svg viewBox="0 0 40 40"><circle cx="24.5" cy="8" r="3.2" /><path d="M12 15.5l7-3.2 5.6 4.4 3.8 5 5 .9M19 12.3l-3 10.4 6.2 4.3-2.4 8.4M16 22.7l-4.6 6.3H6.5" /></svg>,
   hand: <svg viewBox="0 0 40 40"><path d="M14.2 21.8V11.6c0-1.5 1-2.6 2.4-2.6s2.3 1.1 2.3 2.5l.1 8.3M18.9 19.6V8.9c0-1.5 1-2.5 2.4-2.5 1.3 0 2.3 1 2.3 2.4v10.6M23.6 19.5v-8.2c0-1.4 1-2.4 2.3-2.4 1.4 0 2.3 1.1 2.3 2.5l-.1 12.4c-.1 6.4-4.3 10.2-9.6 10.2-4.2 0-6.6-2-8.7-5.3l-3.7-5.9c-.8-1.2-.4-2.6.8-3.2 1.1-.6 2.3-.3 3.1.7l2.2 2.8" /><path className="soft" d="M17.2 30.1c1.4 1 3.1 1.3 4.7 1" /></svg>,
   foot: <svg viewBox="0 0 40 40"><path d="M16.4 6.8c-.3 4.6-.1 9.7.7 14.4.5 3-.2 5.2-1.8 7.2-1.3 1.7-1.6 3.6-.5 5 1.2 1.6 3.6 1.9 7.1 1.6l6.7-.6c2.1-.2 3.2-1.5 2.8-3.1-.4-1.5-2-2.3-4.4-2.8-2.9-.6-4.6-2-5.1-4.7-.6-3.6-.7-9.2-.6-14.2" /><path className="soft" d="M22.8 31.3l1-2.4M26.4 31.6l.6-2.2" /><path className="soft" d="M9.4 15.2c1.6-1.6 3-2.3 4.5-2.6M8.6 20.6c1.6-.9 3.1-1.2 4.8-1.1" /></svg>,
 }
@@ -79,8 +89,9 @@ export function TouchPad() {
   return <div className={'tp-pad' + (idle ? ' tp-idle' : '')}>
     {walk && !talk && <Stick />}
     <div className="tp-acts">
-      {walk && <Btn cls="tp-jump" label="Jump" icon={ICON.foot} onPress={() => tapKey(' ', 'Space')} />}
-      {walk && <Btn cls="tp-act" label="Action" aria="Gather, talk or use" icon={ICON.hand} onPress={() => tapKey('e', 'KeyE')} />}
+      {walk && <Btn cls="tp-jump" label="Jump" icon={<Glyph id="jump" />} onPress={() => tapKey(' ', 'Space')} />}
+      {walk && <Btn cls="tp-act" label="Action" aria="Gather, talk or use" icon={<Glyph id="hand" />} onPress={() => tapKey('e', 'KeyE')} />}
+      {walk && <RunBtn />}
     </div>
     <RotateHint />
   </div>

@@ -422,7 +422,7 @@ function stepPlayer(dt) {
     const a = Math.atan2(-PAD.x, PAD.y); turn = Math.max(-1, Math.min(1, a * 1.6)) * Math.min(1, PAD.mag * 1.4)
     f = Math.abs(a) < 2.0 ? Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(a) > 1.2 ? 0.5 : 1) : 0
   }
-  const run = KEYS.shift || (PAD.active && PAD.run)
+  const run = KEYS.shift || (PAD.active && (PAD.run || PAD.runLock))
   let go = f
   if (gameBlocksKeys() && G.ui.panel) go = 0
   if (actLocked()) { go = 0; turn = 0; P.target = null } // polish: she stands still during an action
