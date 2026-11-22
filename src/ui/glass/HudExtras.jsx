@@ -53,12 +53,12 @@ export function Hotbar({ sbm }) {
   const slots = all.slice(p * HOT_N, p * HOT_N + HOT_N)
   const sel = G.ui.hot && slots.some(s => s.id === G.ui.hot) ? G.ui.hot : null
   return <div className="g-hotbar" role="toolbar" aria-label="Hotbar">
-    {pages > 1 && <button className="g-chev" onClick={() => setPage((p + pages - 1) % pages)} aria-label="Previous hotbar page"><Svg html={GL.chevL} /></button>}
+    <button className="g-chev" disabled={pages < 2} onClick={() => setPage((p + pages - 1) % pages)} aria-label="Previous hotbar page"><Svg html={GL.chevL} /></button>
     {Array.from({ length: HOT_N }, (_, i) => { const s = slots[i]
       if (!s) return <div key={'e' + i} className="g-slot empty"><span className="g-num">{i + 1}</span></div>
       const base = s.id.replace(/_perfect$/, '')
       return <button key={s.id} className={'g-slot' + (s.id === sel ? ' sel' : '') + (s.off ? ' off' : '')} onClick={() => fireHot(i, sbm, p)} title={`${itemName(s.id)} (${i + 1})`} aria-label={`${itemName(s.id)}, key ${i + 1}`}>
         <Icon id={base} size={54} wash={false} dim={s.off} />{s.n != null && <span className="g-ct">{s.n}</span>}{s.id.endsWith('_perfect') && <i className="g-star">✦</i>}<span className="g-num">{i + 1}</span></button> })}
-    {pages > 1 && <button className="g-chev" onClick={() => setPage((p + 1) % pages)} aria-label="Next hotbar page"><Svg html={GL.chevR} /></button>}
+    <button className="g-chev" disabled={pages < 2} onClick={() => setPage((p + 1) % pages)} aria-label="Next hotbar page"><Svg html={GL.chevR} /></button>
   </div>
 }

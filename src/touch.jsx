@@ -7,6 +7,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { q, VIEW, subscribeView, subscribeStick } from './common.jsx'
 import { emitStick } from './signals.js'
 import './touch.css'
+import { GL } from './ui/glass/glyphs.js'
+const Glyph = ({ id }) => <span className="g-pg" dangerouslySetInnerHTML={{ __html: GL[id] }} />
 const tq = q.get('touch')
 export const TOUCH = tq === '1' || (tq !== '0' && typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && matchMedia('(hover: none)').matches)))
 export const PAD = { x: 0, y: 0, mag: 0, run: false, runLock: false, active: false } // runLock: the Run toggle button
@@ -47,7 +49,7 @@ function RunBtn() {
   const [on, setOn] = useState(PAD.runLock)
   const press = (e) => { e.preventDefault(); e.stopPropagation(); buzz(10); PAD.runLock = !PAD.runLock; setOn(PAD.runLock) }
   return <button className={'tp-btn paper tp-run' + (on ? ' on' : '')} aria-label={on ? 'Stop running' : 'Run'} aria-pressed={on} onPointerDown={press} onContextMenu={e => e.preventDefault()}>
-    <span className="ic" aria-hidden="true">{ICON.run}</span></button>
+    <span className="ic" aria-hidden="true">{<Glyph id="run" />}</span></button>
 }
 function RotateHint() {
   const [show, setShow] = useState(false)
@@ -87,8 +89,8 @@ export function TouchPad() {
   return <div className={'tp-pad' + (idle ? ' tp-idle' : '')}>
     {walk && !talk && <Stick />}
     <div className="tp-acts">
-      {walk && <Btn cls="tp-jump" label="Jump" icon={ICON.foot} onPress={() => tapKey(' ', 'Space')} />}
-      {walk && <Btn cls="tp-act" label="Action" aria="Gather, talk or use" icon={ICON.hand} onPress={() => tapKey('e', 'KeyE')} />}
+      {walk && <Btn cls="tp-jump" label="Jump" icon={<Glyph id="jump" />} onPress={() => tapKey(' ', 'Space')} />}
+      {walk && <Btn cls="tp-act" label="Action" aria="Gather, talk or use" icon={<Glyph id="hand" />} onPress={() => tapKey('e', 'KeyE')} />}
       {walk && <RunBtn />}
     </div>
     <RotateHint />

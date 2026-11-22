@@ -57,7 +57,7 @@ function Clock() {
   return <div className="tp-clock g-ident" title={label}>
     <div className="g-ring" role="img" aria-label={'Weather: ' + label}><Svg className="g-wx" html={WX[wx] || WX.clear} /></div>
     <div className="g-bar g-glass"><span className="g-ttl">Tiny Planet</span>
-      <span className="g-sub"><Svg html={WX[small]} /><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b>·<small>Day {G.s.day + 1}</small></span>
+      <span className="g-sub"><Svg html={WX[small]} /><small>Day {G.s.day + 1}</small>·<b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b></span>
       <span className={'tp-nrg' + (e <= 25 ? ' low' : '') + (e <= 0 ? ' empty' : '')} role="meter" aria-valuenow={Math.round(e)} aria-valuemin={0} aria-valuemax={100} aria-label={'Energy ' + Math.round(e)} title={'Energy ' + Math.round(e)}><i style={{ width: e + '%' }} /></span></div>
   </div>
 }
@@ -193,7 +193,7 @@ function DeskButtons() {
     <button className="tp-btn g-glass" onClick={() => setPanel('recipes')} aria-label="Recipes" title="Recipes (C)"><Gl id="recipes" /><span>Recipes</span><em className="g-kc">C</em></button>
     {SCM.m && <><button className="tp-btn g-glass tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal" title="Journal (J)"><Gl id="journal" /><span>Journal</span><em className="g-kc">J</em></button>
     <button className="tp-btn g-glass tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode" title="Photo (P)"><Gl id="camera" /><span>Photo</span><em className="g-kc">P</em></button></>}
-    <button className="tp-btn g-glass tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings" title="Settings"><Gl id="gear" /><span>Settings</span></button></div>
+    <button className="tp-btn g-glass tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings" title="Settings (Esc)"><Gl id="gear" /><span>Settings</span><em className="g-kc">Esc</em></button></div>
 }
 function PhoneMenu({ mode, onClose }) {
   const walk = mode === 'follow'
@@ -256,7 +256,7 @@ export function GameUI() {
   }, [])
   const panel = G.ui.panel === 'craft' ? 'recipes' : G.ui.panel
   return <div className="tp-ui">
-    <IconDefs /><span style={{ display: 'none' }} dangerouslySetInnerHTML={{ __html: GLYPH_DEFS }} />
+    <IconDefs /><span className="g-defs" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPH_DEFS }} />
     <Clock /><RideChip />
     {TOUCH ? <PhoneCorners /> : <DeskButtons />}
     {!TOUCH && <QuestTracker />}{!TOUCH && <Hotbar sbm={SBM} />}
