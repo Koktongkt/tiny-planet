@@ -4,7 +4,7 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import hooks from 'eslint-plugin-react-hooks'
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'public/**', 'screenshots/**', 'tools/**', '*.mjs'] },
+  { ignores: ['dist/**', 'node_modules/**', 'public/**', 'screenshots/**', 'tools/**', '*.mjs', 'ui-mocks/**'] },
   js.configs.recommended,
   {
     files: ['src/**/*.{js,jsx}', 'tests/**/*.{js,mjs}', 'eslint.config.js', 'vite.config.js', 'playwright.config.js'],

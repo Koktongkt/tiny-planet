@@ -1,0 +1,96 @@
+/* Glass & Gold HUD (Option A). Smoked glass + one warm-white rim; gold only marks attention (rings, selection,
+   primary). Chrome glyphs are cream; items / weather keep full colour. New classes use the g- prefix; the old
+   class names (tp-clock, tp-btns, tp-btn, tp-prompt, ...) stay so tests and other modules keep finding them. */
+:root{
+  --g-fill:linear-gradient(180deg,rgba(62,54,62,.58),rgba(34,30,38,.62));
+  --g-rim:rgba(255,246,226,.42);--g-rim-soft:rgba(255,246,226,.22);
+  --g-blur:blur(12px) saturate(1.25);--g-shadow:0 4px 14px rgba(16,10,8,.32);--g-hi:inset 0 1px 0 rgba(255,255,255,.22);
+  --gold-hi:#fff3cc;--gold:#f1c86a;--gold-mid:#d9a24a;--gold-lo:#8a5a22;--leaf:#8fd46a;--alert:#f0573f;
+  --t1:#fffaf0;--t2:rgba(255,250,240,.78);--t-gold:#ffe3a0;--g-ts:0 1px 2px rgba(0,0,0,.55)
+}
+.g-glass{background:var(--g-fill);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1.5px solid var(--g-rim);box-shadow:var(--g-shadow),var(--g-hi);color:var(--t1);text-shadow:var(--g-ts)}
+.g-svg{display:block}.g-svg svg{display:block;width:100%;height:100%}
+.g-gl{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45))}
+
+/* ---------- identity bar + weather ring (keeps .tp-clock) ---------- */
+.tp-ui .tp-clock.g-ident{position:absolute;left:16px;top:12px;right:auto;display:flex;align-items:center;gap:0;padding:0;background:none;border:0;box-shadow:none;pointer-events:auto}
+.tp-clock.g-ident::after{display:none}
+.g-ring{position:relative;flex:none;width:70px;height:70px;border-radius:50%;display:grid;place-items:center;z-index:2;
+  background:radial-gradient(circle at 50% 38%,rgba(92,84,96,.78),rgba(30,28,36,.84) 72%);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:0 0 0 2px #2a2024,0 0 0 4px var(--gold-mid),0 0 0 5.5px #5e3e1a,0 6px 16px rgba(10,6,4,.45),inset 0 2px 3px rgba(255,255,255,.18),inset 0 -6px 12px rgba(0,0,0,.35)}
+.g-ring::before{content:'';position:absolute;inset:-4px;border-radius:50%;padding:2px;pointer-events:none;
+  background:conic-gradient(from 200deg,var(--gold-hi),var(--gold-mid) 25%,var(--gold-lo) 45%,var(--gold) 70%,var(--gold-hi));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.g-ring .g-wx{width:50px;height:50px}
+.g-bar{position:relative;height:58px;margin-left:-30px;padding:0 28px 0 40px;border-radius:0 30px 30px 0;display:flex;flex-direction:column;justify-content:center;gap:1px;font-family:Fredoka,sans-serif}
+.g-bar .g-ttl{font-size:19px;font-weight:600;line-height:1.15;letter-spacing:.2px}
+.g-sub{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:500;white-space:nowrap}
+.g-sub .g-svg{width:20px;height:20px}
+.tp-ui .tp-clock.g-ident .g-sub b{display:inline;font-size:16px;font-weight:500;line-height:1}
+.tp-ui .tp-clock.g-ident small{font-size:16px;opacity:1;line-height:1}
+.tp-ui .g-ident .tp-nrg{position:absolute;left:34px;right:24px;bottom:-1px;width:auto;height:3px;margin:0;border:0;border-radius:2px;background:rgba(0,0,0,.35);overflow:hidden}
+.tp-ui .g-ident .tp-nrg i{background:linear-gradient(90deg,var(--leaf),#ffe07a);box-shadow:0 0 6px rgba(255,224,122,.8)}
+.tp-ui .g-ident .tp-nrg.low i{background:linear-gradient(90deg,#f08a4a,#ffc06a)}
+.tp-ui .g-ident .tp-nrg.empty{background:rgba(240,87,63,.45)}
+
+/* the old title label: the name now lives in the identity bar; the controls hint sits under it as a glass line */
+.tp-title{top:94px;left:18px;padding:0;background:none;box-shadow:none;transform:none;border-radius:0}
+.tp-title .tp-name{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.tp-title .tp-hint{display:inline-block;margin:0;padding:6px 14px;border-radius:14px;font-size:13.5px;line-height:1.45;opacity:1;color:var(--t1);text-shadow:var(--g-ts);
+  background:linear-gradient(90deg,rgba(40,36,46,.62),rgba(40,36,46,.38));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+
+/* ---------- top-right square menu buttons (keeps .tp-btns / .tp-btn) ---------- */
+.tp-ui .tp-btns.g-top{top:14px;right:18px;bottom:auto;gap:12px}
+.tp-ui .tp-btns.g-top .tp-btn{position:relative;width:52px;height:52px;min-width:0;min-height:0;padding:0;border-radius:14px;display:grid;place-items:center;transition:transform .12s,box-shadow .12s}
+.tp-ui .tp-btns.g-top .tp-btn::after{display:none}
+.tp-ui .tp-btns.g-top .tp-btn:hover{transform:translateY(-2px);box-shadow:var(--g-shadow),var(--g-hi),0 0 0 2px rgba(241,200,106,.7)}
+.tp-ui .tp-btns.g-top .tp-btn:active{transform:scale(.95)}
+.tp-ui .tp-btns.g-top .tp-btn .g-gl{width:32px;height:32px}
+.tp-ui .tp-btns.g-top .tp-btn > span:not(.g-svg){display:none}
+.tp-ui .tp-btns.g-top .tp-btn i{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;border:0;border-radius:10px;display:grid;place-items:center;
+  background:var(--alert);color:#fff;font-style:normal;font-size:12px;font-weight:600;text-shadow:none;box-shadow:0 0 0 2px #fff4e0,0 1px 3px rgba(0,0,0,.4)}
+.g-kc{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);min-width:18px;height:17px;padding:0 4px;border-radius:5px;font-size:11px;font-weight:600;line-height:15px;text-align:center;
+  color:var(--t-gold);background:rgba(28,22,26,.9);border:1px solid rgba(255,226,160,.45);text-shadow:none;font-style:normal}
+html.tp-touch .g-kc{display:none}
+
+/* touch: same glass, round and compact (positions stay in touch.css) */
+html.tp-touch .tp-ui .tp-clock.g-ident{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);padding:0}
+html.tp-touch .g-ring{width:48px;height:48px}html.tp-touch .g-ring .g-wx{width:34px;height:34px}
+html.tp-touch .g-bar{height:40px;margin-left:-22px;padding:0 16px 0 28px}
+html.tp-touch .g-bar .g-ttl{display:none}
+html.tp-touch .g-sub,html.tp-touch .tp-ui .tp-clock.g-ident .g-sub b,html.tp-touch .tp-ui .tp-clock.g-ident small{font-size:14px}
+html.tp-touch .g-sub .g-svg{width:16px;height:16px}
+html.tp-touch .tp-ui .g-ident .tp-nrg{left:26px;right:14px}
+html.tp-touch .tp-ui .tp-btns.g-top{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);gap:8px}
+html.tp-touch .tp-ui .tp-btns.g-top .tp-btn{width:48px;height:48px;border-radius:14px}
+html.tp-touch .tp-ui .tp-btns.g-top .tp-btn .g-gl{width:28px;height:28px}
+html.tp-touch .tp-btns.g-top .tp-menubtn svg path{stroke:var(--t1)}
+html.tp-touch .tp-ui .tp-btns.g-top .tp-btn > .g-svg{display:block}          /* touch.css hides every span in these buttons */
+html.tp-touch .tp-btns.g-top .tp-menubtn svg{width:30px;height:30px}
+.tp-ui .tp-btns.g-top .tp-btn i.tp-dot{min-width:0;width:13px;height:13px;padding:0;top:-3px;right:-3px}
+
+/* ---------- prompts, chips, toasts, ride chip, placement bar ---------- */
+.tp-ui .tp-prompt.g-glass,.tp-ui .tp-chip.g-glass,.tp-ui .tp-toast.g-glass,.tp-ui .tp-ride.g-glass,.tp-ui .tp-placebar.g-glass{border-radius:999px}
+.tp-prompt.g-glass::after,.tp-chip.g-glass::after,.tp-toast.g-glass::after,.tp-ride.g-glass::after,.tp-placebar.g-glass::after{display:none}
+.tp-ui .tp-prompt.g-glass{padding:6px 22px 6px 7px;min-height:50px;font-size:18px;font-weight:500}
+.tp-ui .tp-prompt.g-glass,.tp-ui .tp-prompt.g-glass span,.tp-ui .tp-chip.g-glass,.tp-ui .tp-chip.g-glass span,.tp-ui .tp-toast.g-glass span,.tp-ui .tp-ride.g-glass span,.tp-ui .tp-placebar.g-glass span{color:var(--t1)}
+.tp-ui .tp-prompt.g-glass b,.tp-ui .tp-chip.g-glass b,.tp-ui .tp-toast.g-glass b{color:var(--t-gold);font-weight:600}
+.tp-ui .tp-prompt.g-glass em{color:#ffb39a}
+.tp-ui .g-glass .key{min-width:34px;height:34px;border:0;border-radius:50%;padding:0 6px;font-weight:700;font-size:16px;color:#3a2412;text-shadow:none;
+  background:radial-gradient(circle at 50% 30%,#fffaf0,#efd69a);box-shadow:0 0 0 1.5px var(--gold-lo),inset 0 -2px 0 rgba(120,70,20,.3)}
+.tp-ui .tp-chip.g-glass .key{min-width:24px;height:24px;font-size:12px}
+.tp-ui .tp-chip-alt.g-glass .key{min-width:20px;height:20px;font-size:11px}
+.tp-ui .tp-toast.g-glass{padding:4px 18px 4px 6px;font-size:16px}
+.tp-ui .tp-ride.g-glass{padding:4px 14px 4px 6px}
+.tp-ui .tp-placebar.g-glass{border-radius:22px;padding:6px 8px 6px 10px}
+.tp-ui .tp-placebar.g-glass button{border:1.5px solid var(--g-rim);border-radius:999px;background:rgba(255,255,255,.08);color:var(--t1);text-shadow:var(--g-ts)}
+.tp-ui .tp-placebar.g-glass button.go{color:#3a2412;text-shadow:none;border-color:var(--gold-lo);background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-mid))}
+
+/* full-screen panels own the screen: the minimap and the controls hint step out of the way */
+html:has(.sb-veil) .mm-wrap,html:has(.sb-veil) .tp-title{display:none}
+
+/* ---------- minimap: glass frame with a gold edge ---------- */
+.mm-wrap .mm-map{border-radius:16px;transform:none;box-shadow:0 0 0 2px #2a2024,0 0 0 4px var(--gold-mid),0 0 0 5.5px #5e3e1a,0 8px 18px rgba(10,6,4,.4)}
+.mm-wrap .mm-btn{border:0;background:radial-gradient(circle at 50% 30%,#4a4048,#262026);color:var(--t1);box-shadow:0 0 0 1.5px var(--gold-mid),0 2px 6px rgba(0,0,0,.4)}
+
+@media (prefers-reduced-motion:reduce){.tp-ui .tp-btns.g-top .tp-btn{transition:none}}
