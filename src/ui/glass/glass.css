@@ -153,4 +153,4 @@ html.tp-touch .tp-pad .tp-acts .tp-btn.down,html.tp-touch .tp-pad .tp-acts .tp-b
 html.tp-touch .tp-stick{background:radial-gradient(circle,rgba(40,34,40,.18),rgba(40,34,40,.38));box-shadow:0 0 0 2px rgba(255,248,232,.55),0 6px 16px rgba(10,6,4,.25);border-radius:50%}
 
 @media (prefers-reduced-motion:reduce){.tp-ui .tp-btns.g-top .tp-btn{transition:none}}
-html.tp-touch .mm-wrap .mm-btn{width:40px;height:40px;font-size:18px;right:-30px;top:-2px}
+html.tp-touch .mm-wrap .mm-btn{width:44px;height:44px;font-size:18px;right:-34px;top:-4px}
