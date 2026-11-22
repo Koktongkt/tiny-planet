@@ -10,13 +10,13 @@ html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#3a2a20}
 /* the bag is authored in the reference image's own pixel space (1672x941) and scaled to fit */
 .bag{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;transform:scale(.7656);font-family:var(--font);color:#3a2618;text-shadow:none}
 .bag>img{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(20,8,2,.45))}
-.tb{position:absolute;top:275px;height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:22px;font-weight:600;color:#f8e8cc;
+.tb{position:absolute;top:257px;height:60px;border-radius:30px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:22px;font-weight:600;color:#f8e8cc;
   background:linear-gradient(180deg,#6a4636,#56362a);box-shadow:inset 0 1.5px 0 rgba(255,220,180,.25),0 3px 4px rgba(40,20,8,.35)}
 .tb i{font-style:normal;font-weight:500;opacity:.7}
 .tb svg{width:30px;height:30px}
 .tb.on{color:#4a2e14;background:linear-gradient(180deg,#ffe7a6,#f6c86c);box-shadow:inset 0 2px 0 #fff6d8,0 0 0 1.5px #d9a24a,0 3px 6px rgba(120,70,20,.35)}
 .tb.on::after{content:'';position:absolute;left:50%;bottom:-13px;margin-left:-12px;border:12px solid transparent;border-bottom:0;border-top:14px solid #f6c86c}
-.t{position:absolute;width:125px;height:120px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(180deg,#fdf3e2,#f4e3c8);
+.t{position:absolute;width:132px;height:120px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(180deg,#fdf3e2,#f4e3c8);
   box-shadow:0 4px 0 #dcc29c,0 6px 10px rgba(110,70,30,.18),inset 0 2px 0 #fffaf0}
 .t .it{width:86px;height:86px;margin:-8px 0 0 -6px}
 .t .it svg{filter:drop-shadow(0 2px 2px rgba(110,70,30,.22))}
@@ -24,7 +24,7 @@ html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#3a2a20}
 .t.sel{background:linear-gradient(180deg,#fffaec,#fcefd2);box-shadow:0 0 0 4px #f5c242,0 0 0 7px rgba(245,194,66,.3),0 0 22px rgba(255,200,80,.6),inset 0 2px 0 #fff}
 .t .sp{position:absolute;left:12px;top:8px;color:#f5b830;font-size:20px}
 .t.e{background:none;box-shadow:none;border:2.5px dashed rgba(170,125,80,.45)}
-.card{position:absolute;left:1066px;top:300px;width:322px;height:448px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.card{position:absolute;left:1078px;top:280px;width:350px;height:470px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .blob{position:relative;width:200px;height:156px;display:grid;place-items:center;margin-top:4px}
 .blob::before{content:'';position:absolute;inset:8px 14px;background:#f1dcb6;border-radius:46% 54% 44% 56%/56% 44% 56% 44%}
 .blob .it{position:relative;width:146px;height:146px}
@@ -34,19 +34,19 @@ html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#3a2a20}
 .card .pil b{color:#ec9a2a}
 .card p{font-size:19.5px;line-height:1.35;color:#4a3426;margin:14px 6px 0}
 .card .ln{width:100%;border-top:2px dashed rgba(170,125,80,.4);margin:auto 0 0}
-.acts{position:absolute;left:1053px;top:676px;width:345px;display:flex;gap:10px}
+.acts{position:absolute;left:1068px;top:666px;width:370px;display:flex;gap:10px}
 .bt{flex:1;height:64px;border-radius:24px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:23px;font-weight:700}
 .bt svg{width:30px;height:30px}
 .bt.g{flex:1.2;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.3);background:linear-gradient(180deg,#8ccd5a,#4e9530);box-shadow:0 0 0 2px #36701e,0 4px 0 #36701e,inset 0 2px 0 rgba(255,255,255,.4)}
 .bt.y{color:#4a2c0e;background:linear-gradient(180deg,#ffe49a,#f2b640);box-shadow:0 0 0 2px #b8822c,0 4px 0 #b8822c,inset 0 2px 0 rgba(255,255,255,.6)}
-.foot{position:absolute;left:326px;top:784px;height:48px;padding:0 16px 0 14px;border:0;border-radius:24px;background:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;font-size:20px;font-weight:500;color:#f8e8cc;transition:background .15s,box-shadow .15s}
+.foot{position:absolute;left:300px;top:782px;height:48px;padding:0 16px 0 14px;border:0;border-radius:24px;background:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;font-size:20px;font-weight:500;color:#f8e8cc;transition:background .15s,box-shadow .15s}
 .foot .more{font-size:16px;font-weight:600;color:#f6c86c;opacity:0;margin-left:6px;transition:opacity .15s}
 .foot:hover,.foot.on{background:rgba(255,220,150,.10);box-shadow:inset 0 0 0 2px rgba(246,200,108,.75),0 0 16px rgba(246,200,108,.35)}
 .foot:hover .more,.foot.on .more{opacity:1}
 .hot{position:absolute;border:0;background:none;cursor:pointer;border-radius:36px}
 .hot:hover{background:rgba(255,240,200,.12)}
 body.debug .hot,body.debug .foot{outline:3px dashed #39f;outline-offset:2px;background:rgba(51,153,255,.15)}
-.disc{position:absolute;left:300px;bottom:180px;width:440px;padding:20px 22px 18px;border-radius:22px;color:#3a2618;
+.disc{position:absolute;left:290px;bottom:170px;width:440px;padding:20px 22px 18px;border-radius:22px;color:#3a2618;
   background:linear-gradient(180deg,#fffaf0,#f4e6c8);box-shadow:0 0 0 2.5px #c49a62,0 14px 30px rgba(40,20,8,.45)}
 .disc::before{content:'';position:absolute;inset:8px;border-radius:15px;border:2px dashed rgba(170,125,80,.4);pointer-events:none}
 .disc::after{content:'';position:absolute;left:150px;bottom:-14px;border:14px solid transparent;border-bottom:0;border-top:15px solid #f4e6c8;filter:drop-shadow(0 2.5px 0 #c49a62)}
@@ -79,8 +79,8 @@ const DISC = `<div class="disc"><div class="dh">${I.sprout}<b>Discoveries</b><sp
   ${[['sprout', 'Gathered', 10, 24], ['fish', 'Fish', 1, 12], ['bowl', 'Food', 3, 10], ['chair', 'Decor', 0, 11]].map(([ic, n, a, b]) => `<div class="dr"><span class="di">${ic === 'fish' ? `<span class="it">${IC.fish_nw}</span>` : I[ic]}</span><span class="dn">${n}</span><span class="dm"><i style="width:${a / b * 100}%"></i></span><span class="dc">${a}/${b}</span></div>`).join('')}
   <div class="dnext"><span class="it">${IC.glowmoss_nw}</span><span><b>Next to find:</b> something that glows in the forest at night…</span></div>
   <div class="dsoon">The full discovery journal is coming soon</div></div>`
-const tabs = [['Gathered', 12, 'sprout', 318, 202, !FOOD], ['Tools', 4, 'tools', 528, 162], ['Food', 3, 'bowl', 698, 159, FOOD], ['Decor', 1, 'chair', 864, 162]]
-const COLS = [320, 458, 597, 735, 875], ROWS = [368, 500, 628]
+const tabs = [['Gathered', 12, 'sprout', 280, 225, !FOOD], ['Tools', 4, 'tools', 513, 167], ['Food', 3, 'bowl', 688, 170, FOOD], ['Decor', 1, 'chair', 866, 170]]
+const COLS = [287, 436, 585, 733, 882], ROWS = [353, 488, 621]
 const items = FOOD ? [['onigiri', 2], ['soup', 1, 1], ['jam', 3], [null], [null], [null], [null], [null], [null], [null], [null], [null], [null], [null], [null]] : [['mushroom', 3], ['flower', 5, 1], ['berries', 12], ['wood', 24], ['stone', 4], ['shell', 2], ['herbs', 6], ['acorn', 3], ['fish', 1], ['crystal', 2], ['moss', 7], ['pinecone', 4], [null], [null], [null]]
 document.getElementById('root').innerHTML = `
 <div class="abs ident" style="left:16px;top:12px"><div class="ring"><span class="wx" style="display:block">${WX.clear}</span></div>
@@ -88,7 +88,7 @@ document.getElementById('root').innerHTML = `
 <div class="abs" style="right:18px;top:14px;display:flex;gap:12px">
   <div class="glass sqbtn">${gl('bag')}<span class="dot n">3</span><span class="kc">B</span></div><div class="glass sqbtn">${gl('recipes')}<span class="kc">C</span></div>
   <div class="glass sqbtn">${gl('journal')}<span class="dot"></span><span class="kc">J</span></div><div class="glass sqbtn">${gl('gear')}<span class="kc">Esc</span></div></div>
-<div class="bag"><img src="ref/bag-frame.webp" srcset="ref/bag-frame.webp 1x, ref/bag-frame@2x.webp 2x" alt="">
+<div class="bag"><img src="ref2/bag-frame.webp" srcset="ref2/bag-frame.webp 1x, ref2/bag-frame@2x.webp 2x" alt="">
   ${tabs.map(([n, c, ic, x, w, on]) => `<div class="tb${on ? ' on' : ''}" style="left:${x}px;width:${w}px">${I[ic]}${n} <i>${c}</i></div>`).join('')}
   ${items.map(([id, n, s], k) => { const x = COLS[k % 5], y = ROWS[(k / 5) | 0]
     return id ? `<div class="t${s ? ' sel' : ''}" style="left:${x}px;top:${y}px">${it(id)}<span class="n">${n}</span>${s ? '<span class="sp">✦</span>' : ''}</div>` : `<div class="t e" style="left:${x}px;top:${y}px"></div>` }).join('')}
@@ -99,9 +99,9 @@ document.getElementById('root').innerHTML = `
     <div class="ln" style="margin-bottom:96px"></div></div>
   <div class="acts"><span class="bt g">${FOOD ? I.bowl + 'Eat' : I.hammer + 'Craft with'}</span><span class="bt y">${I.gift}Gift</span></div>
   <button class="foot${Q.get('disc') ? ' on' : ''}" aria-label="Discoveries, 14 of 57 found">${I.sprout}14 / 57 discovered<span class="m"><i></i></span><span class="more">View ›</span></button>
-  <button class="hot" style="left:726px;top:150px;width:232px;height:72px" aria-label="Bag" data-act="none"></button>
-  <button class="hot" style="left:1294px;top:153px;width:64px;height:64px;border-radius:50%" aria-label="Close bag" data-act="close"></button>
-  <button class="hot" style="left:1184px;top:788px;width:172px;height:42px;border-radius:21px" aria-label="Reset save" data-act="reset"></button>
+  <button class="hot" style="left:700px;top:118px;width:276px;height:88px" aria-label="Bag" data-act="none"></button>
+  <button class="hot" style="left:1316px;top:121px;width:72px;height:72px;border-radius:50%" aria-label="Close bag" data-act="close"></button>
+  <button class="hot" style="left:1203px;top:782px;width:192px;height:46px;border-radius:23px" aria-label="Reset save" data-act="reset"></button>
   ${Q.get('disc') ? DISC : ''}
 </div>`
 </script></body></html>
