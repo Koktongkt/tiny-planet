@@ -17,6 +17,13 @@
 #pw{position:relative;order:2;flex:0 0 auto;width:min(44vw,70vh);aspect-ratio:684/780;transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 #pw:before{content:"";position:absolute;inset:4% -6% -2%;border-radius:50%;background:radial-gradient(closest-side,#fffbe9b0,#fff6dc40 55%,#fff0 100%);animation:gl 6s ease-in-out infinite alternate}@keyframes gl{to{transform:scale(1.06);opacity:.75}}
 #pf{position:absolute;inset:0}
+/* life on the house: chimney smoke puffs drift off with the breeze; the windows glow warm once the last stage starts */
+#sm{position:absolute;left:66.2%;top:13%;width:8%;aspect-ratio:1;transform:translate(-50%,-50%);opacity:0;transition:opacity 1.6s}#pi.in~#sm{opacity:1}
+.pu{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 40% 36%,#fff 0,#fdfdff 28%,#eef1fa 50%,#e2e6f4cc 60%,#e2e6f400 71%);opacity:0;animation:pu 6s cubic-bezier(.3,.6,.4,1) infinite;will-change:transform,opacity}
+@keyframes pu{0%{transform:translate(0,0) scale(.3);opacity:0}8%{opacity:.9}40%{transform:translate(28%,-110%) scale(1)}70%{opacity:.8}100%{transform:translate(110%,-270%) scale(1.7);opacity:0}}
+#lit,#lha{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 2.2s ease}#lit{mix-blend-mode:multiply}#lha{mix-blend-mode:screen}
+#ld.lit #lit,#ld.lit #lha{opacity:1;animation:fk 4.2s ease-in-out 2.2s infinite}#lit{fill:#ffc04f}#lha{fill:url(#wg)}
+@keyframes fk{0%,100%{opacity:1}30%{opacity:.82}36%{opacity:.95}62%{opacity:.86}}
 #pi{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.94);transition:opacity 1.4s ease,transform 1.8s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 18px 28px #3e5f9640)}#pi.in{opacity:1;transform:none}
 /* title card */
 #tx{position:relative;flex:0 1 auto;width:min(36vw,480px);text-align:center;transition:opacity 1.2s,transform 2s}
@@ -41,7 +48,7 @@
  #ft,#go{margin-top:clamp(18px,3vh,40px)}#st{font-size:14px;letter-spacing:.08em}#tip{font-size:14px}#go{font-size:22px}}
 @media (max-height:500px) and (min-aspect-ratio:1/1){#tt h1{font-size:clamp(38px,11vh,64px)}#tt p{font-size:15px;margin-top:.5em}#ft,#go{margin-top:14px}#st{font-size:13px;margin-top:.5em}#tip{font-size:12px;margin-top:.4em}#go{font-size:18px}}
 html,body{overscroll-behavior:none}#ld{touch-action:none}
-@media (prefers-reduced-motion:reduce){.dr,#pw:before,#go.on{animation:none!important}.bk,#pw,#pi,#tx,#go,#fill{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
+@media (prefers-reduced-motion:reduce){.dr,#pw:before,#go.on{animation:none!important}.pu{animation-play-state:paused!important}#ld.lit #lit,#ld.lit #lha{animation:none!important}.bk,#pw,#pi,#tx,#go,#fill{transition:none!important}#ld.out{-webkit-mask:none;mask:none;animation:none;opacity:0;transition:opacity .4s}}
 </style></head><body style="margin:0;overflow:hidden;background:#86b0e3">
 <div id="ld" role="progressbar" aria-label="Loading Tiny Planet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
@@ -53,7 +60,7 @@ html,body{overscroll-behavior:none}#ld{touch-action:none}
 <div class="lay bk" id="R2"><div class="lay dr"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c2)" opacity=".8"><circle cx="1560" cy="820" r="150"/><circle cx="1390" cy="890" r="120"/><circle cx="1690" cy="720" r="130"/><rect x="1240" y="890" width="560" height="200"/></g></svg></div></div>
 <div class="lay bk" id="L1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c1)"><circle cx="-30" cy="930" r="170"/><circle cx="170" cy="990" r="140"/><circle cx="300" cy="1040" r="110"/><rect x="-200" y="980" width="600" height="200"/></g></svg></div></div>
 <div class="lay bk" id="R1"><div class="lay dr s"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#cb)" fill="url(#c1)"><circle cx="1620" cy="920" r="180"/><circle cx="1430" cy="990" r="140"/><circle cx="1300" cy="1050" r="110"/><rect x="1200" y="990" width="600" height="200"/></g></svg></div></div>
-<div id="pw"><div id="pf"><img id="pi" src="./loader/planet.webp" alt="" width="684" height="780" decoding="async" fetchpriority="high" draggable="false"></div></div>
+<div id="pw"><div id="pf"><img id="pi" src="./loader/planet.webp" alt="" width="684" height="780" decoding="async" fetchpriority="high" draggable="false"><svg id="lit" viewBox="0 0 684 780" aria-hidden="true"><defs><filter id="ws"><feGaussianBlur stdDeviation="1.4"/></filter><radialGradient id="wg"><stop offset="0" stop-color="#ffd986" stop-opacity=".85"/><stop offset=".55" stop-color="#ffc867" stop-opacity=".3"/><stop offset="1" stop-color="#ffc463" stop-opacity="0"/></radialGradient></defs><g filter="url(#ws)"><rect x="222" y="287" width="28" height="40" rx="12"/><circle cx="337.5" cy="330" r="20"/><rect x="430" y="300" width="30" height="40" rx="12"/></g></svg><svg id="lha" viewBox="0 0 684 780" aria-hidden="true"><ellipse cx="236" cy="307" rx="36" ry="42"/><circle cx="337.5" cy="330" r="36"/><ellipse cx="445" cy="320" rx="36" ry="42"/></svg><div id="sm" aria-hidden="true"><i class="pu" style="animation-delay:-0.0s"></i><i class="pu" style="animation-delay:-0.75s"></i><i class="pu" style="animation-delay:-1.5s"></i><i class="pu" style="animation-delay:-2.25s"></i><i class="pu" style="animation-delay:-3.0s"></i><i class="pu" style="animation-delay:-3.75s"></i><i class="pu" style="animation-delay:-4.5s"></i><i class="pu" style="animation-delay:-5.25s"></i></div></div></div>
 <div id="tx">
 <div id="tt"><h1><span><svg class="sp" viewBox="0 0 62 52" aria-hidden="true"><path d="M29 48C17 46 6 36 8 20C12 10 24 14 28 26C30 34 31 42 29 48Z" fill="#f4c95d"/><path d="M33 48C45 46 56 36 54 20C50 10 38 14 34 26C32 34 31 42 33 48Z" fill="#f4c95d"/><circle cx="50" cy="50" r="2.4" fill="#fff6dc"/></svg>Tiny</span> <span>Planet</span></h1>
 <svg class="sw" viewBox="0 0 260 40" aria-hidden="true"><path d="M8 32C70 6 180 4 252 24" fill="none" stroke="#f6d27a" stroke-width="7" stroke-linecap="round"/></svg>
@@ -73,7 +80,7 @@ function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p
  $("fill").style.transform="scaleX("+Math.max(.04,p).toFixed(4)+")";
  bank("L1",40-200*e,60*e);bank("R1",-40+200*e,60*e);bank("L2",20-140*e,30*e);bank("R2",-20+140*e,30*e);
  ld.setAttribute("aria-valuenow",Math.round(p*100));
- var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done)$("sl").textContent=L[c];window.__loader.p=p}
+ if((S.shaders||0)>=1)ld.classList.add("lit");var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done)$("sl").textContent=L[c];window.__loader.p=p}
 var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(en){var n=en.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((S.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(x){}}
 function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="frame"&&v>=1)ready()}
 function ready(){if(done)return;done=1;if((/[?&]touch=1/.test(q)||matchMedia("(pointer: coarse)").matches)&&!/[?&]touch=0/.test(q))$("go").querySelector("small").textContent="tap anywhere";$("ft").style.opacity=0;var b=$("go");setTimeout(function(){b.classList.add("on");b.focus({preventScroll:true})},rm?0:700);if(/[?&]enter/.test(q))setTimeout(enter,rm?0:900)}
