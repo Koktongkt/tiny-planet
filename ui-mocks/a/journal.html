@@ -9,28 +9,26 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 .jb{position:absolute;left:50%;top:50%;width:1448px;height:1086px;transform:translate(-50%,-50%) scale(var(--s,.65));font-family:Fredoka,system-ui,sans-serif;color:#4a2a18}
 .jb>img{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(20,8,2,.45));user-select:none}
 
-/* ---- bookmarks: live leather tabs on the open band under the plaque ---- */
-.bm{position:absolute;left:214px;top:142px;width:1020px;height:90px;display:flex;align-items:flex-end;gap:16px}
-.bk{position:relative;flex:1;height:74px;border:0;padding:0 18px 4px;border-radius:20px 20px 6px 6px;cursor:pointer;font:600 28px Fredoka,system-ui,sans-serif;
-  display:flex;align-items:center;justify-content:center;gap:10px;color:#f7dcb2;
-  background:linear-gradient(180deg,#a65a3a,#8a4329);
-  box-shadow:inset 0 2px 0 rgba(255,200,150,.28),inset 0 -3px 0 rgba(60,20,8,.25),0 3px 5px rgba(40,12,4,.45);
-  transition:transform .14s ease,height .14s ease,color .14s}
-.bk::before{content:'';position:absolute;inset:6px 7px 8px;border-radius:15px 15px 4px 4px;border:2.5px dashed #e3a85a;opacity:.85;pointer-events:none}
-.bk svg{width:34px;height:34px;flex:none}
-.bk .n{min-width:32px;height:30px;padding:0 9px;border-radius:15px;display:grid;place-items:center;font-size:20px;color:#fbe7c8;background:rgba(50,16,6,.35)}
-.bk .dot{position:absolute;right:10px;top:-9px;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe9a0,#f0a428);box-shadow:0 0 0 2.5px #7a3418,0 0 10px rgba(255,200,80,.8)}
-.bk:hover{transform:translateY(-4px);color:#fff0d6}
-.bk:focus-visible{outline:3px solid #ffd77a;outline-offset:3px}
-/* the open bookmark: cream leather like the plaque, taller, and tucked into the page top so it reads as 'this page' */
-.bk.on{height:98px;margin-bottom:-14px;padding-bottom:14px;color:#4a2a18;transform:none;
-  background:linear-gradient(180deg,#fdebcf 0%,#f6d6aa 70%,#f7d2a6 100%);
-  box-shadow:inset 0 2px 0 #fff7e6,inset 0 -2px 0 rgba(160,90,40,.15),0 0 0 2px #b87a46,0 4px 10px rgba(40,12,4,.5),0 0 22px rgba(255,210,130,.35);z-index:2}
-.bk.on::before{border-color:#c98e52;inset:7px 8px 16px}
-.bk.on::after{content:'';position:absolute;left:14px;top:14px;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe28a,#d38a1c);box-shadow:0 1px 1px rgba(80,30,0,.5)}
-.bk.on .n{color:#fff3df;background:#a85a32}
-.bk.on .rv{position:absolute;right:14px;top:14px;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe28a,#d38a1c);box-shadow:0 1px 1px rgba(80,30,0,.5)}
-.bk:not(.on) .rv{display:none}
+/* ---- bookmarks: fabric ribbon markers tucked into the book; their feet vanish behind the leather lip over the pages ---- */
+.bm{position:absolute;left:222px;top:140px;width:1004px;height:88px;display:flex;align-items:flex-end;gap:14px;filter:drop-shadow(0 3px 3px rgba(40,12,4,.45))}
+.bk{position:relative;flex:1;height:64px;border:0;padding:8px 14px 0;cursor:pointer;font:600 27px Fredoka,system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;text-shadow:0 1.5px 1px rgba(60,20,10,.35);
+  /* swallowtail cut at the top, like the ribbons painted at the bottom of the book */
+  clip-path:polygon(0 0,calc(50% - 18px) 0,50% 11px,calc(50% + 18px) 0,100% 0,100% 100%,0 100%);
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2));
+  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -14px 12px -8px rgba(40,10,0,.45);
+  transition:height .16s ease,filter .16s}
+.bk::before{content:'';position:absolute;inset:0 11px;border-left:2px dashed rgba(255,255,255,.45);border-right:2px dashed rgba(255,255,255,.45);pointer-events:none}
+.bk:not(.on){filter:saturate(.92) brightness(.96)}
+.bk svg{width:32px;height:32px;flex:none}
+.bk .n{min-width:30px;height:28px;padding:0 8px;border-radius:14px;display:grid;place-items:center;font-size:19px;color:#fff;background:rgba(40,12,4,.25);text-shadow:none}
+.bk .dot{position:absolute;right:20px;top:14px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c8,#ffc23a);box-shadow:0 0 0 2px rgba(120,40,10,.55),0 0 8px #ffe08a}
+.bk:hover{height:72px;filter:none}
+.bk:focus-visible{outline:none;filter:none;text-decoration:underline 3px}
+/* the open bookmark is pulled up out of the pages: taller, full colour, a little sheen */
+.bk.on{height:86px;padding-top:10px;filter:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 40%),repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2))}
+.rv{display:none}
 
 /* ---- Discoveries sub-pages: small paper tabs along the top of the left page ---- */
 .sub{position:absolute;left:206px;top:284px;display:flex;gap:8px}
@@ -72,10 +70,10 @@ const I = {
 }
 // sample numbers, as the live game would fill them in
 const BOOKMARKS = [
-  { id: 'quests', label: 'Quests', n: 2, dot: true, page: ['Quests', 'Settle In steps, the errand you took from the board, and new notes waiting.'] },
-  { id: 'people', label: 'People', n: '7', page: ['People', 'Everyone you have met: hearts, favourite things, gifts they love.'] },
-  { id: 'discoveries', label: 'Discoveries', n: '18', page: null },
-  { id: 'memories', label: 'Memories', n: 5, page: ['Memories', 'Your photos for now. Room for more kinds of keepsakes later.'] },
+  { id: 'quests', c: ['#e2654c', '#b8402e'], label: 'Quests', n: 2, dot: true, page: ['Quests', 'Settle In steps, the errand you took from the board, and new notes waiting.'] },
+  { id: 'people', c: ['#f3c25a', '#d4922a'], label: 'People', n: '7', page: ['People', 'Everyone you have met: hearts, favourite things, gifts they love.'] },
+  { id: 'discoveries', c: ['#9cc75c', '#679a34'], label: 'Discoveries', n: '18', page: null },
+  { id: 'memories', c: ['#ea9a92', '#c86a66'], label: 'Memories', n: 5, page: ['Memories', 'Your photos for now. Room for more kinds of keepsakes later.'] },
 ]
 const SUBS = [
   { id: 'fish', label: 'Fish', c: '#6fa6c0', seen: 7, of: 18 },
@@ -86,7 +84,7 @@ const q = new URLSearchParams(location.search)
 let tab = q.get('tab') || 'quests', sub = q.get('sub') || 'fish'
 if (q.has('debug')) document.body.classList.add('debug')
 function render() {
-  document.getElementById('bm').innerHTML = BOOKMARKS.map(b => `<button class="bk${b.id === tab ? ' on' : ''}" role="tab" aria-selected="${b.id === tab}" data-id="${b.id}">${I[b.id]}${b.label}${b.n != null ? `<span class="n">${b.n}</span>` : ''}<span class="rv"></span>${b.dot && b.id !== tab ? '<span class="dot" aria-label="something new"></span>' : ''}</button>`).join('')
+  document.getElementById('bm').innerHTML = BOOKMARKS.map(b => `<button class="bk${b.id === tab ? ' on' : ''}" role="tab" aria-selected="${b.id === tab}" data-id="${b.id}" style="--c1:${b.c[0]};--c2:${b.c[1]}">${I[b.id]}${b.label}${b.n != null ? `<span class="n">${b.n}</span>` : ''}<span class="rv"></span>${b.dot && b.id !== tab ? '<span class="dot" aria-label="something new"></span>' : ''}</button>`).join('')
   const isD = tab === 'discoveries'; document.body.classList.toggle('nosub', !isD)
   document.getElementById('sub').innerHTML = isD ? SUBS.map(s => `<button class="st${s.id === sub ? ' on' : ''}" style="--c:${s.c}" role="tab" aria-selected="${s.id === sub}" data-sub="${s.id}"><i></i>${s.label}<small>${s.seen}/${s.of}</small></button>`).join('') : ''
   const S = SUBS.find(s => s.id === sub), B = BOOKMARKS.find(b => b.id === tab)
