@@ -36,8 +36,6 @@
 /* the old title label: the name now lives in the identity bar; the controls hint sits under it as a glass line */
 .tp-title{top:94px;left:18px;padding:0;background:none;box-shadow:none;transform:none;border-radius:0}
 .tp-title .tp-name{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.tp-title .tp-hint{display:inline-block;margin:0;padding:6px 14px;border-radius:14px;font-size:13.5px;line-height:1.45;opacity:1;color:var(--t1);text-shadow:var(--g-ts);
-  background:linear-gradient(90deg,rgba(40,36,46,.62),rgba(40,36,46,.38));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 
 /* ---------- top-right square menu buttons (keeps .tp-btns / .tp-btn) ---------- */
 .tp-ui .tp-btns.g-top{top:14px;right:18px;bottom:auto;gap:12px}
@@ -101,9 +99,6 @@ html:has(.sb-veil) .mm-wrap,html:has(.sb-veil) .tp-title{display:none}
 .mm-touch .mm-n{font-size:10px;top:4px}
 @media (orientation:landscape) and (max-height:500px){.mm-touch .mm-map{width:86px;height:86px}}
 
-/* controls hint: bottom-left on desktop now the corner is free (it fades after a while) */
-.tp-title{top:auto;bottom:22px;max-width:300px}
-.tp-title .tp-hint{font-size:13px}
 
 /* ---------- quest tracker (desktop) ---------- */
 .g-quest{position:absolute;left:16px;top:96px;width:300px;padding:10px 40px 12px 12px;border-radius:14px 0 0 14px;font-family:Fredoka,sans-serif;color:var(--t1);text-shadow:var(--g-ts);

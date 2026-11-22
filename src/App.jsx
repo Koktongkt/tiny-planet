@@ -540,14 +540,6 @@ function Rig() {
   })
   return null
 }
-function Hint() {
-  const [m, setM] = React.useState(VIEW.mode)
-  useEffect(() => subscribeView(setM), [])
-  // the controls line fades once she's been walking a while (Grandma's note teaches them too); a view change brings it back
-  const [quiet, setQuiet] = React.useState(false)
-  useEffect(() => { setQuiet(false); const id = setTimeout(() => setQuiet(true), 45000); return () => clearTimeout(id) }, [m])
-  return <div className={'tp-hint' + (quiet ? ' quiet' : '')}>{TOUCH ? (m === 'follow' ? <>stick to walk · push to the edge to run · tap the ground to walk<br />drag to look · pinch to zoom · ✋ gather</> : <>drag to spin · pinch to zoom · tap Walk to go back</>) : m === 'follow' ? <>WASD / arrows to walk · Space to jump · tap to walk<br />E gather · B bag · C recipes · V planet view</> : <>drag to spin the planet · V to walk</>}</div>
-}
 
 const GAMEON = VIEW.mode === 'follow' && !q.has('nogame')
 function loadGame() {
@@ -810,7 +802,7 @@ export default function App() {
       <WorldFx />
     </Canvas>
     <div className="tp-title">
-      <div className="tp-name">Tiny Planet</div><Hint />
+      <div className="tp-name">Tiny Planet</div>
     </div>
     {GAMEON && <GameSlot ui />}
     {TOUCH && <TouchPace />}
