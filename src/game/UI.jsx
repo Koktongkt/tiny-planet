@@ -14,6 +14,7 @@ import '../ui/glass/glass.css'
 import { WX, GL, GLYPH_DEFS } from '../ui/glass/glyphs.js'
 import { weatherFor } from '../talk/state.js'
 import { BagSatchel, useSatchelFits } from '../ui/bag/BagSatchel.jsx'
+import { QuestTracker, Hotbar, fireHot, HOT_N } from '../ui/glass/HudExtras.jsx'
 import { armAudio } from '../audio/arm.js'
 import { rideShows } from '../ui/ridePlace.js'
 import { newReel, fishStep, reelDt, REEL } from '../systems/fish.js'
@@ -249,6 +250,7 @@ export function GameUI() {
       else if (e.code === 'KeyE' && !G.ui.panel) GAME.actions.act?.()
       else if (e.code === 'KeyF' && !G.ui.panel && G.near?.alt) G.near.alt.act()
       else if (e.code === 'KeyR' && SEM.m && !G.ui.panel) { e.preventDefault(); SEM.m.toggle() }
+      else if (!TOUCH && /^Digit[1-9]$/.test(e.code) && +e.code[5] <= HOT_N && !G.ui.panel && !/input|textarea|select/i.test(e.target?.tagName || '')) fireHot(+e.code[5] - 1, SBM)
     }
     addEventListener('keydown', k); return () => removeEventListener('keydown', k)
   }, [])
@@ -257,6 +259,7 @@ export function GameUI() {
     <IconDefs /><span style={{ display: 'none' }} dangerouslySetInnerHTML={{ __html: GLYPH_DEFS }} />
     <Clock /><RideChip />
     {TOUCH ? <PhoneCorners /> : <DeskButtons />}
+    {!TOUCH && <QuestTracker />}{!TOUCH && <Hotbar sbm={SBM} />}
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
     {G.ui.cook && <Suspense fallback={null}><CookOverlay /></Suspense>}
     {panel === 'bag' && <BagPanel />}{panel === 'recipes' && <Recipes />}
