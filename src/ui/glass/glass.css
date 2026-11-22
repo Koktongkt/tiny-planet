@@ -158,7 +158,15 @@ html.tp-touch .mm-wrap .mm-btn{width:44px;height:44px;font-size:18px;right:-34px
 /* desktop photo button: the small square under the minimap, as in the agreed mock (still one of the 5 menu buttons) */
 html:not(.tp-touch) .tp-ui .tp-btns.g-top .tp-cambtn{position:absolute;right:8px;top:258px;width:42px;height:42px;border-radius:12px}
 html:not(.tp-touch) .tp-ui .tp-btns.g-top .tp-cambtn .g-gl{width:26px;height:26px}
-html:not(.tp-touch):not(:has(.mm-map)) .tp-ui .tp-btns.g-top .tp-cambtn{top:74px}
+/* map closed: its button becomes a glass square in the minimap's corner, the photo button sits right under it */
+html:not(.tp-touch):not(:has(.mm-map)) .tp-ui .tp-btns.g-top .tp-cambtn{top:118px}
+html:not(.tp-touch) .mm-wrap:not(:has(.mm-map)){right:26px;top:74px}
+html:not(.tp-touch) .mm-wrap:not(:has(.mm-map)) .mm-btn{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+  background:var(--g-fill);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1.5px solid var(--g-rim);box-shadow:var(--g-shadow),var(--g-hi)}
+html:not(.tp-touch) .mm-wrap:not(:has(.mm-map)) .mm-btn:hover{box-shadow:var(--g-shadow),var(--g-hi),0 0 0 2px rgba(241,200,106,.7)}
+.mm-gl{display:block;width:26px;height:26px;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45))}.mm-gl svg{display:block;width:100%;height:100%}
+html:not(.tp-touch) .mm-wrap:not(:has(.mm-map)) .mm-btn::after{content:'M';position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);min-width:18px;height:17px;padding:0 4px;border-radius:5px;
+  font:600 11px/15px Fredoka,sans-serif;text-align:center;color:var(--t-gold);background:rgba(28,22,26,.9);border:1px solid rgba(255,226,160,.45)}
 .g-chev:disabled{opacity:.35;cursor:default}
 /* phone pad as in the agreed mock: big Gather on top, Run + Jump below; cream filled glyphs; cream stick knob */
 html.tp-touch .tp-pad .tp-acts{width:200px;height:186px}
@@ -177,3 +185,11 @@ html.tp-touch .tp-stick.run .knob{background:radial-gradient(circle at 45% 35%,#
 @media (orientation:portrait),(min-height:521px){
   html.tp-touch .tp-ui .tp-prompt,html.tp-touch .tp-ui .tp-placebar,html.tp-touch .tp-ui .tp-chips{bottom:calc(env(safe-area-inset-bottom,0px) + 220px)}
   html.tp-touch .tp-ui .tp-ride{bottom:calc(env(safe-area-inset-bottom,0px) + 284px)}}
+/* desktop, while Grandma's note is pinned top-right: the minimap (and the photo button under it) step left of the
+   note instead of sitting on it; they slide back when the note closes. Undoes hud.css's old shrink-and-tuck. */
+@media (min-width:641px){
+  html:has(.tpt-note) .mm-wrap:not(.mm-touch){right:384px;transition:right .4s ease}
+  html:has(.tpt-note) .mm-wrap:not(.mm-touch) .mm-map,html:has(.tpt-note) .mm-wrap:not(.mm-touch) .mm-map:hover{transform:none;opacity:1}
+  html:has(.tpt-note) .mm-wrap:not(.mm-touch):has(.mm-map) .mm-btn{transform:none}
+  html:has(.tpt-note):not(.tp-touch) .tp-ui .tp-btns.g-top .tp-cambtn{right:374px}
+  .mm-wrap:not(.mm-touch){transition:right .4s ease}}

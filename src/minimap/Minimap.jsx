@@ -5,6 +5,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { R, height, ZONES, pathDir, streamDir, waterAt, BRIDGES, dir } from '../world.js'
 import './minimap.css'
+import { GL } from '../ui/glass/glyphs.js'
 
 const TOUCH = typeof window !== 'undefined' && (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window)
 const LAT0 = -1.25, LAT1 = 1.35 // the band that has anything on it (poles are empty meadow)
@@ -110,6 +111,6 @@ export default function Minimap() {
   if (phone() && !on) return null
   return <div className={'mm-wrap' + (idle ? ' mm-idle' : '') + ((TOUCH || phone()) ? ' mm-touch' : '')}>
     {on && <canvas ref={ref} className="mm-map" aria-label="map" />}{on && <span className="mm-n" aria-hidden="true">N</span>}
-    <button className="mm-btn" title="Map (M)" aria-label={on ? 'Close map' : 'Map'} onClick={() => setOn(v => !v)} onPointerDown={e => e.stopPropagation()}>{on ? '×' : '🗺'}</button>
+    <button className="mm-btn" title="Map (M)" aria-label={on ? 'Close map' : 'Map'} onClick={() => setOn(v => !v)} onPointerDown={e => e.stopPropagation()}>{on ? '×' : <span className="mm-gl" aria-hidden="true" dangerouslySetInnerHTML={{ __html: GL.map }} />}</button>
   </div>
 }
