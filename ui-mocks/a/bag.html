@@ -1,0 +1,171 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Bag concepts</title>
+<link rel="stylesheet" href="glass.css">
+<script src="../icons.js"></script><script src="glyphs.js"></script>
+<style>
+html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#000}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.abs{position:absolute}
+/* ---------- shared ---------- */
+.veil{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(16,12,16,.35),rgba(16,12,16,.72))}
+.blurbg{position:absolute;inset:0;backdrop-filter:blur(3px)}
+
+/* ================= SATCHEL ================= */
+.leather{background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='4'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>"),
+  radial-gradient(120% 90% at 50% 0%,#a06a40 0,#83522e 45%,#5e3820 100%)}
+.stitch{position:absolute;inset:12px;border-radius:inherit;border:2.2px dashed rgba(255,226,180,.55);pointer-events:none}
+.sat{left:50%;top:400px;transform:translate(-50%,-50%);width:1000px;height:560px}
+.flap{position:absolute;z-index:1;left:110px;right:110px;top:-6px;height:110px;border-radius:60px 60px 18px 18px;box-shadow:0 -6px 18px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,220,170,.25)}
+.flap .stitch{inset:10px;border-radius:52px 52px 12px 12px}
+.flap::after{content:'';position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.35));border-radius:0 0 18px 18px}
+.body{position:absolute;z-index:2;left:0;right:0;top:70px;bottom:0;border-radius:46px 46px 70px 70px;box-shadow:0 26px 60px rgba(0,0,0,.6),inset 0 3px 0 rgba(255,220,170,.3),inset 0 -14px 30px rgba(0,0,0,.35)}
+.rivet{position:absolute;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2c0,#d9a24a 55%,#7a4e18);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.lining{position:absolute;left:44px;top:50px;width:560px;height:300px;border-radius:24px;background:
+  repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0 6px,transparent 6px 12px),linear-gradient(180deg,#3a2a24,#2a1e1a);
+  box-shadow:inset 0 10px 24px rgba(0,0,0,.6),inset 0 0 0 2px rgba(0,0,0,.35),0 1px 0 rgba(255,220,170,.25)}
+.lining::before{content:'';position:absolute;inset:8px;border-radius:18px;border:1.8px dashed rgba(255,226,180,.22)}
+.pockets{position:absolute;left:30px;top:26px;display:grid;grid-template-columns:repeat(5,92px);gap:10px 10px}
+.pk{position:relative;width:92px;height:80px;border-radius:12px 12px 20px 20px;display:grid;place-items:center;
+  background:linear-gradient(180deg,#6e4528,#4e301c);box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,210,160,.25),0 3px 6px rgba(0,0,0,.45)}
+.pk::after{content:'';position:absolute;left:8px;right:8px;top:7px;bottom:8px;border-radius:8px 8px 14px 14px;border:1.4px dashed rgba(255,226,180,.35);pointer-events:none}
+.pk .it{width:58px;height:58px;margin-top:-4px}
+.pk .tg{position:absolute;right:-4px;bottom:6px;min-width:24px;height:20px;padding:0 6px;border-radius:4px 10px 10px 4px;font-size:13px;font-weight:700;color:#4a2e14;text-shadow:none;display:grid;place-items:center;
+  background:linear-gradient(180deg,#fbf0d8,#e6cfa2);box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.pk.sel{background:linear-gradient(180deg,#8a5a34,#5e3a22);box-shadow:0 0 0 2.5px #ffe3a0,0 0 18px rgba(255,200,100,.6),inset 0 2px 0 rgba(255,230,180,.4)}
+.pk.sel .it{transform:translateY(-6px) rotate(-6deg)}
+.pk.empty{opacity:.45}.pk.empty::before{content:'';position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,rgba(0,0,0,.25),transparent 70%)}
+.pk .star{position:absolute;left:8px;top:5px;color:#ffd45e;font-size:14px;text-shadow:0 0 6px rgba(255,200,100,.9);z-index:2}
+/* tool loops strap */
+.strap{position:absolute;left:44px;top:384px;width:560px;height:44px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,220,170,.25)}
+.strap .stitch{inset:6px;border-radius:8px}
+.loop{position:absolute;top:-44px;width:96px;height:96px;display:grid;place-items:center}
+.loop .it{position:relative;z-index:1;width:78px;height:78px;filter:drop-shadow(0 4px 3px rgba(0,0,0,.45))}
+.loop::after{content:'';position:absolute;z-index:2;left:30px;right:30px;top:58px;height:26px;border-radius:6px;background:linear-gradient(180deg,#7a4a2a,#5a361e);box-shadow:0 2px 4px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,220,170,.35)}
+.loop .lb{position:absolute;bottom:-4px;font-size:12px;font-weight:600;color:var(--t2)}
+.loop.off .it{filter:grayscale(1) brightness(.55) drop-shadow(0 4px 3px rgba(0,0,0,.45));opacity:.6}
+/* category ribbons */
+.ribbons{position:absolute;left:150px;top:-62px;display:flex;gap:10px;z-index:0}
+.rib{position:relative;width:100px;height:84px;padding-top:12px;text-align:center;font-size:15px;font-weight:600;color:#fffaf0;border-radius:12px 12px 0 0;filter:brightness(.82) saturate(.85);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -20px 20px rgba(0,0,0,.25),0 -2px 8px rgba(0,0,0,.3)}
+.rib::after{content:'';position:absolute;inset:5px 5px -10px;border:1.6px dashed rgba(255,255,255,.45);border-radius:8px 8px 0 0}
+.rib i{display:block;font-style:normal;font-size:11px;opacity:.85;margin-top:1px}
+.rib.on{height:100px;transform:translateY(-16px);filter:none;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),0 0 0 2px #ffe3a0,0 0 18px rgba(255,200,100,.5)}
+/* luggage tag */
+.string{position:absolute;z-index:3;right:300px;top:86px;width:150px;height:60px;border-top:2.5px solid #d9c49a;border-radius:50% 50% 0 0;transform:rotate(14deg);opacity:.9}
+.ring2{position:absolute;z-index:3;right:420px;top:96px;width:24px;height:24px;border-radius:50%;border:4px solid #e2b65e;box-shadow:0 2px 3px rgba(0,0,0,.5),inset 0 1px 1px rgba(255,255,255,.5)}
+.tag{position:absolute;z-index:3;right:56px;top:100px;width:300px;height:430px;transform:rotate(3deg);transform-origin:50% 0;color:#4a3426;text-shadow:none;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='2' seed='9'/><feColorMatrix values='0 0 0 0 .4  0 0 0 0 .3  0 0 0 0 .2  0 0 0 .18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),linear-gradient(180deg,#fffaf0,#f3e3c3);
+  clip-path:polygon(18% 0,82% 0,100% 9%,100% 100%,0 100%,0 9%);filter:drop-shadow(0 12px 18px rgba(0,0,0,.5));padding:48px 24px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.tag .hole{position:absolute;left:50%;top:16px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:#3a2a24;box-shadow:0 0 0 5px #e2b65e,0 0 0 6.5px #8a5a22}
+.tag .ink{font-family:var(--font)}
+.tag h5{font-size:26px;font-weight:600;margin:4px 0 0}
+.tag .ty{font-size:12px;font-weight:600;letter-spacing:1.3px;color:#b4712e;margin-top:2px}
+.tag p{font-size:14px;line-height:1.4;margin:8px 0 0;color:#6a5040}
+.tag .ln{width:100%;height:0;border-top:1.6px dashed #d9c49a;margin:10px 0}
+.tag .uses{display:flex;gap:6px;justify-content:center}
+.tag .uses span{width:40px;height:40px;border-radius:10px;background:#efe0c0;display:grid;place-items:center;box-shadow:inset 0 1px 2px rgba(90,62,43,.25)}
+.tag .uses .it{width:32px;height:32px}
+.tag .acts{margin-top:auto;display:flex;gap:8px;width:100%}
+.plate{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);height:34px;padding:0 18px;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#4a2e14;text-shadow:0 1px 0 rgba(255,255,255,.5);
+  background:linear-gradient(180deg,#fff0c0,#e2b65e 60%,#b88232);box-shadow:0 0 0 1.5px #6a4418,0 3px 6px rgba(0,0,0,.45),inset 0 1px 0 #fffbe8}
+.plate .rv{width:7px;height:7px;border-radius:50%;background:#8a5a22;box-shadow:inset 0 1px 1px rgba(0,0,0,.5)}
+.buckle{position:absolute;z-index:3;left:50%;top:84px;transform:translateX(-50%);width:70px;height:44px;border-radius:10px;border:6px solid #e2b65e;box-shadow:0 0 0 1.5px #7a4e18,inset 0 0 0 1.5px #7a4e18,0 4px 8px rgba(0,0,0,.5)}
+.buckle::after{content:'';position:absolute;left:50%;top:-6px;bottom:-6px;width:6px;margin-left:-3px;background:#d9a24a;box-shadow:0 0 0 1px #7a4e18}
+
+/* ================= RING ================= */
+.rc{position:absolute;left:470px;top:380px}
+.rslot{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 35%,rgba(96,84,92,.6),rgba(30,26,32,.72));backdrop-filter:var(--g-blur);
+  box-shadow:0 0 0 1.5px var(--g-rim),0 6px 14px rgba(0,0,0,.4),inset 0 2px 2px rgba(255,255,255,.15)}
+.rslot .it{width:54px;height:54px}
+.rslot .ct{position:absolute;right:-2px;bottom:-4px;min-width:24px;height:22px;padding:0 6px;border-radius:11px;font-size:13px;font-weight:700;display:grid;place-items:center;background:rgba(24,20,24,.9);box-shadow:0 0 0 1.2px var(--g-rim)}
+.rslot.sel{width:92px;height:92px;margin:-46px 0 0 -46px;background:radial-gradient(circle at 50% 35%,rgba(150,118,80,.7),rgba(70,50,36,.8));
+  box-shadow:0 0 0 3px #fff0c8,0 0 0 5px var(--gold-mid),0 0 26px rgba(255,200,100,.7)}
+.rslot.sel .it{width:70px;height:70px}
+.rslot.empty{opacity:.4}
+.rslot .star{position:absolute;left:4px;top:0;color:var(--gold);font-size:14px;text-shadow:0 0 6px rgba(255,200,100,.9)}
+.track{position:absolute;width:470px;height:470px;margin:-235px 0 0 -235px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(255,246,226,.25),inset 0 0 0 1px rgba(255,246,226,.08)}
+.track.in{width:330px;height:330px;margin:-165px 0 0 -165px;box-shadow:0 0 0 1px rgba(255,246,226,.12)}
+.arc{position:absolute;width:470px;height:470px;margin:-235px 0 0 -235px;border-radius:50%;
+  background:conic-gradient(from -15deg,rgba(255,200,100,0) 0deg,rgba(255,210,120,.55) 15deg,rgba(255,200,100,0) 30deg);
+  -webkit-mask:radial-gradient(circle,transparent 196px,#000 198px,#000 236px,transparent 238px);mask:radial-gradient(circle,transparent 196px,#000 198px,#000 236px,transparent 238px)}
+.hub{position:absolute;width:250px;height:250px;margin:-125px 0 0 -125px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.hub .it{width:110px;height:110px;margin-top:-6px;filter:drop-shadow(0 0 14px rgba(255,210,130,.45))}
+.hub b{font-size:22px;font-weight:600}
+.hub small{font-size:12px;font-weight:600;letter-spacing:1.2px;color:var(--t-gold)}
+.cats{position:absolute;left:470px;top:64px;transform:translateX(-50%);display:flex;align-items:center;gap:8px}
+.info{position:absolute;right:44px;top:150px;width:330px;padding:22px;border-radius:22px}
+.info h5{font-size:26px;font-weight:600;margin:0}
+.info .ty{font-size:12px;font-weight:600;letter-spacing:1.3px;color:var(--t-gold);margin-top:2px}
+.info p{font-size:15px;line-height:1.45;color:var(--t2);margin:12px 0 0}
+.info .ln{height:1px;background:var(--g-rim-soft);margin:16px 0}
+.info .row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:16px}
+.info .row .key{width:30px;height:30px;font-size:14px}
+.pages{position:absolute;left:470px;top:690px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;font-size:13px;color:var(--t2)}
+.pages i{width:8px;height:8px;border-radius:50%;background:rgba(255,246,226,.35)}.pages i.on{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+</style></head>
+<body class="ui"><img id="bg" src="t-out2.jpg"><div id="root"></div>
+<script>
+const q = new URLSearchParams(location.search), V = q.get('v') || 'satchel'
+const it = (id) => `<span class="it">${IC[id + '_nw']}</span>`
+const gl = (id) => `<span class="gl">${GL[id]}</span>`
+const items = [['mushroom', 3], ['flower', 5, 1], ['berries', 12], ['wood', 24], ['stone', 4], ['shell', 2], ['herbs', 6], ['acorn', 3], ['fish', 1], ['crystal', 2], ['moss', 7], ['pinecone', 4], [null], [null], [null]]
+let h = ''
+if (V === 'satchel') {
+  h = `<div class="veil"></div>
+  <div class="abs sat">
+    <div class="ribbons">${[['Gathered', 12, '#6fae4a', 1], ['Tools', 4, '#4f86c6'], ['Food', 3, '#d9655b'], ['Decor', 1, '#d9a23a']].map(([n, c, col, on]) =>
+      `<div class="rib${on ? ' on' : ''}" style="background:linear-gradient(180deg,${col},color-mix(in srgb,${col} 70%,#000))${on ? ';box-shadow:inset 0 2px 0 rgba(255,255,255,.35)' : ''}">${n}<i>${c}</i></div>`).join('')}</div>
+    <div class="flap leather"><div class="stitch"></div></div>
+    <div class="body leather"><div class="stitch"></div>
+      <span class="rivet" style="left:26px;top:26px"></span><span class="rivet" style="right:26px;top:26px"></span><span class="rivet" style="left:40px;bottom:36px"></span><span class="rivet" style="right:40px;bottom:36px"></span>
+      <div class="lining"><div class="pockets">${items.map(([id, n, sel]) => id ? `<div class="pk${sel ? ' sel' : ''}">${it(id)}<span class="tg">${n}</span>${id === 'flower' ? '<span class="star">✦</span>' : ''}</div>` : '<div class="pk empty"></div>').join('')}</div></div>
+      <div class="strap leather"><div class="stitch"></div>
+        ${[['rod', 'Rod'], ['can', 'Can'], ['lantern', 'Lantern'], ['bike', 'Bicycle', 1]].map(([id, lb, off], i) => `<div class="loop${off ? ' off' : ''}" style="left:${34 + i * 132}px">${it(id)}</div>`).join('')}</div>
+      <div class="plate"><span class="rv"></span>14 / 57 discovered<span class="rv"></span></div>
+    </div>
+    <div class="buckle"></div>
+    <div class="ptitle" style="top:10px;z-index:3">${it('bag')}Bag</div>
+    <div class="rbtn xbtn" style="right:60px;top:56px;z-index:3">${gl('close')}</div>
+    <div class="ring2"></div><div class="string"></div>
+    <div class="tag"><span class="hole"></span>
+      <span class="it" style="width:92px;height:92px">${IC.flower}</span>
+      <h5>Wild Flower</h5><div class="ty">GATHERED · ✦ PERFECT</div>
+      <p>A little pink bloom from the meadow. Grandma says they brighten any windowsill.</p>
+      <div class="ln"></div>
+      <div style="font-size:12px;font-weight:600;letter-spacing:1.2px;color:#9a7a5a;margin-bottom:8px">GOES INTO</div>
+      <div class="uses"><span>${it('wreath')}</span><span>${it('jam')}</span><span>${it('tea')}</span></div>
+      <div class="acts"><span class="btn green" style="flex:1;padding:0;height:42px;font-size:16px">Craft with</span><span class="btn" style="flex:1;padding:0;height:42px;font-size:16px">Gift</span></div>
+    </div>
+  </div>`
+} else {
+  const ring = items.slice(0, 12), N = ring.length, R = 228
+  h = `<div class="veil" style="background:radial-gradient(circle at 470px 380px,rgba(16,12,16,.25) 0,rgba(16,12,16,.55) 260px,rgba(16,12,16,.78) 100%)"></div>
+  <div class="cats"><span class="key" style="width:30px;height:30px;font-size:14px">Q</span>
+    <div class="tabs glass pill" style="padding:5px;gap:4px"><div class="tab on">Gathered <i>12</i></div><div class="tab" style="border:none;background:none">Tools <i>4</i></div><div class="tab" style="border:none;background:none">Food <i>3</i></div><div class="tab" style="border:none;background:none">Decor <i>1</i></div></div>
+    <span class="key" style="width:30px;height:30px;font-size:14px">E</span></div>
+  <div class="rc">
+    <div class="track"></div><div class="track in"></div>
+    <div class="arc" style="transform:rotate(${360 / N * 1}deg)"></div>
+    ${ring.map(([id, n, sel], i) => { const a = (i / N) * Math.PI * 2 - Math.PI / 2, x = Math.cos(a) * R, y = Math.sin(a) * R
+      return `<div class="rslot${sel ? ' sel' : ''}${id ? '' : ' empty'}" style="left:${x}px;top:${y}px">${id ? it(id) + `<span class="ct">${n}</span>` : ''}${id === 'flower' ? '<span class="star">✦</span>' : ''}</div>` }).join('')}
+    <div class="hub ring"><span class="it">${IC.flower_nw}</span><b>Wild Flower</b><small>×5 · ✦ PERFECT</small></div>
+  </div>
+  <div class="pages"><i class="on"></i><i></i><span style="margin-left:6px">Scroll or drag to spin</span></div>
+  <div class="info glass">
+    <h5>Wild Flower</h5><div class="ty">GATHERED · FOUND IN THE MEADOW</div>
+    <p>A little pink bloom from the meadow. Grandma says they brighten any windowsill.</p>
+    <div class="ln"></div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:1.2px;color:var(--t-gold)">GOES INTO</div>
+    <div style="display:flex;gap:8px;margin-top:8px">${['wreath', 'jam', 'tea'].map(id => `<div class="cell" style="width:56px;height:56px">${it(id).replace('class="it"', 'class="it" style="width:42px;height:42px"')}</div>`).join('')}</div>
+    <div class="ln"></div>
+    <div class="row"><span class="key">C</span>Craft with it</div>
+    <div class="row"><span class="key">G</span>Give as a gift</div>
+    <div class="row"><span class="key">X</span><span style="color:var(--t2)">Put it down</span></div>
+  </div>
+  <div class="ptitle" style="left:110px;top:24px;transform:none">${it('bag')}Bag</div>
+  <div class="rbtn xbtn" style="right:36px;top:36px">${gl('close')}</div>`
+}
+document.getElementById('root').innerHTML = h
+</script></body></html>
