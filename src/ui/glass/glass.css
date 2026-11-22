@@ -188,3 +188,20 @@ html.tp-touch .tp-stick.run .knob{background:radial-gradient(circle at 45% 35%,#
   html:has(.tpt-note) .mm-wrap:not(.mm-touch):has(.mm-map) .mm-btn{transform:none}
   html:has(.tpt-note):not(.tp-touch) .tp-ui .tp-btns.g-top .tp-cambtn{right:374px}
   .mm-wrap:not(.mm-touch){transition:right .4s ease}}
+/* ---------- planet view button (desktop, bottom-left): the Tiny Planet icon in a gold ring ---------- */
+.g-planet{position:absolute;left:22px;bottom:22px;display:flex;align-items:center;gap:0;padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;font-family:Fredoka,sans-serif}
+.g-planet-ring{position:relative;width:64px;height:64px;z-index:2}
+/* the planet art sits above the ring (never clipped), a touch bigger, so it pops out of the medallion */
+.g-planet-art{position:absolute;left:-7px;top:-14px;width:78px;height:78px;z-index:4;pointer-events:none;-webkit-user-drag:none;
+  filter:drop-shadow(0 3px 4px rgba(20,10,4,.45));transition:transform .2s}
+.g-planet:hover .g-planet-art{transform:translateY(-3px) rotate(-6deg)}
+.g-planet:active .g-planet-art{transform:scale(.95)}
+.g-planet .g-kc{left:32px;bottom:-8px;z-index:5}
+/* the label slides out on hover; in planet view it stays out so you know how to get back */
+.g-planet-lb{position:relative;z-index:1;margin-left:-22px;padding:0 16px 0 30px;height:38px;display:flex;align-items:center;border-radius:0 19px 19px 0;font-size:15px;font-weight:600;white-space:nowrap;
+  clip-path:inset(0 100% 0 0);opacity:0;transition:clip-path .25s ease,opacity .2s}
+.g-planet:hover .g-planet-lb,.g-planet:focus-visible .g-planet-lb,.g-planet.on .g-planet-lb{clip-path:inset(0 0 0 0);opacity:1}
+.g-planet:focus-visible{outline:none}.g-planet:focus-visible .g-planet-ring{outline:3px solid #4ea0ff;outline-offset:8px}
+@media (prefers-reduced-motion:reduce){.g-planet-art,.g-planet-lb{transition:none}}
+/* desktop: Grandma's folded note slip pins just left of the minimap instead of behind it */
+@media (min-width:641px){html:not(.tp-touch):has(.tpt-slip):not(:has(.tpt-note)) .tpt{right:214px;top:96px}}
