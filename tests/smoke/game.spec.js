@@ -8,7 +8,8 @@ test('loads, title card enters, no errors', async ({ page }) => {
   const w = watchErrors(page)
   await page.goto('?nosave')
   await expect(page.locator('#go')).toBeVisible({ timeout: 120_000 })
-  await expect(async () => { if (await page.locator('#ld').count()) await page.locator('#go').click({ timeout: 2000 }).catch(() => {}); expect(await page.locator('#ld').count()).toBe(0) }).toPass({ timeout: 200_000, intervals: [2000] })
+  // the click timeout must cover a few rendered frames (actionability checks): on software GL that can take >10 s
+  await expect(async () => { if (await page.locator('#ld').count()) await page.locator('#go').click({ timeout: 20_000 }).catch(() => {}); expect(await page.locator('#ld').count()).toBe(0) }).toPass({ timeout: 200_000, intervals: [2000] })
   await page.waitForFunction(() => window.__loadMarks?.frame && window.__loadMarks?.game, null, { timeout: 120_000 })
   const st = await page.evaluate(() => ({ inside: window.__home.inside, calls: window.__calls, startup: window.__loadMarks.frame }))
   expect(st.inside).toBe(true); expect(st.calls).toBeGreaterThan(0)
