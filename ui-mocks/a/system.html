@@ -1,0 +1,115 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Option A UI System</title>
+<link rel="stylesheet" href="glass.css">
+<script src="../icons.js"></script><script src="glyphs.js"></script>
+<style>
+html,body{margin:0;width:1280px}
+body{background:#2a3324 url(t-out2.jpg) center/cover no-repeat}
+.wrap{position:relative;min-height:100%;padding:36px 44px 48px;background:linear-gradient(180deg,rgba(24,28,22,.30),rgba(24,22,26,.55))}
+h1{font-size:34px;font-weight:600;margin:0}
+h1 small{font-size:18px;font-weight:500;color:var(--t-gold);margin-left:10px}
+.rules{display:flex;gap:12px;margin:14px 0 26px}
+.rules div{flex:1;padding:12px 16px;border-radius:14px;font-size:15px;line-height:1.4}
+.rules b{color:var(--t-gold);display:block;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.sec{margin:0 0 22px;padding:18px 20px 20px;border-radius:18px;background:rgba(20,18,22,.38);border:1px solid rgba(255,246,226,.14)}
+.sec h2{font-size:14px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--t-gold);margin:0 0 14px}
+.row{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+.cap{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:13px;color:var(--t2)}
+.cap>span:last-child{white-space:nowrap}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.sw{width:64px;height:44px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35)}
+.wxb{width:70px;height:70px;display:grid;place-items:center}.wxb>span{display:block;width:50px;height:50px}
+</style></head>
+<body class="ui"><div class="wrap" id="root"></div>
+<script>
+const it = (id) => `<span class="it">${IC[id + '_nw']}</span>`
+const gl = (id) => `<span class="gl">${GL[id]}</span>`
+const cap = (inner, label) => `<div class="cap">${inner}<span>${label}</span></div>`
+const WXN = { clear: 'Sunny', breezy: 'Breezy', cloudy: 'Cloudy', drizzle: 'Drizzle', rain: 'Rain', night: 'Clear night', nightcloudy: 'Cloudy night', nightrain: 'Rainy night' }
+const slot = (cls, id, n, num) => `<div class="slot ${cls}">${id ? it(id) : ''}${n ? `<span class="ct">${n}</span>` : ''}<span class="num">${num}</span></div>`
+document.getElementById('root').innerHTML = `
+<h1>Tiny Planet UI <small>Option A · Glass &amp; Gold</small></h1>
+<div class="rules">
+  <div class="glass"><b>Surfaces</b>Smoked dark glass, blurred, with one thin warm-white rim. Never solid, never black.</div>
+  <div class="glass"><b>Gold = attention</b>Gold marks the selected thing, rings, titles and primary buttons. It is not a default border.</div>
+  <div class="glass"><b>Two icon kinds</b>Chrome glyphs (menus, actions) are cream, one colour. Items, weather and currency keep full colour.</div>
+</div>
+
+<div class="sec"><h2>Weather badge · top-left ring, shows today's weather (game kinds: clear, breezy, cloudy, drizzle, rain; day + night)</h2>
+<div class="row">${Object.keys(WX).map(k => cap(`<div class="ring wxb"><span>${WX[k]}</span></div>`, WXN[k])).join('')}</div>
+<div class="row" style="margin-top:22px">
+  ${cap(`<div class="ident"><div class="ring" style="width:70px;height:70px;display:grid;place-items:center"><span style="display:block;width:50px;height:50px">${WX.drizzle}</span></div><div class="glass bar"><b>Tiny Planet</b><div class="sub"><span style="display:block;width:20px;height:20px">${WX.clear}</span>Day 3 · 07:20</div><span class="nrg"><i style="width:80%"></i></span></div></div>`, 'Identity bar · energy runs along the bottom edge')}
+  ${cap(`<div class="ident"><div class="ring" style="width:70px;height:70px;display:grid;place-items:center"><span style="display:block;width:50px;height:50px">${WX.night}</span></div><div class="glass bar"><b>Tiny Planet</b><div class="sub"><span style="display:block;width:20px;height:20px">${WX.night}</span>Day 3 · 23:10</div><span class="nrg low"><i style="width:18%"></i></span></div></div>`, 'Low energy · bar turns amber')}
+</div></div>
+
+<div class="cols">
+<div class="sec"><h2>Buttons</h2>
+<div class="row">
+  ${cap(`<div class="glass sqbtn">${gl('bag')}</div>`, 'Menu')}
+  ${cap(`<div class="glass sqbtn">${gl('bag')}<span class="dot n">3</span></div>`, 'Count')}
+  ${cap(`<div class="glass sqbtn">${gl('journal')}<span class="dot"></span></div>`, 'New')}
+  ${cap(`<div class="glass sqbtn">${gl('gear')}<span class="kc">Esc</span></div>`, 'Key hint')}
+  ${cap(`<div class="rbtn" style="width:72px;height:72px">${gl('hand')}</div>`, 'Action')}
+  ${cap(`<div class="rbtn press" style="width:72px;height:72px">${gl('hand')}</div>`, 'Pressed')}
+</div>
+<div class="row" style="margin-top:20px">
+  ${cap('<span class="btn">Gift</span>', 'Primary')}
+  ${cap('<span class="btn green">Craft</span>', 'Confirm')}
+  ${cap('<span class="btn ghost">Later</span>', 'Secondary')}
+  ${cap('<span class="btn off">Craft</span>', 'Disabled')}
+  ${cap(`<span class="plus">${GL.plus}</span>`, 'Add')}
+  ${cap(`<div class="rbtn" style="width:44px;height:44px">${gl('close')}</div>`, 'Close')}
+</div></div>
+
+<div class="sec"><h2>Pills · prompts · toasts</h2>
+<div class="row">
+  ${cap(`<div class="glass pill cur"><span class="it">${CUR.coin}</span><b>2,540</b><span class="plus">${GL.plus}</span></div>`, 'Coins')}
+  ${cap(`<div class="glass pill cur"><span class="it">${CUR.gem}</span><b>120</b><span class="plus">${GL.plus}</span></div>`, 'Crystals')}
+  ${cap('<div style="display:flex;gap:8px"><span class="key">E</span><span class="key wide">Shift</span></div>', 'Key caps')}
+</div>
+<div class="row" style="margin-top:18px">
+  ${cap(`<div class="glass pill prompt"><span class="key">E</span><span>Talk to <b>Grandma Fuku</b></span><span class="sep"></span><span class="key" style="width:28px;height:28px;font-size:14px">F</span><span class="alt">Give a gift</span></div>`, 'Interaction prompt')}
+</div>
+<div class="row" style="margin-top:18px">
+  ${cap(`<div class="glass pill toast">${it('mushroom')}<span>Gathered <b>Mushroom</b></span><span class="plusn">+1</span></div>`, 'Toast')}
+  ${cap(`<div class="glass pill toast">${it('heart')}<span>Grandma <b>loved</b> it</span></div>`, 'Toast · social')}
+</div></div>
+</div>
+
+<div class="sec"><h2>Hotbar slot states</h2>
+<div class="row">
+  ${cap(slot('', 'can', 0, 2), 'Normal')}
+  ${cap(slot('sel', 'rod', 0, 1), 'Selected')}
+  ${cap(slot('', 'wood', 24, 5), 'Stack')}
+  ${cap(slot('new', 'lantern', 0, 3), 'New')}
+  ${cap(slot('cd', 'onigiri', 2, 4), 'Cooldown')}
+  ${cap(slot('off', 'bike', 0, 6), 'Locked')}
+  ${cap(slot('empty', null, 0, 7), 'Empty')}
+  <div style="flex:1"></div>
+  ${cap(`<div class="hotbar"><span class="chev">${GL.chevL}</span>${slot('sel', 'berries', 12, 4)}<span class="chev">${GL.chevR}</span></div>`, 'Page arrows')}
+</div></div>
+
+<div class="cols">
+<div class="sec"><h2>Quest tracker</h2>
+<div class="glass fade quest"><h4><span class="scroll">${GL.scroll}</span>A Cozy Home</h4><ul>
+  <li class="done"><span>Gather 5 wood</span><em>5/5</em></li>
+  <li><span>Craft a Moss Lamp</span><em>0/1</em></li>
+  <li class="todo"><span>Place it in your house</span><em>0/1</em></li></ul></div>
+<p style="font-size:13px;color:var(--t2);margin:12px 0 0">Gold diamond = current step · grey = later · green + struck = done. Fades out to the right so the world shows through.</p>
+</div>
+<div class="sec"><h2>Minimap · joystick (touch)</h2>
+<div class="row" style="align-items:center">
+  ${cap(`<div class="ring mini"><div class="map" style="background:url(globe-day.jpg) -16px -18px/192px auto"></div><span class="me">${GL.me}</span><span class="n">N</span></div>`, 'The planet itself is the map')}
+  ${cap(`<div class="stick"><div class="knob"></div>${['left:50%;top:8px;transform:translateX(-50%)', 'left:50%;bottom:8px;transform:translateX(-50%) rotate(180deg)', 'left:8px;top:50%;transform:translateY(-50%) rotate(-90deg)', 'right:8px;top:50%;transform:translateY(-50%) rotate(90deg)'].map(s => `<span class="ar" style="${s}">${GL.arrow}</span>`).join('')}</div>`, 'Stick · touch only')}
+</div></div>
+</div>
+
+<div class="sec"><h2>Panels</h2>
+<div class="row" style="align-items:flex-start;gap:30px">
+  ${cap(`<div class="panel" style="width:330px;height:170px;margin-top:28px"><div class="ptitle">${it('book')}Recipes</div><div class="rbtn xbtn">${gl('close')}</div>
+    <div class="tabs" style="position:absolute;left:18px;top:40px"><div class="tab on">Cooking <i>8</i></div><div class="tab">Crafts <i>5</i></div></div>
+    <div style="position:absolute;left:18px;right:18px;bottom:22px"><span class="meter" style="display:block"><i style="width:40%"></i></span></div></div>`, 'Panel · title ribbon · close · tabs · meter')}
+  ${cap(`<div style="display:flex;gap:10px"><div class="cell">${it('jam')}<span class="ct">2</span></div><div class="cell sel">${it('flower')}<span class="ct">5</span><span class="star">✦</span></div><div class="cell empty"></div></div>`, 'Bag cells · normal · selected (✦ perfect) · empty')}
+</div></div>
+`
+</script></body></html>
