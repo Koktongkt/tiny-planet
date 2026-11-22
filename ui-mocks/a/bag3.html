@@ -39,12 +39,30 @@ html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#3a2a20}
 .bt svg{width:30px;height:30px}
 .bt.g{flex:1.2;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.3);background:linear-gradient(180deg,#8ccd5a,#4e9530);box-shadow:0 0 0 2px #36701e,0 4px 0 #36701e,inset 0 2px 0 rgba(255,255,255,.4)}
 .bt.y{color:#4a2c0e;background:linear-gradient(180deg,#ffe49a,#f2b640);box-shadow:0 0 0 2px #b8822c,0 4px 0 #b8822c,inset 0 2px 0 rgba(255,255,255,.6)}
-.foot{position:absolute;left:340px;top:786px;height:44px;display:flex;align-items:center;gap:14px;font-size:20px;font-weight:500;color:#f8e8cc}
+.foot{position:absolute;left:326px;top:784px;height:48px;padding:0 16px 0 14px;border:0;border-radius:24px;background:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;font-size:20px;font-weight:500;color:#f8e8cc;transition:background .15s,box-shadow .15s}
+.foot .more{font-size:16px;font-weight:600;color:#f6c86c;opacity:0;margin-left:6px;transition:opacity .15s}
+.foot:hover,.foot.on{background:rgba(255,220,150,.10);box-shadow:inset 0 0 0 2px rgba(246,200,108,.75),0 0 16px rgba(246,200,108,.35)}
+.foot:hover .more,.foot.on .more{opacity:1}
+.hot{position:absolute;border:0;background:none;cursor:pointer;border-radius:36px}
+.hot:hover{background:rgba(255,240,200,.12)}
+body.debug .hot,body.debug .foot{outline:3px dashed #39f;outline-offset:2px;background:rgba(51,153,255,.15)}
+.disc{position:absolute;left:300px;bottom:180px;width:440px;padding:20px 22px 18px;border-radius:22px;color:#3a2618;
+  background:linear-gradient(180deg,#fffaf0,#f4e6c8);box-shadow:0 0 0 2.5px #c49a62,0 14px 30px rgba(40,20,8,.45)}
+.disc::before{content:'';position:absolute;inset:8px;border-radius:15px;border:2px dashed rgba(170,125,80,.4);pointer-events:none}
+.disc::after{content:'';position:absolute;left:150px;bottom:-14px;border:14px solid transparent;border-bottom:0;border-top:15px solid #f4e6c8;filter:drop-shadow(0 2.5px 0 #c49a62)}
+.dh{display:flex;align-items:center;gap:10px;font-size:26px;margin-bottom:10px}.dh svg{width:30px;height:30px;color:#6a9a3a}.dh span{margin-left:auto;font-size:22px;font-weight:700;color:#b4712e}
+.dr{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:600;padding:6px 0}
+.di{width:34px;height:34px;display:grid;place-items:center;color:#8a5a30}.di svg{width:28px;height:28px}.di .it{width:34px;height:34px}
+.dn{width:96px}.dm{flex:1;height:12px;border-radius:6px;background:#e6d2ac;box-shadow:inset 0 1px 2px rgba(90,50,20,.25);overflow:hidden}
+.dm i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#f2b640,#ffe49a)}.dc{width:56px;text-align:right;color:#7a5a3a}
+.dnext{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border-radius:14px;background:#f1e0bd;font-size:16px;line-height:1.3}.dnext .it{width:40px;height:40px;flex:none;filter:brightness(.15) opacity(.55)}
+.dsoon{margin-top:10px;text-align:center;font-size:14px;color:#9a7a5a}
 .foot svg{width:28px;height:28px;color:#a8d070}
 .foot .m{width:316px;height:13px;border-radius:7px;background:#2a1a14;box-shadow:inset 0 1px 2px rgba(0,0,0,.6);overflow:hidden;margin-left:8px}
 .foot .m i{display:block;width:26%;height:100%;border-radius:7px;background:linear-gradient(90deg,#f2b640,#ffe49a)}
 </style></head>
-<body class="ui"><img id="bg" src="../bg-in.jpg"><div class="veil"></div><div id="root"></div>
+<body class="ui">
+<script>if (new URLSearchParams(location.search).get('debug')) document.body.classList.add('debug')</script><img id="bg" src="../bg-in.jpg"><div class="veil"></div><div id="root"></div>
 <script>
 const it = (id, w) => `<span class="it">${IC[id + (w ? '' : '_nw')]}</span>`
 const gl = (id) => `<span class="gl">${GL[id]}</span>`
@@ -56,7 +74,11 @@ const I = {
   hammer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4"/><path d="M11 9l3-3 2-1 3 3-1 2-3 3z"/><path d="M12.5 10.5L4 19l1.5 1.5 8.5-8.5"/></svg>`,
   gift: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8C10 4 6.5 5 8 7.5c.6 1 4 .5 4 .5zM12 8c2-4 5.5-3 4-.5-.6 1-4 .5-4 .5z"/></svg>`,
 }
-const FOOD = new URLSearchParams(location.search).get('tab') === 'food'
+const Q = new URLSearchParams(location.search), FOOD = Q.get('tab') === 'food'
+const DISC = `<div class="disc"><div class="dh">${I.sprout}<b>Discoveries</b><span>14 / 57</span></div>
+  ${[['sprout', 'Gathered', 10, 24], ['fish', 'Fish', 1, 12], ['bowl', 'Food', 3, 10], ['chair', 'Decor', 0, 11]].map(([ic, n, a, b]) => `<div class="dr"><span class="di">${ic === 'fish' ? `<span class="it">${IC.fish_nw}</span>` : I[ic]}</span><span class="dn">${n}</span><span class="dm"><i style="width:${a / b * 100}%"></i></span><span class="dc">${a}/${b}</span></div>`).join('')}
+  <div class="dnext"><span class="it">${IC.glowmoss_nw}</span><span><b>Next to find:</b> something that glows in the forest at night…</span></div>
+  <div class="dsoon">The full discovery journal is coming soon</div></div>`
 const tabs = [['Gathered', 12, 'sprout', 318, 202, !FOOD], ['Tools', 4, 'tools', 528, 162], ['Food', 3, 'bowl', 698, 159, FOOD], ['Decor', 1, 'chair', 864, 162]]
 const COLS = [320, 458, 597, 735, 875], ROWS = [368, 500, 628]
 const items = FOOD ? [['onigiri', 2], ['soup', 1, 1], ['jam', 3], [null], [null], [null], [null], [null], [null], [null], [null], [null], [null], [null], [null]] : [['mushroom', 3], ['flower', 5, 1], ['berries', 12], ['wood', 24], ['stone', 4], ['shell', 2], ['herbs', 6], ['acorn', 3], ['fish', 1], ['crystal', 2], ['moss', 7], ['pinecone', 4], [null], [null], [null]]
@@ -66,7 +88,7 @@ document.getElementById('root').innerHTML = `
 <div class="abs" style="right:18px;top:14px;display:flex;gap:12px">
   <div class="glass sqbtn">${gl('bag')}<span class="dot n">3</span><span class="kc">B</span></div><div class="glass sqbtn">${gl('recipes')}<span class="kc">C</span></div>
   <div class="glass sqbtn">${gl('journal')}<span class="dot"></span><span class="kc">J</span></div><div class="glass sqbtn">${gl('gear')}<span class="kc">Esc</span></div></div>
-<div class="bag"><img src="ref/bag-frame.png">
+<div class="bag"><img src="ref/bag-frame.webp" srcset="ref/bag-frame.webp 1x, ref/bag-frame@2x.webp 2x" alt="">
   ${tabs.map(([n, c, ic, x, w, on]) => `<div class="tb${on ? ' on' : ''}" style="left:${x}px;width:${w}px">${I[ic]}${n} <i>${c}</i></div>`).join('')}
   ${items.map(([id, n, s], k) => { const x = COLS[k % 5], y = ROWS[(k / 5) | 0]
     return id ? `<div class="t${s ? ' sel' : ''}" style="left:${x}px;top:${y}px">${it(id)}<span class="n">${n}</span>${s ? '<span class="sp">✦</span>' : ''}</div>` : `<div class="t e" style="left:${x}px;top:${y}px"></div>` }).join('')}
@@ -76,6 +98,10 @@ document.getElementById('root').innerHTML = `
     <p>${FOOD ? 'Warm and thick, made on your own stove. Perfect after a long walk.' : 'A little pink bloom from the meadow. Grandma says they brighten any windowsill.'}</p>
     <div class="ln" style="margin-bottom:96px"></div></div>
   <div class="acts"><span class="bt g">${FOOD ? I.bowl + 'Eat' : I.hammer + 'Craft with'}</span><span class="bt y">${I.gift}Gift</span></div>
-  <div class="foot">${I.sprout}14 / 57 discovered<span class="m"><i></i></span></div>
+  <button class="foot${Q.get('disc') ? ' on' : ''}" aria-label="Discoveries, 14 of 57 found">${I.sprout}14 / 57 discovered<span class="m"><i></i></span><span class="more">View ›</span></button>
+  <button class="hot" style="left:726px;top:150px;width:232px;height:72px" aria-label="Bag" data-act="none"></button>
+  <button class="hot" style="left:1294px;top:153px;width:64px;height:64px;border-radius:50%" aria-label="Close bag" data-act="close"></button>
+  <button class="hot" style="left:1184px;top:788px;width:172px;height:42px;border-radius:21px" aria-label="Reset save" data-act="reset"></button>
+  ${Q.get('disc') ? DISC : ''}
 </div>`
 </script></body></html>
