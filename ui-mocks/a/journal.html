@@ -9,32 +9,36 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 .jb{position:absolute;left:50%;top:50%;width:1448px;height:1086px;transform:translate(-50%,-50%) scale(var(--s,.65));font-family:Fredoka,system-ui,sans-serif;color:#4a2a18}
 .jb>img{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(20,8,2,.45));user-select:none}
 
-/* ---- bookmarks: fabric ribbon markers tucked into the book; their feet vanish behind the leather lip over the pages ---- */
-.bm{position:absolute;left:222px;top:140px;width:1004px;height:88px;display:flex;align-items:flex-end;gap:14px;filter:drop-shadow(0 3px 3px rgba(40,12,4,.45))}
-.bk{position:relative;flex:1;height:64px;border:0;padding:8px 14px 0;cursor:pointer;font:600 27px Fredoka,system-ui,sans-serif;
+/* ---- bookmarks: fabric ribbon markers laid over the top of each page; their feet rest on the paper and cast a shadow on it ---- */
+/* two groups, one over each page, so nothing sits across the gutter between them */
+.bm{position:absolute;inset:0;pointer-events:none}
+.grp{position:absolute;top:140px;height:122px;display:flex;align-items:flex-end;justify-content:center;gap:12px;pointer-events:auto;filter:drop-shadow(0 4px 3px rgba(60,24,6,.38)) drop-shadow(0 1px 1px rgba(60,24,6,.3))}
+.grp.l{left:166px;width:534px}
+.grp.r{left:752px;width:512px}
+.bk{position:relative;flex:none;height:96px;border:0;padding:0 22px 24px;cursor:pointer;font:600 26px Fredoka,system-ui,sans-serif;
   display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;text-shadow:0 1.5px 1px rgba(60,20,10,.35);
   /* swallowtail cut at the top, like the ribbons painted at the bottom of the book */
   clip-path:polygon(0 0,calc(50% - 18px) 0,50% 11px,calc(50% + 18px) 0,100% 0,100% 100%,0 100%);
   background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2));
-  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -14px 12px -8px rgba(40,10,0,.45);
+  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -3px 0 rgba(0,0,0,.14);
   transition:height .16s ease,filter .16s}
 .bk::before{content:'';position:absolute;inset:0 11px;border-left:2px dashed rgba(255,255,255,.45);border-right:2px dashed rgba(255,255,255,.45);pointer-events:none}
 .bk:not(.on){filter:saturate(.92) brightness(.96)}
 .bk svg{width:32px;height:32px;flex:none}
 .bk .n{min-width:30px;height:28px;padding:0 8px;border-radius:14px;display:grid;place-items:center;font-size:19px;color:#fff;background:rgba(40,12,4,.25);text-shadow:none}
-.bk .dot{position:absolute;right:20px;top:14px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c8,#ffc23a);box-shadow:0 0 0 2px rgba(120,40,10,.55),0 0 8px #ffe08a}
-.bk:hover{height:72px;filter:none}
+.bk .dot{position:absolute;right:7px;top:14px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c8,#ffc23a);box-shadow:0 0 0 2px rgba(120,40,10,.55),0 0 8px #ffe08a}
+.bk:hover{height:104px;filter:none}
 .bk:focus-visible{outline:none;filter:none;text-decoration:underline 3px}
 /* the open bookmark is pulled up out of the pages: taller, full colour, a little sheen */
-.bk.on{height:86px;padding-top:10px;filter:none;
+.bk.on{height:118px;filter:none;
   background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 40%),repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2))}
 .rv{display:none}
 
 /* ---- Discoveries sub-pages: small paper tabs along the top of the left page ---- */
-.sub{position:absolute;left:206px;top:284px;display:flex;gap:8px}
-.st{height:54px;padding:0 15px;border:0;border-radius:12px;cursor:pointer;font:600 23px Fredoka,system-ui,sans-serif;color:#5a3a22;display:flex;align-items:center;gap:8px;
+.sub{position:absolute;left:204px;top:296px;width:486px;display:flex;justify-content:center;gap:6px}
+.st{height:50px;padding:0 12px;border:0;border-radius:12px;cursor:pointer;font:600 21px Fredoka,system-ui,sans-serif;color:#5a3a22;display:flex;align-items:center;gap:8px;
   background:color-mix(in srgb,var(--c) 30%,#fbe9cf);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--c) 45%,transparent),0 2px 3px rgba(110,60,20,.18)}
-.st small{font-size:18px;font-weight:400;opacity:.75}
+.st small{font-size:16px;font-weight:400;opacity:.75}
 .st i{width:12px;height:12px;border-radius:50%;background:var(--c)}
 .st.on{background:var(--c);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.25);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 3px 6px rgba(110,60,20,.3)}
 .st.on i{background:#fff}
@@ -44,9 +48,10 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 .pg{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:3px dashed rgba(170,110,60,.35);border-radius:22px;color:#9a6a44}
 .pg h2{margin:0 0 8px;font-size:40px;color:#5a321c}
 .pg p{margin:0;font-size:21px;max-width:380px;line-height:1.35}
-.pg.l{left:205px;top:356px;width:470px;height:534px}
+.pg.l{left:205px;top:364px;width:470px;height:526px}
 .pg.r{left:775px;top:290px;width:490px;height:600px}
 body.nosub .pg.l{top:290px;height:600px}
+.pg.r{top:290px}
 .hot{position:absolute;border:0;background:none;cursor:pointer;border-radius:50%}
 .hot:hover{background:rgba(255,240,200,.15)}
 body.debug .hot,body.debug .bm{outline:3px dashed #39f;outline-offset:2px}
@@ -56,7 +61,7 @@ body.debug .hot,body.debug .bm{outline:3px dashed #39f;outline-offset:2px}
 <div class="jb" id="jb" role="dialog" aria-label="Journal">
   <img src="ref3/journal-frame.webp" srcset="ref3/journal-frame.webp 1x, ref3/journal-frame@2x.webp 2x" alt="" draggable="false">
   <nav class="bm" id="bm" role="tablist" aria-label="Journal sections"></nav>
-  <div id="sub" class="sub" role="tablist" aria-label="Discoveries pages"></div>
+  <div id="sub" class="sub" role="tablist" aria-label="Pages in this section"></div>
   <div class="pg l" id="pl"></div>
   <div class="pg r" id="pr"></div>
   <button class="hot" style="left:1284px;top:104px;width:90px;height:90px" aria-label="Close journal"></button>
@@ -67,35 +72,48 @@ const I = {
   people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>',
   discoveries: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/><path d="M10.5 13.5v-4M10.5 9.5c0-2 1.3-3 3-3 0 2-1.3 3-3 3zM10.5 11c0-1.6-1-2.4-2.5-2.4 0 1.6 1 2.4 2.5 2.4z"/></svg>',
   memories: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" transform="rotate(-4 12 12)"/><path d="M6.6 6.2l10.8-.8.7 9.5-10.8.8z"/><path d="M12.4 12.6c-1.6-1-2.4-2-1.8-3 .5-.8 1.5-.7 1.9 0 .3-.8 1.3-1 1.9-.3.8 1-.2 2.2-2 3.3z" fill="currentColor" stroke="none"/></svg>',
+  recipes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5c-3.5-.5-6.5 0-8.5 1.5z"/><path d="M12 6.5v13"/><path d="M6.5 9.5c1.3-.2 2.6 0 3.5.5M6.5 13c1.3-.2 2.6 0 3.5.5M14 10c.9-.5 2.2-.7 3.5-.5"/></svg>',
 }
 // sample numbers, as the live game would fill them in
 const BOOKMARKS = [
-  { id: 'quests', c: ['#e2654c', '#b8402e'], label: 'Quests', n: 2, dot: true, page: ['Quests', 'Settle In steps, the errand you took from the board, and new notes waiting.'] },
-  { id: 'people', c: ['#f3c25a', '#d4922a'], label: 'People', n: '7', page: ['People', 'Everyone you have met: hearts, favourite things, gifts they love.'] },
-  { id: 'discoveries', c: ['#9cc75c', '#679a34'], label: 'Discoveries', n: '18', page: null },
-  { id: 'memories', c: ['#ea9a92', '#c86a66'], label: 'Memories', n: 5, page: ['Memories', 'Your photos for now. Room for more kinds of keepsakes later.'] },
+  { id: 'quests', side: 'l', c: ['#e2654c', '#b8402e'], label: 'Quests', dot: true, page: ['Quests', 'Settle In steps, the errand you took from the board, and new notes waiting.'] },
+  { id: 'people', side: 'l', c: ['#f3c25a', '#d4922a'], label: 'People', page: ['People', 'Everyone you have met: hearts, favourite things, gifts they love.'] },
+  { id: 'discoveries', side: 'r', c: ['#9cc75c', '#679a34'], label: 'Discoveries' },
+  { id: 'recipes', side: 'l', c: ['#7ab4cf', '#4f89a8'], label: 'Recipes', dot: true },
+  { id: 'memories', side: 'r', c: ['#ea9a92', '#c86a66'], label: 'Memories', page: ['Memories', 'Your photos for now. Room for more kinds of keepsakes later.'] },
 ]
-const SUBS = [
-  { id: 'fish', label: 'Fish', c: '#6fa6c0', seen: 7, of: 18 },
-  { id: 'forage', label: 'Forage', c: '#8fba5c', seen: 9, of: 24 },
-  { id: 'relics', label: 'Relics', c: '#d39a3c', seen: 2, of: 12 },
-]
+// sub-pages: little paper tabs along the top of the left page (counts = found or known / total)
+const SUBS = {
+  discoveries: [
+    { id: 'fish', label: 'Fish', c: '#6fa6c0', seen: 7, of: 18, blurb: 'The fish you have found so far.' },
+    { id: 'forage', label: 'Forage', c: '#8fba5c', seen: 9, of: 24, blurb: 'The forage you have found so far.' },
+    { id: 'relics', label: 'Relics', c: '#d39a3c', seen: 2, of: 12, blurb: 'The relics you have found so far.' },
+  ],
+  recipes: [
+    { id: 'tools', label: 'Tools', c: '#8a9bb0', seen: 3, of: 5, blurb: 'Rod, watering can, lantern, seed pack and the bridge kit.' },
+    { id: 'food', label: 'Food', c: '#e0915a', seen: 4, of: 9, blurb: 'Cooked on the stove at home.' },
+    { id: 'decor', label: 'Decor', c: '#8fba5c', seen: 2, of: 4, blurb: 'Things to place around Home.' },
+    { id: 'keepsakes', label: 'Keepsakes', c: '#c98ab8', seen: 1, of: 4, blurb: 'Gifts that neighbours treasure.' },
+  ],
+}
 const q = new URLSearchParams(location.search)
-let tab = q.get('tab') || 'quests', sub = q.get('sub') || 'fish'
+let tab = q.get('tab') || 'quests'
+const subOf = { discoveries: q.get('sub') || 'fish', recipes: q.get('rsub') || 'tools' }
 if (q.has('debug')) document.body.classList.add('debug')
+const bk = b => `<button class="bk${b.id === tab ? ' on' : ''}" role="tab" aria-selected="${b.id === tab}" data-id="${b.id}" style="--c1:${b.c[0]};--c2:${b.c[1]}">${I[b.id]}${b.label}${b.dot && b.id !== tab ? '<span class="dot" aria-label="something new"></span>' : ''}</button>`
 function render() {
-  document.getElementById('bm').innerHTML = BOOKMARKS.map(b => `<button class="bk${b.id === tab ? ' on' : ''}" role="tab" aria-selected="${b.id === tab}" data-id="${b.id}" style="--c1:${b.c[0]};--c2:${b.c[1]}">${I[b.id]}${b.label}${b.n != null ? `<span class="n">${b.n}</span>` : ''}<span class="rv"></span>${b.dot && b.id !== tab ? '<span class="dot" aria-label="something new"></span>' : ''}</button>`).join('')
-  const isD = tab === 'discoveries'; document.body.classList.toggle('nosub', !isD)
-  document.getElementById('sub').innerHTML = isD ? SUBS.map(s => `<button class="st${s.id === sub ? ' on' : ''}" style="--c:${s.c}" role="tab" aria-selected="${s.id === sub}" data-sub="${s.id}"><i></i>${s.label}<small>${s.seen}/${s.of}</small></button>`).join('') : ''
-  const S = SUBS.find(s => s.id === sub), B = BOOKMARKS.find(b => b.id === tab)
-  const [h, p] = isD ? [S.label, `The ${S.label.toLowerCase()} you have found so far. Page design comes next.`] : B.page
+  document.getElementById('bm').innerHTML = ['l', 'r'].map(side => `<div class="grp ${side}">${BOOKMARKS.filter(b => b.side === side).map(bk).join('')}</div>`).join('')
+  const subs = SUBS[tab]; document.body.classList.toggle('nosub', !subs)
+  document.getElementById('sub').innerHTML = subs ? subs.map(s => `<button class="st${s.id === subOf[tab] ? ' on' : ''}" style="--c:${s.c}" role="tab" aria-selected="${s.id === subOf[tab]}" data-sub="${s.id}"><i></i>${s.label}<small>${s.seen}/${s.of}</small></button>`).join('') : ''
+  const S = subs && subs.find(s => s.id === subOf[tab]), B = BOOKMARKS.find(b => b.id === tab)
+  const [h, p] = S ? [S.label, S.blurb + ' Page design comes next.'] : B.page
   document.getElementById('pl').innerHTML = `<h2>${h}</h2><p>${p}</p>`
-  document.getElementById('pr').innerHTML = `<p>Right page: details for whatever is picked on the left.</p>`
+  document.getElementById('pr').innerHTML = tab === 'recipes' ? `<p>Right page: the picked recipe, what it needs, and a Craft button when you are at the bench.</p>` : `<p>Right page: details for whatever is picked on the left.</p>`
 }
 document.getElementById('bm').onclick = e => { const b = e.target.closest('[data-id]'); if (b) { tab = b.dataset.id; render() } }
-document.getElementById('sub').onclick = e => { const b = e.target.closest('[data-sub]'); if (b) { sub = b.dataset.sub; render() } }
-addEventListener('keydown', e => { const i = BOOKMARKS.findIndex(b => b.id === tab)
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { tab = BOOKMARKS[(i + (e.key === 'ArrowRight' ? 1 : 3)) % 4].id; render() } })
+document.getElementById('sub').onclick = e => { const b = e.target.closest('[data-sub]'); if (b) { subOf[tab] = b.dataset.sub; render() } }
+addEventListener('keydown', e => { const i = BOOKMARKS.findIndex(b => b.id === tab), n = BOOKMARKS.length
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { tab = BOOKMARKS[(i + (e.key === 'ArrowRight' ? 1 : n - 1)) % n].id; render() } })
 const fit = () => document.getElementById('jb').style.setProperty('--s', Math.min(1, (innerWidth - 16) / 1448, (innerHeight - 16) / 1086))
 addEventListener('resize', fit); fit(); render()
 </script>
