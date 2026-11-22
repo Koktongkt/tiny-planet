@@ -10,6 +10,10 @@ import { NEEDS_TOOL } from './recipes.js'
 import { Icon, IconDefs } from './icons.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
+import '../ui/glass/glass.css'
+import { WX, GL, GLYPH_DEFS } from '../ui/glass/glyphs.js'
+import { weatherFor } from '../talk/state.js'
+import { BagSatchel, useSatchelFits } from '../ui/bag/BagSatchel.jsx'
 import { armAudio } from '../audio/arm.js'
 import { rideShows } from '../ui/ridePlace.js'
 import { newReel, fishStep, reelDt, REEL } from '../systems/fish.js'
@@ -34,20 +38,33 @@ const useGame = () => { const [, f] = useReducer(x => x + 1, 0); useEffect(() =>
 const isModal = () => !!(G.ui.panel || G.ui.fish || G.ui.lock || G.ui.cook) // lock: Stage C train ride / photo mode; cook: Stage F overlay
 export const gameBlocksKeys = () => isModal() || !!G.ui.place
 
+// Glass HUD identity bar: today's weather in the gold ring, then the name, time of day and day, with energy along
+// the bottom edge. Keeps .tp-clock (and "Day N" in its <small>) for the tests and other modules.
+const hourNow = () => { const a = ((window.__rot?.a ?? 0) % 6.283185307 + 6.283185307) % 6.283185307; return (12 + a / 6.283185307 * 24) % 24 }
+const WX_NIGHT = { clear: 'night', breezy: 'night', cloudy: 'nightcloudy', drizzle: 'nightrain', rain: 'nightrain' }
+const WX_NAME = { clear: 'Sunny', breezy: 'Breezy', cloudy: 'Cloudy', drizzle: 'Drizzle', rain: 'Rain' }
+const Svg = ({ html, className = '' }) => <span className={'g-svg ' + className} aria-hidden="true" dangerouslySetInnerHTML={{ __html: html }} />
 function Clock() {
-  const [, setT] = useState('') // re-render only when the shown minute / icon / day changes (it used to re-render twice a second)
-  useEffect(() => { const k = () => { const a = ((window.__rot?.a ?? 0) % 6.283185307 + 6.283185307) % 6.283185307, h = (12 + a / 6.283185307 * 24) % 24; return Math.floor(h * 6) + ':' + G.s.day + ':' + Math.round(G.s.energy ?? 100) }; const i = setInterval(() => setT(k()), 500); return () => clearInterval(i) }, [])
-  const a = ((window.__rot?.a ?? 0) % 6.283185307 + 6.283185307) % 6.283185307, hour = (12 + a / 6.283185307 * 24) % 24
-  const ic = hour >= 6.5 && hour < 17.5 ? 'sun' : hour >= 17.5 && hour < 19.5 || hour >= 5 && hour < 6.5 ? 'dusk' : 'moon'
+  const [, setT] = useState('') // re-render only when the shown minute / day / weather / energy changes
+  useEffect(() => { const k = () => Math.floor(hourNow() * 6) + ':' + G.s.day + ':' + Math.round(G.s.energy ?? 100) + ':' + weatherFor(G.s.day); const i = setInterval(() => setT(k()), 500); return () => clearInterval(i) }, [])
+  const hour = hourNow(), night = hour < 6 || hour >= 19
+  const kind = weatherFor(G.s.day), wx = night ? WX_NIGHT[kind] || 'night' : kind
+  const small = hour >= 6.5 && hour < 17.5 ? 'clear' : night ? 'night' : 'cloudy'
   const hh = Math.floor(hour), mm = Math.floor((hour - hh) * 6) * 10
   const e = Math.max(0, Math.min(100, Number.isFinite(G.s.energy) ? G.s.energy : 100))
-  return <div className="tp-clock paper"><Icon id={ic} size={34} /><div><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b><small>Day {G.s.day + 1}</small><span className={'tp-nrg' + (e <= 25 ? ' low' : '') + (e <= 0 ? ' empty' : '')} role="meter" aria-valuenow={Math.round(e)} aria-valuemin={0} aria-valuemax={100} aria-label={'Energy ' + Math.round(e)} title={'Energy ' + Math.round(e)}><i style={{ width: e + '%' }} /></span></div></div>
+  const label = `${WX_NAME[kind] || 'Clear'}${night ? ' night' : ''}`
+  return <div className="tp-clock g-ident" title={label}>
+    <div className="g-ring" role="img" aria-label={'Weather: ' + label}><Svg className="g-wx" html={WX[wx] || WX.clear} /></div>
+    <div className="g-bar g-glass"><span className="g-ttl">Tiny Planet</span>
+      <span className="g-sub"><Svg html={WX[small]} /><b>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</b>·<small>Day {G.s.day + 1}</small></span>
+      <span className={'tp-nrg' + (e <= 25 ? ' low' : '') + (e <= 0 ? ' empty' : '')} role="meter" aria-valuenow={Math.round(e)} aria-valuemin={0} aria-valuemax={100} aria-label={'Energy ' + Math.round(e)} title={'Energy ' + Math.round(e)}><i style={{ width: e + '%' }} /></span></div>
+  </div>
 }
 function RideChip() {
   const m = SEM.m; if (!m) return null
   const place = rideShows({ touch: TOUCH, mode: m.hudPrompt() })
   if (!place.chip) return null
-  return <button className="tp-ride paper" onClick={() => m.toggle()}>{!TOUCH && <span className="key">R</span>}<Icon id="bike" size={26} /><span>{place.label}</span></button>
+  return <button className="tp-ride g-glass" onClick={() => m.toggle()}>{!TOUCH && <span className="key">R</span>}<Icon id="bike" size={26} /><span>{place.label}</span></button>
 }
 function Prompt() {
   const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock) return null
@@ -60,14 +77,14 @@ function Prompt() {
   const need = n.kind === 'spot' && NEEDS_TOOL[n.spot.item]; const lack = need && !G.s.tools[need]
   // round6: compact chips (pets): a small main chip, plus an optional secondary chip (e.g. throw a stick, key F)
   if (n.chip) return <div className="tp-chips">
-    <button className="tp-chip paper" onClick={() => GAME.actions.act?.()}>{!TOUCH && <span className="key">E</span>}<Icon id={icon} size={24} /><span>{verb}{name ? <> <b>{name}</b></> : null}</span></button>
-    {n.alt && <button className="tp-chip tp-chip-alt paper" onClick={() => n.alt.act()}>{!TOUCH && <span className="key">{n.alt.key || 'F'}</span>}<Icon id={n.alt.icon} size={20} /><span>{n.alt.verb}</span></button>}
+    <button className="tp-chip g-glass" onClick={() => GAME.actions.act?.()}>{!TOUCH && <span className="key">E</span>}<Icon id={icon} size={24} /><span>{verb}{name ? <> <b>{name}</b></> : null}</span></button>
+    {n.alt && <button className="tp-chip tp-chip-alt g-glass" onClick={() => n.alt.act()}>{!TOUCH && <span className="key">{n.alt.key || 'F'}</span>}<Icon id={n.alt.icon} size={20} /><span>{n.alt.verb}</span></button>}
   </div>
-  return <button className={'tp-prompt paper' + (lack ? ' lack' : '')} onClick={() => GAME.actions.act?.()}>
+  return <button className={'tp-prompt g-glass' + (lack ? ' lack' : '')} onClick={() => GAME.actions.act?.()}>
     {!TOUCH && <span className="key">E</span>}<Icon id={icon} size={38} /><span>{verb} <b>{name}</b>{lack && <em>needs {ITEMS[need].name}</em>}</span>
   </button>
 }
-function Toasts() { return <div className="tp-toasts">{G.ui.toasts.map(t => <div key={t.id} className="tp-toast paper"><Icon id={t.icon || 'leaf'} size={30} /><span>{t.text}</span></div>)}</div> }
+function Toasts() { return <div className="tp-toasts">{G.ui.toasts.map(t => <div key={t.id} className="tp-toast g-glass"><Icon id={t.icon || 'leaf'} size={30} /><span>{t.text}</span></div>)}</div> }
 function Fly() {
   const [list, setList] = useState([])
   useEffect(() => { if (G.ui.fly.length) { const add = G.ui.fly; G.ui.fly = []; setList(l => [...l, ...add]); if (!q.has('pick')) add.forEach(f => setTimeout(() => setList(l => l.filter(x => x !== f)), 1100)) } })
@@ -91,6 +108,8 @@ function Bag() {
     <div className="tp-foot"><span>{Object.keys(G.s.seen).length} / {Object.keys(ITEMS).length} things discovered</span><button className="tp-link" onClick={() => { if (q.has('ui') || confirm('Start over? Your bag, tools, decor and the bridge will be reset.')) { reset(); setPanel(null) } }}>Reset save</button></div>
   </Panel>
 }
+// The Bag: the leather satchel when it fits the screen, the plain list panel on small portrait phones.
+function BagPanel() { return useSatchelFits() ? <BagSatchel sbm={SBM} onReset={() => { if (q.has('ui') || confirm('Start over? Your bag, tools, decor and the bridge will be reset.')) { reset(); setPanel(null) } }} /> : <Bag /> }
 function Recipes() {
   const bench = G.ui.atBench && G.near?.kind === 'bench' || q.get('ui') === 'craft'
   const cats = ['Tools', 'Food', 'Garden', 'Keepsakes', 'Decor', 'Unlock']
@@ -156,7 +175,7 @@ function Fishing() {
 }
 function PlaceBar() {
   const p = G.ui.place; if (!p) return null
-  return <div className="tp-placebar paper"><Icon id={p.item} size={40} /><span>Placing <b>{ITEMS[p.item].name}</b></span>
+  return <div className="tp-placebar g-glass"><Icon id={p.item} size={40} /><span>Placing <b>{ITEMS[p.item].name}</b></span>
     <button onClick={() => { p.rot += Math.PI / 4; emit() }}><Icon id="rotate" size={26} wash={false} />{TOUCH ? ' Turn' : ' R'}</button>
     <button className="go" onClick={confirmPlace}><Icon id="check" size={26} wash={false} /> Place</button>
     <button onClick={() => { G.ui.place = null; emit() }}><Icon id="close" size={24} wash={false} />{TOUCH ? ' Cancel' : ' Esc'}</button></div>
@@ -166,13 +185,14 @@ const MenuGlyph = () => <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 
 const MapGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><path d="M5 8.5 12 6l8 3 7-2.5V23l-7 2.5-8-3-7 2.5Z" fill="#f1e2bf" stroke="#4a3a35" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 6v16.5M20 9v16.5" fill="none" stroke="#4a3a35" strokeWidth="1.4" /></svg>
 const PinGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><path d="M16 5.5a7 7 0 0 0-7 7c0 5.2 7 14 7 14s7-8.8 7-14a7 7 0 0 0-7-7z" fill="#d9655b" stroke="#4a3a35" strokeWidth="1.7" /><circle cx="16" cy="12.2" r="2.2" fill="#fffaf0" /></svg>
 const GlobeGlyph = () => <svg viewBox="-6 -6 44 44" width="32" height="32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="#4a3a35" strokeWidth="1.8" /><path d="M7.5 16h17M16 7c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9s1.2-6.4 3.6-9z" fill="none" stroke="#4a3a35" strokeWidth="1.5" /></svg>
+const Gl = ({ id }) => <Svg className="g-gl" html={GL[id]} />
 function DeskButtons() {
   const n = Object.values(G.s.inv).reduce((a, b) => a + b, 0)
-  return <div className="tp-btns"><button className="tp-btn paper tp-bagbtn" onClick={() => setPanel('bag')}><Icon id="bag" size={46} /><span>Bag</span>{n > 0 && <i>{n}</i>}</button>
-    <button className="tp-btn paper" onClick={() => setPanel('recipes')}><Icon id="book" size={46} /><span>Recipes</span></button>
-    <button className="tp-btn paper tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings"><Icon id="gear" size={46} /><span>Settings</span></button>
-    {SCM.m && <><button className="tp-btn paper tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal"><Icon id="book" size={46} /><span>Journal</span></button>
-    <button className="tp-btn paper tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode"><Icon id="sun" size={46} /><span>Photo</span></button></>}</div>
+  return <div className="tp-btns g-top"><button className="tp-btn g-glass tp-bagbtn" onClick={() => setPanel('bag')} aria-label="Bag" title="Bag (B)"><Gl id="bag" /><span>Bag</span>{n > 0 && <i>{n}</i>}<em className="g-kc">B</em></button>
+    <button className="tp-btn g-glass" onClick={() => setPanel('recipes')} aria-label="Recipes" title="Recipes (C)"><Gl id="recipes" /><span>Recipes</span><em className="g-kc">C</em></button>
+    {SCM.m && <><button className="tp-btn g-glass tp-jbtn" onClick={() => setPanel('journal')} aria-label="Journal" title="Journal (J)"><Gl id="journal" /><span>Journal</span><em className="g-kc">J</em></button>
+    <button className="tp-btn g-glass tp-cambtn" onClick={() => SCM.m.photo(true)} aria-label="Photo mode" title="Photo (P)"><Gl id="camera" /><span>Photo</span><em className="g-kc">P</em></button></>}
+    <button className="tp-btn g-glass tp-gearbtn" onClick={() => setPanel('settings')} aria-label="Settings" title="Settings"><Gl id="gear" /><span>Settings</span></button></div>
 }
 function PhoneMenu({ mode, onClose }) {
   const walk = mode === 'follow'
@@ -207,9 +227,9 @@ function PhoneCorners() {
   const tut = G.s.tutorial
   const dot = !!(tut && noteVisible(tut, G.s.day, false) && !tut.open)
   return <>
-    <div className="tp-btns">
-      <button className="tp-btn paper tp-bagbtn" aria-label="Bag" onClick={() => { setMenu(false); setPanel('bag') }}><Icon id="bag" size={28} /><span>Bag</span>{n > 0 && <i>{n}</i>}</button>
-      <button className="tp-btn paper tp-menubtn" aria-label={dot ? 'Menu, Grandma\'s note is waiting' : 'Menu'} aria-expanded={menu} onClick={() => setMenu(v => !v)}><MenuGlyph />{dot && <i className="tp-dot" />}</button>
+    <div className="tp-btns g-top">
+      <button className="tp-btn g-glass tp-bagbtn" aria-label="Bag" onClick={() => { setMenu(false); setPanel('bag') }}><Gl id="bag" /><span>Bag</span>{n > 0 && <i>{n}</i>}</button>
+      <button className="tp-btn g-glass tp-menubtn" aria-label={dot ? 'Menu, Grandma\'s note is waiting' : 'Menu'} aria-expanded={menu} onClick={() => setMenu(v => !v)}><MenuGlyph />{dot && <i className="tp-dot" />}</button>
     </div>
     {menu && <PhoneMenu mode={mode} onClose={() => setMenu(false)} />}
   </>
@@ -234,12 +254,12 @@ export function GameUI() {
   }, [])
   const panel = G.ui.panel === 'craft' ? 'recipes' : G.ui.panel
   return <div className="tp-ui">
-    <IconDefs />
+    <IconDefs /><span style={{ display: 'none' }} dangerouslySetInnerHTML={{ __html: GLYPH_DEFS }} />
     <Clock /><RideChip />
     {TOUCH ? <PhoneCorners /> : <DeskButtons />}
     <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
     {G.ui.cook && <Suspense fallback={null}><CookOverlay /></Suspense>}
-    {panel === 'bag' && <Bag />}{panel === 'recipes' && <Recipes />}
+    {panel === 'bag' && <BagPanel />}{panel === 'recipes' && <Recipes />}
     {SBM.m && <Suspense fallback={null}><StageBPanels /></Suspense>}
     {SCM.m && <Suspense fallback={null}><StageCPanels /></Suspense>}
   </div>

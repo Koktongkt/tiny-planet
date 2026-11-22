@@ -1,8 +1,8 @@
-// Desktop HUD stays the full corner layout: title, five buttons, minimap, no phone menu.
+// Desktop glass HUD: identity bar + weather top-left, five menu buttons top-right, minimap, no phone menu.
 import { test, expect } from '@playwright/test'
 import { watchErrors, boot } from './helpers.js'
 
-test('desktop HUD is unchanged at 1280', async ({ page }) => {
+test('desktop glass HUD layout at 1280', async ({ page }) => {
   test.setTimeout(300_000)
   const w = watchErrors(page)
   await boot(page, '?enter&nosave&t=day&out')
@@ -17,8 +17,12 @@ test('desktop HUD is unchanged at 1280', async ({ page }) => {
   const clock = await page.locator('.tp-clock').boundingBox()
   const mapBtn = await page.locator('.mm-btn').boundingBox()
   const bag = await page.locator('.tp-bagbtn').boundingBox()
-  expect(clock.x).toBeGreaterThan(900)
+  // glass HUD: identity bar + weather ring top-left, menu buttons top-right, minimap bottom-left
+  expect(clock.x).toBeLessThan(40)
+  expect(clock.y).toBeLessThan(40)
+  expect(await page.locator('.tp-clock .g-ring').count()).toBe(1)
   expect(mapBtn.width).toBeLessThan(36)
-  expect(bag.y).toBeGreaterThan(500)
+  expect(bag.x).toBeGreaterThan(900)
+  expect(bag.y).toBeLessThan(80)
   w.check()
 })
