@@ -175,8 +175,8 @@ function Walls() {
 }
 
 // ---------- floor, plinth, backdrop ----------
-const planks = () => { const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); x.fillStyle = '#e9b88e'; x.fillRect(0, 0, 512, 512)
-  for (let r = 0; r < 6; r++) { let px = -(r * 131) % 230; const H = 512 / 6; while (px < 512) { const w = 200 + ((r * 31 + px) % 7) * 22, l = 0.94 + ((r * 13 + px * 7) % 5) * 0.025; x.fillStyle = `rgb(${236 * l | 0},${186 * l | 0},${142 * l | 0})`; x.fillRect(px + 2, r * H + 2, w - 4, H - 4)
+const planks = () => { const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); x.fillStyle = '#e9ad86'; x.fillRect(0, 0, 512, 512)
+  for (let r = 0; r < 6; r++) { let px = -(r * 131) % 230; const H = 512 / 6; while (px < 512) { const w = 200 + ((r * 31 + px) % 7) * 22, l = 0.94 + ((r * 13 + px * 7) % 5) * 0.025; x.fillStyle = `rgb(${236 * l | 0},${174 * l | 0},${132 * l | 0})`; x.fillRect(px + 2, r * H + 2, w - 4, H - 4)
     x.strokeStyle = 'rgba(170,110,70,.16)'; x.lineWidth = 2; for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(px + 10, r * H + 18 + k * 22); x.bezierCurveTo(px + w * 0.3, r * H + 12 + k * 22, px + w * 0.6, r * H + 24 + k * 22, px + w - 10, r * H + 18 + k * 22); x.stroke() }
     x.fillStyle = 'rgba(160,100,62,.55)'; x.fillRect(px, r * H, 3, H); px += w } x.fillStyle = '#b77d55'; x.fillRect(0, r * H, 512, 3) }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.9, 1.9); t.anisotropy = 4; return t }
@@ -193,7 +193,7 @@ export function Backdrop() {
     fragmentShader: 'uniform vec3 uTop; uniform vec3 uBot; varying vec3 vP; void main(){ float k = smoothstep(-.35,.6,normalize(vP).y); gl_FragColor = vec4(mix(uBot,uTop,k),1.);\n#include <colorspace_fragment>\n}' }), [])
   const sh = useMemo(() => new THREE.MeshBasicMaterial({ color: '#6a4a5a', transparent: true, opacity: 0.18, depthWrite: false }), [])
   const a = useMemo(() => new THREE.Color(), []), b = useMemo(() => new THREE.Color(), [])
-  useFrame(() => { a.set('#efe3f6').lerp(CC('#f8d2bc'), T.dusk * 0.7).lerp(CC('#2e2c52'), T.night * 0.9); b.set('#f6d6e2').lerp(CC('#f0b89a'), T.dusk * 0.6).lerp(CC('#4a3658'), T.night * 0.9); m.uniforms.uTop.value.copy(a); m.uniforms.uBot.value.copy(b) })
+  useFrame(() => { a.set('#ddcfe2').lerp(CC('#d9c2d4'), T.dusk * 0.6).lerp(CC('#2e2c52'), T.night * 0.9); b.set('#cdb6c6').lerp(CC('#c9aab8'), T.dusk * 0.6).lerp(CC('#4a3658'), T.night * 0.9); /* a soft muted mauve void, like the concept paint-over */ m.uniforms.uTop.value.copy(a); m.uniforms.uBot.value.copy(b) })
   return <group>
     <mesh material={m} renderOrder={-10}><sphereGeometry args={[7, 24, 16]} /></mesh>
     <mesh material={sh} position={[0, -0.17, 0.05]} rotation={[-Math.PI / 2, 0, 0]} scale={[R + 0.5, R + 0.5, 1]}><circleGeometry args={[1, 48]} /></mesh>
@@ -225,7 +225,7 @@ export function Sunbeam() {
     const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); return [g, f, mg] }, [])
   const mm = useMemo(() => new THREE.PointsMaterial({ color: '#fff6d0', size: 0.012, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }), [])
   const mref = useRef()
-  useFrame(() => { const d = Math.max(0, T.day - T.night); m.opacity = 0.09 * d + 0.03 * T.dusk; fl.opacity = 0.2 * d; mm.opacity = 0.8 * d; if (mref.current) mref.current.position.y = Math.sin(performance.now() / 3000) * 0.01 })
+  useFrame(() => { const d = Math.max(0, T.day - T.night); m.opacity = 0.035 * d + 0.02 * T.dusk; fl.opacity = 0.2 * d; mm.opacity = 0.6 * d; /* a faint shaft only: a strong one hazed the left of the room */ if (mref.current) mref.current.position.y = Math.sin(performance.now() / 3000) * 0.01 })
   return <group><mesh geometry={geo} material={m} renderOrder={3} /><mesh geometry={floor} material={fl} renderOrder={2} /><points ref={mref} geometry={motes} material={mm} /></group>
 }
 export const BEAM_SPOT = (() => { const L = OPEN[0], [cx, cz] = polar(L.phi, R - 0.02), t = ((L.y0 + L.ys) / 2) / -SUN_DIR.y; return { x: cx + SUN_DIR.x * t, z: cz + SUN_DIR.z * t } })()

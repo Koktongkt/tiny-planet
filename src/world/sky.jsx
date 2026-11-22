@@ -60,6 +60,9 @@ export function Lights() {
     moon.current.intensity = 1.1 * T.night * (1 - 0.7 * inN)
     hemi.current.color.copy(tmp.set('#cfe6ff').lerp(CC('#ffb59a'), T.dusk).lerp(CC('#4a5fa0'), T.night))
     hemi.current.groundColor.set('#b9d48c').lerp(CC('#2a2f55'), T.night); hemi.current.intensity = (0.9 + 0.25 * T.dusk - 0.3 * T.night) * (1 - 0.35 * inN)
+    if (HOME.inside) { // indoors: a warm peach fill from above and a honey bounce off the wooden floor (the sky's blue + the grass green made the room's shadows grey)
+      hemi.current.color.copy(tmp.set('#ffe6d2').lerp(CC('#ffd6bc'), T.dusk * 0.5).lerp(CC('#7a5a8a'), T.night)); hemi.current.groundColor.set('#e8b48a').lerp(CC('#6a4040'), T.night)
+      sun.current.color.set('#ffead2').lerp(CC('#ffcfa8'), T.dusk * 0.6); sun.current.intensity *= 0.85; hemi.current.intensity = (0.95 + 0.1 * T.dusk - 0.35 * T.night) } // keeps a soft cream light all afternoon (the outdoor dusk orange made the room glow)
   })
   return <><directionalLight ref={sun} castShadow={false} /><directionalLight ref={moon} color="#9db4ff" /><hemisphereLight ref={hemi} /></>
 }
