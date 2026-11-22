@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useEffect, useState, lazy, Suspense } from 'rea
 import './ui/hud.css'
 import { Canvas, useFrame, useThree, advance, _roots } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, Noise, HueSaturation, BrightnessContrast } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, RIVER_HALF, JUMP_HALF, streamDist } from './world.js'
 import { PEOPLE } from './peopleData.js'
@@ -729,16 +729,24 @@ const FX = fxPasses({ touch: TOUCH, fx: q.get('fx'), night: nightFromPhase(rot.a
 function WorldFx() {
   const slim = TOUCH && q.get('fx') !== 'full'
   const [night, setNight] = useState(() => nightFromPhase(rot.a))
-  const cur = useRef(night)
-  useFrame(() => {
+  const cur = useRef(night), grade = useRef({ k: 0 }), hs = useRef(), bc = useRef(), nz = useRef(), vg = useRef()
+  useFrame((_, dt) => {
+    // indoors: a warm storybook grade (a little more colour and contrast, no film grain, a softer vignette), eased in and out at the door
+    const g = grade.current; g.k += ((HOME.inside ? 1 : 0) - g.k) * Math.min(1, dt * 4)
+    if (hs.current) hs.current.saturation = 0.1 * g.k
+    if (bc.current) { bc.current.contrast = 0.07 * g.k; bc.current.brightness = -0.02 * g.k }
+    if (nz.current) nz.current.blendMode.opacity.value = 0.12 * (1 - g.k)
+    if (vg.current) vg.current.darkness = 0.55 - 0.2 * g.k
     if (!slim) return
     const v = T.night > 0.5
     if (v !== cur.current) { cur.current = v; setNight(v) }
   })
   return <EffectComposer ref={c => { COMPOSER.current = c }} multisampling={FX.multisampling}>
     {(!slim || night) && <Bloom intensity={0.9} luminanceThreshold={0.93} luminanceSmoothing={0.2} mipmapBlur />}
-    {FX.noise && <Noise opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />}
-    <Vignette offset={0.3} darkness={0.55} />
+    {FX.noise && <Noise ref={nz} opacity={0.12} blendFunction={BlendFunction.SOFT_LIGHT} />}
+    <HueSaturation ref={hs} saturation={0} />
+    <BrightnessContrast ref={bc} brightness={0} contrast={0} />
+    <Vignette ref={vg} offset={0.3} darkness={0.55} />
   </EffectComposer>
 }
 function useHidden() { const [h, setH] = useState(typeof document !== 'undefined' && document.hidden); useEffect(() => { const f = () => setH(document.hidden); document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f) }, []); return h }
