@@ -13,7 +13,7 @@ import './ui.css'
 import '../ui/glass/glass.css'
 import { WX, GL, GLYPH_DEFS } from '../ui/glass/glyphs.js'
 import { weatherFor } from '../talk/state.js'
-import { BagSatchel, useSatchelFits } from '../ui/bag/BagSatchel.jsx'
+import { BagSatchel, useSatchelFits, preloadBag } from '../ui/bag/BagSatchel.jsx'
 import { QuestTracker, Hotbar, fireHot, HOT_N } from '../ui/glass/HudExtras.jsx'
 import { armAudio } from '../audio/arm.js'
 import { rideShows } from '../ui/ridePlace.js'
@@ -30,6 +30,9 @@ idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady 
   // waits for the first scene frame + 4 s so it never competes with the boot on slow phones
   const afterFrame = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit() }), 3000), 4000) : setTimeout(afterFrame, 250))
   afterFrame()
+  // the satchel art (225-410 KB) loads + decodes quietly a few seconds after the first frame, so opening the bag is instant
+  const bagArt = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(preloadBag, 4000), 2500) : setTimeout(bagArt, 300))
+  bagArt()
 }))
 const SCM = { m: null }
 const StageCPanels = lazy(() => import('../systems/PanelsC.jsx'))

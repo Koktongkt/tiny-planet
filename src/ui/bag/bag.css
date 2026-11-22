@@ -4,6 +4,8 @@
 .sb-bag{position:absolute;left:50%;top:50%;width:1672px;height:941px;transform:translate(-50%,-50%) scale(var(--s,1));transform-origin:50% 50%;
   font-family:Fredoka,sans-serif;color:#3a2618;text-shadow:none;-webkit-user-select:none;user-select:none;pointer-events:none}
 .sb-bag > *{pointer-events:auto}
+.sb-bag.sb-wait{opacity:0}
+.sb-bag{transition:opacity .12s ease-out}
 .sb-art{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(20,8,2,.45));pointer-events:none!important}
 .sb-bag button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .sb-bag button:focus-visible{outline:4px solid #4ea0ff;outline-offset:3px}
