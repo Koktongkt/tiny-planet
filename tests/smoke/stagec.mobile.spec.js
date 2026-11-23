@@ -19,7 +19,7 @@ test('touch: tutorial note, journal + photo chips, photo mode hides the pads, re
   await expect(page.locator('.tp-pad')).toBeHidden(); await expect(page.locator('.tpp-shutter')).toBeVisible()
   await page.locator('.tpp-close').tap(); await page.waitForFunction(() => !document.documentElement.classList.contains('tp-photo'), null, { timeout: 30_000 })
   await page.waitForFunction(() => window.__game.G.near?.spot?.item === 'fish', null, { timeout: 60_000 })
-  await page.locator('.tp-prompt, .tp-chip').first().tap()
+  await page.locator('.tp-prompt, .tp-chip').first().tap({ force: true }) // the head bubble follows the scene and bobs, so it is never 'stable'
   await page.waitForFunction(() => window.__fishSt && window.__fishSt.state === 'bite', null, { timeout: 120_000, polling: 100 })
   const box = await page.locator('.tp-fish-c').boundingBox()
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
