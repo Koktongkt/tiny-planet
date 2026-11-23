@@ -14,6 +14,7 @@ import { familyLine } from './friendship.js'
 import { stitchRow } from './perfectLog.js'
 import { registerFishIcons } from '../art/fish/icons.jsx'
 import { useBookFits } from '../ui/journal/book/useBookFits.js'
+import { ART as BOOK } from '../ui/journal/book/preload.js'
 import './panelsC.css'
 const TutorialNote = lazy(() => import('../ui/tutorial/TutorialNote.jsx'))
 const CatchCard = lazy(() => import('../ui/fish/CatchCard.jsx'))
@@ -34,7 +35,9 @@ const DonateCard = lazy(() => import('../ui/museum/DonateCard.jsx'))
 const LeatherBook = lazy(() => import('../ui/journal/book/JournalBook.jsx'))
 function Journal() {
   const [tab, setTab] = useState('fish'), fits = useBookFits()
-  if (fits) return <LeatherBook onClose={() => { G.ui.atBench = false; close() }} />
+  const onClose = () => { G.ui.atBench = false; close() }
+  // preloaded (preload.js): draw the book straight away like the Bag; only a J pressed before that waits on the lazy chunk
+  if (fits) return BOOK.Book ? <BOOK.Book onClose={onClose} /> : <LeatherBook onClose={onClose} />
   return <JournalBook tab={tab} onTab={setTab} entries={SC.journal(tab)} progress={SC.C.progress(G.s)} stitches={stitchRow(G.s)} quiet={familyLine(G.s.friends)} onClose={close} touch={TOUCH} />
 }
 function Donate() {

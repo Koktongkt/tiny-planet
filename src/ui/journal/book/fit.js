@@ -3,3 +3,5 @@
 export const W = 1448, H = 1086, MIN_SCALE = 0.5
 export const bookScale = (w, h) => Math.min(1, (w - 16) / W, (h - 16) / H)
 export const bookFits = () => typeof innerWidth !== 'undefined' && bookScale(innerWidth, innerHeight) >= MIN_SCALE
+/** one art file per screen (the sharp one at 1.5x+), so the preload and the book always use the same image */
+export const artFor = (dpr, one, two) => ((dpr || 1) >= 1.5 ? two : one)
