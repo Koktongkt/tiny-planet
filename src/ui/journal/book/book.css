@@ -163,15 +163,16 @@ html:has(.jb-veil) .mm-wrap{opacity:0!important;transition:none!important}
 .jb-bigpol::before,.jb-bigpol::after{width:70px;height:22px}
 .jb-bigpol::before{margin-left:-35px;top:-11px}
 .jb-lost{width:100%;aspect-ratio:4/3;display:grid;place-items:center;background:#e9dcc4;color:#a08060;font-size:14px}
-/* handwritten tab labels: Caveat (SIL OFL, src/assets/fonts/OFL-caveat.txt), loaded only with the book; each label sits
-   a little off level, like ink on fabric and paper */
-@font-face{font-family:JBHand;src:url(../../../assets/fonts/caveat-700.woff2) format("woff2");font-weight:700;font-display:swap}
-.jb-hand{display:inline-block;font-family:JBHand,Fredoka,sans-serif;font-weight:700;letter-spacing:.2px}
-.jb-bk .jb-hand{font-size:33px;transform:rotate(-1.4deg) translateY(1px)}
+/* handwritten journal: Gaegu (SIL OFL, src/assets/fonts/OFL-gaegu.txt), loaded only with the book. Its letters are
+   small for their size, so font-size-adjust lifts them to the rounded font's x-height; tab labels sit a touch off level */
+@font-face{font-family:JBHand;src:url(../../../assets/fonts/gaegu-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:JBHand;src:url(../../../assets/fonts/gaegu-700.woff2) format("woff2");font-weight:600 700;font-display:swap}
+.jb-book,.jb-book button,.jb-book *{font-family:JBHand,Fredoka,sans-serif;font-size-adjust:.47}
+.jb-hand{display:inline-block}
+.jb-bk .jb-hand{transform:rotate(-1.4deg) translateY(1px)}
 .jb-bk:nth-child(2) .jb-hand{transform:rotate(1.2deg)}
 .jb-bk:nth-child(3) .jb-hand{transform:rotate(-.6deg) translateY(-1px)}
 .jb-grp.r .jb-bk:nth-child(1) .jb-hand{transform:rotate(.9deg) translateY(1px)}
 .jb-grp.r .jb-bk:nth-child(2) .jb-hand{transform:rotate(-1.8deg)}
-.jb-st .jb-hand{font-size:26px;transform:rotate(-1deg)}
+.jb-st .jb-hand{transform:rotate(-1deg)}
 .jb-st:nth-child(even) .jb-hand{transform:rotate(1.3deg) translateY(1px)}
-.jb-st small.jb-hand{font-size:20px;font-weight:700;transform:rotate(2deg)}
