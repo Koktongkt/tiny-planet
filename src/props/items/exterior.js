@@ -226,7 +226,7 @@ defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags
   // the name plaque on the gable, paw prints on the sides
   bone(k, [0, top + 0.045, fz - 0.002], 0.065, 0.014, 'plaque'); paw(k, 0, top + 0.04, fz + 0.01, 0.006, 'pawInk')
   for (const sd of [-1, 1]) k.within(mat(sd * (W / 2 + 0.004), B + H * 0.5, 0, sd * PI / 2), () => paw(k, 0, -0.01, 0, 0.016, 'sidePaw'))
-  if (o.bone) bone(k, [-0.22 * o.bowlSide, 0.012, 0.22], 0.06, 0.013, 'bone', { flat: true, rot: [0, 0.6, PI / 2] })
+  if (o.bone) bone(k, [0.13 * o.bowlSide, 0.012, 0.3], 0.06, 0.013, 'bone', { flat: true, rot: [0, 0.6, PI / 2] })
   const bx = 0.3 * o.bowlSide // bowlSide: 1 = on the door's right, -1 = its left
   if (o.bowl) k.use('dogBowl', mat(bx, 0, 0.12, -0.4 * o.bowlSide), { shadow: false })
   k.shadow(0.5, 0.44, [0, 0.003, 0.02]); if (o.bowl) k.shadow(0.16, 0.16, [bx, 0.003, 0.12])
