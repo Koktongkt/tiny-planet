@@ -27,7 +27,7 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   // Day 0 opens Grandma's note on top of the lake. A keypress lands on that dialog, so fold it and use the prompt.
   await page.locator('.tpt-note').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {})
   if (await page.locator('.tpt-note').isVisible().catch(() => false)) await page.locator('.tpt-note .tpt-btns .tpx-btn').click()
-  await page.locator('.tp-prompt').click()
+  await page.locator('.tp-prompt').click({ force: true }) // the head bubble follows the scene and bobs, so it is never 'stable'
   await expect(page.locator('.tp-fish-c')).toBeVisible()
   // One long frame can pass through 'bite' before a poll, so 'reel' counts too.
   await page.waitForFunction(() => { const s = window.__fishSt; return !!s && (s.state === 'bite' || s.state === 'reel' || s.state === 'caught') }, null, { timeout: 120_000, polling: 100 })

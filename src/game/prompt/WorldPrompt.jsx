@@ -77,7 +77,7 @@ export function placePrompt(camera, dt, playerObj) {
   PROMPT.pt.x = (_v.x + 1) / 2 * w; PROMPT.pt.y = (1 - _v.y) / 2 * h; PROMPT.pt.behind = behind
   if (!PROMPT.box) { const r = el.getBoundingClientRect(); if (!r.width) return; PROMPT.box = { bw: r.width, bh: r.height + TAIL } }
   const p = placeBubble(PROMPT.pt, { w, h }, PROMPT.box)
-  el.style.transform = `translate(${p.left.toFixed(1)}px, ${p.top.toFixed(1)}px)`
-  el.style.setProperty('--tail', p.tail.toFixed(1) + 'px')
+  const tf = `translate(${Math.round(p.left)}px, ${Math.round(p.top)}px)` // whole pixels: crisp text, no sub-pixel shimmer
+  if (el.style.transform !== tf) { el.style.transform = tf; el.style.setProperty('--tail', Math.round(p.tail) + 'px') }
   el.classList.toggle('tp-behind', behind)
 }
