@@ -9,33 +9,33 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 .jb{position:absolute;left:50%;top:50%;width:1448px;height:1086px;transform:translate(-50%,-50%) scale(var(--s,.65));font-family:Fredoka,system-ui,sans-serif;color:#4a2a18}
 .jb>img{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(20,8,2,.45));user-select:none}
 
-/* ---- bookmarks: fabric ribbon markers laid over the top of each page; their feet rest on the paper and cast a shadow on it ---- */
+/* ---- bookmarks: fabric ribbons standing up out of each page's top edge (art y 238), in front of the leather, never over the paper ---- */
 /* two groups, one over each page, so nothing sits across the gutter between them */
 .bm{position:absolute;inset:0;pointer-events:none}
-.grp{position:absolute;top:140px;height:122px;display:flex;align-items:flex-end;justify-content:center;gap:12px;pointer-events:auto;filter:drop-shadow(0 4px 3px rgba(60,24,6,.38)) drop-shadow(0 1px 1px rgba(60,24,6,.3))}
+.grp{position:absolute;top:140px;height:98px;display:flex;align-items:flex-end;justify-content:center;gap:12px;pointer-events:auto;filter:drop-shadow(0 4px 3px rgba(60,24,6,.38)) drop-shadow(0 1px 1px rgba(60,24,6,.3))}
 .grp.l{left:166px;width:534px}
 .grp.r{left:752px;width:512px}
-.bk{position:relative;flex:none;height:96px;border:0;padding:0 22px 24px;cursor:pointer;font:600 26px Fredoka,system-ui,sans-serif;
+.bk{position:relative;flex:none;height:70px;border:0;padding:6px 22px 0;cursor:pointer;font:600 26px Fredoka,system-ui,sans-serif;
   display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;text-shadow:0 1.5px 1px rgba(60,20,10,.35);
   /* swallowtail cut at the top, like the ribbons painted at the bottom of the book */
   clip-path:polygon(0 0,calc(50% - 18px) 0,50% 11px,calc(50% + 18px) 0,100% 0,100% 100%,0 100%);
   background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2));
-  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -3px 0 rgba(0,0,0,.14);
+  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -5px 4px -3px rgba(60,20,5,.3);
   transition:height .16s ease,filter .16s}
 .bk::before{content:'';position:absolute;inset:0 11px;border-left:2px dashed rgba(255,255,255,.45);border-right:2px dashed rgba(255,255,255,.45);pointer-events:none}
 .bk:not(.on){filter:saturate(.92) brightness(.96)}
 .bk svg{width:32px;height:32px;flex:none}
 .bk .n{min-width:30px;height:28px;padding:0 8px;border-radius:14px;display:grid;place-items:center;font-size:19px;color:#fff;background:rgba(40,12,4,.25);text-shadow:none}
 .bk .dot{position:absolute;right:7px;top:14px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c8,#ffc23a);box-shadow:0 0 0 2px rgba(120,40,10,.55),0 0 8px #ffe08a}
-.bk:hover{height:104px;filter:none}
+.bk:hover{height:77px;filter:none}
 .bk:focus-visible{outline:none;filter:none;text-decoration:underline 3px}
 /* the open bookmark is pulled up out of the pages: taller, full colour, a little sheen */
-.bk.on{height:118px;filter:none;
+.bk.on{height:90px;filter:none;
   background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 40%),repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2))}
 .rv{display:none}
 
 /* ---- Discoveries sub-pages: small paper tabs along the top of the left page ---- */
-.sub{position:absolute;left:204px;top:296px;width:486px;display:flex;justify-content:center;gap:6px}
+.sub{position:absolute;left:204px;top:276px;width:486px;display:flex;justify-content:center;gap:6px}
 .st{height:50px;padding:0 12px;border:0;border-radius:12px;cursor:pointer;font:600 21px Fredoka,system-ui,sans-serif;color:#5a3a22;display:flex;align-items:center;gap:8px;
   background:color-mix(in srgb,var(--c) 30%,#fbe9cf);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--c) 45%,transparent),0 2px 3px rgba(110,60,20,.18)}
 .st small{font-size:16px;font-weight:400;opacity:.75}
@@ -48,7 +48,7 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 .pg{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:3px dashed rgba(170,110,60,.35);border-radius:22px;color:#9a6a44}
 .pg h2{margin:0 0 8px;font-size:40px;color:#5a321c}
 .pg p{margin:0;font-size:21px;max-width:380px;line-height:1.35}
-.pg.l{left:205px;top:364px;width:470px;height:526px}
+.pg.l{left:205px;top:346px;width:470px;height:544px}
 .pg.r{left:775px;top:290px;width:490px;height:600px}
 body.nosub .pg.l{top:290px;height:600px}
 .pg.r{top:290px}
