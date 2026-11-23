@@ -15,6 +15,7 @@ import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
 import { bakePropMeshes } from './propBake.js'
 import { openRecipes } from '../ui/journal/book/openRecipes.js'
+import { notePickup } from './prompt/hints.js'
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
@@ -272,7 +273,7 @@ export function GameWorld() {
       if (nr.kind === 'ext') { nr.act(); return }
       if (nr.kind === 'bench') { G.ui.atBench = true; openRecipes({ bench: true }); return } // the journal's Recipes (the Recipe Book on phones)
       if (nr.kind === 'chest') { G.s.chest = true; add('skyseed', 1, true); add('crystal', 3, true); toast('You found the cliff-top picnic! +1 Sky Seed, +3 Crystal', 'skyseed', 4200); emit(); force(); return }
-      if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
+      if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; notePickup(G.s.hints, p.item, G.s.day); toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
       const sp = nr.spot, need = NEEDS_TOOL[sp.item]
       if (need && !G.s.tools[need]) { toast(`You need a ${ITEMS[need].name} for that.`, need); return }
       if (sp.item === 'fish') { G.onActivity && G.onActivity('fish'); startAct('cast', { dur: 1.0 }); G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit(); return }
@@ -287,7 +288,7 @@ export function GameWorld() {
     G.ui.fly = [...G.ui.fly, { id: sp.id + performance.now(), item: sp.item, x: (_w.x * 0.5 + 0.5) * innerWidth, y: (-_w.y * 0.5 + 0.5) * innerHeight }]; emit()
     const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { dur: isWater ? 1.0 : 0.85, spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
     anim.current[sp.id] = { t0: performance.now() + 280 }
-    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
+    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); if (sp.item !== 'wool' && sp.item !== 'water') notePickup(G.s.hints, sp.item, G.s.day); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
   }
   useFrame(() => {
     const P = GAME.P; if (!P || !L) return

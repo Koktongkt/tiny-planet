@@ -15,6 +15,7 @@ import { TALK } from '../talk/state.js'
 import { T, q } from '../common.jsx'
 import { G, add, toast } from '../game/store.js'
 import { ITEMS } from '../game/items.js'
+import { notePickup } from '../game/prompt/hints.js'
 import { Bubble, Puffs, Hearts, burst } from './fx.jsx'
 
 export const DOG_CFG = { s: 1.0, /* round9: Cozy Chibi Shiba (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'dog', floppy: false, body: [0.056, 0.054, 0.078], legH: 0.056, legR: 0.0155, stride: 0.055, head: 0.072, headY: 0.04, headUp: 0.5, headFwd: 0.9, eye: 0.22, ear: 0.92, earSplay: 0.0, spring: 1.6, collar: false, tongue: true, pupils: 'round',
@@ -93,7 +94,7 @@ export function Dog() {
       if (d < 0.42) { const throwO = { verb: D.throws ? 'Throw again' : 'Throw stick', icon: 'wood', key: 'F', act: throwStick }
         if (D.petCD <= 0) consider({ kind: 'ext', id: 'dog' + (fetchOK ? '+f' : ''), icon: 'hand', verb: 'Pet', name: D.name, chip: true, alt: fetchOK ? throwO : null, act: petDog }, d, 0.42)
         else if (fetchOK) consider({ kind: 'ext', id: 'dog-f', icon: 'wood', verb: throwO.verb, name: '', chip: true, act: throwStick }, d, 0.42) }
-      for (const it of D.dug) if (!it.taken) consider({ kind: 'ext', id: 'dug' + it.id, icon: it.item, verb: 'Pick up', name: ITEMS[it.item].name, act: () => { it.taken = true; add(it.item) } }, pp.distanceTo(surf(it.n, _a)), 0.45)
+      for (const it of D.dug) if (!it.taken) consider({ kind: 'ext', id: 'dug' + it.id, icon: it.item, verb: 'Pick up', name: ITEMS[it.item].name, act: () => { it.taken = true; add(it.item); notePickup(G.s.hints, it.item, G.s.day) } }, pp.distanceTo(surf(it.n, _a)), 0.45)
     })
   }, [])
   function petDog() { const P = HOME.P; startAct('pet', { dur: 1.2 }); D.route = null; D.petCD = 6; D.mood = Math.min(1, D.mood + 0.25); go('petted', 2.6); burst(hearts.current, 5); toast(`${D.name} leans into your hand, tail going ♥`, 'hand'); window.__lastAct = { kind: 'dog', t: performance.now() } }

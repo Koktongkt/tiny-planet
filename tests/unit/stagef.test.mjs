@@ -163,8 +163,8 @@ test('a perfect dish restores about +25% and keeps the food buff', () => {
 })
 
 test('v5 saves become v6 with auto-cook off and no lost progress', () => {
-  assert.equal(SAVE_VERSION, 6)
-  assert.equal(fresh().v, 6)
+  assert.equal(SAVE_VERSION, 7)
+  assert.equal(fresh().v, 7)
   assert.equal(fresh().settings.autoCook, false)
   assert.equal(fresh().energy, 100)
   const v5 = {
@@ -173,7 +173,7 @@ test('v5 saves become v6 with auto-cook off and no lost progress', () => {
     settings: { volume: 0.4, muted: true },
   }
   const s = migrate(v5)
-  assert.equal(s.v, 6)
+  assert.equal(s.v, 7)
   assert.equal(s.energy, 41)
   assert.equal(s.inv.soup, 2)
   assert.equal(s.inv.soup_perfect, 1)
@@ -189,7 +189,7 @@ test('v5 saves become v6 with auto-cook off and no lost progress', () => {
   assert.equal(kept.energy, 37)
   assert.equal(kept.inv.jam, 1)
   const v1 = migrate({ day: 3, inv: { wood: 1 } })
-  assert.equal(v1.v, 6)
+  assert.equal(v1.v, 7)
   assert.equal(v1.energy, 100)
   assert.equal(v1.inv.wood, 1)
   assert.equal(v1.settings.autoCook, false)
