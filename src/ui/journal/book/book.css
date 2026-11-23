@@ -212,3 +212,6 @@ html:has(.jb-veil) .mm-wrap{opacity:0!important;transition:none!important}
 /* opened before the art finished decoding (preload.js): stay hidden, then fade in, never half-drawn (like the Bag) */
 .jb-book.jb-wait{opacity:0}
 .jb-book{transition:opacity .16s ease-out}
+/* Gaegu regular is a light hand: a hairline stroke in the text colour thickens it a little (layout unchanged) */
+.jb-book{-webkit-text-stroke:.6px currentColor}
+.jb-book b,.jb-book .jb-rt,.jb-book .jb-ph,.jb-book .jb-bk,.jb-book .jb-lab{-webkit-text-stroke:.35px currentColor}
