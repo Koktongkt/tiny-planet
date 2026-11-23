@@ -28,7 +28,13 @@ world, where the traveller meets the person, pet or object, in the Glass & Gold 
   the frame and its tail keeps pointing at the target.
 - "Needs a tool" state: the same bubble with a greyed coin and a soft red line naming the missing tool.
 
+- **Phones use the same design as desktop.** The whole bubble is the tap target. The pad's Action button
+  (`src/touch.jsx`) stays as a thumb-reach shortcut.
+
 ## Still open
-- Phones: same in-world prompt with the whole bubble as the tap target, or keep the bottom button?
-- When the target is off screen or behind a wall, should the prompt go back to the bottom of the screen?
+- When the target is off screen or hidden, what should show? Cases where it can happen: the player backs into
+  something toward the camera, the camera is turned or zoomed in close, the target is behind a house, tree or the
+  traveller, rooms indoors where the camera sits close, and the narrow frame in phone portrait. Proposal: clamp the
+  bubble to the screen edge with its tail pointing toward the target. Fall back to the bottom of the screen only if
+  clamping looks wrong in testing.
 - The ground-item chip and ring should be designed with the new highlight style once that revamp is done.
