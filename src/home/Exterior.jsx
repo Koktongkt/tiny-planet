@@ -37,6 +37,10 @@ export function buildYard(homeN, onHouse, lift) {
     for (const [x, z, a] of YARD.stones) k.use('stepStone', at(x, z, a, S, 0.0))
     for (const [x, z, a] of YARD.rocks) k.use('rocks', at(x, z, a))
     YARD.sprouts.forEach(([x, z], i) => k.use('sprout', at(x, z, i * 1.7)))
+    // the crop corner (the beds themselves are the Stage B garden's, art/garden): path, watering can, bushes
+    for (const [x, z, a] of YARD.gardenStones) k.use('stepStone', at(x, z, a, S * 0.8, 0.0))
+    k.use('wateringCan', at(YARD.gardenCan[0], YARD.gardenCan[1], YARD.gardenCan[2]))
+    YARD.gardenBushes.forEach(([x, z, sc], i) => k.use('flowerBush', at(x, z, i * 2.1, S * sc), { flowers: 3 }))
     // the yard fence: an oval of fence runs round everything (a post where each run starts, so joints aren't doubled)
     const runs = fenceRuns()
     runs.forEach(([[x0, z0], [x1, z1]], i) => {

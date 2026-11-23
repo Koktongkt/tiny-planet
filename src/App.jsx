@@ -226,7 +226,8 @@ const tc = ['#5fae63', '#7cc26a', '#4f9a5e', '#9ccf6a'].map(C)
 const TREES = [], FIRS = []
 for (let i = 0; i < 700 * DENS; i++) { const n = randDir(); const cl = Math.sin(n.x * 4 + 1) * Math.sin(n.z * 3 - n.y * 2); if (cl < 0.1 || busy(n)) continue; const fir = rnd() < 0.4; (fir ? FIRS : TREES).push({ ...place(n, -0.02, rnd() * 6), s: 0.45 + rnd() * 0.35, c: tc[i % 4].clone().multiplyScalar(0.9 + rnd() * 0.2) }) }
 for (const A of [TREES, FIRS]) for (let i = A.length - 1; i >= 0; i--) if (A[i].n.angleTo(HOUSES[0]) * R < 2.6) A.splice(i, 1) // her fenced yard stays clear
-const COLLIDERS = [...HOUSES.map((n, i) => ({ n, r: i === 0 ? YARD.houseR / R : 0.085 * K })), ...yardColliders().slice(1).map(([x, z, r]) => ({ n: onHouse(0, x, z), r: r / R })), ...MILLS.map(n => ({ n, r: 0.065 * K })), ...[...TREES, ...FIRS].map(t => ({ n: t.n, r: (0.03 + 0.02 * t.s) * K })), ...ZONE_COLLIDERS]
+const HOME_RS = R + height(HOUSES[0]) // the ground's radius at Home (it sits on a hill): yard sizes in world units -> angles
+const COLLIDERS = [...HOUSES.map((n, i) => ({ n, r: i === 0 ? YARD.houseR / HOME_RS : 0.085 * K })), ...yardColliders().slice(1).map(([x, z, r]) => ({ n: onHouse(0, x, z), r: r / HOME_RS })), ...MILLS.map(n => ({ n, r: 0.065 * K })), ...[...TREES, ...FIRS].map(t => ({ n: t.n, r: (0.03 + 0.02 * t.s) * K })), ...ZONE_COLLIDERS]
 const _setupHome = () => setupHome({ colliders: COLLIDERS, P, homeN: HOUSES[0], doorN: onHouse(0, 0, YARD.doorZ), outN: onHouse(0, 0, YARD.outZ) })
 function Vegetation() {
   const { grass, flowers } = useMemo(() => {

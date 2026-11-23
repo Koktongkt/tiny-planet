@@ -9,8 +9,11 @@ export const YARD = {
   houseR: 0.7, // collider radius (the bulging walls + entrance bushes)
   doorZ: 0.45, outZ: 1.0, // 'Go inside' prompt point; where she steps out to
   trees: [{ x: -0.82, z: -0.56, seed: 1, crown: 0.33 }, { x: 0.86, z: -0.46, seed: 2.3, crown: 0.3 }],
-  bench: [1.0, 0.5], sign: [-0.5, 1.95], mailbox: [0.48, 1.92], // sign + mailbox just outside the front gate
+  bench: [1.0, 0.5], mailbox: [0.48, 1.92], // the mailbox stands just outside the front gate
   stones: [[0.02, 0.98, 0.2], [-0.08, 1.18, -0.4], [0.05, 1.39, 0.9], [-0.04, 1.86, 0.3]],
+  // the crop corner: a stone path from the front path to the beds, a watering can, flowering bushes at the bed corners
+  gardenStones: [[-0.42, 1.2, 0.6], [-0.72, 1.24, -0.3], [-1.0, 1.3, 1.1]],
+  gardenCan: [-0.86, 1.08, -0.6], gardenBushes: [[-1.86, 0.1, 0.9], [-1.86, 1.02, 0.8], [-0.95, -0.1, 0.75]],
   rocks: [[1.05, 1.15, 0.4], [-0.62, 0.32, 2.1], [0.35, -0.75, 1], [-1.85, 0.9, 0.5]],
   sprouts: [[0.7, 0.95], [-0.35, 1.45], [0.95, -0.05], [-1.0, -0.05], [0.4, 1.6], [1.3, 0.8], [-0.62, 1.5]],
   // the yard fence: an oval round the house, trees, bench and crop beds, the gate in front on the stepping stones (x = 0)

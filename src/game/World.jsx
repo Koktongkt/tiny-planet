@@ -1,4 +1,4 @@
-// 3D side of Gather & Craft: gatherable props, sheep, fireflies, the Home bench + sign, placed decor + ghost preview,
+// 3D side of Gather & Craft: gatherable props, sheep, fireflies, the Home bench, placed decor + ghost preview,
 // the rope bridge + cliff-top reward, the player's lantern, and the proximity/interaction loop.
 import { onTap, TOUCH } from '../touch.jsx'
 import { startAct, ACT, FREEZE } from '../act.js'
@@ -53,10 +53,9 @@ export function layout(Zc, village, homeN, blocked) {
   // showcase cluster in the forest (for the gather screenshot / first-time players)
   const fc = toward(Zc.forest, GAME.P ? GAME.P.n : Zc.meadow, ZONES.forest.r * 1.2)
   ;[['mushroom', 0, 0], ['wood', 0.04, 0.9], ['moss', 0.035, -1.0], ['acorn', 0.05, 2.4], ['pinecone', 0.06, -2.2]].forEach(([item, d, b], k) => { const pn = around(fc, d, b); spots.push({ id: `${item}-show-${k}`, item, zone: 'forest', n: pn, stand: pn, pos: posOf(pn), standPos: posOf(pn), spin: k * 1.7, s: 1.5 }) })
-  // home bench, sign
+  // home bench
   const hp = place(homeN, 0, 0)
   const benchN = posOf(homeN).add(new THREE.Vector3(YARD.bench[0], 0, YARD.bench[1]).applyQuaternion(hp.q)).normalize()
-  const signN = posOf(homeN).add(new THREE.Vector3(YARD.sign[0], 0, YARD.sign[1]).applyQuaternion(hp.q)).normalize()
   // rope bridge up the cliff, on the side away from the lake
   const cc = Zc.cliff, cr = ZONES.cliff.r, awayAz = toward(cc, Zc.lake, 0.2).clone()
   const out = toward(cc, cc.clone().multiplyScalar(2).sub(awayAz), 1) // dummy init
@@ -69,7 +68,7 @@ export function layout(Zc, village, homeN, blocked) {
     for (const f of FORAGE) { const max = Math.ceil(f.n * (f.rain || 1)), c = zc(f.zone), r = zr(f.zone)
       for (let i = 0, tries = 0; i < max && tries < 200; tries++) { const pn = f.zone === 'village' ? around(c, r * (1.6 + fr() * 0.8), fr() * 6.283) : around(c, Math.sqrt(fr()) * r * 0.85, fr() * 6.283) // village: the outskirts, clear of the board / stalls / villagers; if (blocked(pn) && tries < 150) continue
         const pos = posOf(pn); spots.push({ id: `${f.id}-${f.zone}-${i}`, item: f.id, zone: f.zone, n: pn, stand: pn, pos, standPos: pos, forage: i, spin: fr() * 6.28, s: 1.35 + fr() * 0.35 }); i++ } } }
-  G.benchPos = posOf(benchN); LAYOUT = window.__layout = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, sign: { n: signN, pos: posOf(signN) }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
+  G.benchPos = posOf(benchN); LAYOUT = window.__layout = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
   void out
   if (q.get('decor') === 'demo') { const hpos = posOf(homeN); G.s.placed = [['wreath', 0.3, 0.55, 0], ['basket', 0.62, 0.2, 0.6], ['mosslamp', 0.18, 0.72, 0], ['chime', 0.75, -0.15, 0.3]].map(([item, x, z, rot], i) => ({ uid: 'demo' + i, item, rot, n: hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize().toArray() })) }
   if (q.has('place')) G.ui.place = { item: q.get('place'), rot: 0.6 }
@@ -170,13 +169,6 @@ function SurfaceGroup({ n, lift = 0, spin = 0, children, gref }) {
   return <group ref={gref} position={p.pos} quaternion={p.q}>{children}</group>
 }
 
-// Home sign with the bundled Fredoka font drawn into a canvas texture
-function HomeSign({ n }) {
-  const tex = useMemo(() => { const c = document.createElement('canvas'); c.width = 256; c.height = 128; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
-    const draw = () => { const x = c.getContext('2d'); x.fillStyle = '#e9cf9e'; x.fillRect(0, 0, 256, 128); x.strokeStyle = '#8a5a3c'; x.lineWidth = 10; x.strokeRect(5, 5, 246, 118); x.fillStyle = '#5a3a24'; x.font = '500 70px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('Home', 128, 70); x.fillStyle = '#d9655b'; x.beginPath(); x.arc(30, 30, 9, 0, 7); x.fill(); t.needsUpdate = true }
-    draw(); document.fonts?.ready.then(draw); return t }, [])
-  return <SurfaceGroup n={n} spin={0.4}><Mx geo={GE.cyl} mat={m('wood', '#a8744c')} scale={[0.014, 0.34, 0.014]} position={[0, 0.17, 0]} /><mesh position={[0, 0.32, 0.012]}><planeGeometry args={[0.24, 0.12]} /><meshBasicMaterial map={tex} side={THREE.DoubleSide} /></mesh><mesh position={[0, 0.32, 0.006]} material={hullMat}><boxGeometry args={[0.26, 0.14, 0.008]} /></mesh></SurfaceGroup>
-}
 function Bench({ b }) {
   return <group position={b.pos} quaternion={b.q}>
     {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z], i) => <Mx key={i} geo={GE.box} mat={m('wood2', '#8a5a3c')} scale={[0.025, 0.14, 0.025]} position={[x * 0.12, 0.07, z * 0.06]} />)}
@@ -347,7 +339,7 @@ export function GameWorld() {
     <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
-    <Bench b={L.bench} /><HomeSign n={L.sign.n} /><Sparkles />
+    <Bench b={L.bench} /><Sparkles />
     {G.s.placed.filter(p => !p.in).map(p => <SurfaceGroup key={p.uid} n={new THREE.Vector3(...p.n)} spin={p.rot}><Decor item={p.item} /></SurfaceGroup>)}
     <group ref={el => { if (el) refs.current.__ghost = el }} visible={false}><GhostDecor /></group>
     {G.s.unlocked.bridge && <><RopeBridge br={L.bridge} /><Reward br={L.bridge} /></>}

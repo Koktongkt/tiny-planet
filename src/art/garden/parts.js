@@ -3,6 +3,8 @@
 // garden merges every visible plant into ONE mesh (see GardenPlots.jsx), so the triangle cost is exactly what's drawn.
 import * as THREE from 'three'
 import { P, emitParts, buildGeometry } from '../kit.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { Builder } from '../../props/kit.js'
 export { emitParts, buildGeometry }
 export const STAGES = ['seed', 'sprout', 'young', 'mature', 'ripe', 'withered']
 export const CROPS = ['skyseed', 'turnip', 'carrot', 'herb']
@@ -91,19 +93,22 @@ export function sparkleSpots(crop) { return crop === 'skyseed' ? [[0.01, 0.1, 0]
 export const SLOTS = [[-0.065, -0.065], [0.065, -0.065], [-0.065, 0.065], [0.065, 0.065]]
 // marker stake with the crop's colour tag (bed-local)
 export function stakeParts(crop) { return [P('box', COL.tagPost, [0.118, 0.035, -0.118], [0.006, 0.07, 0.006], [0, 0.6, 0], 0.15), P('box', TAG[crop] || '#e8dcc8', [0.118, 0.066, -0.118], [0.026, 0.018, 0.004], [0, 0.6, 0.05], 0.15)] }
-// ---------- the bed: tilled soil with three furrow ridges + plank edging + corner pegs (one geometry, instanced) ----------
+// ---------- the bed: a chibi raised bed (one geometry, instanced) ----------
+// Built with the house's prop kit so it matches the cottage and fence: a puffy tilled-soil cushion with three soft
+// furrows, framed by chunky rounded orange-wood rims (the fence's colours) with round knobs at the corners.
+// aSoil marks the soil (it darkens when watered); everything else is the frame.
+export const BED_COL = { soil: '#8b5b3c', furrow: '#9d6a47', rim: '#e9a062', rim2: '#f2b274', knob: '#dd8f52' }
 export function bedGeometry() {
-  const parts = [], S = PLOT_SIZE, iw = S - 0.036
-  parts.push({ ...P('box', '#86603f', [0, 0.012, 0], [iw, 0.026, iw]), soil: 1 })
-  for (let k = -1; k <= 1; k++) parts.push({ k: 'cyl', c: '#93694a', p: [-iw / 2 + 0.004, 0.022, k * 0.075], s: [0.012, iw - 0.008, 0.009], r: [0, 0, -Math.PI / 2], soil: 1 })
-  const pl = (x, z, lx, lz, c) => parts.push(P('box', c, [x, 0.02, z], [lx, 0.04, lz]))
-  pl(0, -S / 2 + 0.01, S, 0.02, COL.wood); pl(0, S / 2 - 0.01, S, 0.02, '#a88462'); pl(-S / 2 + 0.01, 0, 0.02, S - 0.04, '#a88462'); pl(S / 2 - 0.01, 0, 0.02, S - 0.04, COL.wood)
-  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(P('box', COL.wood2, [x * (S / 2 - 0.01), 0.026, z * (S / 2 - 0.01)], [0.026, 0.052, 0.026]))
-  const out = { pos: [], nor: [], col: [], base: [], w: [] }, soil = []
-  const id = new THREE.Matrix4(), O = new THREE.Vector3()
-  for (const pt of parts) { const before = out.pos.length / 3; emitParts([pt], id, O, out); const cnt = out.pos.length / 3 - before; for (let i = 0; i < cnt; i++) soil.push(pt.soil ? 1 : 0) }
-  const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.Float32BufferAttribute(out.pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(out.nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(out.col, 3)); g.setAttribute('aSoil', new THREE.Float32BufferAttribute(soil, 1))
-  return g
+  const S = PLOT_SIZE, iw = S - 0.05, soil = new Builder({}), frame = new Builder({})
+  soil.puff([iw, 0.024, iw], [0, 0.014, 0], BED_COL.soil, { bulge: 0.45, hi: 0.05, shade: 0.2 })
+  for (let k = -1; k <= 1; k++) soil.stick([0.009, iw - 0.03], [0, 0.028, k * 0.075], BED_COL.furrow, { rot: [0, 0, Math.PI / 2], hi: 0.05, shade: 0 })
+  const t = 0.03, h = 0.042
+  for (const sd of [-1, 1]) {
+    frame.box([S, h, t], [0, h / 2, sd * (S / 2 - t / 2)], sd < 0 ? BED_COL.rim : BED_COL.rim2, { r: 0.013, seg: 2, hi: 0.12 })
+    frame.box([t, h, S - 2 * t], [sd * (S / 2 - t / 2), h / 2, 0], BED_COL.rim2, { r: 0.013, seg: 2, hi: 0.12 })
+  }
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) frame.ball(0.021, [x * (S / 2 - t / 2), h + 0.006, z * (S / 2 - t / 2)], BED_COL.knob, { lo: true, hi: 0.2 })
+  const tag = (list, v) => list.map(it => { const g = it.geo; g.setAttribute('aSoil', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(v), 1)); return g })
+  return mergeGeometries([...tag(soil.parts, 1), ...tag(frame.parts, 0)])
 }
 export { rnd }

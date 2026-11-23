@@ -157,6 +157,18 @@ defineProp('gate', { name: 'Garden gate', size: [0.36, 0.24, 0.06], tags: ['outd
   k.shadow(w + 0.1, 0.09)
 })
 
+// ---------- garden ----------
+// A chubby watering can (spout toward +x), for the crop beds. opts: tilt (radians, pouring)
+defineProp('wateringCan', { name: 'Watering can', size: [0.2, 0.14, 0.11], tags: ['outdoor', 'garden'], pal: { can: '#8fc3e8', band: '#6fa6d0', rose: '#f2b274', handle: '#6fa6d0' }, opts: { tilt: 0 } }, (k, o) => {
+  k.within(mat(0, 0, 0, 0).multiply(new THREE.Matrix4().makeRotationZ(-o.tilt)), () => {
+    k.pill([0.048, 0.085], [0, 0.043, 0], 'can', { bevel: 0.3, belly: 0.08, hi: 0.3 })
+    k.pill([0.05, 0.012], [0, 0.07, 0], 'band', { bevel: 0.5, out: false })
+    k.stick([0.011, 0.11], [0.075, 0.07, 0], 'can', { rot: [0, 0, -0.95] })
+    k.pill([0.019, 0.016], [0.118, 0.103, 0], 'rose', { bevel: 0.5, rot: [0, 0, -0.95] })
+    k.ring(0.035, 0.009, [-0.012, 0.098, 0], 'handle', { scale: [0.035, 0.03, 0.035] })
+  })
+})
+
 // ---------- ground bits ----------
 defineProp('stepStone', { name: 'Stepping stone', size: [0.2, 0.02, 0.17], tags: ['outdoor', 'path'], pal: { stone: '#e5cdc4' }, opts: { r: 0.1, shadow: false } }, (k, o) => {
   k.pill([o.r, 0.022], [0, 0.004, 0], 'stone', { bevel: 0.45, scale: [o.r, 0.022, o.r * 0.84], hi: 0.12 })
