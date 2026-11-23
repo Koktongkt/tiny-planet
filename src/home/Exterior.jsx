@@ -26,9 +26,9 @@ export function buildYard(homeN, onHouse, lift) {
     k.shadow(1.5, 1.5)
     // entrance, matching the interior's: lantern posts hugging the door frame, steps + mat, daisy pots, bushes
     const fz = 0.55 * S
-    for (const s of [-1, 1]) k.use('lanternPost', at(s * 0.42, fz - 0.02, -s * 0.25))
+    for (const s of [-1, 1]) k.use('lanternPost', at(s * 0.36, fz - 0.03, -s * 0.15))
     k.use('steps', at(0, fz + 0.02, 0), { w: 0.4, mat: true })
-    for (const s of [-1, 1]) k.use('flowerPot', at(s * 0.56, fz + 0.0, s))
+    for (const s of [-1, 1]) k.use('flowerPot', at(s * 0.74, 0.4, s)) // out past the windows
     // flowering bushes round the foot of the wall, plain bushes toward the back
     ;[[-150, 1, 5], [150, 1, 4], [-100, 0.9, 3], [100, 0.95, 4], [-65, 0.85, 0], [70, 0.85, 2], [-20, 0.8, 0], [20, 0.8, 0]].forEach(([deg, sc, fl], i) => {
       const [x, z] = polar(deg, 0.66 * S), m = at(x, z, -deg * Math.PI / 180 + Math.PI, S * sc)
