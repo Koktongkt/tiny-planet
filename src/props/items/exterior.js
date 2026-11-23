@@ -77,12 +77,15 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: [
     k.ring(0.05, 0.016, [0, 0, 0.01], 'trim')
   })
   // roof: a cone core under three tiers of chunky rounded tiles, each tier overhanging the one below
-  const dy = HW - 0.52 // tiers are drawn for a 0.52 wall and lifted with it
+  // the roof is drawn for a 0.52 wall and roofR 0.44; it sits on the wall top and scales with roofR (rk) as a whole,
+  // so the same roof works from her house down to a dog house
+  const rk = o.roofR / 0.44, dy = HW - 0.52, Y = (y) => HW + (y - 0.52) * rk
   const tiers = [[0.63, 0.48, 0.44, 0.64, 26], [0.48, 0.6, 0.3, 0.76, 19], [0.34, 0.72, 0.15, 0.87, 13]].slice(0, o.tiers)
-    .map(([re, ye, rt, yt, n]) => [re * o.roofR / 0.44, ye + dy, rt * o.roofR / 0.44, yt + dy, n]) // the roof keeps its own size (roofR), so walls can widen under it
-  k.cone([tiers[0][0] * 0.94, 0.52], [0, tiers[0][1] + 0.26, 0], 'roofDark', { n: 20 })
+    .map(([re, ye, rt, yt, n]) => [re * rk, Y(ye), rt * rk, Y(yt), Math.max(9, Math.round(n * Math.pow(rk, 0.3)))])
+  const coreH = tiers[tiers.length - 1][3] - tiers[0][1] + 0.1 * rk
+  k.cone([tiers[0][0] * 0.94, coreH], [0, tiers[0][1] + coreH / 2, 0], 'roofDark', { n: 20 })
   tiers.forEach(([re, ye, rt, yt, n], ti) => {
-    const L = Math.hypot(re - rt, yt - ye), th = Math.atan2(re - rt, yt - ye), rm = (re + rt) / 2, ym = (ye + yt) / 2, t = 0.05
+    const L = Math.hypot(re - rt, yt - ye), th = Math.atan2(re - rt, yt - ye), rm = (re + rt) / 2, ym = (ye + yt) / 2, t = 0.05 * Math.max(0.6, rk)
     const tau = (rt / re - 1) / (rt / re + 1), w = 2 * PI * rm / n * 0.98 // a hair narrower than the gap: the tiles read one by one
     for (let i = 0; i < n; i++) {
       // hand-made unevenness (o.uneven, 0 = machine-neat): each tile a little longer or shorter (a ragged eave), wider
@@ -93,8 +96,8 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: [
     }
   })
   const top = tiers[tiers.length - 1][3]
-  k.pill([tiers[tiers.length - 1][2] + 0.02, 0.07], [0, top + 0.01, 0], 'roof', { bevel: 0.45 })
-  if (o.knob) { k.ring(0.075, 0.034, [0, top + 0.06, 0], 'roof2', { rot: [PI / 2, 0, 0] }); k.ball(0.055, [0, top + 0.1, 0], 'knob') }
+  k.pill([tiers[tiers.length - 1][2] + 0.02 * rk, 0.07 * rk], [0, top + 0.01 * rk, 0], 'roof', { bevel: 0.45 })
+  if (o.knob) { k.ring(0.075 * rk, 0.034 * rk, [0, top + 0.06 * rk, 0], 'roof2', { rot: [PI / 2, 0, 0] }); k.ball(0.055 * rk, [0, top + 0.1 * rk, 0], 'knob') }
   // chimney: a round brick stack up through the roof with a pointed hat
   if (o.chimney) { const c = o.chimney, x = Math.sin(c.phi * D2R) * c.r, z = -Math.cos(c.phi * D2R) * c.r
     k.pill([0.052, 0.44], [x, 0.76 + dy, z], 'chimney', { bevel: 0.1 })
@@ -167,6 +170,66 @@ defineProp('wateringCan', { name: 'Watering can', size: [0.2, 0.14, 0.11], tags:
     k.pill([0.019, 0.016], [0.118, 0.103, 0], 'rose', { bevel: 0.5, rot: [0, 0, -0.95] })
     k.ring(0.035, 0.009, [-0.012, 0.098, 0], 'handle', { scale: [0.035, 0.03, 0.035] })
   })
+})
+
+// ---------- Pip's dog house + bowl ----------
+// A classic kennel gone chibi, in the home's colours but its own shape: a chunky warm-wood plank body on a little
+// base, a soft sage-green pitched roof with a scalloped edge and an orange ridge cap (a daisy growing on top), a cream
+// arched doorway with a cushion spilling out, a bone name plaque with a paw print on the gable and paw prints on
+// the sides. opts: bowl (his food bowl beside it), bone (a chew bone on the grass)
+const paw = (k, x, y, z, s, c) => { k.ball([s, s * 0.8, s * 0.4], [x, y, z], c, { out: false, lo: true }); for (const [dx, dy] of [[-1.1, 1.1], [-0.38, 1.6], [0.38, 1.6], [1.1, 1.1]]) k.ball([s * 0.36, s * 0.42, s * 0.3], [x + dx * s, y + dy * s, z], c, { out: false, lo: true }) }
+const bone = (k, pos, len, r, c, o = {}) => { k.stick([r * 0.6, len], pos, c, { rot: [0, 0, PI / 2], ...o }); for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.ball(r, [pos[0] + sx * len / 2, pos[1] + (o.flat ? 0 : sz * r * 0.7), pos[2] + (o.flat ? sz * r * 0.7 : 0)], c, { lo: true, ...o }) }
+const gableGeo = (w, h, d) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(0, h); sh.lineTo(-w / 2, 0)
+  const g = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 }); g.translate(0, 0, -d / 2); g.computeVertexNormals(); return g }
+defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags: ['outdoor', 'pet'],
+  pal: { base: '#c98552', wood: '#f2b274', plank: '#dc9658', roof: '#9cc65a', roof2: '#88b74c', scallop: '#7fae45', ridge: '#e3843f', hole: '#4a2f24', trim: '#fff4e2', cushion: '#f29a46', cushion2: '#f7b56a', plaque: '#fff4e2', pawInk: '#c98552', sidePaw: '#e3843f', bone: '#fff4e2', mat: '#fbf1e0', matEdge: '#e6b98a' },
+  opts: { bowl: true, bone: true, shadow: false } }, (k, o) => {
+  const W = 0.3, D = 0.28, B = 0.03, H = 0.2, top = B + H, GH = 0.14, ang = Math.atan2(GH, W / 2) // body, gable rise, roof pitch
+  k.box([W + 0.06, B, D + 0.06], [0, B / 2, 0], 'base', { r: 0.014, seg: 2 }) // the little base it stands on
+  k.box([W, H + 0.02, D], [0, B + H / 2, 0], 'wood', { r: 0.035, belly: 0.05, hi: 0.08 })
+  k.add(gableGeo(W - 0.02, GH, D - 0.02), [0, top - 0.002, 0], 'wood', { hi: 0.05 })
+  for (const sd of [-1, 1]) for (let i = -2; i <= 2; i++) { // plank lines on the front and back, and on the sides
+    k.box([0.005, H - 0.03, 0.006], [i * W / 5.5, B + H / 2, sd * (D / 2 + 0.003)], 'plank', { r: 0.002, out: false, hi: 0, seg: 1 })
+    if (Math.abs(i) < 2) k.box([0.006, H - 0.03, 0.005], [sd * (W / 2 + 0.003), B + H / 2, i * D / 4], 'plank', { r: 0.002, out: false, hi: 0, seg: 1 }) }
+  // the roof: two puffy sage slabs meeting at an orange ridge, a scalloped edge of little puffs along both eaves
+  const L = Math.hypot(W / 2, GH) + 0.075, t = 0.04
+  for (const sd of [-1, 1]) {
+    const cx = sd * (Math.cos(ang) * (L / 2 - 0.05)) + sd * Math.sin(ang) * t / 2, cy = top + GH - Math.sin(ang) * (L / 2 - 0.05) + Math.cos(ang) * t / 2
+    k.puff([L, t, D + 0.1], [cx, cy, 0], sd < 0 ? 'roof' : 'roof2', { rot: [0, 0, -sd * ang], bulge: 0.35, hi: 0.2 })
+    const ex = sd * (Math.cos(ang) * (L - 0.05) + Math.sin(ang) * t * 0.3), ey = top + GH - Math.sin(ang) * (L - 0.05) - 0.006
+    for (let i = 0; i < 7; i++) k.ball([0.022, 0.018, 0.028], [ex, ey, -(D + 0.08) / 2 + (D + 0.08) * i / 6], 'scallop', { lo: true, hi: 0.15 })
+  }
+  k.stick([0.022, D + 0.13], [0, top + GH + t * 0.75, 0], 'ridge', { rot: [PI / 2, 0, 0], hi: 0.25 })
+  for (const sz of [-1, 1]) k.ball(0.028, [0, top + GH + t * 0.75, sz * (D + 0.13) / 2], 'ridge', { lo: true })
+  k.daisy([0.05, top + GH + t * 0.75 + 0.03, 0.04], 0.045, 'trim', 'cushion')
+  k.stick([0.003, 0.03], [0.05, top + GH + t * 0.75 + 0.012, 0.04], 'scallop', { out: false })
+  // doorway: a dark arch in a fat cream frame, a cushion spilling over the sill, a doormat
+  const fz = D / 2 + 0.002
+  k.arch(0.13, 0.07, 0.012, [0, B, fz], 'hole', { bevel: 0, out: false, hi: 0, shade: 0 })
+  k.archFrame(0.13, 0.07, 0.024, 0.03, [0, B, fz + 0.008], 'trim')
+  k.puff([0.11, 0.028, 0.06], [0, B + 0.014, fz + 0.01], 'cushion', { bulge: 0.5, hi: 0.25 })
+  k.puff([0.055, 0.016, 0.03], [-0.02, B + 0.032, fz + 0.016], 'cushion2', { bulge: 0.5, rot: [0, -0.3, 0], out: false })
+  k.box([0.14, 0.008, 0.07], [0, 0.004, fz + 0.085], 'matEdge', { r: 0.02, out: false, hi: 0, seg: 2 }); k.box([0.118, 0.01, 0.054], [0, 0.005, fz + 0.085], 'mat', { r: 0.016, out: false, hi: 0, seg: 2 })
+  // the name plaque on the gable, paw prints on the sides
+  bone(k, [0, top + 0.045, fz - 0.002], 0.065, 0.014, 'plaque'); paw(k, 0, top + 0.04, fz + 0.01, 0.006, 'pawInk')
+  for (const sd of [-1, 1]) k.within(mat(sd * (W / 2 + 0.004), B + H * 0.5, 0, sd * PI / 2), () => paw(k, 0, -0.01, 0, 0.016, 'sidePaw'))
+  if (o.bone) bone(k, [-0.22, 0.012, 0.22], 0.06, 0.013, 'bone', { flat: true, rot: [0, 0.6, PI / 2] })
+  if (o.bowl) k.use('dogBowl', mat(0.3, 0, 0.12, -0.4), { shadow: false })
+  k.shadow(0.5, 0.44, [0, 0.003, 0.02]); if (o.bowl) k.shadow(0.16, 0.16, [0.3, 0.003, 0.12])
+})
+// his food bowl: a classic flared feeding bowl, hollow: a wide heavy base, sloped orange sides and a rolled rim, a
+// cream glaze inside, kibble heaped in the dip and a paw print on the side. opts: food (0..1, how full)
+const lathe = (pts, seg = 32) => { const g = new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg); g.computeVertexNormals(); return g }
+defineProp('dogBowl', { name: "Pip's food bowl", size: [0.15, 0.06, 0.15], tags: ['outdoor', 'pet'],
+  pal: { bowl: '#f29a46', foot: '#e07f3c', glaze: '#fff4e2', kibble: '#a8693f', kibble2: '#c98552', pawInk: '#fff4e2' }, opts: { food: 1 } }, (k, o) => {
+  // outside: foot ring, sides sloping in to the rim, the rim rolled over (one lathe, outlined)
+  k.add(lathe([[0, 0], [0.07, 0], [0.074, 0.004], [0.072, 0.012], [0.064, 0.03], [0.057, 0.043], [0.056, 0.05], [0.051, 0.054], [0.046, 0.051]]), [0, 0, 0], 'bowl', { hi: 0.3, shade: 0.25 })
+  k.ring(0.0705, 0.006, [0, 0.008, 0], 'foot', { rot: [PI / 2, 0, 0], out: false })
+  // inside: the glazed hollow, down to a floor well below the rim (no outline: it is seen through the rim)
+  k.add(lathe([[0.046, 0.051], [0.043, 0.04], [0.036, 0.022], [0.026, 0.016], [0, 0.015]]), [0, 0, 0], 'glaze', { out: false, hi: 0.2, shade: 0 })
+  paw(k, 0, 0.022, 0.067, 0.0075, 'pawInk')
+  if (o.food > 0) { const n = Math.round(16 * o.food); for (let i = 0; i < n; i++) { const a = i * 2.4, r = 0.03 * Math.sqrt((i + 0.5) / n)
+    k.ball([0.0085, 0.0065, 0.0085], [Math.sin(a) * r, 0.026 + 0.024 * o.food * (1 - r / 0.036) + (i % 3) * 0.002, Math.cos(a) * r], i % 2 ? 'kibble' : 'kibble2', { lo: true, out: false, rot: [0.3 * (i % 3), a, 0] }) } }
 })
 
 // ---------- ground bits ----------
