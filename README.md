@@ -23,7 +23,7 @@ A cozy, watercolour-toon 3D tiny planet you can walk around. Every mesh is gener
 - **WASD / arrow keys:** walk · **Shift:** run · **Space:** jump · **tap or click:** walk to that spot
 - **V:** toggle planet view (drag to spin, with inertia) / walk view
 
-URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
+URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=zone&z=home|home-garden|home-yard` (her cottage, crop beds, whole yard), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
 
 ## Tech stack
 

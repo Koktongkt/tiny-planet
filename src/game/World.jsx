@@ -10,6 +10,7 @@ import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H } from '../wor
 import { T, C, toon, glow, planetRef } from '../common.jsx'
 import { G, emit, subscribe, add, markTaken, available, toast, count, take } from './store.js'
 import { watchReady } from '../signals.js'
+import { YARD } from '../home/yard.js'
 import { ITEMS, DECOR } from './items.js'
 import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
@@ -54,8 +55,8 @@ export function layout(Zc, village, homeN, blocked) {
   ;[['mushroom', 0, 0], ['wood', 0.04, 0.9], ['moss', 0.035, -1.0], ['acorn', 0.05, 2.4], ['pinecone', 0.06, -2.2]].forEach(([item, d, b], k) => { const pn = around(fc, d, b); spots.push({ id: `${item}-show-${k}`, item, zone: 'forest', n: pn, stand: pn, pos: posOf(pn), standPos: posOf(pn), spin: k * 1.7, s: 1.5 }) })
   // home bench, sign
   const hp = place(homeN, 0, 0)
-  const benchN = posOf(homeN).add(new THREE.Vector3(0.48, 0, 0.42).applyQuaternion(hp.q)).normalize()
-  const signN = posOf(homeN).add(new THREE.Vector3(-0.42, 0, 0.5).applyQuaternion(hp.q)).normalize()
+  const benchN = posOf(homeN).add(new THREE.Vector3(YARD.bench[0], 0, YARD.bench[1]).applyQuaternion(hp.q)).normalize()
+  const signN = posOf(homeN).add(new THREE.Vector3(YARD.sign[0], 0, YARD.sign[1]).applyQuaternion(hp.q)).normalize()
   // rope bridge up the cliff, on the side away from the lake
   const cc = Zc.cliff, cr = ZONES.cliff.r, awayAz = toward(cc, Zc.lake, 0.2).clone()
   const out = toward(cc, cc.clone().multiplyScalar(2).sub(awayAz), 1) // dummy init

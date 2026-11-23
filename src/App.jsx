@@ -40,6 +40,8 @@ import { fxPasses, nightFromPhase } from './fx.js'
 import { paceFrame, stampActive } from './framePace.js'
 import { butterflyAngle, butterflyFrame } from './butterflies.js'
 import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
+import { YARD, CHIMNEY_TOP, yardColliders } from './home/yard.js'
+const HomeExteriorLazy = lazy(() => import('./home/Exterior.jsx')) // her chibi cottage + yard + crop garden (one baked mesh)
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
 import { SHIRTS, tangentAt, buildWalkers, buildNewWalkers, SQ, sqSpot, BENCH, benchSeat, CHAT_A, CHAT_B, SWEEP, A, RATE, STATIC_ACTS, LINEUP } from './npc/routines.js'
 import { walkerPlan, walkerStats } from './npc/sleep.js'
@@ -140,7 +142,7 @@ function VegPatch({ i }) {
 }
 
 function Stones() {
-  const items = useMemo(() => { const a = []; for (let i = 0; i < 6; i++) for (let k = 0; k < 4; k++) { const d = onHouse(i, (k % 2 ? 0.04 : -0.04), 0.4 + k * 0.13); a.push({ ...place(d, 0.0, rnd() * 3), s: 0.85 + rnd() * 0.3 }) } return a }, [])
+  const items = useMemo(() => { const a = []; for (let i = 1; i < 6; i++) for (let k = 0; k < 4; k++) { const d = onHouse(i, (k % 2 ? 0.04 : -0.04), 0.4 + k * 0.13); a.push({ ...place(d, 0.0, rnd() * 3), s: 0.85 + rnd() * 0.3 }) } return a }, [])
   const geo = useMemo(() => { const g = new THREE.CylinderGeometry(0.055, 0.06, 0.025, 9); g.scale(1, 1, 0.8); return g }, [])
   return <Instanced items={items} geo={geo} mat={DM.stone} />
 }
@@ -154,12 +156,12 @@ const houseVariant = (i) => { const k = `${i % 3}|${i % 2}|${i % 4}`; let g = HG
 const HM = { shell: paint(toon('#ffffff', { vertexColors: true }), 0.1, true, 6), detail: paint(toon('#ffffff', { vertexColors: true }), 0.12, false, 9) }
 const HOUSE_LIFT = -0.02
 function Moss() { // moss cushions on the tile rows (follow the roof slope) and at the wall foot
-  const items = useMemo(() => { const a = []; HOUSES.forEach((hn, i) => { const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, half = 0.335, ridge = tall + 0.31, eave = tall - 0.015, ang = Math.atan2(ridge - eave, half), p = place(hn, HOUSE_LIFT, i * 1.3)
+  const items = useMemo(() => { const a = []; HOUSES.forEach((hn, i) => { if (i === 0) return; const w = 0.55 + (i % 3) * 0.1, tall = i % 2 ? 0.55 : 0.45, half = 0.335, ridge = tall + 0.31, eave = tall - 0.015, ang = Math.atan2(ridge - eave, half), p = place(hn, HOUSE_LIFT, i * 1.3)
     ;[[-0.3, 0.72, 1], [0.22, 0.86, 1], [0.05, 0.62, -1], [-0.18, 0.9, -1]].forEach(([x, u, sd], k) => { if ((i + k) % 3 === 2) return; const pos = p.pos.clone().add(new THREE.Vector3(x * w, ridge - (ridge - eave) * u + 0.03 + k * 0.002, sd * half * u).applyQuaternion(p.q)); a.push({ pos, q: p.q.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(sd * ang, 0, 0))).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rnd() * 6, 0))), s: 0.6 + rnd() * 0.5, c: C('#7fae5f').lerp(CC('#a8c86a'), rnd()) }) }) }); return a }, [])
   const geo = useMemo(() => { const g = new THREE.IcosahedronGeometry(0.06, 1); g.scale(1, 0.3, 0.8); return g }, [])
   return <Instanced items={items} geo={geo} mat={useMemo(() => toon('#ffffff'), [])} />
 }
-const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3), c = houseVariant(i).chimney; return { top: p.pos.clone().add(c.clone().applyQuaternion(p.q)), up: p.n } })
+const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3), c = i === 0 ? new THREE.Vector3(...CHIMNEY_TOP) : houseVariant(i).chimney; return { top: p.pos.clone().add(c.clone().applyQuaternion(p.q)), up: p.n } })
 const SmokeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Smoke }))) // r7-ship: lazy (startup budget)
 
 function Butterflies() {
@@ -213,7 +215,7 @@ function Details() {
   return <>
     {<Suspense fallback={null}>{BRIDGES.map((b, i) => <BridgeLazy key={i} b={b} Basis={Basis} DM={DM} />)}</Suspense>}
     <Suspense fallback={null}><LaundryLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><CatLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /><ShrineLazy Basis={Basis} DM={DM} SPOTS={SPOTS} /></Suspense><Suspense fallback={null}><BusStopLazy DM={DM} SPOTS={SPOTS} /></Suspense><Moss /><Suspense fallback={null}><SmokeLazy DM={DM} CHIMNEYS={CHIMNEYS} /></Suspense><Butterflies /><Seeds /><Wildflowers /><Stones />
-    <Suspense fallback={null}>{[0, 1, 3, 4].map(i => <MailboxLazy key={i} i={i} DM={DM} onHouse={onHouse} />)}</Suspense>
+    <Suspense fallback={null}>{[0, 1, 3, 4].map(i => <MailboxLazy key={i} i={i} DM={DM} onHouse={onHouse} at={i === 0 ? YARD.mailbox : null} />)}</Suspense>
     <VegPatch i={4} /><VegPatch i={5} />
   </>
 }
@@ -223,8 +225,9 @@ const busy = (n) => EXTRA_BUSY.some(e => e.distanceTo(n) < 0.1 * K) || SPOTS.vie
 const tc = ['#5fae63', '#7cc26a', '#4f9a5e', '#9ccf6a'].map(C)
 const TREES = [], FIRS = []
 for (let i = 0; i < 700 * DENS; i++) { const n = randDir(); const cl = Math.sin(n.x * 4 + 1) * Math.sin(n.z * 3 - n.y * 2); if (cl < 0.1 || busy(n)) continue; const fir = rnd() < 0.4; (fir ? FIRS : TREES).push({ ...place(n, -0.02, rnd() * 6), s: 0.45 + rnd() * 0.35, c: tc[i % 4].clone().multiplyScalar(0.9 + rnd() * 0.2) }) }
-const COLLIDERS = [...HOUSES.map(n => ({ n, r: 0.085 * K })), ...MILLS.map(n => ({ n, r: 0.065 * K })), ...[...TREES, ...FIRS].map(t => ({ n: t.n, r: (0.03 + 0.02 * t.s) * K })), ...ZONE_COLLIDERS]
-const _setupHome = () => setupHome({ colliders: COLLIDERS, P, homeN: HOUSES[0], doorN: onHouse(0, 0, 0.3), outN: onHouse(0, 0, 0.78) })
+for (const A of [TREES, FIRS]) for (let i = A.length - 1; i >= 0; i--) if (A[i].n.angleTo(HOUSES[0]) * R < 2.6) A.splice(i, 1) // her fenced yard stays clear
+const COLLIDERS = [...HOUSES.map((n, i) => ({ n, r: i === 0 ? YARD.houseR / R : 0.085 * K })), ...yardColliders().slice(1).map(([x, z, r]) => ({ n: onHouse(0, x, z), r: r / R })), ...MILLS.map(n => ({ n, r: 0.065 * K })), ...[...TREES, ...FIRS].map(t => ({ n: t.n, r: (0.03 + 0.02 * t.s) * K })), ...ZONE_COLLIDERS]
+const _setupHome = () => setupHome({ colliders: COLLIDERS, P, homeN: HOUSES[0], doorN: onHouse(0, 0, YARD.doorZ), outN: onHouse(0, 0, YARD.outZ) })
 function Vegetation() {
   const { grass, flowers } = useMemo(() => {
     const grass = [], flowers = [], g1 = C('#86c46c'), g2 = C('#b9de86'), fc = ['#fff4f0', '#ffd36e', '#f59ab0', '#c9b3ff'].map(C)
@@ -288,6 +291,16 @@ function House({ n, i }) {
     <mesh geometry={hg.detail} material={HM.detail} />
     <mesh geometry={hg.glass} material={MAT.win} />
     <mesh geometry={SPILL_GEO} material={SPILL} position={[0, 0.05, 0]} renderOrder={1} />
+  </Surface>
+}
+// Home: the chibi cottage + yard (lazy art); an invisible drum keeps the follow camera out of the walls, and the
+// night window light still spills on the grass
+const HOME_OCC_GEO = new THREE.CylinderGeometry(0.55, 0.58, 1.1, 12).translate(0, 0.55, 0)
+function HomeHouse({ n }) {
+  return <Surface n={n} lift={HOUSE_LIFT} spin={0}>
+    <mesh geometry={HOME_OCC_GEO} ref={occ} visible={false} />
+    <mesh geometry={SPILL_GEO} material={SPILL} position={[0, 0.05, 0]} renderOrder={1} />
+    <Suspense fallback={null}><HomeExteriorLazy homeN={n} onHouse={onHouse} lift={HOUSE_LIFT} /></Suspense>
   </Surface>
 }
 function Lamp({ n, i = 0 }) {
@@ -502,6 +515,9 @@ const ZVIEWS = {
   'harbour-ruins': { cam: dir(-0.1, 3.7), ch: 3.4, look: Zc.harbour.clone().lerp(Zc.ruins, 0.45), lh: 0.0 },
   'forest-giant': { cam: around(Zc.giant, 0.78, 4.6), ch: 3.6, look: Zc.giant, lh: 2.0 },
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
+  home: { cam: onHouse(0, 0.7, 3.4), ch: 1.5, look: onHouse(0, -0.25, 0.2), lh: 0.45 }, // her cottage + yard
+  'home-garden': { cam: onHouse(0, 0.3, 3.0), ch: 2.0, look: onHouse(0, -1.25, 0.6), lh: 0.1 },
+  'home-yard': { cam: onHouse(0, -0.3, 4.2), ch: 3.4, look: onHouse(0, -0.3, 0.3), lh: 0 }, // the whole fenced yard from above
 }
 const CAMD = q.has('camd') ? +q.get('camd') : 1
 function Rig() {
@@ -576,7 +592,7 @@ function Planet() {
   const onDown = (e) => { if (VIEW.mode !== 'follow' || TALK.open) return; e.stopPropagation(); const l = planetRef.current.worldToLocal(e.point.clone()).normalize(); onTap(e.nativeEvent || e, () => { P.target = l }) }
   return <group rotation={[0.35, 0, 0]}><group ref={el => planetRef.current = el} onPointerDown={onDown}>
     <Ground /><Suspense fallback={null}><PathLazy /><StreamLazy /></Suspense>{k >= 2 && <Vegetation />}
-    {k >= 2 && HOUSES.map((n, i) => <House key={i} n={n} i={i} />)}
+    {k >= 2 && HOUSES.map((n, i) => i === 0 ? <HomeHouse key={i} n={n} /> : <House key={i} n={n} i={i} />)}
     {k >= 2 && MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
     {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
     {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}

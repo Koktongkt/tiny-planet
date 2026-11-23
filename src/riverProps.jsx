@@ -147,8 +147,8 @@ export function BusStop({ DM, SPOTS }) {
   </Surface>
 }
 
-export function Mailbox({ i, DM, onHouse }) {
-  return <Surface n={onHouse(i, -0.42, 0.42)} spin={i * 1.3}>
+export function Mailbox({ i, DM, onHouse, at }) {
+  return <Surface n={at ? onHouse(i, at[0], at[1]) : onHouse(i, -0.42, 0.42)} spin={i * 1.3}>
     <mesh position={[0, 0.11, 0]} material={DM.rail}><boxGeometry args={[0.02, 0.22, 0.02]} /></mesh>
     <mesh position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]} material={DM.red}><cylinderGeometry args={[0.04, 0.04, 0.1, 12, 1, false, 0, Math.PI]} /><Outlines thickness={0.005} color={INK} /></mesh>
     <mesh position={[0, 0.235, 0]} material={DM.red}><boxGeometry args={[0.08, 0.03, 0.1]} /></mesh>

@@ -22,10 +22,11 @@ window.__spots = { SPOTS, B0 }
 export const TRAIN_STOPS = [{ id: 'village', lon: 0.75 }, { id: 'forest', lon: 3.7 }]
 export const TRAIN = { fn: null, cars: null }
 export const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c)]
-// Stage B garden beds beside Home (HOUSES[0]): 2 x 3 beds left of the Home sign, 0.36 apart, in the house frame
+// Stage B garden beds beside Home (HOUSES[0]): 2 x 3 beds in the fenced garden left of the house, in the house frame
 // (+x right, +z out of the door). Shared by the lazy garden (systems/World3D.jsx) and the lawn, which keeps tufts out
 // from under the beds.
-export const GARDEN_BEDS = [[-0.84, 0.3], [-1.2, 0.3], [-0.84, 0.66], [-1.2, 0.66], [-0.84, 1.02], [-1.2, 1.02]]
+import { GARDEN_BEDS } from '../home/yard.js' // inside the fenced crop garden (home/yard.js)
+export { GARDEN_BEDS }
 export function gardenBedNs(homeN, height) {
   const hp = place(homeN, 0, 0), hpos = homeN.clone().normalize().multiplyScalar(R + height(homeN))
   return GARDEN_BEDS.map(([x, z]) => hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize())

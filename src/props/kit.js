@@ -71,9 +71,9 @@ function pillGeo(b = 0.25, seg = 24) {
     p.push(new THREE.Vector2(0, h / 2)); const g = new THREE.LatheGeometry(p, seg); g.computeVertexNormals(); return g })
 }
 // a rounded box of size s with edge radius r (true radius, not scaled): built per size so the corners stay round
-function rbox(s, r) { const k = `rbx${s.map(x => x.toFixed(3))}|${r.toFixed(3)}`; return cache(k, () => { const rr = Math.min(r, ...s.map(x => x / 2 - 1e-3)); return new RoundedBoxGeometry(s[0], s[1], s[2], 3, rr) }) }
+function rbox(s, r, seg = 3) { const k = `rbx${s.map(x => x.toFixed(3))}|${r.toFixed(3)}|${seg}`; return cache(k, () => { const rr = Math.min(r, ...s.map(x => x / 2 - 1e-3)); return new RoundedBoxGeometry(s[0], s[1], s[2], seg, rr) }) }
 const shadowGeo = () => cache('shadow', () => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2))
-const sph = () => cache('sph', () => new THREE.SphereGeometry(1, 20, 14))
+const sph = (lo) => lo ? cache('sphLo', () => new THREE.SphereGeometry(1, 12, 8)) : cache('sph', () => new THREE.SphereGeometry(1, 20, 14))
 const half = () => cache('half', () => new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2))
 const tor = (t = 0.3) => cache('tor' + t, () => new THREE.TorusGeometry(1, t, 10, 28))
 const cone = (n = 16) => cache('cone' + n, () => new THREE.ConeGeometry(1, 1, n))
@@ -124,8 +124,17 @@ const tickFire = () => { FIRE_T.value = performance.now() / 1000 }
 // ---------- the builder ----------
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3()
 class Builder {
-  constructor(pal) { this.pal = pal; this.parts = []; this.glow = []; this.pattern = {}; this.halos = []; this.fires = [] }
+  constructor(pal) { this.pal = pal; this.parts = []; this.glow = []; this.pattern = {}; this.halos = []; this.fires = []; this.shadows = []; this.xf = null }
   c(name) { return col(this.pal[name] ?? name) }
+  // composition: run fn with every part it adds moved by matrix m (stacks), so many items bake into ONE prop
+  within(m, fn) { const prev = this.xf; this.xf = prev ? prev.clone().multiply(m) : m.clone(); try { fn() } finally { this.xf = prev } return this }
+  // another catalog item, built in place under matrix m with its own palette (+ its contact shadow, merged)
+  use(id, m, o = {}) { const def = CATALOG[id]; if (!def) throw new Error('unknown prop ' + id); const pal = this.pal, oo = { ...def.opts, ...o }
+    this.pal = { ...def.pal, ...(o.pal || {}) }
+    this.within(m, () => { def.build(this, oo); if (oo.shadow !== false && !def.tags.includes('wall') && !def.tags.includes('structure')) this.shadow(def.size[0] * 1.25 + 0.04, def.size[2] * 1.25 + 0.04) })
+    this.pal = pal; return this }
+  // a soft contact shadow (w x d) on the ground at the current transform
+  shadow(w, d, pos = [0, 0.003, 0]) { const g = shadowGeo().clone(); g.applyMatrix4(_m.compose(_v.set(...pos), _q.identity(), _s.set(w, 1, d))); if (this.xf) g.applyMatrix4(this.xf); this.shadows.push(g); return this }
   // add geometry g with transform; o: { rot, scale, out (outline? default true), glow, shade (0..1 bottom darkening),
   //   hi (0..1 sheen on up-facing surfaces), pattern ('gingham'), tile (pattern repeats across the part) }
   add(g, pos = [0, 0, 0], name = 'wood', o = {}) {
@@ -138,7 +147,7 @@ class Builder {
     if (o.belly || o.taper) { const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2
       for (let i = 0; i < p.count; i++) { const t = ts[i], f = (1 + (o.taper || 0) * (t - 0.5) * 2) * (1 + (o.belly || 0) * Math.sin(Math.PI * Math.min(1, Math.max(0, t)))); p.setX(i, cx + (p.getX(i) - cx) * f); p.setZ(i, cz + (p.getZ(i) - cz) * f) } }
     _e.set(...(o.rot || [0, 0, 0]), o.order || 'XYZ'); _q.setFromEuler(_e); const s = o.scale ?? 1; _s.set(...(Array.isArray(s) ? s : [s, s, s]))
-    geo.applyMatrix4(_m.compose(_v.set(...pos), _q, _s))
+    geo.applyMatrix4(_m.compose(_v.set(...pos), _q, _s)); if (this.xf) geo.applyMatrix4(this.xf)
     // painted colour: a touch darker toward the part's own base (soft occlusion) and a creamy sheen where it faces up
     const c = this.c(name), sh = o.shade ?? 0.14, hi = o.glow ? 0 : (o.hi ?? 0.16), n = geo.attributes.normal, cols = new Float32Array(p.count * 3)
     for (let i = 0; i < p.count; i++) { const k = 1 - sh * (1 - ts[i]) ** 1.5, up = Math.max(0, Math.min(1, (n.getY(i) - 0.45) / 0.5)), h = hi * up * up
@@ -161,14 +170,16 @@ class Builder {
       this.stick([0.0035, len / n * 1.25], [p[0], p[1] + len / n * 0.4, p[2]], o.stem || 'leafDark', { rot: [Math.cos(a) * -0.5, 0, Math.sin(a) * 0.5], out: false })
       this.leaf(p, l * (1 - t * 0.4), a + side * 0.8, -0.1 - t * 0.5, i % 3 === 1 ? (o.alt || 'leafLight') : (o.name || 'leaf'), { roll: side * 0.4, w: 1, out: o.out ?? false }) } return this }
   // an animated flame sheet (base at pos, facing +z; cross for a free-standing fire seen from any side)
-  fire(pos, w, h, o = {}) { this.fires.push({ pos, w, h, cross: !!o.cross }); return this }
+  fire(pos, w, h, o = {}) { const k = this.xfScale(); this.fires.push({ pos: this.xfPos(pos), w: w * k, h: h * k, cross: !!o.cross }); return this }
   // a soft additive glow around a light source (a camera-facing sprite; one draw call)
-  halo(pos, r, color = '#ffc870', o = {}) { this.halos.push({ pos, r, color, flicker: !!o.flicker }); return this }
+  halo(pos, r, color = '#ffc870', o = {}) { this.halos.push({ pos: this.xfPos(pos), r: r * this.xfScale(), color, flicker: !!o.flicker }); return this }
+  xfPos(pos) { return this.xf ? _v.set(...pos).applyMatrix4(this.xf).toArray() : pos }
+  xfScale() { return this.xf ? _s.setFromMatrixScale(this.xf).x : 1 }
   // ---- shorthands (sizes are full sizes unless noted) ----
-  box(size, pos, name, o = {}) { return this.add(rbox(size, o.r ?? Math.min(...size) * 0.22), pos, name, o) } // rounded box, edge radius r
+  box(size, pos, name, o = {}) { return this.add(rbox(size, o.r ?? Math.min(...size) * 0.22, o.seg ?? 3), pos, name, o) } // rounded box, edge radius r
   puff(size, pos, name, o = {}) { return this.add(puffGeo(size, o.bulge ?? 0.35), pos, name, o) } // cushion / mattress / pouf top
   pill([r, h], pos, name, o = {}) { return this.add(pillGeo(o.bevel ?? 0.22, o.seg ?? 24), pos, name, { ...o, scale: o.scale ?? [r, h, r] }) } // rounded cylinder (radius, height; o.scale overrides, e.g. for an oval)
-  ball(r, pos, name, o = {}) { return this.add(sph(), pos, name, { ...o, scale: Array.isArray(r) ? r : [r, r, r] }) }
+  ball(r, pos, name, o = {}) { return this.add(sph(o.lo), pos, name, { ...o, scale: Array.isArray(r) ? r : [r, r, r] }) }
   dome(r, pos, name, o = {}) { return this.add(half(), pos, name, { ...o, scale: Array.isArray(r) ? r : [r, r, r] }) }
   ring(r, t, pos, name, o = {}) { return this.add(tor(t / r), pos, name, { ...o, scale: o.scale ?? [r, r, r] }) } // torus in the xy plane (rot it; o.scale overrides)
   cone([r, h], pos, name, o = {}) { return this.add(cone(o.n ?? 16), pos, name, { ...o, scale: [r, h, r] }) }
@@ -190,12 +201,14 @@ class Builder {
     if (this.glow.length) g.add(new THREE.Mesh(mergeGeometries(this.glow.map(p => p.geo)), GLOW))
     for (const f of this.fires) for (const ry of f.cross ? [0, Math.PI / 2] : [0]) { const m = new THREE.Mesh(fireGeo(), FIRE_MAT); m.position.set(...f.pos); m.scale.set(f.w, f.h, 1); m.rotation.y = ry; m.renderOrder = 4; m.onBeforeRender = tickFire; g.add(m) }
     for (const h of this.halos) { const sp = new THREE.Sprite(haloMat(h.color)); sp.position.set(...h.pos); sp.scale.setScalar(h.r * 2); sp.renderOrder = 5; if (h.flicker) { sp.userData.r = h.r; sp.onBeforeRender = flicker } g.add(sp) }
+    if (this.shadows.length) { const sm = new THREE.Mesh(mergeGeometries(this.shadows), SHADOW); sm.renderOrder = -1; g.add(sm) }
     g.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false } })
     return g
   }
 }
 
 // ---------- registry ----------
+export { Builder }
 export const CATALOG = {} // id -> { id, name, size: [w, h, d], footprint, pal, build, tags }
 export function defineProp(id, meta, build) { CATALOG[id] = { id, name: meta.name || id, size: meta.size || [0.3, 0.3, 0.3], pal: meta.pal || {}, tags: meta.tags || [], opts: meta.opts || {}, build }; return CATALOG[id] }
 const made = new Map()
@@ -206,5 +219,8 @@ export function makeProp(id, o = {}) {
   if (!made.has(key)) { const k = new Builder({ ...def.pal, ...(o.pal || {}) }); def.build(k, { ...def.opts, ...o }); made.set(key, k.bake(def.size, { ...(def.tags.includes('wall') || def.tags.includes('structure') ? { shadow: false } : {}), ...def.opts, ...o })) }
   const src = made.get(key), g = new THREE.Group(); src.children.forEach(m => { const c = m.clone(); c.onBeforeRender = m.onBeforeRender; g.add(c) }); g.userData.prop = id; return g
 }
+// a one-off composition (a whole yard, a house): fn(k) places parts and catalog items (k.use / k.within), baked into
+// ONE toon mesh + ONE outline + one glow + one merged contact-shadow mesh. Not cached: the caller keeps the group.
+export function compose(fn, pal = {}) { const k = new Builder({ ...pal }); fn(k); return k.bake(null, { shadow: false }) }
 // floor footprint (x/z box around the origin, after a yaw of 0 / 90 / 180 / 270 deg) for collision lists like home BLOCKS
 export function footprint(id, x, z, yaw = 0, pad = 0) { const [w, , d] = CATALOG[id].size, q = Math.round(yaw / (Math.PI / 2)) & 1, hw = (q ? d : w) / 2 + pad, hd = (q ? w : d) / 2 + pad; return { id, x0: x - hw, x1: x + hw, z0: z - hd, z1: z + hd } }

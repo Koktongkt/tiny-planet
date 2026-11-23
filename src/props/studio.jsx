@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { CATALOG } from './index.js'
+import './items/exterior.js'
 import { Prop } from './Prop.jsx'
 const ChibiHer = lazy(() => import('../art/chibi/ChibiHer.jsx').then(m => ({ default: m.ChibiHer })))
 const q = new URLSearchParams(location.search), ONE = q.get('id'), SPIN = q.get('spin') !== '0', YAW = +(q.get('yaw') ?? 0.5), HER = q.get('her') !== '0'
