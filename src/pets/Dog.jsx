@@ -19,7 +19,7 @@ import { notePickup } from '../game/prompt/hints.js'
 import { atPlanet } from '../game/prompt/anchors.js'
 import { STILL } from '../game/prompt/still.js'
 import { newRest, petOffer, petLeft } from './petPrompt.js'
-const DREST = newRest() // Pip's bubble: offered after 3 s standing still beside him, then rests 10 min
+const DREST = newRest() // Pip's bubble: offered after 3 s standing still beside him, then rests 10 min (DOG.rest)
 import { Bubble, Puffs, Hearts, burst } from './fx.jsx'
 
 export const DOG_CFG = { s: 1.0, /* round9: Cozy Chibi Shiba (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'dog', floppy: false, body: [0.056, 0.054, 0.078], legH: 0.056, legR: 0.0155, stride: 0.055, head: 0.072, headY: 0.04, headUp: 0.5, headFwd: 0.9, eye: 0.22, ear: 0.92, earSplay: 0.0, spring: 1.6, collar: false, tongue: true, pupils: 'round',
@@ -38,6 +38,7 @@ const atPip = (out) => atPlanet(surf(DOG.n, out), 0.36)(out)
 const DIG = ['acorn', 'stone', 'coin', 'shell', 'pinecone', 'clay', 'shard']
 export const DOG = { n: new THREE.Vector3(0, 1, 0), f: new THREE.Vector3(1, 0, 0), speed: 0, state: 'follow', t: 0, dur: 0, mood: 0.6, side: 1, idleT: 0, barkCD: 4, splashCD: 0, name: 'Pip',
   petCD: 0, ex: 0, wetT: 0, decT: 2, playWin: 0, playRoll: 20, lastFetchH: -99, throws: 0, cd: {}, route: null, routeT: 0, stick: { mode: 'none', n: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector3(), t: 0 }, critter: { on: false, kind: 'fly', n: new THREE.Vector3(), d: new THREE.Vector3(), t: 0, up: 0 }, dug: [], onBike: 0, hop: 0, obj: null }
+DOG.rest = DREST
 if (typeof window !== 'undefined') window.__dog = DOG
 const DEMO = q.has('petsdemo') // ?petsdemo: both pets side by side outdoors (Mochi's rig sits beside Pip), close camera
 const FORCE = q.get('dog') || (DEMO ? 'sit' : null)

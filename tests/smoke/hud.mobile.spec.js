@@ -123,7 +123,7 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
     const D = window.__dog
     return !!(D && D.n && D.init && !D.onBike && !(D.hop > 0) && D.state !== 'onBike')
   }, null, { timeout: 30_000 })
-  await page.evaluate(() => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
+  await page.evaluate(() => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1; Object.assign(window.__dog.rest, { until: -Infinity, shown: false }) }) // riding with Pip started his 10-min rest
   const pet = page.locator('.tp-prompt, .tp-chip').first() // Pip's prompt is the head bubble now; F stacks above as .tp-chip
   await expect(pet).toBeVisible({ timeout: 20_000 })
   await expect(pet.locator('.key')).toHaveCount(0)

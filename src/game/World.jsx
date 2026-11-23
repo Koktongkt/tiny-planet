@@ -20,6 +20,7 @@ import { notePickup } from './prompt/hints.js'
 import { pickTarget, promptWeight } from './prompt/logic.js'
 import { atPlanet, facingCos } from './prompt/anchors.js'
 import { placePrompt } from './prompt/WorldPrompt.jsx'
+import { tickStill } from './prompt/still.js'
 import { setOutline } from './prompt/outline.js'
 // the traveller stands between the camera and the item: on screen near each other, and she is the closer one
 const _cv = new THREE.Vector3(), _cp = new THREE.Vector3(), _ca = new THREE.Vector3()
@@ -309,6 +310,7 @@ export function GameWorld() {
     const night = T.night > 0.5; G.night = night
     const H = GAME.H, inside = !!(H && (H.inside || H.alt)) // H.alt: the Stage C museum interior
     const cands = CANDS; cands.length = 0
+    { const hp = H && H.hp; if (inside && hp) tickStill(hp.x, 0, hp.z, dt); else tickStill(_pp.x, _pp.y, _pp.z, dt) } // before pets read it
     const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim) cands.push({ o, d, lim, cos: null }) } // indoors only the house's own interactables count
     forageTick(force); let forageShown = 0
     for (const sp of L.spots) {

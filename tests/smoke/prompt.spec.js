@@ -83,8 +83,8 @@ test('Pip stays quiet beside her until she stands still 3 s, then offers Pet', a
   await page.waitForFunction(() => { const D = window.__dog; return !!(D && D.n && D.init && !D.onBike && !(D.hop > 0) && D.state === 'follow') }, null, { timeout: 30_000 })
   await go(page, () => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
   await nearIs(page, () => /^dog/.test(window.__game.G.near?.id || ''))
-  expect(await page.evaluate(() => window.__game.G.near.quiet)).toBe(true) // just arrived: no bubble
-  await expect(page.locator('.tp-bubble-wrap .tp-prompt')).toHaveCount(0)
+  const now = await page.evaluate(() => ({ quiet: window.__game.G.near.quiet, bubbles: document.querySelectorAll('.tp-bubble-wrap .tp-prompt').length }))
+  expect(now).toEqual({ quiet: true, bubbles: 0 }) // just arrived: no bubble (checked once; it is due 3 s later)
   await nearIs(page, () => /^dog/.test(window.__game.G.near?.id || '') && window.__game.G.near.quiet === false)
   await expect(page.locator('.tp-bubble-wrap .tp-prompt')).toContainText('Pip', { timeout: 20_000 })
   w.check()

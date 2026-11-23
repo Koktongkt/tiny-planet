@@ -12,7 +12,6 @@ import { Icon } from '../icons.jsx'
 import { placeBubble } from './logic.js'
 import { chipShows } from './hints.js'
 import { talkWins } from '../../talk/state.js'
-import { STILL } from './still.js'
 import './prompt.css'
 
 export const PROMPT = { el: null, pt: { x: 0, y: 0, behind: false }, idleMs: 0, id: null, box: null, hide: null }
@@ -64,7 +63,6 @@ const TAIL = 10 // px the tail hangs below the bubble box
 export function placePrompt(camera, dt, playerObj) {
   const n = G.near, el = PROMPT.el
   if (playerObj) { playerObj.getWorldPosition(_p); const moved = _p.distanceToSquared(_last) > 1e-8; _last.copy(_p)
-    STILL.ms = moved ? 0 : STILL.ms + dt * 1000
     PROMPT.idleMs = !n || moved || PROMPT.id !== n.id ? 0 : PROMPT.idleMs + dt * 1000 }
   PROMPT.id = n ? n.id : null
   if (!el || !n) return
