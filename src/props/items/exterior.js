@@ -35,17 +35,20 @@ function clover(k, s = 1, lean = 1) {
   k.ball([0.006 * s, 0.006 * s, 0.004], [lean * 0.014 * s, -0.05 * s, z], 'cloverStem', { out: false })
 }
 
+const hash = (n) => { const x = Math.sin(n * 12.9898 + 4.1414) * 43758.5453; return x - Math.floor(x) } // 0..1, stable per n
+
 // ---------- the cottage ----------
 // A squat round plaster house under a three-tier tiled roof with a knob on top, after the reference: her real front
 // door (doorLeaf/doorFrame, the same as inside), arched glowing windows with clover sprigs, a round bath porthole and
-// a tall chimney where the stove flue leaves the room (phi -50). Window angles roughly follow the interior (sunny window -112ish,
+// a chimney where the stove flue leaves the room (phi -50). Window angles follow the interior (sunny window -112ish,
 // kitchen window -13, porthole 47), so the outside and inside agree.
-//   opts: r, h (wall radius + height), roofR (roof size, independent of the walls), belly (how much the walls bulge), windows: [{ phi, clover }], porthole (phi | null), chimney: { phi, r } | null,
+//   opts: uneven (0..1, hand-made wobble of the roof tiles), seed, frame (door arch colour), r, h (wall radius + height), roofR (roof size, independent of the walls), belly (how much the walls bulge), windows: [{ phi, clover }], porthole (phi | null), chimney: { phi, r } | null,
 //         tiers (1-3), knob, door
-defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.4, 1.26], tags: ['outdoor', 'building'],
+defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: ['outdoor', 'building'],
   pal: { wall: '#fbe6c6', roof: '#f08a4b', roof2: '#f59c5c', roof3: '#ec8243', roofDark: '#b85a2c', trim: '#e8873f', pane: '#ffd873', bar: '#d9773a', clover: '#9ccf45', clover2: '#b4de5e', cloverStem: '#86bb3c', chimney: '#7c4b39', chimneyCap: '#5d382b', knob: '#f6ddd4', porthole: '#cfe7ee' },
-  opts: { r: 0.48, roofR: 0.44, h: 0.7, belly: 0.14, windows: [{ phi: -132, clover: true }, { phi: 132, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.36 }, tiers: 3, knob: true, door: true } }, (k, o) => {
+  opts: { r: 0.48, roofR: 0.44, h: 0.62, belly: 0.14, windows: [{ phi: -125, clover: true }, { phi: 125, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.3 }, tiers: 3, knob: true, door: true, uneven: 0.6, seed: 3 } }, (k, o) => {
   const RW = o.r, HW = o.h
+  // walls: a soft drum, a touch wider at the foot
   // walls: a plump, soft drum (a marshmallow): bulging out round the middle, a touch wider at the foot, very round edges
   const TAPER = -0.03, BELLY = o.belly
   k.pill([RW, HW], [0, HW / 2, 0], 'wall', { bevel: 0.2, taper: TAPER, belly: BELLY, hi: 0.06, shade: 0.12 })
@@ -53,12 +56,12 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.4, 1.26], tags: ['
   let rDoor = 0; for (let y = 0; y <= 0.5; y += 0.01) rDoor = Math.max(rDoor, rAt(y)) // the door stands clear of the bulge
   // front door: the interior's own door + surround, set into a deep frame that buries itself in the curved wall
   if (o.door) {
-    k.use('doorFrame', mat(0, 0, rDoor - 0.05), { d: 0.2, f: 0.055, shadow: false, pal: { frame: o.frame || '#e3843f', inner: '#a95a2a' } }) // deep, so it sinks into the round wall at its edges
+    k.use('doorFrame', mat(0, 0, rDoor - 0.05), { d: 0.2, f: 0.05, shadow: false, pal: { frame: o.frame || '#e3843f', inner: '#a95a2a' } }) // deep, so it sinks into the round wall at its edges
     k.use('doorLeaf', mat(0, 0, rDoor + 0.004), { shadow: false })
   }
   // arched windows: orange frame, glowing panes behind a cross bar, a sill; a clover sprig above
   for (const w of o.windows || []) {
-    const y = 0.18, ww = 0.17, hr = 0.11 // tall: the arch tops out near the door's, as on the reference
+    const y = 0.21, ww = 0.17, hr = 0.09
     k.within(onWall(w.phi, rAt(y + 0.08) - 0.004, y), () => {
       k.arch(ww, hr, 0.01, [0, 0, 0.004], 'pane', { glow: true, bevel: 0 })
       k.archFrame(ww, hr, 0.026, 0.04, [0, 0, 0.012], 'trim')
@@ -66,38 +69,42 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.4, 1.26], tags: ['
       k.box([ww, 0.014, 0.012], [0, hr * 0.9, 0.014], 'bar', { r: 0.004, out: false, seg: 2 })
       k.box([ww + 0.075, 0.024, 0.06], [0, -0.03, 0.026], 'trim', { r: 0.01, seg: 2 })
     })
-    if (w.clover) k.within(onWall(w.phi + (w.phi < 0 ? -9 : 9), rAt(0.5) - 0.01, 0.5), () => clover(k, 1.55, w.phi < 0 ? 1 : -1)) // above the window, nudged toward the door
+    if (w.clover) k.within(onWall(w.phi + (w.phi < 0 ? -10 : 10), rAt(0.49) - 0.008, 0.49), () => clover(k, 1.7, w.phi < 0 ? 1 : -1))
   }
   // the bath porthole: a round window with a thick ring
   if (o.porthole != null) k.within(onWall(o.porthole, rAt(0.34), 0.34), () => {
     k.pill([0.045, 0.012], [0, 0, 0.004], 'porthole', { glow: true, rot: [PI / 2, 0, 0], bevel: 0 })
     k.ring(0.05, 0.016, [0, 0, 0.01], 'trim')
   })
-  // roof: three tiers of narrow rounded tiles, each overhanging the one below, rising to a peaked top (the upper tiers
-  // steeper, like a pointed cap) over a cone core. Radii scale with roofR, so walls can widen under it.
-  const E = HW - 0.08, rk = o.roofR / 0.44 // eave height
-  const tiers = [[0.6, 0, 0.47, 0.15, 30], [0.5, 0.11, 0.33, 0.28, 22], [0.37, 0.24, 0.15, 0.44, 15]].slice(0, o.tiers)
-    .map(([re, ye, rt, yt, n]) => [re * rk, E + ye, rt * rk, E + yt, n])
-  k.cone([0.46 * rk, 0.5], [0, E + 0.25, 0], 'roofDark', { n: 20 }) // the core (its base is the roof's underside)
+  // roof: a cone core under three tiers of chunky rounded tiles, each tier overhanging the one below
+  const dy = HW - 0.52 // tiers are drawn for a 0.52 wall and lifted with it
+  const tiers = [[0.63, 0.48, 0.44, 0.64, 26], [0.48, 0.6, 0.3, 0.76, 19], [0.34, 0.72, 0.15, 0.87, 13]].slice(0, o.tiers)
+    .map(([re, ye, rt, yt, n]) => [re * o.roofR / 0.44, ye + dy, rt * o.roofR / 0.44, yt + dy, n]) // the roof keeps its own size (roofR), so walls can widen under it
+  k.cone([tiers[0][0] * 0.94, 0.52], [0, tiers[0][1] + 0.26, 0], 'roofDark', { n: 20 })
   tiers.forEach(([re, ye, rt, yt, n], ti) => {
-    const L = Math.hypot(re - rt, yt - ye), th = Math.atan2(re - rt, yt - ye), rm = (re + rt) / 2, ym = (ye + yt) / 2, t = 0.045
-    const tau = (rt / re - 1) / (rt / re + 1), w = 2 * PI * rm / n * 0.97 // a hair narrower than the gap: the tiles read one by one
-    for (let i = 0; i < n; i++) { const a = (i + ti * 0.5) / n * PI * 2, rr = rm + t / 2 * Math.cos(th)
-      k.box([w, L * 1.08, t], [Math.sin(a) * rr, ym + t / 2 * Math.sin(th), Math.cos(a) * rr], i % 3 === 1 ? 'roof2' : i % 3 === 2 ? 'roof3' : 'roof', { rot: [-th, a, 0], order: 'YXZ', r: t * 0.48, taper: tau, seg: 2, hi: 0.1, shade: 0.3 }) }
+    const L = Math.hypot(re - rt, yt - ye), th = Math.atan2(re - rt, yt - ye), rm = (re + rt) / 2, ym = (ye + yt) / 2, t = 0.05
+    const tau = (rt / re - 1) / (rt / re + 1), w = 2 * PI * rm / n * 0.98 // a hair narrower than the gap: the tiles read one by one
+    for (let i = 0; i < n; i++) {
+      // hand-made unevenness (o.uneven, 0 = machine-neat): each tile a little longer or shorter (a ragged eave), wider
+      // or narrower, lifted a touch off the slope and swung a few degrees in its own plane. Seeded, so it never changes.
+      const j = (q) => (hash(ti * 97 + i * 13 + q * 7 + o.seed) - 0.5) * 2 * o.uneven, dl = L * 1.08 * 0.14 * j(1), lift = 0.06 * j(2)
+      const a = (i + ti * 0.5 + 0.22 * j(3)) / n * PI * 2, thi = th + lift, rr = rm + t / 2 * Math.cos(thi) + Math.sin(thi) * dl / 2
+      k.box([w * (1 + 0.1 * j(4)), L * 1.08 + dl, t], [Math.sin(a) * rr, ym + t / 2 * Math.sin(thi) - Math.cos(thi) * dl / 2, Math.cos(a) * rr], i % 3 === 1 ? 'roof2' : i % 3 === 2 ? 'roof3' : 'roof', { rot: [-thi, a, 0.08 * j(5)], order: 'YXZ', r: t * 0.48, taper: tau, seg: 2, hi: 0.1, shade: 0.3 })
+    }
   })
   const top = tiers[tiers.length - 1][3]
   k.pill([tiers[tiers.length - 1][2] + 0.02, 0.07], [0, top + 0.01, 0], 'roof', { bevel: 0.45 })
   if (o.knob) { k.ring(0.075, 0.034, [0, top + 0.06, 0], 'roof2', { rot: [PI / 2, 0, 0] }); k.ball(0.055, [0, top + 0.1, 0], 'knob') }
-  // chimney: a tall round stack standing up out of the roof with a pointed hat, where the stove flue leaves the room (back-left)
+  // chimney: a round brick stack up through the roof with a pointed hat
   if (o.chimney) { const c = o.chimney, x = Math.sin(c.phi * D2R) * c.r, z = -Math.cos(c.phi * D2R) * c.r
-    k.pill([0.058, 0.62], [x, E + 0.31, z], 'chimney', { bevel: 0.1 })
-    k.pill([0.068, 0.045], [x, E + 0.6, z], 'chimney', { bevel: 0.4 })
-    k.cone([0.085, 0.1], [x, E + 0.675, z], 'chimneyCap', { n: 12 })
-    k.ball(0.015, [x, E + 0.73, z], 'chimneyCap', { out: false })
+    k.pill([0.052, 0.44], [x, 0.76 + dy, z], 'chimney', { bevel: 0.1 })
+    k.pill([0.062, 0.04], [x, 0.96 + dy, z], 'chimney', { bevel: 0.4 })
+    k.cone([0.078, 0.085], [x, 1.03 + dy, z], 'chimneyCap', { n: 12 })
+    k.ball(0.014, [x, 1.08 + dy, z], 'chimneyCap', { out: false })
   }
 })
 // where the cottage's smoke leaves (room units, house-local) for the given opts
-export const chimneyTop = (c = { phi: -50, r: 0.36 }, h = 0.7) => [Math.sin(c.phi * D2R) * c.r, h + 0.66, -Math.cos(c.phi * D2R) * c.r]
+export const chimneyTop = (c = { phi: -50, r: 0.3 }, h = 0.62) => [Math.sin(c.phi * D2R) * c.r, 1.0 + h - 0.52, -Math.cos(c.phi * D2R) * c.r]
 
 // ---------- puffy tree ----------
 // A broccoli tree: a stout tapered trunk with root flares and two forks, under a crown of soft round puffs.
