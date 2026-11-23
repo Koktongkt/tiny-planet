@@ -15,9 +15,9 @@ export const YARD = {
   gardenStones: [[-0.42, 1.2, 0.6], [-0.72, 1.24, -0.3], [-1.0, 1.3, 1.1]],
   gardenCan: [-0.86, 1.08, -0.6], gardenBushes: [[-1.86, 0.1, 0.9], [-1.86, 1.02, 0.8], [-0.95, -0.1, 0.75]],
   // Pip's dog house: right of the cottage, set back from the fence, turned a little toward the house and the path
-  dogHouse: { x: 0.98, z: 0.72, yaw: -0.55 },
+  dogHouse: { x: 1.2, z: 0.52, yaw: -0.55 },
   rocks: [[1.32, 1.18, 0.4], [-0.62, 0.32, 2.1], [0.35, -0.75, 1], [-1.85, 0.9, 0.5]],
-  sprouts: [[0.52, 0.78], [-0.35, 1.45], [0.95, -0.05], [-1.0, -0.05], [0.4, 1.6], [1.5, 0.45], [-0.62, 1.5]],
+  sprouts: [[0.52, 0.78], [-0.35, 1.45], [0.95, -0.05], [-1.0, -0.05], [0.4, 1.6], [1.52, 0.98], [-0.62, 1.5]],
   // the yard fence: an oval round the house, trees, bench and crop beds, the gate in front on the stepping stones (x = 0)
   fence: { cx: -0.3, cz: 0.25, rx: 2.0, rz: 1.6, gateW: 0.42, seg: 0.45 },
 }
