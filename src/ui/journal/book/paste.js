@@ -9,4 +9,5 @@ export function pasteLook(id) {
   return { rot: +rot.toFixed(2), x: +x.toFixed(1), y: +y.toFixed(1), tape, tapeRot: +tapeRot.toFixed(1) }
 }
 /** CSS custom properties for a polaroid button / figure */
-export const pasteStyle = (id) => { const l = pasteLook(id); return { '--r': l.rot + 'deg', '--x': l.x + 'px', '--y': l.y + 'px', '--tr': l.tapeRot + 'deg' } }
+// own names: something on the page types a bare --r as a length, which turned every tilt into 0px (no transform)
+export const pasteStyle = (id) => { const l = pasteLook(id); return { '--jb-rot': l.rot + 'deg', '--jb-x': l.x + 'px', '--jb-y': l.y + 'px', '--jb-tape': l.tapeRot + 'deg' } }

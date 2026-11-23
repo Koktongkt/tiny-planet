@@ -16,3 +16,8 @@ test('photos are not all pasted alike', () => {
   assert.ok(new Set(looks.map(l => l.tape)).size >= 2); assert.ok(new Set(looks.map(l => Math.round(l.rot))).size >= 5)
   assert.ok(looks.some(l => l.rot < -1) && looks.some(l => l.rot > 1)) // leaning both ways
 })
+test('the style uses the album\'s own variable names (a page-wide --r is typed as a length and would swallow a tilt)', async () => {
+  const { pasteStyle } = await import('../../src/ui/journal/book/paste.js')
+  const st = pasteStyle('ph1'); assert.deepEqual(Object.keys(st).sort(), ['--jb-rot', '--jb-tape', '--jb-x', '--jb-y'])
+  assert.match(st['--jb-rot'], /deg$/); assert.match(st['--jb-x'], /px$/)
+})
