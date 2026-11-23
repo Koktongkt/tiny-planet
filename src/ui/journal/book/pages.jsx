@@ -10,6 +10,7 @@ import { PREFS, RETURN_GIFTS } from '../../../systems/friendship.js'
 import { quests, people, giftShelves, recipeRows, RECIPE_TABS, discoveries, fishFacts, forageSeason, firsts } from '../../../systems/journalPages.js'
 import { SC } from '../../../systems/liveC.js'
 import { MAX, PER_PAGE, pageCount } from '../../../systems/photo.js'
+import { pasteLook, pasteStyle } from './paste.js'
 import { HoshinoPortrait } from '../../../art/museum/portrait.jsx'
 import { registerRelicIcons } from '../../../art/museum/icons.jsx'
 import '../../../art/forage/icons.jsx'
@@ -161,17 +162,17 @@ function MemoriesPage({ sub, pick, setPick, refresh }) {
   const list = SC.journal('photos'), sel = list.find(p => p.id === pick) || list[list.length - 1]
   const idx = sel ? list.indexOf(sel) : 0, page = Math.floor(idx / PER_PAGE), pages = pageCount(list.length), first = page * PER_PAGE
   const turn = (d) => { const np = Math.max(0, Math.min(pages - 1, page + d)); setPick(list[Math.min(list.length - 1, np * PER_PAGE)].id) }
-  // empty places are dotted outlines; only photos she has taken become polaroids
-  const left = <><div className="jb-scroll">{!list.length && <p className="jb-empty jb-albumhint">{blank('photos')}</p>}<div className="jb-mgrid">{Array.from({ length: PER_PAGE }, (_, k) => { const i = first + k, p = list[i]
-    return p ? <button key={p.id} data-pick={p.id} className={'jb-pol' + (sel && p.id === sel.id ? ' on' : '')} style={{ '--r': ((i * 37) % 9 - 4) * 0.8 + 'deg' }} onClick={() => setPick(p.id)}>
-      {p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jb-slot" />}<span>{D(p.day)}</span></button> : <div key={'s' + k} className="jb-slot" aria-hidden /> })}</div></div>
+  // only photos she has taken are shown, each pasted in by hand (paste.js); an empty album is just the hint
+  const left = <><div className="jb-scroll">{list.length ? <div className="jb-mgrid">{list.slice(first, first + PER_PAGE).map(p =>
+    <button key={p.id} data-pick={p.id} data-tape={pasteLook(p.id).tape} className={'jb-pol' + (sel && p.id === sel.id ? ' on' : '')} style={pasteStyle(p.id)} onClick={() => setPick(p.id)}>
+      {p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jb-lost">faded</div>}<span>{D(p.day)}</span></button>)}</div>
+    : <p className="jb-empty jb-albumhint">{blank('photos')}</p>}</div>
     <div className="jb-lfoot jb-pager">{pages > 1 && <button className="jb-turn" data-turn="-1" disabled={page === 0} onClick={() => turn(-1)} aria-label="Previous page">‹</button>}
       <span>{pages > 1 ? `${page + 1} / ${pages} · ` : ''}{list.length} of {MAX} kept</span>
       {pages > 1 && <button className="jb-turn" data-turn="1" disabled={page === pages - 1} onClick={() => turn(1)} aria-label="Next page">›</button>}</div></>
-  if (!sel) return [left, <><div className="jb-bigslot" aria-hidden><span>Your photos are pinned here</span></div>
-    <div className="jb-hint" style={{ marginTop: 18 }}>Use Photo (P) to take one.</div></>]
+  if (!sel) return [left, <p key="e" className="jb-rdesc" style={{ marginTop: 220 }}>Photos you take are pasted in here.</p>]
   const remove = () => { if (confirm('Remove this photo from your journal?')) { const next = list[idx + 1] || list[idx - 1]; SC.removePhoto(sel.id); setPick(next ? next.id : null); refresh() } }
-  return [left, <><div className="jb-pol jb-bigpol" style={{ marginTop: 30 }}>{sel.src ? <img src={sel.src} alt={'Photo from day ' + (sel.day + 1)} /> : <div className="jb-slot" />}<span>{D(sel.day)}</span></div>
+  return [left, <><div className="jb-pol jb-bigpol" data-tape={pasteLook(sel.id).tape} style={{ ...pasteStyle(sel.id), marginTop: 30 }}>{sel.src ? <img src={sel.src} alt={'Photo from day ' + (sel.day + 1)} /> : <div className="jb-lost">faded</div>}<span>{D(sel.day)}</span></div>
     <div className="jb-rsub" style={{ marginTop: 22 }}>Photo {idx + 1} of {list.length}</div>
     <Foot><button className="jb-btn" style={{ background: '#ead7bb', color: '#6a4a2e' }} onClick={remove}>Remove</button></Foot></>]
 }
