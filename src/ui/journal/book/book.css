@@ -137,3 +137,5 @@
 .jb-rw{display:inline-flex;align-items:center;gap:6px}
 /* the minimap steps aside while the book is open, like for the other panels (game/ui.css) */
 html:has(.jb-veil) .mm-wrap{opacity:0!important;transition:none!important}
+/* the game layer sets button{color:inherit} (.tp-ui button); the ribbons keep white labels */
+.jb-book .jb-bk{color:#fff}

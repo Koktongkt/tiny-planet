@@ -52,7 +52,7 @@ function QuestsPage({ pick, setPick, refresh }) {
         <span className="ic">{r.kind === 'tutorial' ? <It id="book" size={58} /> : r.kind === 'board' ? <It id="board" size={58} /> : <Med id={r.npcId} size={54} />}</span>
         <span><b>{r.title}</b><span className="d">{r.desc}</span></span><span className={'jb-pill ' + r.state}>{PILL[r.state]}</span></button></React.Fragment> })
       : <p className="jb-empty">Nothing to do right now. New notes go up on the village board each morning.</p>}</div>
-    <div className="jb-lfoot">{((G.s.errands && G.s.errands.log) || []).length} favours finished</div></>
+    <div className="jb-lfoot">{((n) => `${n} favour${n === 1 ? '' : 's'} finished`)(((G.s.errands && G.s.errands.log) || []).length)}</div></>
   if (!sel) return [left, <p key="e" className="jb-rdesc" style={{ marginTop: 200 }}>Quests you take on will be written here.</p>]
   let right
   if (sel.kind === 'tutorial') right = <><div className="jb-blob"><It id="book" size={120} /></div><div className="jb-rt">Settle In</div><div className="jb-rule" />
