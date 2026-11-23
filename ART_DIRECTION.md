@@ -118,6 +118,14 @@ Villagers differ by body (tall / short / round / slim, toddler → hunched elder
 - Villagers fade through three LOD levels by camera distance (props and sleeves drop first, face detail next). Whole walkers are culled past the planet horizon and, in close views, past ~12 units.
 - A planet-wide **horizon cull** also hides world meshes on the far side (houses, trees, flowers) so the orbit overview stays under ~1,000 draw calls.
 
+## Her home, outside
+A chibi round cottage in its own fenced yard, matching the interior (same door, the stove's chimney back-left, windows near where they are inside).
+- **Cottage:** plump cream walls that bulge round the middle, a three-tier cone roof of chunky orange clay tiles with a donut-and-ball knob, the tiles a little uneven like hand-pressed clay (seeded, so the wobble is stable). Bright orange door arch and window frames, glowing panes, puffy three-leaf clovers on the wall under the eave.
+- **Entrance:** the interior's own pieces: lantern posts on stacked stones beside the door, stone steps with a mat, daisy pots, bushes. Flowering bushes round the foot of the wall.
+- **Yard:** two broccoli-crowned puffy trees behind the house, stepping stones to a plank gate in an oval wooden fence, the crafting bench and the six crop beds inside, the Home sign and mailbox just outside the gate. Rocks and grass sprouts dotted about.
+- **Assets:** all reusable chibi props (`src/props/items/exterior.js`: `cottage`, `puffTree`, `flowerBush`, `fence`, `gate`, `stepStone`, `rocks`, `sprout`) with options for colours, sizes, window layout, roof tiers and unevenness; preview any of them at `/propstudio.html?id=<name>`. The yard composes them into one baked mesh (`src/home/Exterior.jsx`); layout numbers live in `src/home/yard.js`.
+- **Views:** `?view=zone&z=home`, `z=home-garden`, `z=home-yard`.
+
 ## Gather & Craft UI
 - Panels use warm watercolour paper (a radial cream gradient) with a 2.6px ink border (#4a3a35), wobbly uneven corner radii and an inner dashed stitch line.
 - All text is set in Fredoka.
