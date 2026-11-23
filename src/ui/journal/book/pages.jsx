@@ -57,10 +57,10 @@ function QuestsPage({ pick, setPick, refresh }) {
     <div className="jb-lfoot">{((n) => `${n} favour${n === 1 ? '' : 's'} finished`)(((G.s.errands && G.s.errands.log) || []).length)}</div></>
   if (!sel) return [left, <p key="e" className="jb-rdesc" style={{ marginTop: 200 }}>Quests you take on will be written here.</p>]
   let right
-  if (sel.kind === 'tutorial') right = <><div className="jb-blob"><It id="book" size={120} /></div><div className="jb-rt">Settle In</div><div className="jb-rule" />
+  if (sel.kind === 'tutorial') right = <><div className="jb-blob"><It id="book" size={100} /></div><div className="jb-rt">Settle In</div><div className="jb-rule" />
     <p className="jb-rdesc">{npc('grandma')} wrote you a little list for your first days on the planet.</p>
     <Box label="Steps">{sel.lines.map((l, i) => <Row key={i} ok={l.ok} text={l.text} />)}</Box></>
-  else if (sel.kind === 'board') right = <><div className="jb-blob"><It id="board" size={120} /></div><div className="jb-rt">New notes on the board</div><div className="jb-rule" />
+  else if (sel.kind === 'board') right = <><div className="jb-blob"><It id="board" size={100} /></div><div className="jb-rt">New notes on the board</div><div className="jb-rule" />
     <p className="jb-rdesc">Neighbours have pinned up requests on the notice board in the village. Walk over and read them; a favour you take shows up here with everything you need.</p>
     <Foot><div className="jb-hint">Details appear here once you take a note at the board.</div></Foot></>
   else if (sel.kind === 'notice') right = <><div className="jb-blob"><Med id={sel.npcId} size={110} /></div><div className="jb-rt">{sel.title}</div><div className="jb-rule" /><p className="jb-rdesc">{sel.mention}</p></>
@@ -108,12 +108,12 @@ function RecipesPage({ sub, pick, setPick, refresh }) {
     {r.owned ? <span className="jb-pill done own">{r.cat === 'Unlock' ? 'Built' : 'Owned'}</span> : r.ready ? <span className="jb-rdy" title="You have everything" /> : null}</button>)}</div>
     <div className="jb-lfoot">{nKnown} of {rows.length} learned · <span style={{ color: '#4f8f2a' }}>●</span> ready to make</div></>
   if (!sel) return [left, null]
-  if (!sel.known) return [left, <><div className="jb-blob"><Ghost id={sel.makes} size={120} /></div><div className="jb-rt">???</div><div className="jb-rule" /><p className="jb-rdesc">Find all of its ingredients out in the world to learn this recipe.</p></>]
+  if (!sel.known) return [left, <><div className="jb-blob"><Ghost id={sel.makes} size={100} /></div><div className="jb-rt">???</div><div className="jb-rule" /><p className="jb-rdesc">Find all of its ingredients out in the world to learn this recipe.</p></>]
   const r = sel.recipe, busy = G.ui.crafting && G.ui.crafting.id === r.id, stove = r.at === 'stove'
   const action = sel.owned ? <div className="jb-hint">{r.cat === 'Unlock' ? 'Already built.' : 'Already in your bag.'}</div>
     : atBench() && !stove ? <button className="jb-btn g" data-act="craft" disabled={!canCraft(r) || !!G.ui.crafting} onClick={() => craft(r, () => { emit(); refresh() })}><It id="hand" size={30} />{busy ? 'Crafting…' : 'Craft'}</button>
       : <><button className="jb-btn g" disabled><It id="hand" size={30} />Craft</button><div className="jb-hint">{stove ? 'Cook this on the stove at home.' : 'Craft at the bench beside Home.'}</div></>
-  return [left, <><div className="jb-blob"><It id={r.makes} size={132} /></div><div className="jb-rt">{name(r.makes)}</div>
+  return [left, <><div className="jb-blob"><It id={r.makes} size={104} /></div><div className="jb-rt">{name(r.makes)}</div>
     <div className="jb-rsub">{r.cat === 'Unlock' ? 'Builds' : r.cat}{sel.owned ? ' · Owned' : ''}{sel.perfectDay != null && <span className="jb-pf"> · ✦ Perfect on {D(sel.perfectDay)}</span>}</div><div className="jb-rule" />
     <p className="jb-rdesc">{desc(r.makes)}</p>
     <Box label="Needs">{sel.needs.map(({ need: [, n], have, ok, show }, i) =>
@@ -131,16 +131,16 @@ function DiscoveriesPage({ sub, pick, setPick }) {
   if (!sel || !sel.seen) { const f = sel && sub === 'fish' && fishFacts(sel.id)
     const hint = f ? `Try the ${f.where.join(' or ')}${f.seasons === 'any' ? '' : ' in ' + f.seasons.join(' or ')}${f.times === 'any' ? '' : ', ' + f.times.join(' or ')}${f.weather === 'any' ? '' : ', when it is ' + f.weather}.`
       : sub === 'forage' && sel ? `Look for it in ${forageSeason(sel.id)}.` : blank(sub)
-    return [left, <><div className="jb-blob">{sel && <Ghost id={sel.id} size={120} />}</div><div className="jb-rt">Still a mystery</div><div className="jb-rule" /><p className="jb-rdesc">{hint}</p></>] }
+    return [left, <><div className="jb-blob">{sel && <Ghost id={sel.id} size={100} />}</div><div className="jb-rt">Still a mystery</div><div className="jb-rule" /><p className="jb-rdesc">{hint}</p></>] }
   const facts = [['First found', sel.firstDay != null ? D(sel.firstDay) : '—'], [sub === 'fish' ? 'Caught' : 'Found', '×' + Math.max(1, sel.count || 0)]]
   const f = sub === 'fish' && fishFacts(sel.id)
   if (f) facts.push(['Biggest', sel.best ? sel.best + ' cm' : '—'], ['Where', f.where.map(cap).join(', ')], ['When', [f.seasons === 'any' ? 'Any season' : f.seasons.map(cap).join(', '), f.times === 'any' ? 'any time' : f.times.join(', ')].join(' · ')], ['Weather', f.weather === 'any' ? 'Any' : cap(f.weather)])
   if (sub === 'forage') facts.push(['Season', cap(forageSeason(sel.id))])
   const don = G.s.museum.donated[sel.id]
-  return [left, <><div className="jb-blob"><It id={sel.id} size={132} /></div><div className="jb-rt">{name(sel.id)}</div>{f && <div className="jb-rsub">{cap(f.rarity === 'legend' ? 'legendary' : f.rarity)}</div>}<div className="jb-rule" />
+  return [left, <><div className="jb-blob"><It id={sel.id} size={104} /></div><div className="jb-rt">{name(sel.id)}</div>{f && <div className="jb-rsub">{cap(f.rarity === 'legend' ? 'legendary' : f.rarity)}</div>}<div className="jb-rule" />
     <p className="jb-rdesc">{desc(sel.id)}</p>
     <Box label="Notes"><dl className="jb-facts">{facts.map(([a, b]) => <React.Fragment key={a}><dt>{a}</dt><dd>{b}</dd></React.Fragment>)}</dl></Box>
-    <Foot>{canGive(sel.id) ? (don !== undefined ? <span className="jb-bigstamp">ON SHOW AT THE MUSEUM · {D(don)}</span> : <div className="jb-hint">Bring one to Professor Hoshino at the ruins to put it on show.</div>) : null}</Foot></>]
+    <Foot>{canGive(sel.id) ? (don !== undefined ? <span className="jb-bigstamp">IN THE MUSEUM · {D(don)}</span> : <div className="jb-hint">Bring one to Professor Hoshino at the ruins to put it on show.</div>) : null}</Foot></>]
 }
 
 // ---------- Memories ----------

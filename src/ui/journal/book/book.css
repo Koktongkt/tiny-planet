@@ -186,3 +186,26 @@ html:has(.jb-veil) .mm-wrap{opacity:0!important;transition:none!important}
 .jb-R .jb-rt{font-size:33px;margin-top:0}
 .jb-R .jb-row{padding:3px 2px}
 .jb-scroll{margin:0;padding:4px 2px 6px}
+/* fit, round 2 (measured in the game): five villager cards a row inside the page, four recipe sub-tabs inside the page,
+   and right pages that fit without scrolling (Settle In's 7 steps, People, rare fish) */
+.jb-book,.jb-book button,.jb-book *{font-size-adjust:.44}
+.jb-pgrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px 6px}
+.jb-pc{padding:7px 2px 5px;gap:2px;min-width:0}
+.jb-pc b{max-width:100%}
+.jb-sub{gap:4px}
+.jb-sub .jb-st{padding:0 9px;gap:6px;font-size:20px;min-width:0}
+.jb-sub .jb-st small{font-size:15px}
+.jb-R .jb-rdesc{margin:2px 8px 8px;font-size:19px;line-height:1.28}
+.jb-R .jb-box{padding:9px 12px 6px;margin-top:4px}
+.jb-R .jb-box+.jb-box{margin-top:18px!important}
+.jb-R .jb-row{padding:2px;font-size:19px}
+.jb-R .jb-blob.sm{height:100px}
+.jb-R .jb-shelf{padding:1px 0}.jb-R .jb-shelf .jb-it,.jb-R .jb-shelf .q{width:36px;height:36px}
+.jb-R .jb-facts{gap:2px 14px;font-size:18px}
+.jb-R .jb-rule{margin:2px auto 6px}
+.jb-R .jb-bigstamp{margin-top:4px;font-size:18px;padding:1px 10px}
+.jb-R .jb-rsub{margin-bottom:4px}
+.jb-R .jb-blob{height:106px}.jb-R .jb-blob .jb-it{width:100px;height:100px}
+.jb-R{height:666px}
+.jb-R .jb-bigstamp{transform:rotate(-3.5deg);margin-bottom:10px}
+.jb-R .jb-rdesc+.jb-box,.jb-R .jb-rule+.jb-box,.jb-R .jb-rsub+.jb-box{margin-top:16px}
