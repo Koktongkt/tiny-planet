@@ -68,6 +68,15 @@ const PAINT = `
       torso = mix(torso, uBottom, max(bib, max(strapF, strapB)));
       float pocket = front * aa(.015 - ax) * aa(y - uZ.x + .025) * aa(uZ.x - .002 - y) * aa(z - .02);
       torso = mix(torso, uBottom*.84, pocket);
+      if (uZ.w > .5) { // outfit.seams: darker stitched seams (bib pocket rim, front fly, curved hip pockets, bib top)
+        float ln = .0011, inBib = aa(uZ.x + .018 - y);
+        float rim = front * aa(.0165 - ax) * aa(y - uZ.x + .0265) * aa(uZ.x - .0005 - y) * (1. - aa(.0145 - ax) * aa(y - uZ.x + .0245) * aa(uZ.x - .0025 - y));
+        float fly = front * aa(ln - abs(x)) * aa(uY.x - .004 - y) * aa(y - uZ.z - .004);
+        float hp = ax - .021 - (uY.x - y) * 1.15;
+        float hip = front * aa(ln - abs(hp)) * aa(uY.x - .001 - y) * aa(y - uY.x + .026) * aa(ax - .02);
+        float top = front * inBib * aa(ln - abs(y - uZ.x - .0155)) * aa(uO.w - .003 - ax) * (1. - waist);
+        torso = mix(torso, uBottom*.66, clamp(max(max(rim, fly), max(hip, top)), 0., 1.) * .85);
+      }
     } else if (ty == 2) { // apron
       float ap = front * aa(uO.w - ax) * aa(uZ.x + .01 - y) * aa(z - .006);
       float ties = aa(.004 - abs(y - uY.x - .004)) * (1. - ap);
@@ -179,7 +188,7 @@ function bodyMat(cfg, S) {
   const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 + (o.waistUp ?? 0) : S.bellyY + 0.008
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, 0) } }, vertexShader: VS, fragmentShader: FS })
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
   bodyMatCache.set(key, m); return m
@@ -566,7 +575,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
   const B = R.bones, o = cfg.outfit, f = cfg.face || {}, hd = cfg.body.head ?? 1
   const headLocal = [0, S.headC.y - B.head.userData.rest.y, S.headC.z - B.head.userData.rest.z]
   const chestY = B.chest.userData.rest.y, hipsY = B.hips.userData.rest.y
-  const sleeveGeo = o.sleeve === 'kimono' ? null : o.sleeve === 'short' ? G.sleeveS : G.sleeve
+  const sleeveGeo = o.sleeve === 'kimono' ? null : (cfg.ext?.sleeveGeo ?? (o.sleeve === 'short' ? G.sleeveS : G.sleeve))
   const sleeveC = o.type === 'cardigan' ? o.acc : o.top
   const es = f.eye ?? 1, X = cfg.ext || {}
   return <group scale={S.H * scale}>
@@ -582,14 +591,14 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     {createPortal(<Merge>
       {cfg.scarf && <><M geo={G.scarfRing} mat={cel(cfg.scarf)} position={[0, S.neckY + 0.01 - chestY, 0.004 + 0.02 * S.hc]} rotation={[0.12, 0, 0]} scale={X.ring ?? 1} />
         <group position={[X.knot?.[0] ?? 0.012, S.neckY + 0.008 - chestY + (X.knot?.[1] ?? 0), 0.036 + 0.02 * S.hc + (X.knot?.[2] ?? 0)]} scale={X.knot?.[3] ?? 1}><M geo={G.scarfKnot} mat={cel(cfg.scarf)} />
-          <group ref={set('scarf')}>{[-0.4, 0.35].map(a => <M key={a} geo={G.scarfTail} mat={cel(cfg.scarf)} rotation={[0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}
+          <group ref={set('scarf')}>{(X.tails ?? [-0.4, 0.35]).map(a => <M key={a} geo={X.tailGeo ?? G.scarfTail} mat={cel(cfg.scarf)} rotation={[X.tailX ?? 0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}
       {o.type === 'sailor' && <group position={[0, S.neckY - 0.03 - chestY, S.chest[1].z * 0.95]}><M geo={G.scarfKnot} mat={cel(o.acc ?? '#d9455b')} scale={0.6} /><group ref={set('scarf')}>{[-0.3, 0.3].map(a => <M key={a} geo={G.scarfTail} mat={cel(o.acc ?? '#d9455b')} rotation={[0.15, 0, a]} scale={0.7} />)}</group></group>}
       {o.type === 'overalls' && [-1, 1].map(x => <M key={x} geo={G.tiny} mat={cel('#f2d27a')} position={[x * (o.bibW ?? 0.031), S.chestY + 0.012 - chestY, S.chest[1].z * 0.93 + S.chest[0].z]} outline={false} />)}
       {cfg.satchel && !X.strap && <mesh position={[0, S.chestY - 0.01 - chestY, -0.002]} rotation={[0.05, 0, -0.72]} material={cel('#8a5a3c')}><torusGeometry args={[S.chest[1].x * 1.26, 0.0035, 6, 40]} /></mesh>}
       {cfg.satchel && X.strap && <group position={[X.strap[5] ?? 0, S.chestY - 0.01 - chestY + X.strap[2], X.strap[4] ?? 0]} rotation={[0, 0, X.strap[0]]}>{/* ext.strap [tilt, radius, y, depth, z, x]: a cross-body loop over the shoulder down to the bag */}
-        <mesh rotation={[0, Math.PI / 2, 0]} scale={[X.strap[3], 1, 1]} material={cel('#8a5a3c')}><torusGeometry args={[X.strap[1], 0.0045, 6, 40]} /></mesh></group>}
+        <mesh rotation={[0, Math.PI / 2, 0]} scale={[X.strap[3], 1, X.strap[6] ?? 1]} material={cel(X.strapC ?? '#8a5a3c')}><torusGeometry args={[X.strap[1], 0.0045, 6, 40]} /></mesh></group>}
     </Merge>, B.chest)}
-    {cfg.satchel && createPortal(<group ref={lod(1)}><group ref={set('bag')} position={[S.belly[1].x + (X.bag?.[0] ?? 0), S.bellyY + 0.03 - hipsY + (X.bag?.[1] ?? 0), -0.006 + (X.bag?.[2] ?? 0)]}><M geo={X.bagGeo ?? G.bag} mat={cel(X.bagC ?? '#c08d58')} position={[0.006, -0.03, 0]} scale={X.bag?.[3] ?? 1} /></group></group>, B.hips)}
+    {cfg.satchel && createPortal(<group ref={lod(1)}><group ref={set('bag')} position={[S.belly[1].x + (X.bag?.[0] ?? 0), S.bellyY + 0.03 - hipsY + (X.bag?.[1] ?? 0), -0.006 + (X.bag?.[2] ?? 0)]}>{X.Bag ? <X.Bag /> : <M geo={X.bagGeo ?? G.bag} mat={cel(X.bagC ?? '#c08d58')} position={[0.006, -0.03, 0]} scale={X.bag?.[3] ?? 1} />}</group></group>, B.hips)}
     {createPortal(<group position={headLocal} scale={1.17 * hd}>{X.Face ? <X.Face st={st} lod={lod} /> : <group ref={lod(2)}><Merge>
       {[-1, 1].map(x => <group key={x} position={[x * 0.021 * (f.wide ?? 1), -0.012 + (f.eyeY ?? 0), 0.047]} rotation={[0, x * 0.33, 0]}>
         {f.closed ? <mesh geometry={G.lid} material={eyeMat} rotation={[0, 0, 0]} position={[0, -0.002, 0.003]} ref={set(x < 0 ? 'eyeL' : 'eyeR')} />
