@@ -228,7 +228,7 @@ defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags
   for (const sd of [-1, 1]) k.within(mat(sd * (W / 2 + 0.004), B + H * 0.5, 0, sd * PI / 2), () => paw(k, 0, -0.01, 0, 0.016, 'sidePaw'))
   if (o.bone) bone(k, [-0.12 * o.bowlSide, 0.012, 0.3], 0.06, 0.013, 'bone', { flat: true, rot: [0, 0.6, PI / 2] })
   const bx = o.bowlX ?? 0.3 * o.bowlSide // bowlSide: 1 = on the door's right, -1 = its left; bowlX / bowlZ place it exactly
-  if (o.bowl) k.use('dogBowl', mat(bx, 0, o.bowlZ, -0.4 * o.bowlSide), { shadow: false })
+  if (o.bowl) k.use('dogBowl', mat(bx, 0, o.bowlZ, -0.4 * o.bowlSide), { shadow: false, food: o.food ?? 1 })
   k.shadow(0.5, 0.44, [0, 0.003, 0.02]); if (o.bowl) k.shadow(0.16, 0.16, [bx, 0.003, o.bowlZ])
 })
 // his food bowl: a classic flared feeding bowl, hollow: a wide heavy base, sloped orange sides and a rolled rim, a

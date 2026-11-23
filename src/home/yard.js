@@ -15,7 +15,7 @@ export const YARD = {
   gardenStones: [[-0.42, 1.2, 0.6], [-0.72, 1.24, -0.3], [-1.0, 1.3, 1.1]],
   gardenCan: [-0.86, 1.08, -0.6], gardenBushes: [[-1.86, 0.1, 0.9], [-1.86, 1.02, 0.8], [-0.95, -0.1, 0.75]],
   // Pip's dog house: right of the cottage, set back from the fence, turned a little toward the house and the path
-  dogHouse: { x: 1.2, z: 0.52, yaw: -0.55 },
+  dogHouse: { x: 1.2, z: 0.52, yaw: -0.55, bowlX: -0.18, bowlZ: 0.38 }, // bowl: room units in the dog house's frame (front-left of its door)
   rocks: [[1.32, 1.18, 0.4], [-0.62, 0.32, 2.1], [0.35, -0.75, 1], [-1.85, 0.9, 0.5]],
   sprouts: [[0.52, 0.78], [-0.35, 1.45], [0.95, -0.05], [-1.0, -0.05], [0.4, 1.6], [1.52, 0.98], [-0.62, 1.5]],
   // the yard fence: an oval round the house, trees, bench and crop beds, the gate in front on the stepping stones (x = 0)
@@ -44,3 +44,6 @@ export function yardColliders() {
 }
 // chimney top, house frame (for the smoke): cottage room units * HOME_S (exterior.js chimneyTop, default wall height)
 export const CHIMNEY_TOP = (() => { const { phi, r } = COTTAGE.chimney, d = Math.PI / 180; return [Math.sin(phi * d) * r * HOME_S, 1.12 * HOME_S, -Math.cos(phi * d) * r * HOME_S] })()
+// Pip's food bowl in the house frame (world units), from the dog house's spot and turn: where she feeds him (pets/Dog.jsx)
+export const DOG_BOWL = (() => { const d = YARD.dogHouse, c = Math.cos(d.yaw), s = Math.sin(d.yaw)
+  return { x: d.x + HOME_S * (d.bowlX * c + d.bowlZ * s), z: d.z + HOME_S * (-d.bowlX * s + d.bowlZ * c), yaw: d.yaw } })()
