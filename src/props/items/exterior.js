@@ -38,13 +38,13 @@ function clover(k, s = 1, lean = 1) {
 // ---------- the cottage ----------
 // A squat round plaster house under a three-tier tiled roof with a knob on top, after the reference: her real front
 // door (doorLeaf/doorFrame, the same as inside), arched glowing windows with clover sprigs, a round bath porthole and
-// a tall chimney back-right as on the reference. Window angles roughly follow the interior (sunny window -112ish,
+// a tall chimney where the stove flue leaves the room (phi -50). Window angles roughly follow the interior (sunny window -112ish,
 // kitchen window -13, porthole 47), so the outside and inside agree.
 //   opts: r, h (wall radius + height), roofR (roof size, independent of the walls), belly (how much the walls bulge), windows: [{ phi, clover }], porthole (phi | null), chimney: { phi, r } | null,
 //         tiers (1-3), knob, door
-defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: ['outdoor', 'building'],
+defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.4, 1.26], tags: ['outdoor', 'building'],
   pal: { wall: '#fbe6c6', roof: '#f08a4b', roof2: '#f59c5c', roof3: '#ec8243', roofDark: '#b85a2c', trim: '#e8873f', pane: '#ffd873', bar: '#d9773a', clover: '#9ccf45', clover2: '#b4de5e', cloverStem: '#86bb3c', chimney: '#7c4b39', chimneyCap: '#5d382b', knob: '#f6ddd4', porthole: '#cfe7ee' },
-  opts: { r: 0.48, roofR: 0.44, h: 0.62, belly: 0.14, windows: [{ phi: -132, clover: true }, { phi: 132, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: 38, r: 0.3 }, tiers: 3, knob: true, door: true } }, (k, o) => {
+  opts: { r: 0.48, roofR: 0.44, h: 0.7, belly: 0.14, windows: [{ phi: -132, clover: true }, { phi: 132, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.36 }, tiers: 3, knob: true, door: true } }, (k, o) => {
   const RW = o.r, HW = o.h
   // walls: a plump, soft drum (a marshmallow): bulging out round the middle, a touch wider at the foot, very round edges
   const TAPER = -0.03, BELLY = o.belly
@@ -66,19 +66,19 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: [
       k.box([ww, 0.014, 0.012], [0, hr * 0.9, 0.014], 'bar', { r: 0.004, out: false, seg: 2 })
       k.box([ww + 0.075, 0.024, 0.06], [0, -0.03, 0.026], 'trim', { r: 0.01, seg: 2 })
     })
-    if (w.clover) k.within(onWall(w.phi + (w.phi < 0 ? -9 : 9), rAt(0.45) - 0.01, 0.45), () => clover(k, 1.55, w.phi < 0 ? 1 : -1)) // above the window, nudged toward the door
+    if (w.clover) k.within(onWall(w.phi + (w.phi < 0 ? -9 : 9), rAt(0.5) - 0.01, 0.5), () => clover(k, 1.55, w.phi < 0 ? 1 : -1)) // above the window, nudged toward the door
   }
   // the bath porthole: a round window with a thick ring
   if (o.porthole != null) k.within(onWall(o.porthole, rAt(0.34), 0.34), () => {
     k.pill([0.045, 0.012], [0, 0, 0.004], 'porthole', { glow: true, rot: [PI / 2, 0, 0], bevel: 0 })
     k.ring(0.05, 0.016, [0, 0, 0.01], 'trim')
   })
-  // roof: a low rounded dome (steep at the eave, flattening toward the top, like the reference) under three tiers of
-  // narrow rounded tiles, each tier overhanging the one below. Radii scale with roofR, so walls can widen under it.
+  // roof: three tiers of narrow rounded tiles, each overhanging the one below, rising to a peaked top (the upper tiers
+  // steeper, like a pointed cap) over a cone core. Radii scale with roofR, so walls can widen under it.
   const E = HW - 0.08, rk = o.roofR / 0.44 // eave height
-  const tiers = [[0.6, 0, 0.47, 0.15, 30], [0.5, 0.11, 0.34, 0.24, 22], [0.37, 0.2, 0.17, 0.3, 15]].slice(0, o.tiers)
+  const tiers = [[0.6, 0, 0.47, 0.15, 30], [0.5, 0.11, 0.33, 0.28, 22], [0.37, 0.24, 0.15, 0.44, 15]].slice(0, o.tiers)
     .map(([re, ye, rt, yt, n]) => [re * rk, E + ye, rt * rk, E + yt, n])
-  k.dome([0.5 * rk, 0.27, 0.5 * rk], [0, E, 0], 'roofDark'); k.pill([0.5 * rk, 0.02], [0, E + 0.01, 0], 'roofDark', { out: false }) // the core + its underside
+  k.cone([0.46 * rk, 0.5], [0, E + 0.25, 0], 'roofDark', { n: 20 }) // the core (its base is the roof's underside)
   tiers.forEach(([re, ye, rt, yt, n], ti) => {
     const L = Math.hypot(re - rt, yt - ye), th = Math.atan2(re - rt, yt - ye), rm = (re + rt) / 2, ym = (ye + yt) / 2, t = 0.045
     const tau = (rt / re - 1) / (rt / re + 1), w = 2 * PI * rm / n * 0.97 // a hair narrower than the gap: the tiles read one by one
@@ -88,16 +88,16 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: [
   const top = tiers[tiers.length - 1][3]
   k.pill([tiers[tiers.length - 1][2] + 0.02, 0.07], [0, top + 0.01, 0], 'roof', { bevel: 0.45 })
   if (o.knob) { k.ring(0.075, 0.034, [0, top + 0.06, 0], 'roof2', { rot: [PI / 2, 0, 0] }); k.ball(0.055, [0, top + 0.1, 0], 'knob') }
-  // chimney: a tall round stack standing up out of the roof (back-right, as on the reference) with a pointed hat
+  // chimney: a tall round stack standing up out of the roof with a pointed hat, where the stove flue leaves the room (back-left)
   if (o.chimney) { const c = o.chimney, x = Math.sin(c.phi * D2R) * c.r, z = -Math.cos(c.phi * D2R) * c.r
-    k.pill([0.056, 0.42], [x, E + 0.21, z], 'chimney', { bevel: 0.1 })
-    k.pill([0.066, 0.045], [x, E + 0.4, z], 'chimney', { bevel: 0.4 })
-    k.cone([0.082, 0.1], [x, E + 0.47, z], 'chimneyCap', { n: 12 })
-    k.ball(0.015, [x, E + 0.525, z], 'chimneyCap', { out: false })
+    k.pill([0.058, 0.62], [x, E + 0.31, z], 'chimney', { bevel: 0.1 })
+    k.pill([0.068, 0.045], [x, E + 0.6, z], 'chimney', { bevel: 0.4 })
+    k.cone([0.085, 0.1], [x, E + 0.675, z], 'chimneyCap', { n: 12 })
+    k.ball(0.015, [x, E + 0.73, z], 'chimneyCap', { out: false })
   }
 })
 // where the cottage's smoke leaves (room units, house-local) for the given opts
-export const chimneyTop = (c = { phi: 38, r: 0.3 }, h = 0.62) => [Math.sin(c.phi * D2R) * c.r, h + 0.42, -Math.cos(c.phi * D2R) * c.r]
+export const chimneyTop = (c = { phi: -50, r: 0.36 }, h = 0.7) => [Math.sin(c.phi * D2R) * c.r, h + 0.66, -Math.cos(c.phi * D2R) * c.r]
 
 // ---------- puffy tree ----------
 // A broccoli tree: a stout tapered trunk with root flares and two forks, under a crown of soft round puffs.

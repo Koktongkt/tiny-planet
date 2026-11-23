@@ -4,7 +4,7 @@
 // meshes), so the startup chunk can use it for colliders / bench / garden beds while the art loads lazily
 // (home/Exterior.jsx). Edit a number here and everything that depends on it (art, colliders, prompts) follows.
 export const HOME_S = 1.25
-export const COTTAGE = { chimney: { phi: 38, r: 0.3 } } // cottage opts shared with the smoke
+export const COTTAGE = { chimney: { phi: -50, r: 0.36 } } // cottage opts shared with the smoke
 export const YARD = {
   houseR: 0.7, // collider radius (the bulging walls + entrance bushes)
   doorZ: 0.45, outZ: 1.0, // 'Go inside' prompt point; where she steps out to
@@ -38,4 +38,4 @@ export function yardColliders() {
   return c
 }
 // chimney top, house frame (for the smoke): cottage room units * HOME_S (exterior.js chimneyTop, default wall height)
-export const CHIMNEY_TOP = (() => { const { phi, r } = COTTAGE.chimney, d = Math.PI / 180; return [Math.sin(phi * d) * r * HOME_S, 1.1 * HOME_S, -Math.cos(phi * d) * r * HOME_S] })()
+export const CHIMNEY_TOP = (() => { const { phi, r } = COTTAGE.chimney, d = Math.PI / 180; return [Math.sin(phi * d) * r * HOME_S, 1.36 * HOME_S, -Math.cos(phi * d) * r * HOME_S] })()

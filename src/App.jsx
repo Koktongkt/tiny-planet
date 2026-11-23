@@ -295,7 +295,7 @@ function House({ n, i }) {
 }
 // Home: the chibi cottage + yard (lazy art); an invisible drum keeps the follow camera out of the walls, and the
 // night window light still spills on the grass
-const HOME_OCC_GEO = new THREE.CylinderGeometry(0.55, 0.58, 1.1, 12).translate(0, 0.55, 0)
+const HOME_OCC_GEO = new THREE.CylinderGeometry(0.6, 0.62, 1.3, 12).translate(0, 0.65, 0)
 function HomeHouse({ n }) {
   return <Surface n={n} lift={HOUSE_LIFT} spin={0}>
     <mesh geometry={HOME_OCC_GEO} ref={occ} visible={false} />
@@ -515,7 +515,7 @@ const ZVIEWS = {
   'harbour-ruins': { cam: dir(-0.1, 3.7), ch: 3.4, look: Zc.harbour.clone().lerp(Zc.ruins, 0.45), lh: 0.0 },
   'forest-giant': { cam: around(Zc.giant, 0.78, 4.6), ch: 3.6, look: Zc.giant, lh: 2.0 },
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
-  home: { cam: onHouse(0, 0.6, 2.95), ch: 1.4, look: onHouse(0, -0.25, 0.2), lh: 0.45 }, // her cottage + yard
+  home: { cam: onHouse(0, 0.6, 3.1), ch: 1.5, look: onHouse(0, -0.25, 0.2), lh: 0.55 }, // her cottage + yard
   'home-garden': { cam: onHouse(0, 0.3, 3.0), ch: 2.0, look: onHouse(0, -1.25, 0.6), lh: 0.1 },
   'home-yard': { cam: onHouse(0, -0.3, 4.2), ch: 3.4, look: onHouse(0, -0.3, 0.3), lh: 0 }, // the whole fenced yard from above
 }
