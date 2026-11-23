@@ -78,9 +78,9 @@ MU.open = openSlot
 export function nearInside(consider, SC) {
   if (!MU.inside) return
   const mp = MU.mp, dd = Math.hypot(mp.x - MDOOR.x, mp.z - MDOOR.z)
-  if (dd < 0.42) consider({ kind: 'ext', inside: true, id: 'museum-exit', icon: 'leaf', verb: 'Leave', name: 'the museum', act: () => exit() }, dd * 0.01, 1)
+  if (dd < 0.42) consider({ kind: 'ext', inside: true, id: 'museum-exit', at: (out) => toWorld(MDOOR.x, 0.7, MDOOR.z, out), icon: 'leaf', verb: 'Leave', name: 'the museum', act: () => exit() }, dd * 0.01, 1)
   const s = slotNear(mp.x, mp.z, 0.36); if (!s) return
   const don = G.s.museum.donated[s.id] !== undefined, have = count(s.id) > 0, nm = SC.itemName(s.id)
   const mode = don || !have ? 'inspect' : 'donate'
-  consider({ kind: 'ext', inside: true, id: 'mslot-' + s.id + mode, icon: don || have ? s.id : 'book', verb: mode === 'donate' ? 'Donate' : 'Look at', name: don || have ? nm : 'the empty plinth', act: () => openSlot(s.id) }, 0.002 + Math.hypot(mp.x - s.x, mp.z - s.z) * 0.01, 1)
+  consider({ kind: 'ext', inside: true, id: 'mslot-' + s.id + mode, at: (out) => toWorld(s.x, 0.5, s.z, out), icon: don || have ? s.id : 'book', verb: mode === 'donate' ? 'Donate' : 'Look at', name: don || have ? nm : 'the empty plinth', act: () => openSlot(s.id) }, 0.002 + Math.hypot(mp.x - s.x, mp.z - s.z) * 0.01, 1)
 }

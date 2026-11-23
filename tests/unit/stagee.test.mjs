@@ -14,7 +14,7 @@ import {
 import { createBike } from '../../src/art/bike/mesh.js'
 
 test('save is v6; a v4 save gains full energy and keeps Stage C progress', () => {
-  assert.equal(SAVE_VERSION, 6)
+  assert.equal(SAVE_VERSION, 7)
   assert.equal(fresh().energy, 100)
   const v4 = {
     v: 4, day: 2, inv: { wood: 3, fish: 1 }, tools: { rod: true }, crafted: 2,
@@ -27,7 +27,7 @@ test('save is v6; a v4 save gains full energy and keeps Stage C progress', () =>
     errands: { day: 2, list: [] }, buffs: [], settings: { volume: 0.4 },
   }
   const s = migrate(v4)
-  assert.equal(s.v, 6)
+  assert.equal(s.v, 7)
   assert.equal(s.energy, 100)
   assert.equal(s.settings.autoCook, false)
   assert.equal(s.inv.wood, 3)
@@ -48,7 +48,7 @@ test('v5 energy is clamped; a carried value survives migration; garbage falls ba
   assert.equal(migrate({ v: 5, energy: 'tired' }).energy, 100)
   assert.equal(migrate({ v: 4, energy: 12, day: 0, clock: { a: START_PHASE } }).energy, 12)
   const v1 = migrate({ day: 3, inv: { wood: 1 } })
-  assert.equal(v1.v, 6)
+  assert.equal(v1.v, 7)
   assert.equal(v1.energy, 100)
   assert.equal(v1.inv.wood, 1)
 })

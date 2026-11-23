@@ -16,6 +16,20 @@ import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
 import { bakePropMeshes } from './propBake.js'
 import { openRecipes } from '../ui/journal/book/openRecipes.js'
+import { notePickup } from './prompt/hints.js'
+import { pickTarget, promptWeight } from './prompt/logic.js'
+import { atPlanet, facingCos } from './prompt/anchors.js'
+import { placePrompt } from './prompt/WorldPrompt.jsx'
+import { setOutline } from './prompt/outline.js'
+// the traveller stands between the camera and the item: on screen near each other, and she is the closer one
+const _cv = new THREE.Vector3(), _cp = new THREE.Vector3(), _ca = new THREE.Vector3()
+function covers(camera, player, at) {
+  player.getWorldPosition(_cp); _cv.set(0, 1, 0).transformDirection(player.matrixWorld); _cp.addScaledVector(_cv, 0.22); at(_ca) // her chest
+  if (camera.position.distanceTo(_cp) >= camera.position.distanceTo(_ca)) return false
+  _cv.copy(_cp).project(camera); _ca.project(camera)
+  return Math.hypot((_cv.x - _ca.x) * innerWidth / 2, (_cv.y - _ca.y) * innerHeight / 2) < Math.min(innerWidth, innerHeight) * 0.13
+}
+const CANDS = []
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
@@ -147,7 +161,6 @@ function MergedProp({ item, s }) {
   if (c === false) return <Prop item={item} s={s} />
   return <group ref={ref} visible={false}><Prop item={item} s={1} /></group>
 }
-const G_RING = new THREE.MeshBasicMaterial({ color: '#fffbe8', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false, depthWrite: false })
 const G_FLY = glow('#f2ff8a'), G_HALO = new THREE.MeshBasicMaterial({ color: '#e8ff9a', transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false })
 
 // decor meshes (placed + ghost)
@@ -273,7 +286,7 @@ export function GameWorld() {
       if (nr.kind === 'ext') { nr.act(); return }
       if (nr.kind === 'bench') { G.ui.atBench = true; openRecipes({ bench: true }); return } // the journal's Recipes (the Recipe Book on phones)
       if (nr.kind === 'chest') { G.s.chest = true; add('skyseed', 1, true); add('crystal', 3, true); toast('You found the cliff-top picnic! +1 Sky Seed, +3 Crystal', 'skyseed', 4200); emit(); force(); return }
-      if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
+      if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; notePickup(G.s.hints, p.item, G.s.day); toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
       const sp = nr.spot, need = NEEDS_TOOL[sp.item]
       if (need && !G.s.tools[need]) { toast(`You need a ${ITEMS[need].name} for that.`, need); return }
       if (sp.item === 'fish') { G.onActivity && G.onActivity('fish'); startAct('cast', { dur: 1.0 }); G.ui.fish = { spot: sp.id, t0: performance.now(), zone: 0.3 + Math.random() * 0.4, tries: 3 }; emit(); return }
@@ -288,15 +301,15 @@ export function GameWorld() {
     G.ui.fly = [...G.ui.fly, { id: sp.id + performance.now(), item: sp.item, x: (_w.x * 0.5 + 0.5) * innerWidth, y: (-_w.y * 0.5 + 0.5) * innerHeight }]; emit()
     const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { dur: isWater ? 1.0 : 0.85, spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
     anim.current[sp.id] = { t0: performance.now() + 280 }
-    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
+    if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); if (sp.item !== 'wool' && sp.item !== 'water') notePickup(G.s.hints, sp.item, G.s.day); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
   }
-  useFrame(() => {
+  useFrame((_, dt) => {
     const P = GAME.P; if (!P || !L) return
     _pp.copy(P.n).multiplyScalar(R + height(P.n) + P.h)
     const night = T.night > 0.5; G.night = night
-    let best = null, bd = 1e9
     const H = GAME.H, inside = !!(H && (H.inside || H.alt)) // H.alt: the Stage C museum interior
-    const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
+    const cands = CANDS; cands.length = 0
+    const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim) cands.push({ o, d, lim, cos: null }) } // indoors only the house's own interactables count
     forageTick(force); let forageShown = 0
     for (const sp of L.spots) {
       const g = refs.current[sp.id]; if (!g) continue
@@ -317,20 +330,28 @@ export function GameWorld() {
         g.position.copy(sp.pos); g.scale.setScalar(1)
         if (sp.item === 'firefly') g.position.addScaledVector(sp.n, Math.sin(performance.now() / 600 + sp.spin) * 0.05)
         if (sp.item === 'glowmoss') g.scale.setScalar(G.s.tools.lantern && night ? 1.25 : 1)
-        const d = _pp.distanceTo(sp.standPos); consider({ kind: 'spot', spot: sp, id: sp.id }, d, sp.water ? 0.75 : sp.item === 'firefly' ? 0.5 : 0.42)
+        const d = _pp.distanceTo(sp.standPos); consider({ kind: 'spot', spot: sp, id: sp.id, at: atPlanet(sp.water ? sp.standPos : sp.pos, sp.water ? 0.05 : sp.item === 'firefly' ? 0.18 : 0.1), obj: sp.water ? null : g }, d, sp.water ? 0.75 : sp.item === 'firefly' ? 0.5 : 0.42)
       }
     }
-    for (const s of sheep) if (available(s.id)) consider({ kind: 'spot', spot: { ...s, pos: s.pos.clone(), standPos: s.pos.clone(), stand: s.n.clone() }, id: s.id }, _pp.distanceTo(s.pos), 0.45)
-    consider({ kind: 'bench', id: 'bench' }, _pp.distanceTo(L.bench.pos), 0.5)
-    if (G.s.unlocked.bridge && !G.s.chest) consider({ kind: 'chest', id: 'chest' }, _pp.distanceTo(posOf(L.bridge.chest)), 0.45)
-    for (const p of G.s.placed) if (!G.ui.place && !p.in) consider({ kind: 'decor', id: 'decor' + p.uid, uid: p.uid, item: p.item }, _pp.distanceTo(posOf(new THREE.Vector3(...p.n))), 0.35)
+    for (const s of sheep) if (available(s.id)) consider({ kind: 'spot', spot: { ...s, pos: s.pos.clone(), standPos: s.pos.clone(), stand: s.n.clone() }, id: s.id, at: atPlanet(s.pos, 0.3) }, _pp.distanceTo(s.pos), 0.45)
+    consider({ kind: 'bench', id: 'bench', at: atPlanet(L.bench.pos, 0.45) }, _pp.distanceTo(L.bench.pos), 0.5)
+    if (G.s.unlocked.bridge && !G.s.chest) { const cp = posOf(L.bridge.chest); consider({ kind: 'chest', id: 'chest', at: atPlanet(cp, 0.35) }, _pp.distanceTo(cp), 0.45) }
+    for (const p of G.s.placed) if (!G.ui.place && !p.in) { const dp = posOf(new THREE.Vector3(...p.n)); consider({ kind: 'decor', id: 'decor' + p.uid, uid: p.uid, item: p.item, at: atPlanet(dp, 0.25) }, _pp.distanceTo(dp), 0.35) }
     if (H) for (const f of H.near) f(consider, _pp) // door, pets, dug-up finds, indoor decor
+    for (const c of cands) c.cos = facingCos(c.o.at) // in-range only: prefer what she faces, the current target holds
+    const pick = pickTarget(cands, G.near && G.near.id), best = pick ? pick.o : null
+    if (best) best.weight = promptWeight(best)
     const id = best ? best.id : null
-    if (id !== (G.near && G.near.id)) { G.near = best; emit() }
+    if (id !== (G.near && G.near.id)) { G.near = best; emit() } else G.near = best // same target: keep its anchor and fields fresh
     if (G.autoAct && best && best.id === G.autoAct) { G.autoAct = null; GAME.actions.act() }
-    const hl = refs.current.__hl, bu = refs.current.__burst, now = performance.now() / 1000
-    if (hl) { const sp = best && best.kind === 'spot' && !best.spot.water ? best.spot : null; hl.visible = !!sp && !G.ui.panel
-      if (sp) { const p = place(sp.stand, 0.006, now * 0.6); hl.position.copy(sp.water ? sp.standPos : p.pos); hl.quaternion.copy(p.q); hl.scale.setScalar(1 + Math.sin(now * 4) * 0.08) } }
+    placePrompt(camera, dt, H && H.playerObj) // the in-world bubble follows its anchor
+    const bu = refs.current.__burst, now = performance.now() / 1000
+    // light-weight target: gold outline on the item (see-through while the traveller covers it); water: a ring of sparkles
+    const lt = best && best.weight === 'light' && best.obj && !G.ui.panel ? best : null
+    setOutline(lt, now, !!(lt && H && H.playerObj && covers(camera, H.playerObj, best.at)))
+    const ws = refs.current.__wsp, wsp = best && best.kind === 'spot' && best.spot.water && !G.ui.panel ? best.spot : null
+    if (ws) { ws.visible = !!wsp; if (wsp) { const p = place(wsp.stand, 0.02, 0); ws.position.copy(wsp.standPos); ws.quaternion.copy(p.q)
+      ws.children.forEach((c, i) => { const a = i / ws.children.length * 6.283 + now * 0.5; c.position.set(Math.cos(a) * 0.16, 0.02 + Math.sin(now * 2 + i) * 0.015, Math.sin(a) * 0.16); c.scale.setScalar(0.014 + 0.006 * Math.sin(now * 3 + i)) }) } }
     if (bu) { const ids = Object.keys(anim.current); bu.visible = ids.length > 0
       if (ids.length) { const g = refs.current[ids[0]], a = anim.current[ids[0]]; let k = Math.max(0, (performance.now() - a.t0) / 700); if (freezePick != null) k = freezePick
         bu.position.copy(g.position); bu.quaternion.copy(g.quaternion); bu.children.forEach((c, i) => { const ang = i / bu.children.length * 6.283 + k * 2, r = 0.05 + k * 0.16; c.position.set(Math.cos(ang) * r, 0.06 + Math.sin(i * 2.1) * 0.04 + k * 0.05, Math.sin(ang) * r); c.scale.setScalar(0.022 * (1 - k * 0.5)) }) } }
@@ -344,7 +365,7 @@ export function GameWorld() {
   return <group>
     {L.spots.map(sp => <group key={sp.id} ref={el => { if (el) refs.current[sp.id] = el }} position={sp.pos} quaternion={place(sp.water ? sp.n : sp.n, 0, sp.spin).q}
       onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <MergedProp item={sp.item} s={sp.s} />}</group>)}
-    <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
+    <group ref={el => { if (el) refs.current.__wsp = el }} visible={false}>{[...Array(8)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
     <Bench b={L.bench} /><HomeSign n={L.sign.n} /><Sparkles />

@@ -10,7 +10,7 @@ test('hooks: save v6, __T season + weather, deterministic rain days, tutorial no
   test.setTimeout(300_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home'); await scReady(page)
   const h = await page.evaluate(() => ({ v: window.__game.G.s.v, season: window.__T.season, w: window.__T.seasonW, kind: window.__T.kind, rain: window.__T.rain, wet: window.__T.wet, rainDays: Array.from({ length: 14 }, (_, d) => window.__sc.W.isRainDay(d)) }))
-  expect(h.v).toBe(6); expect(h.season).toBe('spring'); expect(h.w).toEqual([1, 0, 0, 0]); expect(h.kind).toBe('clear'); expect(h.rain).toBe(0); expect(h.wet).toBe(0)
+  expect(h.v).toBe(7); expect(h.season).toBe('spring'); expect(h.w).toEqual([1, 0, 0, 0]); expect(h.kind).toBe('clear'); expect(h.rain).toBe(0); expect(h.wet).toBe(0)
   expect(h.rainDays.filter(Boolean).length).toBe(2); expect(h.rainDays[0] || h.rainDays[1]).toBe(false)
   // a rain day at mid-morning: the hooks report rain
   const d = h.rainDays.findIndex(Boolean)
@@ -27,7 +27,7 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   // Day 0 opens Grandma's note on top of the lake. A keypress lands on that dialog, so fold it and use the prompt.
   await page.locator('.tpt-note').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {})
   if (await page.locator('.tpt-note').isVisible().catch(() => false)) await page.locator('.tpt-note .tpt-btns .tpx-btn').click()
-  await page.locator('.tp-prompt').click()
+  await page.locator('.tp-prompt').click({ force: true }) // the head bubble follows the scene and bobs, so it is never 'stable'
   await expect(page.locator('.tp-fish-c')).toBeVisible()
   // One long frame can pass through 'bite' before a poll, so 'reel' counts too.
   await page.waitForFunction(() => { const s = window.__fishSt; return !!s && (s.state === 'bite' || s.state === 'reel' || s.state === 'caught') }, null, { timeout: 120_000, polling: 100 })

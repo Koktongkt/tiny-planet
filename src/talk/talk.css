@@ -1,9 +1,7 @@
 /* '…' bubble + storybook dialogue box (parchment, brush-ink border, Cormorant italic like the loader) */
 .tk-bubble{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s;will-change:transform}
-.tk-bubble span{display:block;font:italic 500 26px/1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#3b2f22;padding:2px 12px 9px;
-  background:radial-gradient(70% 60% at 35% 30%,#fffaf0 0,#f4ead2 70%,#ead9b3 100%);border-radius:48% 52% 46% 54%/56% 50% 50% 44%;
-  box-shadow:inset 0 0 0 1.8px #3b2f22d0,0 3px 8px #2a1e1430;animation:tk-bob 1.6s ease-in-out infinite}
-.tk-bubble span::after{content:'';position:absolute;left:50%;bottom:-6px;width:10px;height:10px;margin-left:-6px;background:#f1e5c9;transform:rotate(45deg);box-shadow:1.6px 1.6px 0 #3b2f22c0;border-radius:0 0 3px 0}
+.tk-host{z-index:4}
+/* the villager's bubble is the shared in-world head bubble (src/game/prompt/prompt.css): Talk to + Give a gift */
 @keyframes tk-bob{50%{transform:translateY(-3px)}}
 .tk-box{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);z-index:6;width:min(640px,calc(100vw - 28px));box-sizing:border-box;
   padding:26px 30px 16px;color:#3b2f22;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;animation:tk-in .32s cubic-bezier(.2,.9,.3,1.2);

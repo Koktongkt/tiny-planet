@@ -2,7 +2,7 @@
 import { MILESTONES } from '../systems/friendship.js'
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
-export const SAVE_VERSION = 6
+export const SAVE_VERSION = 7
 export const TAU = Math.PI * 2
 // clock phase (rot.a) the game starts at: 0 = noon, so 0.4 is early afternoon
 export const START_PHASE = 0.4
@@ -19,7 +19,8 @@ const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum
 // v5 (Stage E): energy 0–100. The bicycle, once crafted, lives in tools.bike (no extra field).
 const E5 = () => ({ energy: 100 })
 // v6 (Stage F): settings.autoCook. Perfect dishes are bag ids (`soup_perfect`), not a separate field.
-export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4(), ...E5() })
+// v7 (in-world prompts): hints, per item { n: pickups, day: last pickup day } for the pickup chip reminders.
+export const fresh = () => ({ v: SAVE_VERSION, inv: {}, seen: {}, tools: {}, placed: [], unlocked: {}, taken: {}, day: 0, chest: false, crafted: 0, clock: { a: START_PHASE }, ...B3(), ...C4(), ...E5(), hints: {} })
 
 // each step takes a save of version `from` and returns one of version `from + 1`
 export const MIGRATIONS = [
@@ -39,6 +40,8 @@ export const MIGRATIONS = [
     const prev = s.settings && typeof s.settings === 'object' ? s.settings : {}
     return { ...s, settings: { ...prev, autoCook: prev.autoCook === true } }
   } },
+  // v7: pickup chip reminders start empty (every item shows its chip for its first pickups again)
+  { from: 6, up: (s) => ({ ...s, hints: {} }) },
 ]
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)
@@ -77,6 +80,7 @@ export function normalize(s) {
   if (!isObj(o.tutorial.done)) o.tutorial = { ...c.tutorial, dismissed: !!o.tutorial.dismissed }
   if (typeof o.tutorial.open !== 'boolean') o.tutorial.open = null // null = device default (open on desktop, folded slip on touch)
   if (!isObj(o.dig.taken)) o.dig = { taken: {} }
+  if (!isObj(o.hints)) o.hints = {}
   o.settings = { ...b.settings, ...(isObj(o.settings) ? o.settings : {}) }
   o.energy = Math.max(0, Math.min(100, Number.isFinite(o.energy) ? o.energy : 100))
   if (!isObj(o.clock) || !Number.isFinite(o.clock.a)) o.clock = { a: START_PHASE + o.day * TAU }

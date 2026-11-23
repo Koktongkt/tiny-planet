@@ -9,6 +9,7 @@ import { TOUCH } from '../touch.jsx'
 import { G, emit, subscribe, setPanel } from '../game/store.js'
 import { VILLAGE_POS, gardenBedNs } from '../world/village.js'
 import { SB } from './live.js'
+import { atPlanet } from '../game/prompt/anchors.js'
 const GardenPlots = lazy(() => import('../art/garden/GardenPlots.jsx')) // (not index.js: an "index-*" chunk name would look like the startup chunk)
 const NoticeBoard = lazy(() => import('../ui/errands/NoticeBoard.jsx'))
 const StageCWorld = lazy(() => import('./WorldC.jsx')) // Stage C stations, dig spots, museum door, photo capture (lazy)
@@ -40,8 +41,8 @@ export function StageBWorld({ L, GAME }) {
     if (hooked || !GAME.H) return; hooked = true
     GAME.H.near.push((consider, pp) => {
       if (!SL || GAME.H.inside) return
-      for (const pl of SL.plots) { const d = pp.distanceTo(_f.fromArray(pl.pos)); if (d < 0.24) { const o = SB.plotPrompt(pl.id); if (o) consider({ kind: 'ext', id: pl.id + ':' + o.verb + o.icon, chip: !!o.alt, ...o }, d, 0.24) } }
-      const d = pp.distanceTo(SL.board.pos); if (d < 0.55) consider({ kind: 'ext', id: 'errands-board', icon: 'board', verb: 'Read', name: 'the errands board', act: () => setPanel('errands') }, d, 0.55)
+      for (const pl of SL.plots) { const d = pp.distanceTo(_f.fromArray(pl.pos)); if (d < 0.24) { const o = SB.plotPrompt(pl.id); if (o) consider({ kind: 'ext', id: pl.id + ':' + o.verb + o.icon, at: (out) => atPlanet(out.fromArray(pl.pos), 0.14)(out), chip: !!o.alt, ...o }, d, 0.24) } }
+      const d = pp.distanceTo(SL.board.pos); if (d < 0.55) consider({ kind: 'ext', id: 'errands-board', at: atPlanet(SL.board.pos, 0.75), icon: 'board', verb: 'Read', name: 'the errands board', act: () => setPanel('errands') }, d, 0.55)
     })
   }, [])
   const tapPlot = (id) => { const pl = SL.plots.find(p => p.id === id); if (!pl || !GAME.P) return; GAME.P.target = pl.n.clone() } // walk over; E / Action then acts
