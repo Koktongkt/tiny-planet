@@ -8,7 +8,9 @@ import { VIEW } from '../common.jsx'
 import { G, subscribe } from '../game/store.js'
 import { HOME } from '../home/state.js'
 import { setHideStick } from '../touch.jsx'
-import { NPCS, TALK, weatherFor, noteActivity, recentActivity, periodAt } from './state.js'
+import { NPCS, TALK, weatherFor, noteActivity, recentActivity, periodAt, talkWins } from './state.js'
+import { Bubble } from '../game/prompt/WorldPrompt.jsx'
+import { placeBubble } from '../game/prompt/logic.js'
 import { buildLines, PROFILES } from './profiles.js'
 import { HeartsBadge } from '../ui/gifts/Hearts.jsx'
 import './talk.css'
@@ -71,19 +73,24 @@ export function Talk({ P }) {
     place()
   })
   const place = () => { const el = BUBBLE.el, who = TALK.open || TALK.near; if (!el) return
-    if (!who || !who.obj) { el.style.opacity = 0; return }
+    if (!!window.__sb !== BUBBLE.sb) { BUBBLE.sb = !!window.__sb; bump() } // the gift bubble appears once Stage B is up
+    if (!who || !who.obj || TALK.open || !talkWins(G.near)) { el.style.opacity = 0; return }
     who.obj.getWorldPosition(_h); _up.set(0, 1, 0).applyQuaternion(who.obj.getWorldQuaternion(new THREE.Quaternion())); _h.addScaledVector(_up, who.h || 0.92).project(camera)
-    if (_h.z > 1) { el.style.opacity = 0; return }
-    el.style.opacity = TALK.open ? 0 : 1; el.style.transform = `translate(${((_h.x + 1) / 2 * size.width).toFixed(1)}px, ${((1 - _h.y) / 2 * size.height).toFixed(1)}px) translate(-50%, -100%)` }
+    if (!BUBBLE.box) { const r = el.getBoundingClientRect(); if (!r.width) return; BUBBLE.box = { bw: r.width, bh: r.height + 10 } }
+    const p = placeBubble({ x: (_h.x + 1) / 2 * size.width, y: (1 - _h.y) / 2 * size.height, behind: _h.z > 1 }, { w: size.width, h: size.height }, BUBBLE.box)
+    el.style.opacity = 1; el.style.transform = `translate(${p.left.toFixed(1)}px, ${p.top.toFixed(1)}px)`; el.style.setProperty('--tail', p.tail.toFixed(1) + 'px') }
   return null
 }
-const BUBBLE = { el: null }
+const BUBBLE = { el: null, box: null, sb: false }
 // DOM overlay: bubble + dialogue box
 export function TalkOverlay() {
   useTalk()
   const L = TALK.lines, pg = TALK.page
   return <>
-    <div className="tk-bubble" ref={el => BUBBLE.el = el} aria-hidden="true"><span>…</span></div>
+    <div className="tp-ui tk-host"><div className="tk-bubble" ref={el => { BUBBLE.el = el; BUBBLE.box = null }}>
+      {TALK.near && !TALK.open && <Bubble key={TALK.near.key + (BUBBLE.sb ? '+g' : '')} icon="hand" verb="Talk to" name={(PROFILES[TALK.near.key] || {}).name || 'Villager'}
+        alt={BUBBLE.sb ? { key: 'G', icon: 'heart', verb: 'Give a gift' } : null} onAct={() => open(TALK.near)} onAlt={() => gift(TALK.near)} />}
+    </div></div>
     {L && <div className="tk-box" role="dialog" aria-label={`Talking with ${L.name}`} onPointerDown={e => { e.stopPropagation(); e.preventDefault(); advance() }}>
       <div className="tk-plate">{TALK.open && TALK.open.key === 'scholar' && <React.Suspense fallback={null}><HoshinoPortrait size={44} className="tk-portrait" /></React.Suspense>}<b>{L.name}</b><i>{L.role}</i>{window.__sb && TALK.open && <HeartsBadge hearts={window.__sb.friend(TALK.open.key).hearts} size={18} className="tk-hearts" />}</div>
       {window.__sb && TALK.open && <button className="tk-gift" aria-label="Give a gift" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); gift(TALK.open) }}>♥ Gift{TOUCHY ? '' : ' (G)'}</button>}

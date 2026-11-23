@@ -11,6 +11,7 @@ import { NEEDS_TOOL } from '../recipes.js'
 import { Icon } from '../icons.jsx'
 import { placeBubble } from './logic.js'
 import { chipShows } from './hints.js'
+import { talkWins } from '../../talk/state.js'
 import './prompt.css'
 
 export const PROMPT = { el: null, pt: { x: 0, y: 0, behind: false }, idleMs: 0, id: null, box: null, hide: null }
@@ -64,7 +65,9 @@ export function placePrompt(camera, dt, playerObj) {
   if (playerObj) { playerObj.getWorldPosition(_p); const moved = _p.distanceToSquared(_last) > 1e-8; _last.copy(_p)
     PROMPT.idleMs = !n || moved || PROMPT.id !== n.id ? 0 : PROMPT.idleMs + dt * 1000 }
   PROMPT.id = n ? n.id : null
-  if (!el || !n || typeof n.at !== 'function') return
+  if (!el || !n) return
+  const tw = talkWins(n); if (el.classList.contains('tp-hidden') !== tw) el.classList.toggle('tp-hidden', tw) // a villager has E
+  if (typeof n.at !== 'function') return
   if (n.weight === 'light') {
     const show = chipShows(G.s.hints || {}, el.dataset.item, G.s.day, PROMPT.idleMs)
     if (el.classList.contains('tp-off') === show) el.classList.toggle('tp-off', !show)

@@ -62,3 +62,18 @@ test('the targeted pickup gets the gold outline; the white ring is gone', async 
   await page.waitForFunction(() => window.__outline && window.__outline.id === null, null, { timeout: 20_000 })
   w.check()
 })
+
+test('villagers: Talk to bubble with Give a gift stacked above, one bubble at a time', async ({ page }) => {
+  const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=talk')
+  const tb = page.locator('.tk-bubble')
+  await expect(tb).toContainText('Talk to', { timeout: 40_000 })
+  await page.waitForFunction(() => !!window.__sb, null, { timeout: 40_000 })
+  await expect(tb).toContainText('Give a gift', { timeout: 20_000 })
+  const name = await page.evaluate(() => document.querySelector('.tk-bubble .tp-bubble b')?.textContent || '')
+  expect(name.length).toBeGreaterThan(1)
+  await expect(page.locator('.tp-bubble-wrap:not(.tp-hidden)')).toHaveCount(0)
+  await page.keyboard.press('e')
+  await expect(page.locator('.tk-box')).toBeVisible({ timeout: 20_000 })
+  await expect(tb.locator('.tp-bubble')).toBeHidden()
+  w.check()
+})
