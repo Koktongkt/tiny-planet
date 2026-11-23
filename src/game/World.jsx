@@ -23,10 +23,10 @@ import { setOutline } from './prompt/outline.js'
 // the traveller stands between the camera and the item: on screen near each other, and she is the closer one
 const _cv = new THREE.Vector3(), _cp = new THREE.Vector3(), _ca = new THREE.Vector3()
 function covers(camera, player, at) {
-  player.getWorldPosition(_cp); at(_ca)
+  player.getWorldPosition(_cp); _cv.set(0, 1, 0).transformDirection(player.matrixWorld); _cp.addScaledVector(_cv, 0.22); at(_ca) // her chest
   if (camera.position.distanceTo(_cp) >= camera.position.distanceTo(_ca)) return false
   _cv.copy(_cp).project(camera); _ca.project(camera)
-  return Math.hypot((_cv.x - _ca.x) * innerWidth / 2, (_cv.y - _ca.y) * innerHeight / 2) < Math.min(innerWidth, innerHeight) * 0.09
+  return Math.hypot((_cv.x - _ca.x) * innerWidth / 2, (_cv.y - _ca.y) * innerHeight / 2) < Math.min(innerWidth, innerHeight) * 0.13
 }
 const CANDS = []
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
