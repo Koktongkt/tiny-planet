@@ -54,7 +54,10 @@ export function recipeRows(tab, s, T) {
   const perfect = (s.journal && s.journal.perfect) || {}
   return RECIPES.filter(r => (RECIPE_TABS[tab] || []).includes(r.cat)).map(r => { const known = !!T.known(r), owned = !!T.owned(r)
     return { id: r.id, makes: r.makes, cat: r.cat, at: r.at || 'bench', recipe: r, known, owned, ready: known && !owned && T.haveFor(r).every(h => h.ok),
-      perfectDay: perfect[r.makes + '_perfect'] ?? null, needs: T.haveFor(r) } })
+      perfectDay: perfect[r.makes + '_perfect'] ?? null,
+      // show: the ingredient ids to name; for 'herbs or tea' only the ones she has found (never spoil an unfound item)
+      needs: T.haveFor(r).map(h => { const k = h.need[0], seen = (x) => !!(s.seen && s.seen[x])
+        return { ...h, show: typeof k === 'string' ? [k] : (k.any.filter(seen).length ? k.any.filter(seen) : ['unknown']) } }) } })
 }
 
 // ---------- Discoveries ----------
@@ -71,7 +74,7 @@ export const forageSeason = (id) => (Object.entries(FORAGE).find(([, l]) => l.in
 
 // ---------- Memories: Firsts ----------
 export function firsts(s, T) {
-  const ev = [], add = (day, kind, id, text) => { if (Number.isFinite(day)) ev.push({ day, kind, id, text }) }
+  const ev = [], add = (day, kind, id, text) => { if (Number.isFinite(day) && day >= 0) ev.push({ day, kind, id, text }) } // -1 = before the journal kept track
   for (const [id, f] of Object.entries((s.friends && s.friends.list) || {})) {
     if (f.metDay != null) add(f.metDay, 'met', id, `Met ${T.npcName(id)}`)
     for (const [h, d] of Object.entries(f.hit || {})) add(d, 'hearts', id, `${T.npcName(id)} reached ${h} hearts`)

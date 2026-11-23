@@ -93,7 +93,7 @@ export const journal = (tab) => tab === 'photos' ? S().photos.list.map(p => ({ .
 export const donatable = () => C.DONATABLE.filter(id => C.canDonate(S().museum, id, S().inv))
 export function donate(id) {
   if (!C.donate(S().museum, id, S().inv, S().day)) return false
-  SB.Fr.addHearts(S().friends, C.HOSHINO, 0.5)
+  SB.Fr.addHearts(S().friends, C.HOSHINO, 0.5, S().day) // Journal: meeting + heart milestones on that day
   const cases = C.caseCount(S()), full = cases.n === cases.of
   if (full && S().museum.full == null) S().museum.full = S().day
   const line = full ? C.HALL_LINE : null

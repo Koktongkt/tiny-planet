@@ -73,3 +73,36 @@ test('removing the cover photo clears the cover', () => {
   removePhoto(photos.list, store, 'b', photos); assert.equal(photos.cover, 'a')
   removePhoto(photos.list, store, 'a', photos); assert.equal(photos.cover, null)
 })
+
+// ---- final review fixes ----
+import { give, addHearts, newFriend } from '../../src/systems/friendship.js'
+import { firsts, recipeRows } from '../../src/systems/journalPages.js'
+
+test('a gift before any chat counts as meeting them that day, and notes heart milestones', () => {
+  const f = friends(); f.list.baker = { ...newFriend('baker'), hearts: 2.8 }
+  give(f, 'baker', 'berries', 1, 6)
+  assert.equal(f.list.baker.metDay, 6); assert.equal(f.list.baker.hit[3], 6)
+})
+test('hearts from elsewhere (a museum donation) meet and note milestones on that day', () => {
+  const f = friends(); addHearts(f, 'scholar', 3, 4)
+  assert.equal(f.list.scholar.metDay, 4); assert.equal(f.list.scholar.hit[3], 4)
+  addHearts(f, 'cook', 1) // no day: unchanged behaviour
+  assert.equal(f.list.cook.metDay, undefined)
+})
+test('old saves: milestones reached before tracking are marked unknown, never dated later', () => {
+  const old = fresh(); old.friends.list.grandma = { npcId: 'grandma', hearts: 3.5, giftedToday: false }
+  const s = migrate(JSON.parse(JSON.stringify(old)))
+  assert.equal(s.friends.list.grandma.hit[3], -1)
+  assert.deepEqual(noteMilestones(s.friends.list.grandma, 40), [])
+  const names = { itemName: (x) => x, npcName: (x) => x }
+  assert.equal(firsts(s, names).some(e => e.kind === 'hearts'), false)
+})
+test('new friends start with an empty milestone record', () => { assert.deepEqual(newFriend('baker').hit, {}) })
+test('a recipe ingredient that can be one of several only names the ones she has found', () => {
+  const T = { known: () => true, owned: () => false, haveFor: (r) => r.needs.map(nd => ({ need: nd, have: 0, ok: false })) }
+  const tea = recipeRows('food', { seen: { herbs: true }, journal: {} }, T).find(r => r.id === 'teacup')
+  const any = tea.needs.find(n => typeof n.need[0] !== 'string')
+  assert.deepEqual(any.show, ['herbs'])
+  const plainNeed = tea.needs.find(n => typeof n.need[0] === 'string')
+  assert.deepEqual(plainNeed.show, [plainNeed.need[0]])
+})

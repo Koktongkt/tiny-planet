@@ -102,7 +102,7 @@ function RecipesPage({ sub, pick, setPick, refresh }) {
   const left = <><div className="jb-scroll">{rows.map(r => <button key={r.id} data-pick={r.id} className={'jb-rc' + (sel && r.id === sel.id ? ' on' : '') + (r.known ? '' : ' lock')} onClick={() => setPick(r.id)}>
     {r.known ? <It id={r.makes} size={46} /> : <Ghost id={r.makes} size={46} />}
     <span><b>{r.known ? name(r.makes) : '???'}{r.perfectDay != null && <span className="jb-pf"> ✦</span>}</b>
-      <small>{r.known ? r.needs.map(({ need: [id, n] }) => `${n} ${typeof id === 'string' ? name(id) : id.any.map(name).join(' or ')}`).join(' · ') : 'Find its ingredients to learn it'}</small></span>
+      <small>{r.known ? r.needs.map(({ need: [, n], show }) => `${n} ${show.map(x => (x === 'unknown' ? '???' : name(x))).join(' or ')}`).join(' · ') : 'Find its ingredients to learn it'}</small></span>
     {r.owned ? <span className="jb-pill done own">{r.cat === 'Unlock' ? 'Built' : 'Owned'}</span> : r.ready ? <span className="jb-rdy" title="You have everything" /> : null}</button>)}</div>
     <div className="jb-lfoot">{nKnown} of {rows.length} learned · <span style={{ color: '#4f8f2a' }}>●</span> ready to make</div></>
   if (!sel) return [left, null]
@@ -114,8 +114,8 @@ function RecipesPage({ sub, pick, setPick, refresh }) {
   return [left, <><div className="jb-blob"><It id={r.makes} size={132} /></div><div className="jb-rt">{name(r.makes)}</div>
     <div className="jb-rsub">{r.cat === 'Unlock' ? 'Builds' : r.cat}{sel.owned ? ' · Owned' : ''}{sel.perfectDay != null && <span className="jb-pf"> · ✦ Perfect on {D(sel.perfectDay)}</span>}</div><div className="jb-rule" />
     <p className="jb-rdesc">{desc(r.makes)}</p>
-    <Box label="Needs">{sel.needs.map(({ need: [id, n], have, ok }, i) => { const ids = typeof id === 'string' ? [id] : id.any
-      return <Row key={i} ok={ok} icon={ids[0]} text={ids.map(name).join(' or ')} count={`${Math.min(have, n)}/${n}`} /> })}</Box>
+    <Box label="Needs">{sel.needs.map(({ need: [, n], have, ok, show }, i) =>
+      <Row key={i} ok={ok} icon={show[0]} text={show.map(x => (x === 'unknown' ? '???' : name(x))).join(' or ')} count={`${Math.min(have, n)}/${n}`} />)}</Box>
     <Foot>{action}</Foot></>]
 }
 

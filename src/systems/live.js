@@ -75,8 +75,8 @@ export const giftable = () => Object.entries(S().inv).filter(([k, n]) => n > 0 &
 export const prefsSeen = (npcId) => { const f = S().friends.list[npcId], o = {}; for (const [k, v] of Object.entries((f && f.seen) || {})) o[k] = v; return o }
 export function giveGift(npcId, itemId) {
   if (count(itemId) < 1) return null
-  const r = Fr.give(S().friends, npcId, itemId, Bf.has(S().buffs, 'cozy', now()) ? Bf.BUFFS.cozy.heartsMul : 1); if (!r) return null
-  take(itemId, 1); const f = S().friends.list[npcId]; f.seen = { ...(f.seen || {}), [itemId]: r.kind }; Fr.noteMilestones(f, S().day)
+  const r = Fr.give(S().friends, npcId, itemId, Bf.has(S().buffs, 'cozy', now()) ? Bf.BUFFS.cozy.heartsMul : 1, S().day); if (!r) return null
+  take(itemId, 1); const f = S().friends.list[npcId]; f.seen = { ...(f.seen || {}), [itemId]: r.kind }
   for (const [k, n] of r.returns) setTimeout(() => { add(k, n, true); toast(`${who(npcId)} gives you ${n} ${nm(k)} in return!`, k, 3800) }, 2000)
   emit(); return r
 }
@@ -90,7 +90,7 @@ export function deliverErrand(id) {
   const e = S().errands.list.find(x => x.id === id), r = Er.deliver(S().errands, id, S().inv); if (!r) return null
   if (r.coins) add('coin', r.coins, true)
   if (r.itemId) add(r.itemId, 1, true)
-  if (r.hearts) { Fr.addHearts(S().friends, e.npcId, r.hearts); Fr.noteMilestones(S().friends.list[e.npcId], S().day) }
+  if (r.hearts) Fr.addHearts(S().friends, e.npcId, r.hearts, S().day)
   toast(`${who(e.npcId)}: "Thank you!" ` + [r.coins && `+${r.coins} ${nm('coin')}`, r.itemId && `+1 ${nm(r.itemId)}`, r.hearts && '+♥'].filter(Boolean).join(' '), r.itemId || 'coin', 3600)
   emit(); return r
 }

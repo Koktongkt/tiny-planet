@@ -1,4 +1,5 @@
 // Save schema + ordered migrations. Pure (no DOM), so node unit tests can import it.
+import { MILESTONES } from '../systems/friendship.js'
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
 export const SAVE_VERSION = 6
@@ -70,6 +71,8 @@ export function normalize(s) {
   if (!Array.isArray(o.photos.list)) o.photos = { list: [] }
   if (typeof o.photos.cover !== 'string') o.photos.cover = null // Journal: the photo shown first in Memories
   if (!Array.isArray(o.errands.log)) o.errands.log = [] // Journal: the last finished favours
+  // Journal: friends from before milestone tracking: hearts already reached get day -1 (unknown), so they are never dated later
+  for (const f of Object.values(o.friends.list)) if (isObj(f) && !isObj(f.hit)) { f.hit = {}; for (const h of MILESTONES) if (f.hearts >= h) f.hit[h] = -1 }
   if (!Number.isFinite(o.train.rides)) o.train = { rides: 0 }
   if (!isObj(o.tutorial.done)) o.tutorial = { ...c.tutorial, dismissed: !!o.tutorial.dismissed }
   if (typeof o.tutorial.open !== 'boolean') o.tutorial.open = null // null = device default (open on desktop, folded slip on touch)
