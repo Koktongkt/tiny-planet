@@ -1,6 +1,6 @@
 # In-world action prompts and the gold outline: design
 
-Status: design, waiting for the owner's approval. Mockups: https://claude.ai/artifact/42D7HtpPdV34xcHDkLMaN1 (private
+Status: **approved** by the owner (2026-11-23). Mockups: https://claude.ai/artifact/42D7HtpPdV34xcHDkLMaN1 (private
 to the owner). Highlight test renders came from a throwaway spike, not in the repo.
 
 ## Why
@@ -88,8 +88,11 @@ For gather spots, forage, fireflies, dug-up finds and placed decor ("Pick up").
 - Panels, fishing, placing decor and talking hide the prompt, as today.
 
 ### Villagers
-Talking is a separate system (`src/talk/Talk.jsx`) with its own "…" bubble and its own E handling; it is not in
-`G.near`. **Open question for the owner** (below).
+Talking is a separate system (`src/talk/Talk.jsx`) with its own "…" bubble and its own E and G handling; it is not
+in `G.near`. **Decided:** villagers get the same head bubble. The "…" bubble becomes "E Talk to <name>" (person icon),
+with "G Give a gift" stacked above it as the second action. The bubble is drawn by the same component as every other
+prompt; Talk keeps its own key handling and its rule for when a gather target beats a villager. Phones: tapping the
+bubble opens the talk, tapping the gift bubble opens the gift picker. The open dialogue box hides the bubble, as today.
 
 ## Constraints
 - Smoke tests select `.tp-prompt` and `.tp-chip` (`stagec`, `stageb`, `hud.mobile`). `hud.mobile` taps the pet prompt
@@ -106,7 +109,3 @@ Talking is a separate system (`src/talk/Talk.jsx`) with its own "…" bubble and
 - How "the traveller covers the item" is detected (for example, a ray from the camera to the item that hits her
   body first).
 - Whether the bubble is one DOM element moved per frame (recommended) or several.
-
-## Open
-1. Villagers: fold the "…" bubble into the new head bubble ("E Talk to Hana", with "G Give a gift" stacked above as the
-   second action), or leave the "…" bubble as it is?
