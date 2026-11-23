@@ -182,7 +182,7 @@ const bone = (k, pos, len, r, c, o = {}) => { k.stick([r * 0.6, len], pos, c, { 
 const gableGeo = (w, h, d) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(0, h); sh.lineTo(-w / 2, 0)
   const g = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 }); g.translate(0, 0, -d / 2); g.computeVertexNormals(); return g }
 defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags: ['outdoor', 'pet'],
-  pal: { base: '#c98552', wood: '#f2b274', plank: '#dc9658', roof: '#9cc65a', roof2: '#88b74c', scallop: '#7fae45', ridge: '#e3843f', hole: '#4a2f24', trim: '#fff4e2', cushion: '#f29a46', cushion2: '#f7b56a', plaque: '#fff4e2', pawInk: '#c98552', sidePaw: '#e3843f', bone: '#fff4e2', mat: '#fbf1e0', matEdge: '#e6b98a' },
+  pal: { base: '#c98552', wood: '#f2b274', plank: '#dc9658', roof: '#9cc65a', roof2: '#88b74c', roof3: '#b2d672', f1: '#f7b5c8', f2: '#ffe07a', eye: '#f2b33c', clover: '#86b545', clover2: '#9cc952', cloverStem: '#6f9e3a', scallop: '#7fae45', ridge: '#e3843f', hole: '#4a2f24', trim: '#fff4e2', cushion: '#f29a46', cushion2: '#f7b56a', plaque: '#fff4e2', pawInk: '#c98552', sidePaw: '#e3843f', bone: '#fff4e2', mat: '#fbf1e0', matEdge: '#e6b98a' },
   opts: { bowl: true, bone: true, shadow: false } }, (k, o) => {
   const W = 0.3, D = 0.28, B = 0.03, H = 0.2, top = B + H, GH = 0.14, ang = Math.atan2(GH, W / 2) // body, gable rise, roof pitch
   k.box([W + 0.06, B, D + 0.06], [0, B / 2, 0], 'base', { r: 0.014, seg: 2 }) // the little base it stands on
@@ -196,6 +196,19 @@ defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags
   for (const sd of [-1, 1]) {
     const cx = sd * (Math.cos(ang) * (L / 2 - 0.05)) + sd * Math.sin(ang) * t / 2, cy = top + GH - Math.sin(ang) * (L / 2 - 0.05) + Math.cos(ang) * t / 2
     k.puff([L, t, D + 0.1], [cx, cy, 0], sd < 0 ? 'roof' : 'roof2', { rot: [0, 0, -sd * ang], bulge: 0.35, hi: 0.2 })
+    // on the slab (its own frame: u runs down the slope, z along the ridge, y off the roof): staggered rows of little
+    // rounded shingles, cream barge boards on the gable ends, and a few flowers + a clover tuft growing in the moss
+    k.within(new THREE.Matrix4().makeTranslation(cx, cy, 0).multiply(new THREE.Matrix4().makeRotationZ(-sd * ang)), () => {
+      const at = (u, y, z) => [sd * u, y, z], DZ = D + 0.1, n = 6, tw = DZ / n
+      for (let r = 0; r < 3; r++) for (let i = 0; i < n + (r % 2); i++) {
+        const z = -DZ / 2 + tw * (i + (r % 2 ? 0 : 0.5)); if (Math.abs(z) > DZ / 2 - 0.012) continue
+        k.box([0.08, 0.012, tw * 0.94], at(-L / 2 + 0.07 + r * 0.075, t / 2 + 0.002 + r * 0.0015, z), (i + r) % 3 === 0 ? 'roof3' : (i + r) % 3 === 1 ? 'roof' : 'roof2', { rot: [0, 0, sd * 0.1], r: 0.0058, seg: 2, hi: 0.25, shade: 0.1 })
+      }
+      for (const sz of [-1, 1]) k.box([L + 0.01, 0.026, 0.016], at(0, -t / 2 - 0.006, sz * (DZ / 2 - 0.004)), 'trim', { r: 0.007, seg: 2, hi: 0.1 })
+      if (sd < 0) { flower(k, at(0.0, t / 2 + 0.016, -0.08), 0.026, 'f1', 'eye'); flower(k, at(0.07, t / 2 + 0.018, 0.1), 0.022, 'f2', 'eye'); flower(k, at(-0.05, t / 2 + 0.014, 0.12), 0.02, 'f1', 'eye')
+        k.within(new THREE.Matrix4().makeTranslation(...at(0.05, t / 2 + 0.006, -0.12)).multiply(new THREE.Matrix4().makeRotationX(-PI / 2)), () => clover(k, 0.6, 1)) }
+      else { flower(k, at(0.04, t / 2 + 0.018, -0.1), 0.024, 'f2', 'eye'); k.within(new THREE.Matrix4().makeTranslation(...at(-0.02, t / 2 + 0.006, 0.09)).multiply(new THREE.Matrix4().makeRotationX(-PI / 2)), () => clover(k, 0.55, -1)) }
+    })
     const ex = sd * (Math.cos(ang) * (L - 0.05) + Math.sin(ang) * t * 0.3), ey = top + GH - Math.sin(ang) * (L - 0.05) - 0.006
     for (let i = 0; i < 7; i++) k.ball([0.022, 0.018, 0.028], [ex, ey, -(D + 0.08) / 2 + (D + 0.08) * i / 6], 'scallop', { lo: true, hi: 0.15 })
   }
