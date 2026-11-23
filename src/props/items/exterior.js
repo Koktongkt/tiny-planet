@@ -40,11 +40,11 @@ function clover(k, s = 1, lean = 1) {
 // door (doorLeaf/doorFrame, the same as inside), arched glowing windows with clover sprigs, a round bath porthole and
 // a chimney where the stove flue leaves the room (phi -50). Window angles follow the interior (sunny window -112ish,
 // kitchen window -13, porthole 47), so the outside and inside agree.
-//   opts: r, h (wall radius + height), windows: [{ phi, clover }], porthole (phi | null), chimney: { phi, r } | null,
+//   opts: r, h (wall radius + height), roofR (roof size, independent of the walls), belly (how much the walls bulge), windows: [{ phi, clover }], porthole (phi | null), chimney: { phi, r } | null,
 //         tiers (1-3), knob, door
 defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: ['outdoor', 'building'],
   pal: { wall: '#fbe6c6', roof: '#f08a4b', roof2: '#f59c5c', roof3: '#ec8243', roofDark: '#b85a2c', trim: '#e8873f', pane: '#ffd873', bar: '#d9773a', clover: '#9ccf45', clover2: '#b4de5e', cloverStem: '#86bb3c', chimney: '#7c4b39', chimneyCap: '#5d382b', knob: '#f6ddd4', porthole: '#cfe7ee' },
-  opts: { r: 0.44, h: 0.62, belly: 0.14, windows: [{ phi: -125, clover: true }, { phi: 125, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.3 }, tiers: 3, knob: true, door: true } }, (k, o) => {
+  opts: { r: 0.48, roofR: 0.44, h: 0.62, belly: 0.14, windows: [{ phi: -125, clover: true }, { phi: 125, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.3 }, tiers: 3, knob: true, door: true } }, (k, o) => {
   const RW = o.r, HW = o.h
   // walls: a soft drum, a touch wider at the foot
   // walls: a plump, soft drum (a marshmallow): bulging out round the middle, a touch wider at the foot, very round edges
@@ -77,7 +77,7 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: [
   // roof: a cone core under three tiers of chunky rounded tiles, each tier overhanging the one below
   const dy = HW - 0.52 // tiers are drawn for a 0.52 wall and lifted with it
   const tiers = [[0.63, 0.48, 0.44, 0.64, 26], [0.48, 0.6, 0.3, 0.76, 19], [0.34, 0.72, 0.15, 0.87, 13]].slice(0, o.tiers)
-    .map(([re, ye, rt, yt, n]) => [re * RW / 0.44, ye + dy, rt * RW / 0.44, yt + dy, n])
+    .map(([re, ye, rt, yt, n]) => [re * o.roofR / 0.44, ye + dy, rt * o.roofR / 0.44, yt + dy, n]) // the roof keeps its own size (roofR), so walls can widen under it
   k.cone([tiers[0][0] * 0.94, 0.52], [0, tiers[0][1] + 0.26, 0], 'roofDark', { n: 20 })
   tiers.forEach(([re, ye, rt, yt, n], ti) => {
     const L = Math.hypot(re - rt, yt - ye), th = Math.atan2(re - rt, yt - ye), rm = (re + rt) / 2, ym = (ye + yt) / 2, t = 0.05

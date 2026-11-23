@@ -6,7 +6,7 @@
 export const HOME_S = 1.25
 export const COTTAGE = { chimney: { phi: -50, r: 0.3 } } // cottage opts shared with the smoke
 export const YARD = {
-  houseR: 0.6, // collider radius (walls + entrance bushes)
+  houseR: 0.7, // collider radius (the bulging walls + entrance bushes)
   doorZ: 0.45, outZ: 1.0, // 'Go inside' prompt point; where she steps out to
   trees: [{ x: -0.82, z: -0.56, seed: 1, crown: 0.33 }, { x: 0.86, z: -0.46, seed: 2.3, crown: 0.3 }],
   bench: [1.0, 0.5], sign: [-0.5, 1.95], mailbox: [0.48, 1.92], // sign + mailbox just outside the front gate
