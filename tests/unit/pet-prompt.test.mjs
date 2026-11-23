@@ -34,3 +34,9 @@ test('a quiet pet never takes E from something else in range', () => {
   assert.equal(pickTarget([pip, berry], 'dog').o.id, 'b')
   assert.equal(pickTarget([pip], null).o.id, 'dog') // alone, E still pets quietly
 })
+test('stillness: counts while she stays put, resets the frame she moves (a teleport too)', async () => {
+  const { STILL, tickStill } = await import('../../src/game/prompt/still.js')
+  tickStill(0, 0, 0, 0.5); assert.equal(STILL.ms, 0) // first frame: no history
+  tickStill(0, 0, 0, 1); tickStill(0, 0, 0, 2.5); assert.equal(STILL.ms, 3500)
+  tickStill(0.5, 0, 0, 1); assert.equal(STILL.ms, 0)
+})
