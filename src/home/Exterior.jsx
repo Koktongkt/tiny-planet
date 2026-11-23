@@ -33,6 +33,7 @@ export function buildYard(homeN, onHouse, lift) {
     ;[[-150, 1, 5], [150, 1, 4], [-100, 0.9, 3], [100, 0.95, 4], [-65, 0.85, 0], [70, 0.85, 2], [-20, 0.8, 0], [20, 0.8, 0]].forEach(([deg, sc, fl], i) => {
       const [x, z] = polar(deg, 0.66 * S), m = at(x, z, -deg * Math.PI / 180 + Math.PI, S * sc)
       fl ? k.use('flowerBush', m, { flowers: fl }) : k.use('bush', m) })
+    { const d = YARD.dogHouse; k.use('dogHouse', at(d.x, d.z, d.yaw), { bowlSide: -1 }) } // Pip's house, bowl on the bench side
     for (const t of YARD.trees) k.use('puffTree', at(t.x, t.z, t.seed), { seed: t.seed, crown: t.crown })
     for (const [x, z, a] of YARD.stones) k.use('stepStone', at(x, z, a, S, 0.0))
     for (const [x, z, a] of YARD.rocks) k.use('rocks', at(x, z, a))

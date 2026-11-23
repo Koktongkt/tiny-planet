@@ -14,8 +14,10 @@ export const YARD = {
   // the crop corner: a stone path from the front path to the beds, a watering can, flowering bushes at the bed corners
   gardenStones: [[-0.42, 1.2, 0.6], [-0.72, 1.24, -0.3], [-1.0, 1.3, 1.1]],
   gardenCan: [-0.86, 1.08, -0.6], gardenBushes: [[-1.86, 0.1, 0.9], [-1.86, 1.02, 0.8], [-0.95, -0.1, 0.75]],
-  rocks: [[1.05, 1.15, 0.4], [-0.62, 0.32, 2.1], [0.35, -0.75, 1], [-1.85, 0.9, 0.5]],
-  sprouts: [[0.7, 0.95], [-0.35, 1.45], [0.95, -0.05], [-1.0, -0.05], [0.4, 1.6], [1.3, 0.8], [-0.62, 1.5]],
+  // Pip's dog house: front-right between the bench and the gate, its door turned to the stepping-stone path
+  dogHouse: { x: 0.86, z: 1.02, yaw: -1.3 },
+  rocks: [[1.3, 0.62, 0.4], [-0.62, 0.32, 2.1], [0.35, -0.75, 1], [-1.85, 0.9, 0.5]],
+  sprouts: [[0.52, 0.78], [-0.35, 1.45], [0.95, -0.05], [-1.0, -0.05], [0.4, 1.6], [1.3, 0.8], [-0.62, 1.5]],
   // the yard fence: an oval round the house, trees, bench and crop beds, the gate in front on the stepping stones (x = 0)
   fence: { cx: -0.3, cz: 0.25, rx: 1.85, rz: 1.4, gateW: 0.42, seg: 0.45 },
 }
@@ -36,7 +38,7 @@ export function fenceRuns(f = YARD.fence) {
 }
 // circle colliders (house frame x, z, radius in world units): the house, tree trunks, fence posts every ~0.12
 export function yardColliders() {
-  const c = [[0, 0, YARD.houseR], ...YARD.trees.map(t => [t.x, t.z, 0.13])]
+  const c = [[0, 0, YARD.houseR], ...YARD.trees.map(t => [t.x, t.z, 0.13]), [YARD.dogHouse.x, YARD.dogHouse.z, 0.24]]
   for (const [[x0, z0], [x1, z1]] of fenceRuns()) { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 0.12)); for (let i = 0; i <= n; i++) c.push([x0 + (x1 - x0) * i / n, z0 + (z1 - z0) * i / n, 0.045]) }
   return c
 }
