@@ -17,6 +17,8 @@ world, where the traveller meets the person, pet or object, in the Glass & Gold 
 - **Ground chips show less often.** The ring always shows. The chip is a reminder that appears only some of the time
   (proposal below).
 - Only one prompt shows at a time, as today: the nearest thing in range (`G.near`, set in `src/game/World.jsx`).
+- **Phones use the same design as desktop.** The whole bubble is the tap target. The pad's Action button
+  (`src/touch.jsx`) stays as a thumb-reach shortcut.
 
 ## Proposed, not yet confirmed
 - Chip reminder rule for ground items: show the chip for the first few pickups of each item type (say 3). After that, show
@@ -27,9 +29,6 @@ world, where the traveller meets the person, pet or object, in the Glass & Gold 
 - Small or floating things (fireflies) anchor just above the object. Near the screen edge, the bubble slides back inside
   the frame and its tail keeps pointing at the target.
 - "Needs a tool" state: the same bubble with a greyed coin and a soft red line naming the missing tool.
-
-- **Phones use the same design as desktop.** The whole bubble is the tap target. The pad's Action button
-  (`src/touch.jsx`) stays as a thumb-reach shortcut.
 
 ## Still open
 - When the target is off screen or hidden, what should show? Cases where it can happen: the player backs into
