@@ -59,6 +59,17 @@ export function give(friends, npcId, itemId, mul = 1) {
   return { kind, gained: f.hearts - before, returns }
 }
 export function addHearts(friends, npcId, n) { const f = friendOf(friends, npcId); f.hearts = Math.max(0, Math.min(MAX_HEARTS, f.hearts + n)); return f.hearts }
+// Journal: the day she first chatted with someone (once). -> true the first time
+export function meet(friends, npcId, day) { const f = friendOf(friends, npcId); if (f.metDay != null) return false; f.metDay = day; return true }
+// Journal: the first day each heart milestone was reached. -> the milestones newly reached
+export const MILESTONES = [3, 5]
+export function noteMilestones(f, day) {
+  const out = []; if (!f) return out
+  for (const h of MILESTONES) if (f.hearts >= h && !(f.hit && f.hit[h] != null)) { (f.hit = f.hit || {})[h] = day; out.push(h) }
+  return out
+}
+// Journal: the met day; friends from saves before met-tracking (hearts or gifts) count as met on day 1
+export function metOf(f) { if (!f) return null; if (f.metDay != null) return f.metDay; return f.hearts > 0 || (f.seen && Object.keys(f.seen).length) ? 0 : null }
 // a new morning: everyone can receive a gift again
 export function resetDay(friends, day) { if (friends.day === day) return false; friends.day = day; for (const k in friends.list) friends.list[k].giftedToday = false; return true }
 // extra dialogue unlocked by friendship (Talk appends one of these)

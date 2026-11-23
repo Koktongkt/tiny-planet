@@ -11,10 +11,10 @@ export const dayFromPhase = (a) => Math.max(0, Math.floor((a + Math.PI / 2) / TA
 // v3 (Stage B): garden plots, friends (npcId -> Friend), today's errands, timed food buffs, settings. The systems that use
 // them (src/systems) are lazy; here only the shape lives. `day` in garden/friends/errands = the last in-game day applied.
 const SET = () => ({ volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1, autoCook: false })
-const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [] }, buffs: [], settings: SET() })
+const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [], log: [] }, buffs: [], settings: SET() })
 // v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
 // tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.
-const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0, open: null }, dig: { taken: {} } })
+const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [], cover: null }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0, open: null }, dig: { taken: {} } })
 // v5 (Stage E): energy 0–100. The bicycle, once crafted, lives in tools.bike (no extra field).
 const E5 = () => ({ energy: 100 })
 // v6 (Stage F): settings.autoCook. Perfect dishes are bag ids (`soup_perfect`), not a separate field.
@@ -68,6 +68,8 @@ export function normalize(s) {
   if (!isObj(o.journal.forage) || !isObj(o.journal.relics)) o.journal = { forage: isObj(o.journal.forage) ? o.journal.forage : {}, relics: isObj(o.journal.relics) ? o.journal.relics : {} }
   if (!isObj(o.museum.donated)) o.museum = { donated: {} }
   if (!Array.isArray(o.photos.list)) o.photos = { list: [] }
+  if (typeof o.photos.cover !== 'string') o.photos.cover = null // Journal: the photo shown first in Memories
+  if (!Array.isArray(o.errands.log)) o.errands.log = [] // Journal: the last finished favours
   if (!Number.isFinite(o.train.rides)) o.train = { rides: 0 }
   if (!isObj(o.tutorial.done)) o.tutorial = { ...c.tutorial, dismissed: !!o.tutorial.dismissed }
   if (typeof o.tutorial.open !== 'boolean') o.tutorial.open = null // null = device default (open on desktop, folded slip on touch)

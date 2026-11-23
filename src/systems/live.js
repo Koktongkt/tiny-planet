@@ -76,10 +76,13 @@ export const prefsSeen = (npcId) => { const f = S().friends.list[npcId], o = {};
 export function giveGift(npcId, itemId) {
   if (count(itemId) < 1) return null
   const r = Fr.give(S().friends, npcId, itemId, Bf.has(S().buffs, 'cozy', now()) ? Bf.BUFFS.cozy.heartsMul : 1); if (!r) return null
-  take(itemId, 1); const f = S().friends.list[npcId]; f.seen = { ...(f.seen || {}), [itemId]: r.kind }
+  take(itemId, 1); const f = S().friends.list[npcId]; f.seen = { ...(f.seen || {}), [itemId]: r.kind }; Fr.noteMilestones(f, S().day)
   for (const [k, n] of r.returns) setTimeout(() => { add(k, n, true); toast(`${who(npcId)} gives you ${n} ${nm(k)} in return!`, k, 3800) }, 2000)
   emit(); return r
 }
+
+// Journal: the first chat with someone (Talk calls this when the dialogue opens)
+export function meet(npcId) { if (Fr.meet(S().friends, npcId, S().day)) emit() }
 
 // ---------- errands ----------
 export function acceptErrand(id) { if (!Er.accept(S().errands, id)) return false; const e = S().errands.list.find(x => x.id === id); toast(`You took ${who(e.npcId)}'s request.`, 'board'); emit(); return true }
@@ -87,7 +90,7 @@ export function deliverErrand(id) {
   const e = S().errands.list.find(x => x.id === id), r = Er.deliver(S().errands, id, S().inv); if (!r) return null
   if (r.coins) add('coin', r.coins, true)
   if (r.itemId) add(r.itemId, 1, true)
-  if (r.hearts) Fr.addHearts(S().friends, e.npcId, r.hearts)
+  if (r.hearts) { Fr.addHearts(S().friends, e.npcId, r.hearts); Fr.noteMilestones(S().friends.list[e.npcId], S().day) }
   toast(`${who(e.npcId)}: "Thank you!" ` + [r.coins && `+${r.coins} ${nm('coin')}`, r.itemId && `+1 ${nm(r.itemId)}`, r.hearts && '+♥'].filter(Boolean).join(' '), r.itemId || 'coin', 3600)
   emit(); return r
 }
@@ -132,6 +135,6 @@ export function init() {
 // debug / smoke tests: the next morning without sleeping (same hooks as a real new day)
 export const nextDay = () => newDay(S().day + 1)
 export function openGift(npcId) { G.ui.gift = npcId; G.ui.panel = 'gift'; emit() }
-export const SB = { now, nextDay, openGift, setPlots, plotPrompt, plantAt, waterAt, harvestAt, friend, giftable, prefsSeen, giveGift, acceptErrand, deliverErrand, eatFood, buffFor, activeBuffs, applySettings, catchUp, G, Gd, Fr, Er, Bf }
+export const SB = { now, nextDay, openGift, setPlots, plotPrompt, plantAt, waterAt, harvestAt, friend, giftable, prefsSeen, giveGift, meet, acceptErrand, deliverErrand, eatFood, buffFor, activeBuffs, applySettings, catchUp, G, Gd, Fr, Er, Bf }
 window.__sb = SB
 init()

@@ -7,7 +7,8 @@ export function addPhoto(list, store, meta, dataUrl) {
   while (list.length > MAX) { const o = list.shift(); delete store[o.id]; dropped.push(o.id) }
   return dropped
 }
-export function removePhoto(list, store, id) { const i = list.findIndex(p => p.id === id); if (i < 0) return false; list.splice(i, 1); delete store[id]; return true }
+// photos (optional, G.s.photos): removing the cover photo clears the cover
+export function removePhoto(list, store, id, photos) { const i = list.findIndex(p => p.id === id); if (i < 0) return false; list.splice(i, 1); delete store[id]; if (photos && photos.cover === id) photos.cover = null; return true }
 // keep metadata and thumbnails consistent (e.g. storage was cleared or a write failed)
 export function reconcile(list, store) { const ids = new Set(list.map(p => p.id)); for (const k of Object.keys(store)) if (!ids.has(k)) delete store[k]; for (let i = list.length - 1; i >= 0; i--) if (!store[list[i].id]) list.splice(i, 1); return list }
 export const thumbSize = (w, h) => { const tw = Math.min(THUMB_W, w); return [tw, Math.max(1, Math.round(h * tw / w))] }
