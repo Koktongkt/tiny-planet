@@ -54,9 +54,11 @@ test('fishing: wait, bite, reel with the net, species logged; photo mode capture
   expect(shot.n).toBe(1); expect(shot.stored).toBe(1); expect(shot.w).toBeGreaterThan(100); expect(shot.thumbBytes).toBeLessThan(80_000)
   await page.keyboard.press('Escape')
   await page.waitForFunction(() => !document.documentElement.classList.contains('tp-photo') && !window.__game.G.ui.lock, null, { timeout: 30_000 })
-  await page.keyboard.press('j'); await expect(page.locator('.jn-veil')).toBeVisible() // Studio's notebook
-  await expect(page.locator('.jn-cell')).toHaveCount(12)
-  await page.locator('.jn-tabs button', { hasText: 'Photos' }).click(); await expect(page.locator('.jn-photos img')).toHaveCount(1)
+  await page.keyboard.press('j'); await expect(page.locator('.jb-veil')).toBeVisible() // the journal book
+  await page.locator('.jb-bk[data-id="discoveries"]').click(); await page.locator('.jb-st[data-sub="fish"]').click()
+  await expect(page.locator('.jb-dc')).toHaveCount(12)
+  await page.locator('.jb-bk[data-id="memories"]').click(); await page.locator('.jb-st[data-sub="photos"]').click()
+  await expect(page.locator('.jb-pol[data-pick] img')).toHaveCount(1)
   w.check()
 })
 
@@ -113,7 +115,8 @@ test('ruins: dig spots, museum donation (+ Hoshino), journal relics; tutorial di
   await page.waitForFunction(() => window.__game.G.near?.id === 'museum-exit', null, { timeout: 30_000 })
   await page.keyboard.press('e'); await page.waitForFunction(() => !window.__museum.inside && !window.__museum.busy, null, { timeout: 30_000 })
   await page.keyboard.press('j')
-  await page.locator('.jn-tabs button', { hasText: 'Relics' }).click()
-  await expect(page.locator('.jn-cell')).toHaveCount(8)
+  await page.locator('.jb-bk[data-id="discoveries"]').click(); await page.locator('.jb-st[data-sub="relics"]').click()
+  await expect(page.locator('.jb-dc')).toHaveCount(8)
+  await expect(page.locator('.jb-dc:has(.jb-stamp)')).toHaveCount(1) // the shard she just gave to the museum
   w.check()
 })

@@ -109,7 +109,7 @@ function RecipesPage({ sub, pick, setPick, refresh }) {
   if (!sel.known) return [left, <><div className="jb-blob"><Ghost id={sel.makes} size={120} /></div><div className="jb-rt">???</div><div className="jb-rule" /><p className="jb-rdesc">Find all of its ingredients out in the world to learn this recipe.</p></>]
   const r = sel.recipe, busy = G.ui.crafting && G.ui.crafting.id === r.id, stove = r.at === 'stove'
   const action = sel.owned ? <div className="jb-hint">{r.cat === 'Unlock' ? 'Already built.' : 'Already in your bag.'}</div>
-    : atBench() && !stove ? <button className="jb-btn g" disabled={!canCraft(r) || !!G.ui.crafting} onClick={() => craft(r, () => { emit(); refresh() })}><It id="hand" size={30} />{busy ? 'Crafting…' : 'Craft'}</button>
+    : atBench() && !stove ? <button className="jb-btn g" data-act="craft" disabled={!canCraft(r) || !!G.ui.crafting} onClick={() => craft(r, () => { emit(); refresh() })}><It id="hand" size={30} />{busy ? 'Crafting…' : 'Craft'}</button>
       : <><button className="jb-btn g" disabled><It id="hand" size={30} />Craft</button><div className="jb-hint">{stove ? 'Cook this on the stove at home.' : 'Craft at the bench beside Home.'}</div></>
   return [left, <><div className="jb-blob"><It id={r.makes} size={132} /></div><div className="jb-rt">{name(r.makes)}</div>
     <div className="jb-rsub">{r.cat === 'Unlock' ? 'Builds' : r.cat}{sel.owned ? ' · Owned' : ''}{sel.perfectDay != null && <span className="jb-pf"> · ✦ Perfect on {D(sel.perfectDay)}</span>}</div><div className="jb-rule" />
