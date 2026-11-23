@@ -29,6 +29,7 @@ replaces the spiral-notebook Journal (J), and later the separate Recipe Book. Th
   They keep to the flat part of each edge (x 160–652 and 796–1262), clear of the curl into the middle of the book.
 - The open bookmark rises higher. The others sit lower and slightly muted, and rise a little on hover.
 - No counts on bookmarks; a gold dot means something new.
+- Bookmark and sub-tab labels are handwritten (Caveat, SIL OFL, bundled with the book only), each a touch off level.
 
 ## Pages
 - **Quests.** Left: Settle In (n/7 while steps remain), errands accepted at the board (Active), finished ones (Done,

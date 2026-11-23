@@ -54,11 +54,11 @@ export function JournalBook({ onClose }) {
       <nav className="jb-bm" role="tablist" aria-label="Journal sections">
         {['l', 'r'].map(side => <div key={side} className={'jb-grp ' + side}>{BOOKMARKS.filter(b => b.side === side).map(b =>
           <button key={b.id} data-id={b.id} className={'jb-bk' + (b.id === tab ? ' on' : '')} role="tab" aria-selected={b.id === tab} style={{ '--c1': b.c[0], '--c2': b.c[1] }} onClick={() => go(b.id)}>
-            {ICON[b.id]}{b.label}{dots[b.id] && b.id !== tab && <span className="jb-dot" aria-label="something new" />}</button>)}</div>)}
+            {ICON[b.id]}<span className="jb-hand">{b.label}</span>{dots[b.id] && b.id !== tab && <span className="jb-dot" aria-label="something new" />}</button>)}</div>)}
       </nav>
       {subs && <div className="jb-sub" role="tablist" aria-label={'Pages in ' + tab}>{subs.map(t => { const c = t.count ? t.count() : null
         return <button key={t.id} data-sub={t.id} className={'jb-st' + (t.id === sub ? ' on' : '')} role="tab" aria-selected={t.id === sub} style={{ '--c': t.c }} onClick={() => { MEM.sub[tab] = t.id; bump() }}>
-          <i />{t.label}{c && <small>{c}</small>}</button> })}</div>}
+          <i /><span className="jb-hand">{t.label}</span>{c && <small className="jb-hand">{c}</small>}</button> })}</div>}
       <div className={'jb-L' + (subs ? ' sub' : '')}>{left}</div>
       <div className="jb-R">{right}</div>
       <button className="jb-x" onClick={onClose} aria-label="Close journal" />
