@@ -131,18 +131,20 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
   await page.evaluate(() => { const P = window.__player; P.n.copy(window.__sbLayout.plots[0].n); P.target = null; window.__snap = 1 })
   await expect(page.locator('.tp-prompt, .tp-chip').first()).toBeVisible({ timeout: 30_000 })
   const cdp = await context.newCDPSession(page)
-  const hold = async () => {
+  const hold = async (tag = 'first') => {
     const box = await page.locator('.tp-stick').boundingBox()
     const x = box.x + box.width / 2, y = box.y + box.height * 0.62
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] })
-    const on = await page.waitForFunction(() => !!document.querySelector('.tp-stick.on'), null, { timeout: 2000 }).then(() => true).catch(() => false)
+    // SwiftShader draws a phone frame in ~0.7-1 s at DPR 3, and the touch lands on the next one, so the stick lights
+    // 1-2 s after touchStart. Watch for the class change itself (not once per frame) and allow a few frames.
+    const on = await page.waitForFunction(() => !!document.querySelector('.tp-stick.on'), null, { timeout: 8000, polling: 'mutation' }).then(() => true).catch(() => false)
     if (!on) {
       const info = await page.evaluate(({ x, y }) => {
         const hit = document.elementFromPoint(x, y)
         const s = document.querySelector('.tp-stick')
-        return { hit: hit && (hit.getAttribute('aria-label') || hit.className || hit.tagName), stickOp: getComputedStyle(s).opacity, pad: document.querySelector('.tp-pad').className }
+        return { hit: hit && (hit.getAttribute('aria-label') || hit.className || hit.tagName), stickOp: getComputedStyle(s).opacity, pad: document.querySelector('.tp-pad').className, vw: innerWidth + 'x' + innerHeight, talk: !!document.querySelector('.tk-box'), panel: window.__game?.G.ui.panel || null }
       }, { x, y })
-      throw new Error('stick did not engage ' + JSON.stringify(info))
+      throw new Error('stick did not engage (' + tag + ') ' + JSON.stringify(info))
     }
     return { x, y }
   }
@@ -166,7 +168,7 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
   for (const size of [{ width: 390, height: 664 }, { width: 360, height: 640 }, { width: 844, height: 390 }, { width: 640, height: 360 }]) {
     await page.setViewportSize(size)
     await page.waitForTimeout(250)
-    await hold()
+    await hold(size.width + 'x' + size.height)
     await page.waitForTimeout(200)
     const els = await rects(page)
     const pad = els.filter(e => pads.has(e.sel)), hud = els.filter(e => !pads.has(e.sel))
