@@ -21,6 +21,20 @@ function flower(k, pos, r, petal, eye = 'eye') {
   k.ball([r * 0.34, r * 0.24, r * 0.34], [pos[0], pos[1] + r * 0.1, pos[2]], eye, { out: false, lo: true })
 }
 
+// a puffy three-leaf clover stuck flat on a wall (facing +z): three plump heart leaflets round a centre and a
+// little curled stem, like the reference's wall sprigs. s scales it; lean (+1 / -1) tips it toward one side.
+function clover(k, s = 1, lean = 1) {
+  const r = 0.024 * s, z = 0.006
+  ;[[90, 'clover2'], [210, 'clover'], [330, 'clover']].forEach(([deg, c]) => {
+    const a = (deg + lean * 12) * D2R, dx = Math.cos(a), dy = Math.sin(a), px = -dy, py = dx
+    for (const sd of [-1, 1]) k.ball([r, r * 0.85, r * 0.42], [(dx * 1.25 + px * sd * 0.55) * r, (dy * 1.25 + py * sd * 0.55) * r, z + r * 0.12], c, { rot: [0, 0, a + sd * 0.5], hi: 0.3 }) // the heart's two lobes
+    k.ball([r * 0.55, r * 0.4, r * 0.3], [dx * 0.55 * r, dy * 0.55 * r, z + r * 0.05], c, { rot: [0, 0, a], out: false }) // its point, toward the centre
+  })
+  k.ball(r * 0.3, [0, 0, z + r * 0.16], 'cloverStem', { out: false })
+  k.stick([0.0055 * s, 0.05 * s], [lean * 0.006 * s, -0.026 * s, z], 'cloverStem', { rot: [0, 0, lean * 0.3], out: false })
+  k.ball([0.006 * s, 0.006 * s, 0.004], [lean * 0.014 * s, -0.05 * s, z], 'cloverStem', { out: false })
+}
+
 // ---------- the cottage ----------
 // A squat round plaster house under a three-tier tiled roof with a knob on top, after the reference: her real front
 // door (doorLeaf/doorFrame, the same as inside), arched glowing windows with clover sprigs, a round bath porthole and
@@ -29,16 +43,19 @@ function flower(k, pos, r, petal, eye = 'eye') {
 //   opts: r, h (wall radius + height), windows: [{ phi, clover }], porthole (phi | null), chimney: { phi, r } | null,
 //         tiers (1-3), knob, door
 defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: ['outdoor', 'building'],
-  pal: { wall: '#fbe6c6', roof: '#f08a4b', roof2: '#f59c5c', roof3: '#ec8243', roofDark: '#b85a2c', trim: '#e8873f', pane: '#ffd873', bar: '#d9773a', clover: '#86b94a', clover2: '#9ccb55', chimney: '#7c4b39', chimneyCap: '#5d382b', knob: '#f6ddd4', porthole: '#cfe7ee' },
-  opts: { r: 0.44, h: 0.62, windows: [{ phi: -125, clover: true }, { phi: 125, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.3 }, tiers: 3, knob: true, door: true } }, (k, o) => {
+  pal: { wall: '#fbe6c6', roof: '#f08a4b', roof2: '#f59c5c', roof3: '#ec8243', roofDark: '#b85a2c', trim: '#e8873f', pane: '#ffd873', bar: '#d9773a', clover: '#9ccf45', clover2: '#b4de5e', cloverStem: '#86bb3c', chimney: '#7c4b39', chimneyCap: '#5d382b', knob: '#f6ddd4', porthole: '#cfe7ee' },
+  opts: { r: 0.44, h: 0.62, belly: 0.14, windows: [{ phi: -125, clover: true }, { phi: 125, clover: true }, { phi: -13 }], porthole: 47, chimney: { phi: -50, r: 0.3 }, tiers: 3, knob: true, door: true } }, (k, o) => {
   const RW = o.r, HW = o.h
   // walls: a soft drum, a touch wider at the foot
-  k.pill([RW, HW], [0, HW / 2, 0], 'wall', { bevel: 0.06, taper: -0.05, hi: 0.06, shade: 0.1 })
-  const rAt = (y) => RW * (1 + 0.05 * (1 - 2 * (y / HW))) // the drum's radius at height y (taper)
+  // walls: a plump, soft drum (a marshmallow): bulging out round the middle, a touch wider at the foot, very round edges
+  const TAPER = -0.03, BELLY = o.belly
+  k.pill([RW, HW], [0, HW / 2, 0], 'wall', { bevel: 0.2, taper: TAPER, belly: BELLY, hi: 0.06, shade: 0.12 })
+  const rAt = (y) => { const t = Math.min(1, Math.max(0, y / HW)); return RW * (1 + TAPER * (t - 0.5) * 2) * (1 + BELLY * Math.sin(PI * t)) } // the drum's radius at height y
+  let rDoor = 0; for (let y = 0; y <= 0.5; y += 0.01) rDoor = Math.max(rDoor, rAt(y)) // the door stands clear of the bulge
   // front door: the interior's own door + surround, set into a deep frame that buries itself in the curved wall
   if (o.door) {
-    k.use('doorFrame', mat(0, 0, rAt(0) - 0.012), { d: 0.14, shadow: false })
-    k.use('doorLeaf', mat(0, 0, rAt(0) + 0.006), { shadow: false })
+    k.use('doorFrame', mat(0, 0, rDoor - 0.05), { d: 0.2, f: 0.05, shadow: false }) // deep, so it sinks into the round wall at its edges
+    k.use('doorLeaf', mat(0, 0, rDoor + 0.004), { shadow: false })
   }
   // arched windows: orange frame, glowing panes behind a cross bar, a sill; a clover sprig above
   for (const w of o.windows || []) {
@@ -50,10 +67,7 @@ defineProp('cottage', { name: 'Round cottage', size: [1.26, 1.16, 1.26], tags: [
       k.box([ww, 0.014, 0.012], [0, hr * 0.9, 0.014], 'bar', { r: 0.004, out: false, seg: 2 })
       k.box([ww + 0.075, 0.024, 0.06], [0, -0.03, 0.026], 'trim', { r: 0.01, seg: 2 })
     })
-    if (w.clover) k.within(onWall(w.phi, rAt(0.5), 0.5), () => {
-      k.stick([0.006, 0.06], [0.012, -0.03, 0.006], 'clover', { rot: [0, 0, 0.35], out: false })
-      for (const [roll, c] of [[0, 'clover2'], [2.1, 'clover'], [-2.1, 'clover']]) k.leaf([0, 0, 0.006], 0.065, 0, PI / 2, c, { roll })
-    })
+    if (w.clover) k.within(onWall(w.phi + (w.phi < 0 ? -10 : 10), rAt(0.49) - 0.008, 0.49), () => clover(k, 1.7, w.phi < 0 ? 1 : -1))
   }
   // the bath porthole: a round window with a thick ring
   if (o.porthole != null) k.within(onWall(o.porthole, rAt(0.34), 0.34), () => {

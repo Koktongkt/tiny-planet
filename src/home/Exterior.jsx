@@ -25,8 +25,8 @@ export function buildYard(homeN, onHouse, lift) {
     k.use('cottage', mat(0, 0, 0, 0, S), { chimney: COTTAGE.chimney, shadow: false })
     k.shadow(1.5, 1.5)
     // entrance, matching the interior's: lantern posts hugging the door frame, steps + mat, daisy pots, bushes
-    const fz = 0.462 * S
-    for (const s of [-1, 1]) k.use('lanternPost', at(s * 0.31, fz + 0.02, 0))
+    const fz = 0.47 * S
+    for (const s of [-1, 1]) k.use('lanternPost', at(s * 0.37, fz + 0.0, -s * 0.25))
     k.use('steps', at(0, fz + 0.02, 0), { w: 0.4, mat: true })
     for (const s of [-1, 1]) k.use('flowerPot', at(s * 0.47, fz + 0.06, s))
     // flowering bushes round the foot of the wall, plain bushes toward the back
