@@ -13,6 +13,7 @@ import { withProgress, TUTORIAL_SIGNER } from '../ui/tutorial/steps.js'
 import { familyLine } from './friendship.js'
 import { stitchRow } from './perfectLog.js'
 import { registerFishIcons } from '../art/fish/icons.jsx'
+import { useBookFits } from '../ui/journal/book/useBookFits.js'
 import './panelsC.css'
 const TutorialNote = lazy(() => import('../ui/tutorial/TutorialNote.jsx'))
 const CatchCard = lazy(() => import('../ui/fish/CatchCard.jsx'))
@@ -29,8 +30,11 @@ function Book({ title, icon, children }) {
 // Studio's field notebook (journal) and Hoshino's catalogue card (museum plinths / tank slots), both lazy
 const JournalBook = lazy(() => import('../ui/journal/Journal.jsx'))
 const DonateCard = lazy(() => import('../ui/museum/DonateCard.jsx'))
+// the leather journal book (Quests, People, Recipes, Discoveries, Memories) when it fits; the notebook on small phones
+const LeatherBook = lazy(() => import('../ui/journal/book/JournalBook.jsx'))
 function Journal() {
-  const [tab, setTab] = useState('fish')
+  const [tab, setTab] = useState('fish'), fits = useBookFits()
+  if (fits) return <LeatherBook onClose={() => { G.ui.atBench = false; close() }} />
   return <JournalBook tab={tab} onTab={setTab} entries={SC.journal(tab)} progress={SC.C.progress(G.s)} stitches={stitchRow(G.s)} quiet={familyLine(G.s.friends)} onClose={close} touch={TOUCH} />
 }
 function Donate() {

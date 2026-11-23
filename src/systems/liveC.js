@@ -169,6 +169,9 @@ export function capture() { return new Promise((res) => { PH.pending = { res } }
 let ALBUM = null
 const photoStore = () => { if (!ALBUM) { try { ALBUM = JSON.parse(localStorage.getItem(Ph.KEY) || '{}') || {} } catch (e) { ALBUM = {} } Ph.reconcile(S().photos.list, ALBUM) } return ALBUM }
 const saveAlbum = () => { try { localStorage.setItem(Ph.KEY, JSON.stringify(ALBUM)); return true } catch (e) { return false } }
+// Journal (Memories): take a photo out of the album; pick the one shown first
+export function removePhoto(id) { photoStore(); if (Ph.removePhoto(S().photos.list, ALBUM, id, S().photos)) { saveAlbum(); emit() } }
+export function setCover(id) { if (S().photos.list.some(p => p.id === id)) { S().photos.cover = id; emit() } }
 export async function shutter({ download = true } = {}) {
   const M = await loadPhotoMods(), v = PH.v || { filter: 'none' }, raw = await capture()
   const caption = `Day ${S().day + 1} · ${T.season || 'spring'}`, cv = M.f.gradeCanvas(raw, v.filter, { frame: !!v.frame, caption })
@@ -203,7 +206,7 @@ DAY_HOOKS.push(() => tut('sleep'))
 
 // ---------- boot ----------
 setInterval(tickWeather, 100); setInterval(tickTutorial, 500)
-export const SC = { itemName: nm, toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
+export const SC = { itemName: nm, toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, removePhoto, setCover, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
 window.__sc = SC
 emit()
 // a save that already holds one of the new relics gets their icons straight away

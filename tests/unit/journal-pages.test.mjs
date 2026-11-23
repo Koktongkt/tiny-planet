@@ -107,3 +107,11 @@ test('the Quests bookmark gets a dot while notes wait on the board', () => {
   assert.equal(newDots(save({ errands: { day: 7, list: [errand('a', 'baker', [['berries', 4]])], log: [] } })).quests, true)
   assert.equal(newDots(save()).quests, false)
 })
+
+test('the Bag opens Recipes at the first recipe that uses (or makes) the item', async () => {
+  const { recipeTabFor } = await import('../../src/systems/journalPages.js')
+  assert.deepEqual(recipeTabFor('reed'), { sub: 'tools', pick: 'rod' })
+  assert.deepEqual(recipeTabFor('rice'), { sub: 'food', pick: 'onigiri' })
+  assert.deepEqual(recipeTabFor('wreath'), { sub: 'decor', pick: 'wreath' })
+  assert.equal(recipeTabFor('nothing_like_this'), null)
+})

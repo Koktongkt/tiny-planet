@@ -53,7 +53,7 @@ export const RECIPE_TABS = { tools: ['Tools', 'Garden', 'Unlock'], food: ['Food'
 export function recipeRows(tab, s, T) {
   const perfect = (s.journal && s.journal.perfect) || {}
   return RECIPES.filter(r => (RECIPE_TABS[tab] || []).includes(r.cat)).map(r => { const known = !!T.known(r), owned = !!T.owned(r)
-    return { id: r.id, makes: r.makes, cat: r.cat, at: r.at || (r.cook ? 'stove' : 'bench'), recipe: r, known, owned, ready: known && !owned && T.haveFor(r).every(h => h.ok),
+    return { id: r.id, makes: r.makes, cat: r.cat, at: r.at || 'bench', recipe: r, known, owned, ready: known && !owned && T.haveFor(r).every(h => h.ok),
       perfectDay: perfect[r.makes + '_perfect'] ?? null, needs: T.haveFor(r) } })
 }
 
@@ -83,4 +83,11 @@ export function firsts(s, T) {
   for (const [id, d] of Object.entries((s.journal && s.journal.perfect) || {})) add(d, 'perfect', plain(id), `Cooked a perfect ${T.itemName(plain(id))}`)
   for (const e of ((s.errands && s.errands.log) || []).slice().reverse()) add(e.day, 'favour', e.npcId, `Did a favour for ${T.npcName(e.npcId)}`)
   return ev.map((e, i) => [e, i]).sort((a, b) => a[0].day - b[0].day || a[1] - b[1]).map(([e]) => e)
+}
+// Bag -> Journal: the recipe page for an item (the recipe that makes it, else the first that uses it). -> { sub, pick } | null
+export function recipeTabFor(itemId) {
+  const id = plain(itemId), uses = (r) => r.needs.some(([k]) => (typeof k === 'string' ? k === id : k.any.includes(id)))
+  const r = RECIPES.find(x => x.makes === id) || RECIPES.find(uses); if (!r) return null
+  const sub = Object.keys(RECIPE_TABS).find(t => RECIPE_TABS[t].includes(r.cat))
+  return sub ? { sub, pick: r.id } : null
 }

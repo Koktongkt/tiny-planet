@@ -14,6 +14,7 @@ import { ITEMS, DECOR } from './items.js'
 import { SPAWNS, NEEDS_TOOL } from './recipes.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
 import { bakePropMeshes } from './propBake.js'
+import { openRecipes } from '../ui/journal/book/openRecipes.js'
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
@@ -269,7 +270,7 @@ export function GameWorld() {
     GAME.actions.act = () => {
       const nr = G.near; if (!nr) return
       if (nr.kind === 'ext') { nr.act(); return }
-      if (nr.kind === 'bench') { G.ui.panel = 'recipes'; G.ui.atBench = true; emit(); return }
+      if (nr.kind === 'bench') { G.ui.atBench = true; openRecipes({ bench: true }); return } // the journal's Recipes (the Recipe Book on phones)
       if (nr.kind === 'chest') { G.s.chest = true; add('skyseed', 1, true); add('crystal', 3, true); toast('You found the cliff-top picnic! +1 Sky Seed, +3 Crystal', 'skyseed', 4200); emit(); force(); return }
       if (nr.kind === 'decor') { const k = G.s.placed.findIndex(p => p.uid === nr.uid); if (k >= 0) { const [p] = G.s.placed.splice(k, 1); G.s.inv[p.item] = count(p.item) + 1; toast(`Picked up ${ITEMS[p.item].name}`, p.item); emit(); force() } return }
       const sp = nr.spot, need = NEEDS_TOOL[sp.item]
