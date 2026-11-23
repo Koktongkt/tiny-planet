@@ -81,7 +81,13 @@ function paperFrame(img, caption = '') {
 /** small JPEG for the journal Photos tab (Codor stores ≤ 12): data URL, longest side maxW px */
 export function photoThumb(canvas, maxW = 320, quality = 0.72) {
   const k = Math.min(1, maxW / Math.max(canvas.width, canvas.height)), c = document.createElement('canvas'); c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k)
-  c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', quality)
+  c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height); return thumbUrl(c, quality)
+}
+/** WebP is ~30% smaller than JPEG at the same quality (more photos fit in storage); browsers that cannot encode it
+ *  (Safari answers with a PNG) get JPEG */
+export function thumbUrl(c, quality) {
+  const w = c.toDataURL('image/webp', quality)
+  return w.startsWith('data:image/webp') ? w : c.toDataURL('image/jpeg', quality)
 }
 /** CSS for the live overlay layers (PhotoMode renders these as divs above the canvas, under its own UI) */
 export function layerStyle(L) {

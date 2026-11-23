@@ -1,9 +1,10 @@
-// Journal save additions: met day, heart milestones, finished-errand log, photo cover.
+// Journal save additions: met day, heart milestones, finished-errand log; album pages and thumbnails.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { meet, noteMilestones, metOf } from '../../src/systems/friendship.js'
 import { errandsFor, accept, deliver, rollDay } from '../../src/systems/errands.js'
-import { removePhoto } from '../../src/systems/photo.js'
+import { PER_PAGE, pageCount } from '../../src/systems/photo.js'
+import { thumbUrl } from '../../src/ui/photo/filters.js'
 import { migrate, fresh } from '../../src/save/schema.js'
 
 const friends = () => ({ day: 0, list: {} })
@@ -59,19 +60,23 @@ test('a new day keeps the errand log', () => {
   assert.equal(errands.log.length, 1)
 })
 
-test('old saves get an empty errand log and no cover; new ones keep theirs', () => {
-  const old = fresh(); delete old.errands.log; delete old.photos.cover
-  const s = migrate(JSON.parse(JSON.stringify(old)))
-  assert.deepEqual(s.errands.log, []); assert.equal(s.photos.cover, null)
-  const n = fresh(); n.errands.log = [{ npcId: 'baker', wants: [], reward: {}, day: 1 }]; n.photos.cover = 'p1'
-  const s2 = migrate(JSON.parse(JSON.stringify(n)))
-  assert.equal(s2.errands.log.length, 1); assert.equal(s2.photos.cover, 'p1')
+test('old saves get an empty errand log; broken log entries are dropped on load', () => {
+  const old = fresh(); delete old.errands.log
+  assert.deepEqual(migrate(JSON.parse(JSON.stringify(old))).errands.log, [])
+  const n = fresh(); n.errands.log = [{ npcId: 'baker', wants: [{ itemId: 'berries', count: 4 }], reward: {}, day: 1 }, null, 'x', { npcId: 'cook', day: 2 }, { npcId: 'cook', wants: [], day: 'soon' }]
+  const log = migrate(JSON.parse(JSON.stringify(n))).errands.log
+  assert.equal(log.length, 1); assert.equal(log[0].npcId, 'baker')
 })
 
-test('removing the cover photo clears the cover', () => {
-  const photos = { list: [{ id: 'a' }, { id: 'b' }], cover: 'a' }, store = { a: 'x', b: 'y' }
-  removePhoto(photos.list, store, 'b', photos); assert.equal(photos.cover, 'a')
-  removePhoto(photos.list, store, 'a', photos); assert.equal(photos.cover, null)
+test('the album shows 12 photos a page', () => {
+  assert.equal(PER_PAGE, 12)
+  assert.equal(pageCount(0), 1); assert.equal(pageCount(12), 1); assert.equal(pageCount(13), 2); assert.equal(pageCount(48), 4)
+})
+
+test('thumbnails are WebP where the browser can make it, JPEG otherwise', () => {
+  const canvas = (webp) => ({ toDataURL: (type, q) => (type === 'image/webp' && webp ? 'data:image/webp;q=' + q : type === 'image/webp' ? 'data:image/png;big' : 'data:image/jpeg;q=' + q) })
+  assert.equal(thumbUrl(canvas(true), 0.72), 'data:image/webp;q=0.72')
+  assert.equal(thumbUrl(canvas(false), 0.72), 'data:image/jpeg;q=0.72') // Safari answers WebP with a PNG
 })
 
 // ---- final review fixes ----

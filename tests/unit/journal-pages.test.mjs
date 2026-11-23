@@ -13,7 +13,7 @@ const T = {
   haveFor: (r) => r.needs.map(nd => ({ need: nd, have: 9, ok: r.id === 'can' })),
 }
 const save = (o = {}) => ({ day: 7, inv: {}, seen: {}, tutorial: { done: {} }, errands: { day: 7, list: [], log: [] }, friends: { day: 7, list: {} },
-  fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [], cover: null }, ...o })
+  fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, ...o })
 const errand = (id, npcId, wants, extra = {}) => ({ id, npcId, wants: wants.map(([itemId, count]) => ({ itemId, count })), reward: { coins: 3 }, day: 7, accepted: false, done: false, ...extra })
 
 test('Settle In shows while tutorial steps remain, with progress', () => {

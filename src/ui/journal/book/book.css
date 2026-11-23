@@ -139,3 +139,7 @@
 html:has(.jb-veil) .mm-wrap{opacity:0!important;transition:none!important}
 /* the game layer sets button{color:inherit} (.tp-ui button); the ribbons keep white labels */
 .jb-book .jb-bk{color:#fff}
+/* album page turner (Memories > Photos), like the ‹ 1 / 4 › under the reference art's right page */
+.jb-pager{display:flex;align-items:center;justify-content:center;gap:16px}
+.jb-book .jb-turn{width:56px;height:40px;border:0;border-radius:20px;font-size:28px;line-height:1;color:#6a3a1a;background:linear-gradient(180deg,#fbe8cc,#efd2a6);box-shadow:0 3px 0 #d6ad78}
+.jb-book .jb-turn:disabled{opacity:.35;cursor:default}

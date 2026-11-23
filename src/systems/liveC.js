@@ -170,16 +170,18 @@ let ALBUM = null
 const photoStore = () => { if (!ALBUM) { try { ALBUM = JSON.parse(localStorage.getItem(Ph.KEY) || '{}') || {} } catch (e) { ALBUM = {} } Ph.reconcile(S().photos.list, ALBUM) } return ALBUM }
 const saveAlbum = () => { try { localStorage.setItem(Ph.KEY, JSON.stringify(ALBUM)); return true } catch (e) { return false } }
 // Journal (Memories): take a photo out of the album; pick the one shown first
-export function removePhoto(id) { photoStore(); if (Ph.removePhoto(S().photos.list, ALBUM, id, S().photos)) { saveAlbum(); emit() } }
-export function setCover(id) { if (S().photos.list.some(p => p.id === id)) { S().photos.cover = id; emit() } }
+export function removePhoto(id) { photoStore(); if (Ph.removePhoto(S().photos.list, ALBUM, id)) { saveAlbum(); emit() } }
 export async function shutter({ download = true } = {}) {
   const M = await loadPhotoMods(), v = PH.v || { filter: 'none' }, raw = await capture()
   const caption = `Day ${S().day + 1} · ${T.season || 'spring'}`, cv = M.f.gradeCanvas(raw, v.filter, { frame: !!v.frame, caption })
   const url = M.f.photoThumb(cv, Ph.THUMB_W, Ph.THUMB_Q)
   const meta = { id: 'ph' + Date.now().toString(36), day: S().day, filter: v.filter, w: cv.width, h: cv.height }
-  photoStore(); Ph.addPhoto(S().photos.list, ALBUM, meta, url)
-  if (!saveAlbum()) { Ph.removePhoto(S().photos.list, ALBUM, meta.id); toast('No room left to keep the photo in your journal.', 'unknown') }
-  PH.n++; PH.last = { url, caption: 'Saved to your journal' }
+  photoStore()
+  // a full album refuses the photo (still downloaded below); nothing older is dropped on its own
+  let kept = Ph.addPhoto(S().photos.list, ALBUM, meta, url)
+  if (!kept) toast(`Your album is full (${Ph.MAX} photos). Remove one in the journal to keep new ones.`, 'unknown', 4200)
+  else if (!saveAlbum()) { Ph.removePhoto(S().photos.list, ALBUM, meta.id); kept = false; toast('No room left to keep the photo in your journal.', 'unknown') }
+  PH.n++; PH.last = { url, caption: kept ? 'Saved to your journal' : 'Not kept: the album is full' }
   if (download) cv.toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = Ph.fileName(S().day, PH.n); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000) }, 'image/png')
   emit(); return { meta, thumbBytes: url.length, w: cv.width, h: cv.height }
 }
@@ -206,7 +208,7 @@ DAY_HOOKS.push(() => tut('sleep'))
 
 // ---------- boot ----------
 setInterval(tickWeather, 100); setInterval(tickTutorial, 500)
-export const SC = { itemName: nm, toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, removePhoto, setCover, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
+export const SC = { itemName: nm, toff: 0, t: () => wind.time.value, W, F, Tr, C, Tu, Ph, SCH, TS, RIDE, PH, TUT, ctxNow, rollFor, onCatch, journal, removePhoto, donatable, donate, digAt, stationPrompt, board, alight, platformN, photo, setPhoto, capture, shutter, tutorial, tutorialFold, tutorialSteps, tutorialVisible, height }
 window.__sc = SC
 emit()
 // a save that already holds one of the new relics gets their icons straight away

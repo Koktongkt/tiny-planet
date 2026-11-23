@@ -9,6 +9,7 @@ import { PROFILES } from '../../../talk/profiles.js'
 import { PREFS, RETURN_GIFTS } from '../../../systems/friendship.js'
 import { quests, people, giftShelves, recipeRows, RECIPE_TABS, discoveries, fishFacts, forageSeason, firsts } from '../../../systems/journalPages.js'
 import { SC } from '../../../systems/liveC.js'
+import { MAX, PER_PAGE, pageCount } from '../../../systems/photo.js'
 import { HoshinoPortrait } from '../../../art/museum/portrait.jsx'
 import { registerRelicIcons } from '../../../art/museum/icons.jsx'
 import '../../../art/forage/icons.jsx'
@@ -156,18 +157,22 @@ function MemoriesPage({ sub, pick, setPick, refresh }) {
     const at = cuts.length ? cuts.reduce((b, i) => (Math.abs(lines(i) - goal) < Math.abs(lines(b) - goal) ? i : b), cuts[0]) : ev.length
     return [<div key="l" className="jb-scroll"><Diary ev={ev.slice(0, at)} /></div>, <><div className="jb-scroll" style={{ width: '100%' }}><Diary ev={ev.slice(at)} /></div><div className="jb-hint">Her journal fills in by itself as the days go by.</div></>]
   }
-  const cover = G.s.photos.cover, list = SC.journal('photos').slice().sort((a, b) => (b.id === cover) - (a.id === cover))
-  const sel = list.find(p => p.id === pick) || list[0]
-  const left = <><div className="jb-scroll">{list.length ? <div className="jb-mgrid">{Array.from({ length: 12 }, (_, i) => { const p = list[i]
+  // the album: oldest first, PER_PAGE to a page; the page follows the picked photo (opens on the newest)
+  const list = SC.journal('photos'), sel = list.find(p => p.id === pick) || list[list.length - 1]
+  const idx = sel ? list.indexOf(sel) : 0, page = Math.floor(idx / PER_PAGE), pages = pageCount(list.length), first = page * PER_PAGE
+  const turn = (d) => { const np = Math.max(0, Math.min(pages - 1, page + d)); setPick(list[Math.min(list.length - 1, np * PER_PAGE)].id) }
+  const left = <><div className="jb-scroll">{list.length ? <div className="jb-mgrid">{Array.from({ length: PER_PAGE }, (_, k) => { const i = first + k, p = list[i]
     return p ? <button key={p.id} data-pick={p.id} className={'jb-pol' + (sel && p.id === sel.id ? ' on' : '')} style={{ '--r': ((i * 37) % 9 - 4) * 0.8 + 'deg' }} onClick={() => setPick(p.id)}>
-      {p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jb-slot" />}<span>{p.id === cover ? '✦ ' : ''}{D(p.day)}</span></button> : <div key={'s' + i} className="jb-slot" /> })}</div>
-    : <p className="jb-empty">{blank('photos')}</p>}</div><div className="jb-lfoot">{list.length} of 12 kept</div></>
+      {p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jb-slot" />}<span>{D(p.day)}</span></button> : <div key={'s' + k} className="jb-slot" /> })}</div>
+    : <p className="jb-empty">{blank('photos')}</p>}</div>
+    <div className="jb-lfoot jb-pager">{pages > 1 && <button className="jb-turn" data-turn="-1" disabled={page === 0} onClick={() => turn(-1)} aria-label="Previous page">‹</button>}
+      <span>{pages > 1 ? `${page + 1} / ${pages} · ` : ''}{list.length} of {MAX} kept</span>
+      {pages > 1 && <button className="jb-turn" data-turn="1" disabled={page === pages - 1} onClick={() => turn(1)} aria-label="Next page">›</button>}</div></>
   if (!sel) return [left, null]
-  const remove = () => { if (confirm('Remove this photo from your journal?')) { SC.removePhoto(sel.id); setPick(null); refresh() } }
-  return [left, <><div className="jb-pol jb-bigpol" style={{ marginTop: 30 }}>{sel.src ? <img src={sel.src} alt={'Photo from day ' + (sel.day + 1)} /> : <div className="jb-slot" />}<span>{sel.caption || D(sel.day)}</span></div>
-    <div className="jb-rsub" style={{ marginTop: 22 }}>{D(sel.day)}{sel.id === cover ? ' · the cover photo' : ''}</div>
-    <Foot><div style={{ display: 'flex', gap: 14 }}>{sel.id !== cover && <button className="jb-btn y" onClick={() => { SC.setCover(sel.id); refresh() }}>Set as cover</button>}
-      <button className="jb-btn" style={{ background: '#ead7bb', color: '#6a4a2e' }} onClick={remove}>Remove</button></div></Foot></>]
+  const remove = () => { if (confirm('Remove this photo from your journal?')) { const next = list[idx + 1] || list[idx - 1]; SC.removePhoto(sel.id); setPick(next ? next.id : null); refresh() } }
+  return [left, <><div className="jb-pol jb-bigpol" style={{ marginTop: 30 }}>{sel.src ? <img src={sel.src} alt={'Photo from day ' + (sel.day + 1)} /> : <div className="jb-slot" />}<span>{D(sel.day)}</span></div>
+    <div className="jb-rsub" style={{ marginTop: 22 }}>Photo {idx + 1} of {list.length}</div>
+    <Foot><button className="jb-btn" style={{ background: '#ead7bb', color: '#6a4a2e' }} onClick={remove}>Remove</button></Foot></>]
 }
 
 export const PAGES = { quests: QuestsPage, people: PeoplePage, recipes: RecipesPage, discoveries: DiscoveriesPage, memories: MemoriesPage }
@@ -177,5 +182,5 @@ export const SUBS = {
   recipes: [{ id: 'tools', label: 'Tools', c: '#8a9bb0', count: learned('tools') }, { id: 'food', label: 'Food', c: '#e0915a', count: learned('food') },
     { id: 'decor', label: 'Decor', c: '#8fba5c', count: learned('decor') }, { id: 'keepsakes', label: 'Keepsakes', c: '#c98ab8', count: learned('keepsakes') }],
   discoveries: [{ id: 'fish', label: 'Fish', c: '#6fa6c0', count: count('fish') }, { id: 'forage', label: 'Forage', c: '#8fba5c', count: count('forage') }, { id: 'relics', label: 'Relics', c: '#d39a3c', count: count('relics') }],
-  memories: [{ id: 'photos', label: 'Photos', c: '#e08a8a', count: () => `${G.s.photos.list.length}/12` }, { id: 'firsts', label: 'Firsts', c: '#c9a24a' }],
+  memories: [{ id: 'photos', label: 'Photos', c: '#e08a8a', count: () => `${G.s.photos.list.length}` }, { id: 'firsts', label: 'Firsts', c: '#c9a24a' }],
 }

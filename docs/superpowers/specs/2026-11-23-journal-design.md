@@ -47,9 +47,11 @@ replaces the spiral-notebook Journal (J), and later the separate Recipe Book. Th
 - **Discoveries.** Left: icon grid, silhouettes for unfound, "7/12 found · Museum 3/8" at the bottom. Right: name,
   description, first found day, count, best size (fish), a where/when hint (fish: spot, season, time, weather;
   forage: season), museum stamp or a nudge to bring it to Professor Hoshino.
-- **Memories.** Photos: up to 12 taped polaroids, the picked one large on the right with its day and caption, with
-  "Set as cover" and "Remove" (both new). Firsts: a short
-  diary written from data the game already keeps (first catch of each fish, relics found, museum donations, perfect
+- **Memories.** Photos: up to 48 taped polaroids, 12 to a page with ‹ 1 / 4 › page arrows; the picked one large on
+  the right with its day, and "Remove". When the album is full a new photo is not kept (it still downloads) and a note
+  says so; nothing older is dropped on its own. Thumbnails are WebP (about 30% smaller), JPEG where the browser cannot
+  make WebP. (A cover photo was tried and taken out for now.)
+  Firsts: a short diary written from data the game already keeps (first catch of each fish, relics found, museum donations, perfect
   dishes, and with the save additions below, people met and heart milestones).
 
 ## Save additions (agreed)
