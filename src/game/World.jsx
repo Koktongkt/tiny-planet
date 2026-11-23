@@ -19,6 +19,15 @@ import { notePickup } from './prompt/hints.js'
 import { pickTarget, promptWeight } from './prompt/logic.js'
 import { atPlanet, facingCos } from './prompt/anchors.js'
 import { placePrompt } from './prompt/WorldPrompt.jsx'
+import { setOutline } from './prompt/outline.js'
+// the traveller stands between the camera and the item: on screen near each other, and she is the closer one
+const _cv = new THREE.Vector3(), _cp = new THREE.Vector3(), _ca = new THREE.Vector3()
+function covers(camera, player, at) {
+  player.getWorldPosition(_cp); at(_ca)
+  if (camera.position.distanceTo(_cp) >= camera.position.distanceTo(_ca)) return false
+  _cv.copy(_cp).project(camera); _ca.project(camera)
+  return Math.hypot((_cv.x - _ca.x) * innerWidth / 2, (_cv.y - _ca.y) * innerHeight / 2) < Math.min(innerWidth, innerHeight) * 0.09
+}
 const CANDS = []
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
@@ -151,7 +160,6 @@ function MergedProp({ item, s }) {
   if (c === false) return <Prop item={item} s={s} />
   return <group ref={ref} visible={false}><Prop item={item} s={1} /></group>
 }
-const G_RING = new THREE.MeshBasicMaterial({ color: '#fffbe8', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false, depthWrite: false })
 const G_FLY = glow('#f2ff8a'), G_HALO = new THREE.MeshBasicMaterial({ color: '#e8ff9a', transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false })
 
 // decor meshes (placed + ghost)
@@ -336,9 +344,13 @@ export function GameWorld() {
     if (id !== (G.near && G.near.id)) { G.near = best; emit() } else G.near = best // same target: keep its anchor and fields fresh
     if (G.autoAct && best && best.id === G.autoAct) { G.autoAct = null; GAME.actions.act() }
     placePrompt(camera, dt, H && H.playerObj) // the in-world bubble follows its anchor
-    const hl = refs.current.__hl, bu = refs.current.__burst, now = performance.now() / 1000
-    if (hl) { const sp = best && best.kind === 'spot' && !best.spot.water ? best.spot : null; hl.visible = !!sp && !G.ui.panel
-      if (sp) { const p = place(sp.stand, 0.006, now * 0.6); hl.position.copy(sp.water ? sp.standPos : p.pos); hl.quaternion.copy(p.q); hl.scale.setScalar(1 + Math.sin(now * 4) * 0.08) } }
+    const bu = refs.current.__burst, now = performance.now() / 1000
+    // light-weight target: gold outline on the item (see-through while the traveller covers it); water: a ring of sparkles
+    const lt = best && best.weight === 'light' && best.obj && !G.ui.panel ? best : null
+    setOutline(lt, now, !!(lt && H && H.playerObj && covers(camera, H.playerObj, best.at)))
+    const ws = refs.current.__wsp, wsp = best && best.kind === 'spot' && best.spot.water && !G.ui.panel ? best.spot : null
+    if (ws) { ws.visible = !!wsp; if (wsp) { const p = place(wsp.stand, 0.02, 0); ws.position.copy(wsp.standPos); ws.quaternion.copy(p.q)
+      ws.children.forEach((c, i) => { const a = i / ws.children.length * 6.283 + now * 0.5; c.position.set(Math.cos(a) * 0.16, 0.02 + Math.sin(now * 2 + i) * 0.015, Math.sin(a) * 0.16); c.scale.setScalar(0.014 + 0.006 * Math.sin(now * 3 + i)) }) } }
     if (bu) { const ids = Object.keys(anim.current); bu.visible = ids.length > 0
       if (ids.length) { const g = refs.current[ids[0]], a = anim.current[ids[0]]; let k = Math.max(0, (performance.now() - a.t0) / 700); if (freezePick != null) k = freezePick
         bu.position.copy(g.position); bu.quaternion.copy(g.quaternion); bu.children.forEach((c, i) => { const ang = i / bu.children.length * 6.283 + k * 2, r = 0.05 + k * 0.16; c.position.set(Math.cos(ang) * r, 0.06 + Math.sin(i * 2.1) * 0.04 + k * 0.05, Math.sin(ang) * r); c.scale.setScalar(0.022 * (1 - k * 0.5)) }) } }
@@ -352,7 +364,7 @@ export function GameWorld() {
   return <group>
     {L.spots.map(sp => <group key={sp.id} ref={el => { if (el) refs.current[sp.id] = el }} position={sp.pos} quaternion={place(sp.water ? sp.n : sp.n, 0, sp.spin).q}
       onPointerDown={e => { if (!refs.current[sp.id]?.visible) return; e.stopPropagation(); onTap(e.nativeEvent || e, () => GAME.actions.tapSpot(sp)) }}>{(sp.forage === undefined || sp.forage < (FORAGE_N[sp.item] || 0)) && <MergedProp item={sp.item} s={sp.s} />}</group>)}
-    <group ref={el => { if (el) refs.current.__hl = el }} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} material={G_RING} renderOrder={5}><ringGeometry args={[0.1, 0.122, 40, 1, 0, 5.2]} /></mesh><mesh rotation={[-Math.PI / 2, 0, 2.6]} material={G_RING} renderOrder={5}><ringGeometry args={[0.135, 0.145, 40, 1, 0, 2.2]} /></mesh></group>
+    <group ref={el => { if (el) refs.current.__wsp = el }} visible={false}>{[...Array(8)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     <group ref={el => { if (el) refs.current.__burst = el }} visible={false}>{[...Array(7)].map((_, i) => <mesh key={i} geometry={GE.ico} material={i % 2 ? G_FLY : G_SPARK} />)}</group>
     {sheep.map((s, i) => <Sheep key={i} i={i} sheep={sheep} />)}
     <Bench b={L.bench} /><HomeSign n={L.sign.n} /><Sparkles />

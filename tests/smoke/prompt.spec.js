@@ -50,3 +50,15 @@ test('indoors the bubble follows the house targets', async ({ page }) => {
   await expect(page.locator('.tp-prompt.tp-bubble')).toContainText('outside', { timeout: 30_000 })
   w.check()
 })
+
+test('the targeted pickup gets the gold outline; the white ring is gone', async ({ page }) => {
+  const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=village')
+  await go(page, () => { const sp = window.__game.L.spots.find(s => s.id.startsWith('mushroom-show')); const P = window.__player; P.n.copy(sp.stand); P.target = null; window.__snap = 1 })
+  await nearIs(page, () => window.__game.G.near?.kind === 'spot')
+  await page.waitForFunction(() => /^mushroom-show/.test(window.__outline?.id || ''), null, { timeout: 20_000 })
+  expect(await page.evaluate(() => window.__outline.ring)).toBeUndefined()
+  await go(page, () => { const P = window.__player; P.n.copy(window.__game.L.bench.n); P.target = null; window.__snap = 1 })
+  await nearIs(page, () => window.__game.G.near?.kind === 'bench')
+  await page.waitForFunction(() => window.__outline && window.__outline.id === null, null, { timeout: 20_000 })
+  w.check()
+})

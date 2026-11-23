@@ -10,9 +10,9 @@ html.tp-touch .tp-ui .tp-bubble-wrap.tp-dock{bottom:calc(env(safe-area-inset-bot
 
 /* the buttons live inside the wrapper: drop the old bottom-of-screen placement */
 html .tp-ui .tp-bubble-wrap .tp-prompt,html .tp-ui .tp-bubble-wrap .tp-chip{position:relative!important;left:auto!important;bottom:auto!important;top:auto!important;transform:none!important;margin:0;max-width:none;pointer-events:auto;white-space:nowrap}
-.tp-ui .tp-bubble-wrap .tp-prompt.tp-bubble{min-height:46px;padding:5px 18px 5px 6px;font-size:17px;gap:8px;animation:none}
-.tp-bubble .tp-bw{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}
-.tp-bubble .tp-bw em{font-size:13px}
+.tp-ui .tp-bubble-wrap .tp-prompt.tp-bubble{min-height:46px;padding:5px 18px 5px 6px;font-size:18px;gap:8px;animation:none}
+.tp-bubble .tp-bw{display:block;line-height:1.15}
+.tp-bubble .tp-bw em{display:block;font-size:13px}
 
 /* the tail: a glass diamond under the main bubble, pointing at the target */
 .tp-bubble-in::after{content:'';position:absolute;left:var(--tail,50%);bottom:-8px;width:16px;height:16px;transform:translateX(-50%) rotate(45deg);pointer-events:none;
