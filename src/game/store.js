@@ -34,4 +34,11 @@ export const markTaken = (spotId) => { G.s.taken[spotId] = G.s.day }
 // Stage B systems (lazy) hook new mornings here: garden growth, gift + errand reset
 export const DAY_HOOKS = []
 export function newDay(d) { if (d <= G.s.day) return; G.s.day = d; for (const f of DAY_HOOKS) f(d); toast(`A new morning — Day ${d + 1}. Everything has grown back.`, 'sun', 3600); emit() }
-export const setPanel = (p) => { G.ui.panel = G.ui.panel === p ? null : p; emit() }
+// closing (p null, or the same panel again) also forgets that the journal was opened from the bench
+export const setPanel = (p) => { G.ui.panel = G.ui.panel === p ? null : p; if (!G.ui.panel) G.ui.atBench = false; emit() }
+// Open the journal book at a place, e.g. openJournal('recipes', { sub: 'food', pick: 'onigiri' }). Only once the Stage C
+// chunk is loaded (it draws the book); -> false so callers fall back (the Bag / bench open the old Recipe Book).
+export function openJournal(tab, at = {}) {
+  if (typeof window === 'undefined' || !window.__scReady) return false
+  G.ui.journalAt = { tab, ...at }; G.ui.panel = 'journal'; emit(); return true
+}

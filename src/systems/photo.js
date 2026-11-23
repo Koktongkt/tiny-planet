@@ -1,11 +1,13 @@
 // Stage C photo album (pure; unit-tested). Metadata in the save (G.s.photos.list); the small JPEG thumbnails live in
-// their own localStorage key so the main save stays small. Up to MAX photos; the oldest is dropped.
-export const MAX = 12, THUMB_W = 320, THUMB_Q = 0.7, KEY = 'tinyplanet.photos'
-// list: meta[], store: { [id]: dataUrl }. -> dropped ids
+// their own localStorage key so the main save stays small. Up to MAX photos (4 album pages of PER_PAGE); when the album
+// is full a new photo is refused, nothing is dropped on its own.
+export const PER_PAGE = 12
+export const pageCount = (n) => Math.max(1, Math.ceil(n / PER_PAGE))
+export const MAX = 48, THUMB_W = 320, THUMB_Q = 0.7, KEY = 'tinyplanet.photos'
+// list: meta[], store: { [id]: dataUrl }. -> false when the album is full (nothing added)
 export function addPhoto(list, store, meta, dataUrl) {
-  list.push(meta); store[meta.id] = dataUrl; const dropped = []
-  while (list.length > MAX) { const o = list.shift(); delete store[o.id]; dropped.push(o.id) }
-  return dropped
+  if (list.length >= MAX) return false
+  list.push(meta); store[meta.id] = dataUrl; return true
 }
 export function removePhoto(list, store, id) { const i = list.findIndex(p => p.id === id); if (i < 0) return false; list.splice(i, 1); delete store[id]; return true }
 // keep metadata and thumbnails consistent (e.g. storage was cleared or a write failed)

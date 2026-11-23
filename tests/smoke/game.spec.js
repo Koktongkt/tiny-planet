@@ -38,8 +38,12 @@ test('crafts at the bench', async ({ page }) => {
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home&give=all')
   await page.evaluate(() => { const P = window.__player; P.n.copy(window.__game.L.bench.n); P.target = null; window.__snap = 1 })
   await page.waitForFunction(() => window.__game.G.near?.kind === 'bench', null, { timeout: 30_000 })
-  await page.keyboard.press('e')
-  const btn = page.locator('.tp-craft:not([disabled])').first(); await expect(btn).toBeVisible()
+  await page.waitForFunction(() => window.__scReady, null, { timeout: 60_000 }) // the journal book (Stage C chunk) draws Recipes
+  await page.keyboard.press('e'); await expect(page.locator('.jb-veil')).toBeVisible()
+  await expect(page.locator('.jb-bk.on[data-id="recipes"]')).toBeVisible()
+  await page.locator('.jb-st[data-sub="decor"]').click() // give=all: tools are owned already, decor is craftable
+  await page.locator('.jb-rc:has(.jb-rdy)').first().click() // a recipe she has everything for
+  const btn = page.locator('[data-act="craft"]:not([disabled])'); await expect(btn).toBeVisible()
   await btn.click()
   await page.waitForFunction(() => window.__game.G.s.crafted === 1 && !window.__game.G.ui.crafting, null, { timeout: 20_000 })
   w.check()

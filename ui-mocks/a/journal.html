@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>Journal bookmarks (draft)</title>
+<html><head><meta charset="utf-8"><title>Journal (draft)</title>
 <style>
 @font-face{font-family:Fredoka;font-weight:400;src:url(../../public/fonts/fredoka-400.woff2)}
 @font-face{font-family:Fredoka;font-weight:600;src:url(../../public/fonts/fredoka-600.woff2)}
@@ -9,94 +9,382 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 .jb{position:absolute;left:50%;top:50%;width:1448px;height:1086px;transform:translate(-50%,-50%) scale(var(--s,.65));font-family:Fredoka,system-ui,sans-serif;color:#4a2a18}
 .jb>img{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(20,8,2,.45));user-select:none}
 
-/* ---- bookmarks: fabric ribbon markers tucked into the book; their feet vanish behind the leather lip over the pages ---- */
-.bm{position:absolute;left:222px;top:140px;width:1004px;height:88px;display:flex;align-items:flex-end;gap:14px;filter:drop-shadow(0 3px 3px rgba(40,12,4,.45))}
-.bk{position:relative;flex:1;height:64px;border:0;padding:8px 14px 0;cursor:pointer;font:600 27px Fredoka,system-ui,sans-serif;
+/* ---- bookmarks: fabric ribbons standing up out of each page's top edge (art y 238), in front of the leather, never over the paper ---- */
+/* two groups, one over each page, so nothing sits across the gutter between them */
+.bm{position:absolute;inset:0;pointer-events:none}
+.grp{position:absolute;top:140px;height:98px;display:flex;align-items:flex-end;justify-content:center;gap:8px;pointer-events:auto;filter:drop-shadow(0 4px 3px rgba(60,24,6,.38)) drop-shadow(0 1px 1px rgba(60,24,6,.3))}
+.grp.l{left:160px;width:492px} /* page top edge is flat (y 238) from x 160 to ~655, then curls down into the gutter */
+.grp.r{left:796px;width:466px} /* flat again from ~795 */
+.bk{position:relative;flex:none;height:70px;border:0;padding:6px 17px 0;cursor:pointer;font:600 26px Fredoka,system-ui,sans-serif;
   display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;text-shadow:0 1.5px 1px rgba(60,20,10,.35);
   /* swallowtail cut at the top, like the ribbons painted at the bottom of the book */
   clip-path:polygon(0 0,calc(50% - 18px) 0,50% 11px,calc(50% + 18px) 0,100% 0,100% 100%,0 100%);
   background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2));
-  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -14px 12px -8px rgba(40,10,0,.45);
+  box-shadow:inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.12),inset 0 -5px 4px -3px rgba(60,20,5,.3);
   transition:height .16s ease,filter .16s}
 .bk::before{content:'';position:absolute;inset:0 11px;border-left:2px dashed rgba(255,255,255,.45);border-right:2px dashed rgba(255,255,255,.45);pointer-events:none}
 .bk:not(.on){filter:saturate(.92) brightness(.96)}
 .bk svg{width:32px;height:32px;flex:none}
 .bk .n{min-width:30px;height:28px;padding:0 8px;border-radius:14px;display:grid;place-items:center;font-size:19px;color:#fff;background:rgba(40,12,4,.25);text-shadow:none}
-.bk .dot{position:absolute;right:20px;top:14px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c8,#ffc23a);box-shadow:0 0 0 2px rgba(120,40,10,.55),0 0 8px #ffe08a}
-.bk:hover{height:72px;filter:none}
+.bk .dot{position:absolute;right:7px;top:14px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c8,#ffc23a);box-shadow:0 0 0 2px rgba(120,40,10,.55),0 0 8px #ffe08a}
+.bk:hover{height:77px;filter:none}
 .bk:focus-visible{outline:none;filter:none;text-decoration:underline 3px}
 /* the open bookmark is pulled up out of the pages: taller, full colour, a little sheen */
-.bk.on{height:86px;padding-top:10px;filter:none;
+.bk.on{height:90px;filter:none;
   background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 40%),repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px),linear-gradient(180deg,var(--c1),var(--c2))}
 .rv{display:none}
 
-/* ---- Discoveries sub-pages: small paper tabs along the top of the left page ---- */
-.sub{position:absolute;left:206px;top:284px;display:flex;gap:8px}
-.st{height:54px;padding:0 15px;border:0;border-radius:12px;cursor:pointer;font:600 23px Fredoka,system-ui,sans-serif;color:#5a3a22;display:flex;align-items:center;gap:8px;
+/* ---- sub-pages: small paper tabs along the top of the left page ---- */
+.sub{position:absolute;left:204px;top:270px;width:486px;display:flex;justify-content:center;gap:6px}
+.st{height:48px;padding:0 12px;border:0;border-radius:12px;cursor:pointer;font:600 21px Fredoka,system-ui,sans-serif;color:#5a3a22;display:flex;align-items:center;gap:8px;
   background:color-mix(in srgb,var(--c) 30%,#fbe9cf);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--c) 45%,transparent),0 2px 3px rgba(110,60,20,.18)}
-.st small{font-size:18px;font-weight:400;opacity:.75}
+.st small{font-size:16px;font-weight:400;opacity:.75}
 .st i{width:12px;height:12px;border-radius:50%;background:var(--c)}
 .st.on{background:var(--c);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.25);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 3px 6px rgba(110,60,20,.3)}
-.st.on i{background:#fff}
-.st.on small{opacity:.9}
+.st.on i{background:#fff}.st.on small{opacity:.9}
 
-/* ---- page placeholders (the page designs come later) ---- */
-.pg{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:3px dashed rgba(170,110,60,.35);border-radius:22px;color:#9a6a44}
-.pg h2{margin:0 0 8px;font-size:40px;color:#5a321c}
-.pg p{margin:0;font-size:21px;max-width:380px;line-height:1.35}
-.pg.l{left:205px;top:356px;width:470px;height:534px}
-.pg.r{left:775px;top:290px;width:490px;height:600px}
-body.nosub .pg.l{top:290px;height:600px}
+/* ---- pages: list on the left, the picked entry on the right ---- */
+.L{position:absolute;left:204px;top:276px;width:486px;height:636px;display:flex;flex-direction:column}
+body.hassub .L{top:332px;height:580px}
+.R{position:absolute;left:786px;top:268px;width:478px;height:650px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.scroll{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:#d4a878 transparent;padding:4px 6px 6px;margin:0 -6px}
+.it{display:inline-grid;place-items:center}.it svg{width:100%;height:100%}
+.ph{font-size:34px;font-weight:600;color:#5a321c;margin:0 0 10px;text-align:center}
+.ph small{font-size:20px;font-weight:400;color:#9a6a44;margin-left:6px}
+.lfoot{margin-top:8px;text-align:center;font-size:19px;color:#7a5236}
+.bar{height:14px;border-radius:7px;background:#8a5a3c;box-shadow:inset 0 2px 2px rgba(40,10,0,.35);overflow:hidden;margin:6px 40px 0}
+.bar i{display:block;height:100%;background:linear-gradient(180deg,#a5d65c,#6fae34);border-radius:7px}
+.pill{height:32px;padding:0 13px;border-radius:16px;font-size:17px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.pill.active{background:#f8cf62;color:#5a3a10}.pill.avail{background:#ead7bb;color:#6a4a2e}.pill.done{background:#cfe3b4;color:#3f6a22}
+.empty{color:#a07a58;font-size:19px;padding:10px}
+.btn{height:60px;padding:0 26px;border:0;border-radius:22px;font:600 24px Fredoka,system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:10px}
+.btn.g{color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.3);background:linear-gradient(180deg,#8ccd5a,#4e9530);box-shadow:0 0 0 2px #36701e,0 4px 0 #36701e,inset 0 2px 0 rgba(255,255,255,.4)}
+.btn.y{color:#4a2c0e;background:linear-gradient(180deg,#ffe49a,#f2b640);box-shadow:0 0 0 2px #b8822c,0 4px 0 #b8822c,inset 0 2px 0 rgba(255,255,255,.6)}
+.btn[disabled]{filter:grayscale(.7) opacity(.6);cursor:default}
+.hint{font-size:17px;color:#9a6a44;margin-top:10px}
+.blob{position:relative;width:190px;height:150px;display:grid;place-items:center;flex:none}
+.blob::before{content:'';position:absolute;inset:6px 14px;background:#f1d8ae;border-radius:46% 54% 44% 56%/56% 44% 56% 44%}
+.blob>*{position:relative}.blob .it{width:132px;height:132px}
+.blob.sm{height:118px;width:150px}
+.rt{font-size:36px;font-weight:600;color:#4a2a18;margin:4px 0 2px;display:flex;align-items:center;gap:10px;justify-content:center}
+.rsub{font-size:19px;color:#8a5a36;margin-bottom:8px}
+.rdesc{font-size:20px;line-height:1.35;color:#5a3a24;margin:4px 10px 10px}
+.rule{width:70%;height:4px;border-radius:2px;background:linear-gradient(90deg,transparent,#f2c26a,transparent);margin:2px auto 10px}
+.box{width:100%;box-sizing:border-box;border:2.5px dashed rgba(180,120,70,.4);border-radius:18px;padding:12px 14px 10px;margin-top:6px;text-align:left;position:relative}
+.box>b.lab{position:absolute;top:-17px;left:50%;transform:translateX(-50%);background:#f9dcae;color:#5a3a1a;border-radius:14px;padding:2px 16px;font-size:19px;box-shadow:0 2px 0 #e0b47a}
+.row{display:flex;align-items:center;gap:10px;font-size:20px;padding:5px 2px;color:#4a2a18}
+.row .it{width:34px;height:34px;flex:none}
+.row .c{margin-left:auto;font-weight:600;color:#8a5a36}
+.row.ok .c{color:#4f8f2a}
+.chk{width:26px;height:26px;border-radius:7px;border:2.5px solid #c49a6c;flex:none;display:grid;place-items:center;background:#fff8ec}
+.row.ok .chk{background:#6fb03a;border-color:#4a8a22}.row.ok .chk::after{content:'';width:12px;height:7px;border:3px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-2px)}
+.row.ok .t{text-decoration:line-through;color:#8a7a68}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:19px;text-align:left}
+.facts dt{color:#9a6a44}.facts dd{margin:0;color:#4a2a18;font-weight:600}
+
+/* quests */
+.qc{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:20px;margin-bottom:10px;cursor:pointer;background:#fbe8cc;box-shadow:0 3px 0 #e6c597,0 4px 8px rgba(120,70,20,.12);border:0;width:100%;text-align:left;font-family:inherit;color:inherit}
+.qc.on{background:#fff3d6;box-shadow:0 0 0 4px #f5c242,0 0 18px rgba(255,200,80,.55)}
+.qc.done{opacity:.6}
+.qc .ic{width:62px;height:62px;flex:none;display:grid;place-items:center}
+.qc .ic .it{width:58px;height:58px}
+.qc b{display:block;font-size:22px}.qc span.d{display:block;font-size:17px;color:#7a5236;line-height:1.25}
+.qc .pill{margin-left:auto}
+.qh{font-size:17px;font-weight:600;color:#a07a58;letter-spacing:.5px;margin:4px 4px 8px;text-transform:uppercase}
+/* people */
+.med{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;background:radial-gradient(circle at 35% 30%,hsl(var(--h) 60% 72%),hsl(var(--h) 45% 52%));box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 0 0 3px #fff4e0,0 2px 4px rgba(90,50,20,.3);text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.pc{border:0;background:#fbe8cc;border-radius:16px;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-family:inherit;color:inherit;box-shadow:0 3px 0 #e6c597}
+.pc .med{width:52px;height:52px;font-size:24px}
+.pc b{font-size:15px;line-height:1.1;max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc.on{background:#fff3d6;box-shadow:0 0 0 4px #f5c242,0 0 14px rgba(255,200,80,.5)}
+.pc.unmet .med{background:#d9c3a3;color:#f6ead8;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.pc.unmet b{color:#b09070}
+.hearts{display:inline-flex;gap:2px}.hearts svg{display:block}
+.shelf{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:19px}
+.shelf>span:first-child{width:92px;color:#8a5a36;font-weight:600}
+.shelf .it{width:42px;height:42px;background:#fff6e6;border-radius:12px;box-shadow:0 2px 0 #e6c597}
+.shelf .q{width:42px;height:42px;border-radius:12px;border:2.5px dashed rgba(180,120,70,.45);display:grid;place-items:center;color:#c0946a;font-weight:600;box-sizing:border-box}
+/* recipes */
+.rc{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;border-radius:14px;padding:3px 10px;cursor:pointer;font-family:inherit;color:inherit;text-align:left;border-bottom:2px dashed rgba(180,120,70,.25)}
+.rc .it{width:46px;height:46px;flex:none}
+.rc b{font-size:20px}.rc small{display:block;font-size:16px;color:#9a6a44}
+.rc .rdy{margin-left:auto;width:16px;height:16px;border-radius:50%;background:#7cc04a;box-shadow:0 0 0 3px #d8f0c0}
+.rc .own{margin-left:auto}
+.rc.on{background:#fff3d6;box-shadow:0 0 0 3px #f5c242}
+.rc.lock{color:#a88a6a}
+.rc.lock .it{filter:brightness(0) opacity(.18)}
+.pf{color:#e59a1e;font-size:18px}
+/* discoveries */
+.dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.dc{position:relative;border:0;background:#fbe8cc;border-radius:16px;padding:8px 4px 8px;display:flex;flex-direction:column;align-items:center;cursor:pointer;font-family:inherit;color:inherit;box-shadow:0 3px 0 #e6c597}
+.dc .it{width:64px;height:64px}
+.dc b{font-size:15px;line-height:1.15;min-height:34px;display:flex;align-items:center;text-align:center}
+.dc.no .it{filter:brightness(0) opacity(.16)}.dc.no b{color:#b09070}
+.dc.on{background:#fff3d6;box-shadow:0 0 0 4px #f5c242,0 0 14px rgba(255,200,80,.5)}
+.stamp{position:absolute;right:-4px;top:4px;transform:rotate(12deg);font-size:12px;font-weight:600;color:#b8452e;border:2px solid #b8452e;border-radius:6px;padding:0 4px;background:#fff3e6;letter-spacing:.5px}
+.bigstamp{display:inline-block;transform:rotate(-6deg);font-size:20px;font-weight:600;color:#b8452e;border:3px solid #b8452e;border-radius:10px;padding:2px 12px;margin-top:12px}
+/* memories */
+.pol{position:relative;background:#fffdf7;padding:8px 8px 26px;box-shadow:0 3px 8px rgba(90,50,20,.25);transform:rotate(var(--r));border:0;cursor:pointer;font-family:inherit}
+.pol img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.pol span{position:absolute;left:0;right:0;bottom:4px;font-size:15px;color:#7a5236}
+.pol::before{content:'';position:absolute;left:50%;top:-10px;width:60px;height:20px;margin-left:-30px;background:rgba(240,200,140,.75);transform:rotate(-3deg)}
+.pol.on{box-shadow:0 0 0 4px #f5c242,0 4px 14px rgba(200,140,40,.5)}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px 16px;padding:12px 6px}
+.slot{aspect-ratio:1/1.02;border:2.5px dashed rgba(180,120,70,.4);border-radius:6px}
+.bigpol{width:400px;padding:12px 12px 46px;transform:rotate(-1.5deg);cursor:default}
+.bigpol span{font-size:22px;bottom:10px}
+.diary{font-size:20px;line-height:1.3;text-align:left;width:100%}
+.diary .dd{font-weight:600;color:#b4712e;font-size:18px;margin:12px 0 4px;border-bottom:2px dashed rgba(180,120,70,.3)}
+.diary p{margin:4px 0;display:flex;gap:10px;align-items:center}.diary .it{width:34px;height:34px;flex:none}
 .hot{position:absolute;border:0;background:none;cursor:pointer;border-radius:50%}
 .hot:hover{background:rgba(255,240,200,.15)}
 body.debug .hot,body.debug .bm{outline:3px dashed #39f;outline-offset:2px}
 </style></head>
 <body>
 <img id="bg" src="../bg-in.jpg" alt="">
+<span id="defs"></span>
 <div class="jb" id="jb" role="dialog" aria-label="Journal">
   <img src="ref3/journal-frame.webp" srcset="ref3/journal-frame.webp 1x, ref3/journal-frame@2x.webp 2x" alt="" draggable="false">
   <nav class="bm" id="bm" role="tablist" aria-label="Journal sections"></nav>
-  <div id="sub" class="sub" role="tablist" aria-label="Discoveries pages"></div>
-  <div class="pg l" id="pl"></div>
-  <div class="pg r" id="pr"></div>
+  <div id="sub" class="sub" role="tablist" aria-label="Pages in this section"></div>
+  <div class="L" id="pl"></div>
+  <div class="R" id="pr"></div>
   <button class="hot" style="left:1284px;top:104px;width:90px;height:90px" aria-label="Close journal"></button>
 </div>
+<script src="../icons.js"></script><script src="journal-data.js"></script>
 <script>
 const I = {
   quests: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h11a2 2 0 0 1 2 2v13"/><path d="M6 3a2 2 0 0 0-2 2v1h4"/><path d="M8 5v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1h-9v1a2 2 0 0 1-2 2"/><path d="M11 8h5M11 12h5"/></svg>',
   people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>',
   discoveries: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/><path d="M10.5 13.5v-4M10.5 9.5c0-2 1.3-3 3-3 0 2-1.3 3-3 3zM10.5 11c0-1.6-1-2.4-2.5-2.4 0 1.6 1 2.4 2.5 2.4z"/></svg>',
   memories: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" transform="rotate(-4 12 12)"/><path d="M6.6 6.2l10.8-.8.7 9.5-10.8.8z"/><path d="M12.4 12.6c-1.6-1-2.4-2-1.8-3 .5-.8 1.5-.7 1.9 0 .3-.8 1.3-1 1.9-.3.8 1-.2 2.2-2 3.3z" fill="currentColor" stroke="none"/></svg>',
+  recipes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5c-3.5-.5-6.5 0-8.5 1.5z"/><path d="M12 6.5v13"/><path d="M6.5 9.5c1.3-.2 2.6 0 3.5.5M6.5 13c1.3-.2 2.6 0 3.5.5M14 10c.9-.5 2.2-.7 3.5-.5"/></svg>',
 }
 // sample numbers, as the live game would fill them in
 const BOOKMARKS = [
-  { id: 'quests', c: ['#e2654c', '#b8402e'], label: 'Quests', n: 2, dot: true, page: ['Quests', 'Settle In steps, the errand you took from the board, and new notes waiting.'] },
-  { id: 'people', c: ['#f3c25a', '#d4922a'], label: 'People', n: '7', page: ['People', 'Everyone you have met: hearts, favourite things, gifts they love.'] },
-  { id: 'discoveries', c: ['#9cc75c', '#679a34'], label: 'Discoveries', n: '18', page: null },
-  { id: 'memories', c: ['#ea9a92', '#c86a66'], label: 'Memories', n: 5, page: ['Memories', 'Your photos for now. Room for more kinds of keepsakes later.'] },
+  { id: 'quests', side: 'l', c: ['#e2654c', '#b8402e'], label: 'Quests', dot: true },
+  { id: 'people', side: 'l', c: ['#f3c25a', '#d4922a'], label: 'People' },
+  { id: 'recipes', side: 'l', c: ['#7ab4cf', '#4f89a8'], label: 'Recipes', dot: true },
+  { id: 'discoveries', side: 'r', c: ['#9cc75c', '#679a34'], label: 'Discoveries' },
+  { id: 'memories', side: 'r', c: ['#ea9a92', '#c86a66'], label: 'Memories' },
 ]
-const SUBS = [
-  { id: 'fish', label: 'Fish', c: '#6fa6c0', seen: 7, of: 18 },
-  { id: 'forage', label: 'Forage', c: '#8fba5c', seen: 9, of: 24 },
-  { id: 'relics', label: 'Relics', c: '#d39a3c', seen: 2, of: 12 },
-]
+// ---------- a sample save on day 8, shaped like G.s (with the three agreed additions: metDay, learned, errands.log) ----------
+const S = {
+  day: 7,
+  inv: { wood: 6, reed: 2, stone: 3, clay: 2, shell: 1, driftwood: 1, rice: 3, fish: 2, berries: 4, flower: 3, moss: 2, glowmoss: 1, bamboo: 2, fluff: 2, wool: 1, crystal: 1, shard: 2, coin: 3, firefly: 1, mushroom: 2, herbs: 1, acorn: 2 },
+  tools: { rod: true, can: true },
+  tutorial: { done: { move: 1, look: 1, gather: 1, craft: 1, talk: 1 } },
+  friends: { list: {
+    grandma: { hearts: 3.5, metDay: 0, giftedToday: true, learned: { teacup: 'love', pine_tea: 'like', fish: 'dislike' }, hit: { 3: 4 } },
+    fisherman: { hearts: 2, metDay: 1, learned: { onigiri: 'love', driftwood: 'like' } },
+    fishwife: { hearts: 2.5, metDay: 1, learned: { grilledfish: 'love', shell: 'like' } },
+    'dock boy': { hearts: 1, metDay: 2, learned: { coin: 'like' } },
+    'sailor girl': { hearts: 1.5, metDay: 3, learned: { chime: 'like' } },
+    baker: { hearts: 2, metDay: 3, learned: { berries: 'love' } },
+    scholar: { hearts: 3, metDay: 4, learned: { shard: 'love', coin: 'like', fish: 'dislike' }, hit: { 3: 6 } },
+    'farm wife': { hearts: 0.5, metDay: 5, learned: {} },
+    farmer: { hearts: 0.25, metDay: 6, learned: { rice: 'love' } },
+  } },
+  errands: { list: [
+    { id: 'e7-1', npcId: 'fishwife', wants: [{ itemId: 'shell', count: 2 }, { itemId: 'driftwood', count: 1 }], reward: { coins: 4, hearts: 1 }, accepted: true, done: false },
+    { id: 'e7-2', npcId: 'dock boy', wants: [{ itemId: 'stone', count: 3 }], reward: { coins: 3 }, accepted: false, done: false },
+    { id: 'e7-3', npcId: 'farm wife', wants: [{ itemId: 'flower', count: 2 }], reward: { itemId: 'seedpack' }, accepted: false, done: false },
+  ], log: [
+    { npcId: 'fisherman', wants: [{ itemId: 'reed', count: 3 }], reward: { coins: 3 }, day: 6 },
+    { npcId: 'baker', wants: [{ itemId: 'berries', count: 4 }], reward: { coins: 2, hearts: 1 }, day: 5 },
+  ] },
+  fish: { minnow: { count: 6, best: 8, firstDay: 1 }, crucian: { count: 3, best: 22, firstDay: 2 }, ayu: { count: 2, best: 19, firstDay: 3 }, mackerel: { count: 4, best: 31, firstDay: 4 }, koi: { count: 1, best: 41, firstDay: 5 }, loach: { count: 1, best: 12, firstDay: 6 }, sea_bream: { count: 1, best: 38, firstDay: 6 } },
+  journal: { forage: { sakura: { count: 3, firstDay: 1 }, bamboo_shoot: { count: 2, firstDay: 2 } },
+    relics: { coin: { count: 5, firstDay: 1 }, shard: { count: 4, firstDay: 2 }, crystal: { count: 1, firstDay: 4 }, relic_bell: { count: 1, firstDay: 5 } },
+    perfect: { onigiri_perfect: 5, teacup_perfect: 6 } },
+  museum: { donated: { shard: 3, koi: 6, relic_bell: 6 } },
+  photos: [ { day: 1, src: '../bg-out.jpg', pos: '30% 40%', note: 'First morning on the planet' }, { day: 2, src: 'globe-day.jpg', pos: '50% 50%', note: 'The whole planet from the hill' },
+    { day: 4, src: '../bg-in.jpg', pos: '60% 50%', note: 'Home, a little tidier' }, { day: 5, src: 't-out2.jpg', pos: '40% 60%', note: 'Koi day!' }, { day: 6, src: 'globe-night.jpg', pos: '50% 50%', note: 'Fireflies over the terraces' } ],
+  unknownRecipes: ['bike', 'jam_sky', 'soup_veg', 'mosslamp'],
+}
+// ---------- helpers ----------
+const P = Object.fromEntries(JD.people.map(p => [p.k, p])), ITEM = JD.items
+const ICON_FALLBACK = { sakura: 'flower', bamboo_shoot: 'bamboo', cicada_shell: 'shell', sunflower: 'flower', maple_leaf: 'leaf', chestnut: 'acorn', persimmon: 'berries', yuzu: 'berries', snowdrop: 'flower',
+  relic_tile: 'stone', relic_bell: 'chime', relic_lens: 'crystal', relic_mask: 'shard', relic_bowl: 'teacup', jam_sky: 'jam', soup_veg: 'soup', bridgekit: 'bridgekit' }
+const icon = (id, size) => { const k = IC[id] ? id : ICON_FALLBACK[id] || (JD.fish.some(f => f.id === id) ? 'fish' : 'unknown'); return `<span class="it" style="width:${size}px;height:${size}px">${IC[k]}</span>` }
+const nm = (id) => (ITEM[id] && ITEM[id].name) || (JD.fr[id] && JD.fr[id].name) || (JD.fish.find(f => f.id === id) || {}).name || id
+const hue = (k) => [...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7)
+const med = (k, size, fs) => `<span class="med" style="--h:${hue(k)};width:${size}px;height:${size}px;font-size:${fs}px">${P[k].name.replace(/^(Grandma|Grandpa|Granny|Professor|Mr\.) /, '')[0]}</span>`
+function hearts(n, size = 16) {
+  return `<span class="hearts">${[0, 1, 2, 3, 4].map(i => { const f = Math.max(0, Math.min(1, n - i)); return `<svg width="${size}" height="${size}" viewBox="0 0 24 24"><defs><clipPath id="h${i}${size}${Math.round(f * 4)}"><rect width="${24 * f}" height="24"/></clipPath></defs><path d="M12 21s-7.5-4.6-9.5-9.4C1 8 3.2 4.5 6.8 4.5c2.2 0 3.6 1.2 5.2 3 1.6-1.8 3-3 5.2-3 3.6 0 5.8 3.5 4.3 7.1C19.5 16.4 12 21 12 21z" fill="#ecd9c0" stroke="#c4936a" stroke-width="1.6"/><path clip-path="url(#h${i}${size}${Math.round(f * 4)})" d="M12 21s-7.5-4.6-9.5-9.4C1 8 3.2 4.5 6.8 4.5c2.2 0 3.6 1.2 5.2 3 1.6-1.8 3-3 5.2-3 3.6 0 5.8 3.5 4.3 7.1C19.5 16.4 12 21 12 21z" fill="#ef6f6c" stroke="#b8452e" stroke-width="1.6"/></svg>` }).join('')}</span>`
+}
+const heart1 = (size) => `<span class="hearts">${hearts(1, size).match(/<svg[\s\S]*?<\/svg>/)[0]}</span>`
+const have = (id) => (S.inv[id] || 0)
+const D = (d) => 'Day ' + (d + 1)
+const cap = (x) => x[0].toUpperCase() + x.slice(1)
+// ---------- sub-pages ----------
+const RECIPE_TABS = { tools: ['Tools', 'Garden', 'Unlock'], food: ['Food'], decor: ['Decor'], keepsakes: ['Keepsakes'] }
+const recipesIn = (t) => JD.recipes.filter(r => RECIPE_TABS[t].includes(r.cat))
+const known = (r) => !S.unknownRecipes.includes(r.id)
+const needOk = (r) => r.needs.every(([id, n]) => typeof id === 'string' ? have(id) >= n : id.any.some(x => have(x) >= n))
+const owned = (r) => !!S.tools[r.makes]
+const FISH_IDS = JD.fish.map(f => f.id), FORAGE_IDS = Object.values(JD.forage).flat()
+const SUBS = {
+  recipes: [
+    { id: 'tools', label: 'Tools', c: '#8a9bb0' }, { id: 'food', label: 'Food', c: '#e0915a' }, { id: 'decor', label: 'Decor', c: '#8fba5c' }, { id: 'keepsakes', label: 'Keepsakes', c: '#c98ab8' },
+  ].map(t => ({ ...t, seen: recipesIn(t.id).filter(known).length, of: recipesIn(t.id).length })),
+  discoveries: [
+    { id: 'fish', label: 'Fish', c: '#6fa6c0', seen: Object.keys(S.fish).length, of: FISH_IDS.length },
+    { id: 'forage', label: 'Forage', c: '#8fba5c', seen: Object.keys(S.journal.forage).length, of: FORAGE_IDS.length },
+    { id: 'relics', label: 'Relics', c: '#d39a3c', seen: Object.keys(S.journal.relics).length, of: JD.relics.length },
+  ],
+  memories: [ { id: 'photos', label: 'Photos', c: '#e08a8a', seen: S.photos.length, of: 12 }, { id: 'firsts', label: 'Firsts', c: '#c9a24a' } ],
+}
 const q = new URLSearchParams(location.search)
-let tab = q.get('tab') || 'quests', sub = q.get('sub') || 'fish'
+let tab = q.get('tab') || 'quests'
+const subOf = { discoveries: q.get('sub') || 'fish', recipes: q.get('rsub') || 'food', memories: q.get('msub') || 'photos' }
+const pick = { quests: q.get('pick') || 'e7-1', people: q.get('person') || 'grandma', recipes: { [subOf.recipes]: q.get('rpick') }, discoveries: { [subOf.discoveries]: q.get('dpick') }, memories: 0 }
+const AT_BENCH = q.has('bench')
 if (q.has('debug')) document.body.classList.add('debug')
+
+// ---------- Quests ----------
+function questList() {
+  const out = [], tut = ['move', 'look', 'gather', 'craft', 'talk', 'garden', 'sleep'], n = tut.filter(t => S.tutorial.done[t]).length
+  if (n < tut.length) out.push({ id: 'tut', kind: 'tut', title: 'Settle In', desc: `Granny Fuku's first-day list · ${n}/${tut.length}`, st: 'active', group: 'Today' })
+  // only errands she has accepted at the notice board get a page; notes still on the board are one hint card, details hidden
+  for (const e of S.errands.list.filter(e => e.accepted)) out.push({ id: e.id, kind: 'errand', e, title: `A favour for ${P[e.npcId].name}`, desc: e.wants.map(w => `${w.count} × ${nm(w.itemId)}`).join(', '), st: e.done ? 'done' : 'active', group: 'Today' })
+  const waiting = S.errands.list.filter(e => !e.accepted && !e.done).length
+  if (waiting) out.push({ id: 'board', kind: 'board', title: 'New notes on the board', desc: `${waiting} request${waiting > 1 ? 's' : ''} pinned up in the village`, st: 'avail', group: 'Today' })
+  for (const [i, e] of S.errands.log.entries()) out.push({ id: 'log' + i, kind: 'log', e, title: `A favour for ${P[e.npcId].name}`, desc: `Done on ${D(e.day)}`, st: 'done', group: 'Finished' })
+  return out
+}
+const PILL = { active: 'Active', avail: 'Go and see', done: 'Done' }
+function quests() {
+  const list = questList(), sel = list.find(x => x.id === pick.quests) || list[0]
+  let g = ''
+  const L = `<div class="ph">Quests <small>Day ${S.day + 1}</small></div><div class="scroll">${list.map(x => { const h = x.group !== g ? `<div class="qh">${(g = x.group)}</div>` : ''
+    return h + `<button class="qc${x.id === sel.id ? ' on' : ''}${x.st === 'done' ? ' done' : ''}" data-pick="${x.id}"><span class="ic">${x.kind === 'tut' ? icon('book', 58) : x.kind === 'board' ? icon('board', 58) : med(x.e.npcId, 54, 26)}</span><span><b>${x.title}</b><span class="d">${x.desc}</span></span><span class="pill ${x.st}">${PILL[x.st]}</span></button>` }).join('')}</div>
+    <div class="lfoot">${S.errands.log.length} favours finished</div>`
+  let R
+  if (sel.kind === 'tut') {
+    const steps = [['move', 'Walk around'], ['look', 'Look around'], ['gather', 'Gather something that shimmers'], ['craft', 'Craft at the bench by Home'], ['talk', 'Say hello to a villager'], ['garden', 'Plant a seed in the garden beds'], ['sleep', 'Sleep in your bed']]
+    R = `<div class="blob">${icon('book', 120)}</div><div class="rt">Settle In</div><div class="rule"></div><p class="rdesc">Granny Fuku wrote you a little list for your first days on the planet.</p>
+      <div class="box"><b class="lab">Steps</b>${steps.map(([id, t]) => `<div class="row${S.tutorial.done[id] ? ' ok' : ''}"><span class="chk"></span><span class="t">${t}</span></div>`).join('')}</div>`
+  } else if (sel.kind === 'board') {
+    R = `<div class="blob">${icon('board', 120)}</div><div class="rt">New notes on the board</div><div class="rule"></div>
+      <p class="rdesc">Neighbours have pinned up requests on the notice board in the village. Walk over and read them; a favour you take shows up here with everything you need.</p>
+      <div style="margin-top:auto;padding-bottom:6px"><div class="hint">Details appear here once you take a note at the board.</div></div>`
+  } else {
+    const e = sel.e, p = P[e.npcId], ready = e.wants.every(w => have(w.itemId) >= w.count)
+    const rew = [e.reward.coins && `${icon('coin', 30)} ${e.reward.coins} coins`, e.reward.hearts && `${heart1(26)} +${e.reward.hearts} heart`, e.reward.itemId && `${icon(e.reward.itemId, 30)} ${nm(e.reward.itemId)}`].filter(Boolean)
+    R = `<div class="blob">${med(e.npcId, 120, 56)}</div><div class="rt">${sel.title}</div><div class="rsub">${p.name} · ${p.role}</div><div class="rule"></div>
+      <div class="box"><b class="lab">To do</b>${e.wants.map(w => { const h = Math.min(have(w.itemId), w.count), ok = sel.kind === 'log' || h >= w.count
+        return `<div class="row${ok ? ' ok' : ''}"><span class="chk"></span>${icon(w.itemId, 34)}<span class="t">Bring ${w.count > 1 ? w.count + ' × ' : ''}${nm(w.itemId)}</span><span class="c">${sel.kind === 'log' ? w.count : h}/${w.count}</span></div>` }).join('')}
+        <div class="row${sel.kind === 'log' ? ' ok' : ''}"><span class="chk"></span><span class="t">Take it to ${p.name}</span></div></div>
+      <div class="box" style="margin-top:22px"><b class="lab">Reward</b><div class="row" style="justify-content:center;gap:22px">${rew.map(x => `<span style="display:inline-flex;align-items:center;gap:6px">${x}</span>`).join('')}</div></div>
+      <div style="margin-top:auto;padding-bottom:6px">${sel.st === 'active' ? `<button class="btn g">${icon('check', 30)}Track</button><div class="hint">${ready ? `You have everything. Take it to ${p.name}.` : 'Shows this favour on your quest tracker.'}</div>` : `<div class="hint">Finished on ${D(e.day)}.</div>`}</div>`
+  }
+  return [L, R]
+}
+// ---------- People ----------
+function people() {
+  const sel = pick.people, met = (k) => S.friends.list[k] && S.friends.list[k].metDay != null, nMet = JD.people.filter(p => met(p.k)).length
+  const L = `<div class="ph">People <small>${nMet} of ${JD.people.length} met</small></div><div class="scroll"><div class="pgrid">${JD.people.map(p => { const f = S.friends.list[p.k]
+    return met(p.k) ? `<button class="pc${p.k === sel ? ' on' : ''}" data-pick="${p.k}">${med(p.k, 52, 24)}<b>${p.name.replace(/^(Grandma|Grandpa|Granny|Professor|Mr\.) /, '')}</b>${hearts(f.hearts, 15)}</button>`
+      : `<button class="pc unmet" data-pick="${p.k}"><span class="med" style="width:52px;height:52px;font-size:24px">?</span><b>???</b>${hearts(0, 15)}</button>` }).join('')}</div></div>`
+  const p = P[sel], f = S.friends.list[sel]
+  if (!f || f.metDay == null) return [L, `<div class="blob"><span class="med" style="width:120px;height:120px;font-size:56px;background:#d9c3a3">?</span></div><div class="rt">Not met yet</div><div class="rule"></div><p class="rdesc">Someone in the village you haven't said hello to. Walk up and press E to chat.</p>`]
+  const prefs = JD.prefs[sel] || {}, shelf = (kind, label) => { const got = Object.entries(f.learned).filter(([, v]) => v === kind).map(([k]) => k), total = kind === 'like' ? (prefs.like || []).length : (prefs[kind] || []).length, left = Math.max(0, total - got.length)
+    return `<div class="shelf"><span>${label}</span>${got.map(k => `<span title="${nm(k)}">${icon(k, 42)}</span>`).join('')}${Array(left).fill('<span class="q">?</span>').join('')}</div>` }
+  const ms = [[3, '2 Seed Packs'], [5, 'a Sky Seed']]
+  const R = `<div class="blob sm">${med(sel, 96, 44)}</div><div class="rt">${p.name}</div><div class="rsub">${cap(p.role)} · met on ${D(f.metDay)}</div>${hearts(f.hearts, 30)}
+    <p class="rdesc" style="margin:8px 10px 14px">Loves <i>${p.fav}</i>.</p>
+    <div class="box"><b class="lab">Gifts</b>${shelf('love', 'Loves')}${shelf('like', 'Likes')}${shelf('dislike', 'Dislikes')}</div>
+    <div class="box" style="margin-top:20px;padding-top:8px"><b class="lab">Friendship</b>${ms.map(([h, g]) => `<div class="row${f.hearts >= h ? ' ok' : ''}"><span class="chk"></span><span class="t">${h} hearts: ${p.name.split(' ').pop()} gives you ${g}</span></div>`).join('')}</div>
+    <div class="hint" style="margin-top:auto;padding-bottom:6px">${f.giftedToday ? '🎁 Gifted today. One gift a day each.' : 'No gift yet today.'}</div>`
+  return [L, R]
+}
+// ---------- Recipes ----------
+function recipes() {
+  const t = subOf.recipes, list = recipesIn(t), sel = list.find(r => r.id === pick.recipes[t]) || list.find(known) || list[0]
+  const L = `<div class="scroll">${list.map(r => { const k = known(r), ok = k && !owned(r) && needOk(r), pf = S.journal.perfect[r.makes + '_perfect'] != null
+    return `<button class="rc${r.id === sel.id ? ' on' : ''}${k ? '' : ' lock'}" data-pick="${r.id}">${icon(r.makes, 46)}<span><b>${k ? nm(r.makes) : '???'}${pf ? ' <span class="pf">✦</span>' : ''}</b><small>${k ? r.needs.map(([id, n]) => `${n} ${typeof id === 'string' ? nm(id) : 'Herbs or Tea'}`).join(' · ') : 'Find its ingredients to learn it'}</small></span>${owned(r) ? '<span class="pill done own">Owned</span>' : ok ? '<span class="rdy" title="You have everything"></span>' : ''}</button>` }).join('')}</div>
+    <div class="lfoot">${SUBS.recipes.find(s => s.id === t).seen} of ${list.length} learned · <span style="color:#4f8f2a">●</span> ready to make</div>`
+  if (!known(sel)) return [L, `<div class="blob">${icon(sel.makes, 120).replace('class="it"', 'class="it" style="filter:brightness(0) opacity(.18);width:120px;height:120px"')}</div><div class="rt">???</div><div class="rule"></div><p class="rdesc">Find all of its ingredients out in the world to learn this recipe.</p>`]
+  const pf = S.journal.perfect[sel.makes + '_perfect'], stove = sel.at === 'stove' || t === 'food' && sel.cook
+  const R = `<div class="blob">${icon(sel.makes, 132)}</div><div class="rt">${nm(sel.makes)}</div><div class="rsub">${sel.cat === 'Unlock' ? 'Builds' : sel.cat}${owned(sel) ? ' · Owned' : ''}${pf != null ? ` · <span class="pf">✦ Perfect on ${D(pf)}</span>` : ''}</div><div class="rule"></div>
+    <p class="rdesc">${(ITEM[sel.makes] || {}).desc || ''}</p>
+    <div class="box"><b class="lab">Needs</b>${sel.needs.map(([id, n]) => { const ids = typeof id === 'string' ? [id] : id.any, h = Math.max(...ids.map(have)), ok = h >= n
+      return `<div class="row${ok ? ' ok' : ''}"><span class="chk"></span>${icon(ids[0], 34)}<span class="t">${ids.map(nm).join(' or ')}</span><span class="c">${Math.min(h, n)}/${n}</span></div>` }).join('')}</div>
+    <div style="margin-top:auto;padding-bottom:6px">${owned(sel) ? '<div class="hint">Already in your bag.</div>' : AT_BENCH && !stove ? `<button class="btn g"${needOk(sel) ? '' : ' disabled'}>${icon('hand', 30)}Craft</button>`
+      : `<button class="btn g" disabled>${icon('hand', 30)}Craft</button><div class="hint">${stove ? 'Cook this on the stove at home.' : 'Craft at the bench beside Home.'}</div>`}</div>`
+  return [L, R]
+}
+// ---------- Discoveries ----------
+function discoveries() {
+  const t = subOf.discoveries, ids = t === 'fish' ? FISH_IDS : t === 'forage' ? FORAGE_IDS : JD.relics
+  const rec = (id) => t === 'fish' ? S.fish[id] : S.journal[t === 'forage' ? 'forage' : 'relics'][id], don = (id) => S.museum.donated[id] != null
+  const sel = ids.includes(pick.discoveries[t]) ? pick.discoveries[t] : ids.find(rec) || ids[0]
+  const canGive = (id) => t === 'relics' || t === 'fish' && ['rare', 'legendary'].includes(JD.fish.find(x => x.id === id).rarity)
+  const donatable = t !== 'forage', nDon = ids.filter(don).length, nGive = ids.filter(canGive).length
+  const L = `<div class="scroll"><div class="dgrid">${ids.map(id => { const e = rec(id)
+    return `<button class="dc${e ? '' : ' no'}${id === sel ? ' on' : ''}" data-pick="${id}">${icon(id, 64)}<b>${e ? nm(id) : '? ? ?'}</b>${don(id) ? '<i class="stamp">MUSEUM</i>' : ''}</button>` }).join('')}</div></div>
+    <div class="lfoot">${ids.filter(rec).length} of ${ids.length} found${donatable ? ` · Museum ${nDon}/${nGive}` : ''}</div>`
+  const e = rec(sel)
+  if (!e) return [L, `<div class="blob">${icon(sel, 120).replace('class="it"', 'class="it" style="filter:brightness(0) opacity(.18);width:120px;height:120px"')}</div><div class="rt">Still a mystery</div><div class="rule"></div>
+    <p class="rdesc">${t === 'fish' ? hintFish(sel) : t === 'forage' ? `Look for it in ${seasonOf(sel)}.` : 'Something old is still buried near the ruins.'}</p>`]
+  const f = JD.fish.find(x => x.id === sel), txt = t === 'fish' ? f.desc : (JD.fr[sel] || ITEM[sel] || {}).desc
+  const facts = [['First found', D(e.firstDay)], [t === 'fish' ? 'Caught' : 'Found', '×' + e.count]]
+  if (t === 'fish') facts.push(['Biggest', e.best + ' cm'], ['Where', f.spots.map(cap).join(', ')], ['When', [f.season === 'any' ? 'Any season' : f.season.map(cap).join(', '), f.time === 'any' ? 'any time' : f.time.join(', ')].join(' · ')], ['Weather', f.weather === 'any' ? 'Any' : cap(f.weather)])
+  if (t === 'forage') facts.push(['Season', cap(seasonOf(sel))])
+  const R = `<div class="blob">${icon(sel, 132)}</div><div class="rt">${nm(sel)}</div>${t === 'fish' ? `<div class="rsub">${cap(f.rarity)}</div>` : ''}<div class="rule"></div><p class="rdesc">${txt}</p>
+    <div class="box"><b class="lab">Notes</b><dl class="facts">${facts.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl></div>
+    <div style="margin-top:auto;padding-bottom:6px">${canGive(sel) ? (don(sel) ? `<span class="bigstamp">ON SHOW AT THE MUSEUM · ${D(S.museum.donated[sel])}</span>` : `<div class="hint">Bring one to Professor Hoshino at the ruins to put it on show.</div>`) : ''}</div>`
+  return [L, R]
+}
+const seasonOf = (id) => Object.entries(JD.forage).find(([, l]) => l.includes(id))[0]
+function hintFish(id) { const f = JD.fish.find(x => x.id === id); return `Try the ${f.spots.join(' or ')}${f.season === 'any' ? '' : ' in ' + f.season.join(' or ')}${f.time === 'any' ? '' : ', ' + f.time.join(' or ')}${f.weather === 'any' ? '' : ', when it is ' + f.weather}.` }
+// ---------- Memories ----------
+function firsts() {
+  const ev = []
+  for (const [k, f] of Object.entries(S.friends.list)) { if (f.metDay != null) ev.push([f.metDay, k, `Met <b>${P[k].name}</b>`, 'med']); for (const [h, d] of Object.entries(f.hit || {})) ev.push([d, k, `<b>${P[k].name}</b> reached ${h} hearts`, 'heart']) }
+  for (const [id, e] of Object.entries(S.fish)) ev.push([e.firstDay, id, `Caught your first <b>${nm(id)}</b>`])
+  for (const [id, e] of Object.entries(S.journal.forage)) ev.push([e.firstDay, id, `Found <b>${nm(id)}</b>`])
+  for (const [id, e] of Object.entries(S.journal.relics)) ev.push([e.firstDay, id, `Dug up <b>${nm(id)}</b>`])
+  for (const [id, d] of Object.entries(S.museum.donated)) ev.push([d, id, `Gave <b>${nm(id)}</b> to the museum`])
+  for (const [id, d] of Object.entries(S.journal.perfect)) ev.push([d, id.replace('_perfect', ''), `Cooked a perfect <b>${nm(id.replace('_perfect', ''))}</b>`])
+  for (const e of S.errands.log) ev.push([e.day, e.npcId, `Did a favour for <b>${P[e.npcId].name}</b>`, 'med'])
+  return ev.sort((a, b) => a[0] - b[0])
+}
+function diary(ev) { let d = -1; return `<div class="diary">${ev.map(([day, id, t, k]) => (day !== d ? `<div class="dd">${D((d = day))}</div>` : '') + `<p>${k === 'med' ? med(id, 34, 16) : k === 'heart' ? heart1(32) : icon(id, 34)}<span>${t}</span></p>`).join('')}</div>` }
+function memories() {
+  if (subOf.memories === 'firsts') { const ev = firsts(), lines = (n) => n + new Set(ev.slice(0, n).map(e => e[0])).size // a day heading takes a line too
+    // split at the day boundary nearest 45% of the lines (the left page is shorter: the sub-tabs sit on it)
+    const cuts = ev.map((e, i) => i).filter(i => i > 0 && ev[i][0] !== ev[i - 1][0]), goal = lines(ev.length) * 0.45
+    const at = cuts.reduce((b, i) => Math.abs(lines(i) - goal) < Math.abs(lines(b) - goal) ? i : b, cuts[0] || ev.length)
+    return [`<div class="scroll">${diary(ev.slice(0, at))}</div>`, `<div class="scroll" style="width:100%">${diary(ev.slice(at))}</div><div class="hint">Her journal fills in by itself as the days go by.</div>`] }
+  const sel = S.photos[pick.memories] || S.photos[0]
+  const L = `<div class="scroll"><div class="mgrid">${Array.from({ length: 12 }, (_, i) => { const p = S.photos[i]
+    return p ? `<button class="pol${p === sel ? ' on' : ''}" style="--r:${((i * 37) % 9 - 4) * 0.8}deg" data-pick="${i}"><img src="${p.src}" style="object-position:${p.pos}" alt=""><span>${D(p.day)}</span></button>` : '<div class="slot"></div>' }).join('')}</div></div>
+    <div class="lfoot">${S.photos.length} of 12 kept</div>`
+  const R = `<div class="pol bigpol" style="margin-top:30px"><img src="${sel.src}" style="object-position:${sel.pos}" alt=""><span>${sel.note}</span></div>
+    <div class="rsub" style="margin-top:22px">${D(sel.day)}</div>
+    <div style="margin-top:auto;padding-bottom:6px;display:flex;gap:14px"><button class="btn y">Set as cover</button><button class="btn" style="background:#ead7bb;color:#6a4a2e">Remove</button></div>`
+  return [L, R]
+}
+// ---------- render ----------
+const bk = b => `<button class="bk${b.id === tab ? ' on' : ''}" role="tab" aria-selected="${b.id === tab}" data-id="${b.id}" style="--c1:${b.c[0]};--c2:${b.c[1]}">${I[b.id]}${b.label}${b.dot && b.id !== tab ? '<span class="dot" aria-label="something new"></span>' : ''}</button>`
+const PAGES = { quests, people, recipes, discoveries, memories }
 function render() {
-  document.getElementById('bm').innerHTML = BOOKMARKS.map(b => `<button class="bk${b.id === tab ? ' on' : ''}" role="tab" aria-selected="${b.id === tab}" data-id="${b.id}" style="--c1:${b.c[0]};--c2:${b.c[1]}">${I[b.id]}${b.label}${b.n != null ? `<span class="n">${b.n}</span>` : ''}<span class="rv"></span>${b.dot && b.id !== tab ? '<span class="dot" aria-label="something new"></span>' : ''}</button>`).join('')
-  const isD = tab === 'discoveries'; document.body.classList.toggle('nosub', !isD)
-  document.getElementById('sub').innerHTML = isD ? SUBS.map(s => `<button class="st${s.id === sub ? ' on' : ''}" style="--c:${s.c}" role="tab" aria-selected="${s.id === sub}" data-sub="${s.id}"><i></i>${s.label}<small>${s.seen}/${s.of}</small></button>`).join('') : ''
-  const S = SUBS.find(s => s.id === sub), B = BOOKMARKS.find(b => b.id === tab)
-  const [h, p] = isD ? [S.label, `The ${S.label.toLowerCase()} you have found so far. Page design comes next.`] : B.page
-  document.getElementById('pl').innerHTML = `<h2>${h}</h2><p>${p}</p>`
-  document.getElementById('pr').innerHTML = `<p>Right page: details for whatever is picked on the left.</p>`
+  document.getElementById('bm').innerHTML = ['l', 'r'].map(side => `<div class="grp ${side}">${BOOKMARKS.filter(b => b.side === side).map(bk).join('')}</div>`).join('')
+  const subs = SUBS[tab]; document.body.classList.toggle('hassub', !!subs)
+  document.getElementById('sub').innerHTML = subs ? subs.map(s => `<button class="st${s.id === subOf[tab] ? ' on' : ''}" style="--c:${s.c}" role="tab" aria-selected="${s.id === subOf[tab]}" data-sub="${s.id}"><i></i>${s.label}${s.of ? `<small>${s.seen}/${s.of}</small>` : ''}</button>`).join('') : ''
+  const [L, R] = PAGES[tab](); document.getElementById('pl').innerHTML = L; document.getElementById('pr').innerHTML = R
 }
 document.getElementById('bm').onclick = e => { const b = e.target.closest('[data-id]'); if (b) { tab = b.dataset.id; render() } }
-document.getElementById('sub').onclick = e => { const b = e.target.closest('[data-sub]'); if (b) { sub = b.dataset.sub; render() } }
-addEventListener('keydown', e => { const i = BOOKMARKS.findIndex(b => b.id === tab)
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { tab = BOOKMARKS[(i + (e.key === 'ArrowRight' ? 1 : 3)) % 4].id; render() } })
+document.getElementById('sub').onclick = e => { const b = e.target.closest('[data-sub]'); if (b) { subOf[tab] = b.dataset.sub; render() } }
+document.getElementById('pl').onclick = e => { const b = e.target.closest('[data-pick]'); if (!b) return; const v = b.dataset.pick
+  if (tab === 'recipes' || tab === 'discoveries') pick[tab][subOf[tab]] = v; else if (tab === 'memories') pick.memories = +v; else pick[tab] = v; render() }
+addEventListener('keydown', e => { const i = BOOKMARKS.findIndex(b => b.id === tab), n = BOOKMARKS.length
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { tab = BOOKMARKS[(i + (e.key === 'ArrowRight' ? 1 : n - 1)) % n].id; render() } })
 const fit = () => document.getElementById('jb').style.setProperty('--s', Math.min(1, (innerWidth - 16) / 1448, (innerHeight - 16) / 1086))
+document.getElementById('defs').innerHTML = IC.defs
 addEventListener('resize', fit); fit(); render()
 </script>
 </body></html>

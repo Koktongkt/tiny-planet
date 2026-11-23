@@ -1,4 +1,5 @@
 // Save schema + ordered migrations. Pure (no DOM), so node unit tests can import it.
+import { MILESTONES } from '../systems/friendship.js'
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
 export const SAVE_VERSION = 6
@@ -11,7 +12,7 @@ export const dayFromPhase = (a) => Math.max(0, Math.floor((a + Math.PI / 2) / TA
 // v3 (Stage B): garden plots, friends (npcId -> Friend), today's errands, timed food buffs, settings. The systems that use
 // them (src/systems) are lazy; here only the shape lives. `day` in garden/friends/errands = the last in-game day applied.
 const SET = () => ({ volume: 0.8, music: 0.7, sfx: 0.8, muted: false, textScale: 1, autoCook: false })
-const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [] }, buffs: [], settings: SET() })
+const B3 = (day = 0) => ({ garden: { day, plots: [] }, friends: { day, list: {} }, errands: { day: -1, list: [], log: [] }, buffs: [], settings: SET() })
 // v4 (Stage C): fish species log, journal (forage + relics), museum donations, photo album metadata, train rides,
 // tutorial progress, ruins dig spots. Seasons + weather are derived from the clock, so they need no fields.
 const C4 = (day = 0) => ({ fish: {}, journal: { forage: {}, relics: {} }, museum: { donated: {} }, photos: { list: [] }, train: { rides: 0 }, tutorial: { done: {}, dismissed: day > 0, open: null }, dig: { taken: {} } })
@@ -68,6 +69,10 @@ export function normalize(s) {
   if (!isObj(o.journal.forage) || !isObj(o.journal.relics)) o.journal = { forage: isObj(o.journal.forage) ? o.journal.forage : {}, relics: isObj(o.journal.relics) ? o.journal.relics : {} }
   if (!isObj(o.museum.donated)) o.museum = { donated: {} }
   if (!Array.isArray(o.photos.list)) o.photos = { list: [] }
+  // Journal: the last finished favours (entries that are not a whole favour are dropped, so the pages never trip on them)
+  o.errands.log = Array.isArray(o.errands.log) ? o.errands.log.filter(e => isObj(e) && typeof e.npcId === 'string' && Array.isArray(e.wants) && Number.isFinite(e.day)) : []
+  // Journal: friends from before milestone tracking: hearts already reached get day -1 (unknown), so they are never dated later
+  for (const f of Object.values(o.friends.list)) if (isObj(f) && !isObj(f.hit)) { f.hit = {}; for (const h of MILESTONES) if (f.hearts >= h) f.hit[h] = -1 }
   if (!Number.isFinite(o.train.rides)) o.train = { rides: 0 }
   if (!isObj(o.tutorial.done)) o.tutorial = { ...c.tutorial, dismissed: !!o.tutorial.dismissed }
   if (typeof o.tutorial.open !== 'boolean') o.tutorial.open = null // null = device default (open on desktop, folded slip on touch)

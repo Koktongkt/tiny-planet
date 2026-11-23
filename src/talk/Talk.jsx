@@ -22,7 +22,7 @@ function open(npc) {
   const L = buildLines(npc.key, { period: periodAt(rot.a), weather: weatherFor(G.s.day || 0), recent: recentActivity(), stage: npc.stage })
   // Stage B: a friendship line (unlocked by hearts) after the greeting
   const sb = window.__sb, hl = sb && sb.Fr.heartLine(G.s.friends.list[npc.key]); if (hl) L.pages.splice(1, 0, hl)
-  TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; setHideStick(true); TALK.onOpen && TALK.onOpen(); bump()
+  TALK.open = npc; TALK.lines = L; TALK.page = 0; npc.w.talking = true; setHideStick(true); TALK.onOpen && TALK.onOpen(); sb && sb.meet && sb.meet(npc.key); bump()
 }
 // Stage B gifts: G near a villager or the Gift button in the dialogue opens Studio's GiftPicker (systems/Panels.jsx)
 function gift(npc) { if (!npc || !window.__sb) return; close(); window.__sb.openGift(npc.key) }

@@ -160,10 +160,13 @@ test('tutorial: day-0 note, steps tick once, reopen from settings', () => {
   const u = freshTutorial(); u.dismissed = true; assert.ok(!visible(u, 0))
 })
 // ---- photos ----
-test('photo album keeps at most 12, drops the oldest, stays consistent', () => {
+test('photo album keeps up to 48; when full a new photo is refused and nothing is dropped', () => {
   const list = [], store = {}
-  for (let i = 0; i < 14; i++) addPhoto(list, store, { id: 'p' + i, day: 0 }, 'data:' + i)
-  assert.equal(list.length, MAX); assert.equal(list[0].id, 'p2'); assert.equal(Object.keys(store).length, MAX); assert.equal(store.p0, undefined)
+  for (let i = 0; i < MAX; i++) assert.equal(addPhoto(list, store, { id: 'p' + i, day: 0 }, 'data:' + i), true)
+  assert.equal(MAX, 48)
+  assert.equal(addPhoto(list, store, { id: 'late', day: 0 }, 'data:x'), false)
+  assert.equal(list.length, MAX); assert.equal(list[0].id, 'p0'); assert.equal(store.late, undefined); assert.equal(store.p0, 'data:0')
+  list.length = 12; for (const k of Object.keys(store)) if (!list.some(p => p.id === k)) delete store[k]
   assert.ok(removePhoto(list, store, 'p5')); assert.equal(list.length, 11)
   delete store.p7; store.ghost = 'x'; reconcile(list, store); assert.equal(list.length, 10); assert.equal(store.ghost, undefined)
   assert.deepEqual(thumbSize(1280, 800), [320, 200]); assert.deepEqual(thumbSize(200, 100), [200, 100])

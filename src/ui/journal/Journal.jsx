@@ -9,6 +9,7 @@ import { registerFishIcons } from '../../art/fish/icons.jsx'
 import '../../art/forage/icons.jsx'
 import { registerRelicIcons } from '../../art/museum/icons.jsx'
 import { JOURNAL_TABS, entryName, entryBlurb, entryNote, tabCount } from './text.js'
+import { MAX as PHOTO_MAX } from '../../systems/photo.js'
 import '../../art/parchment.css'
 import './journal.css'
 registerFishIcons(); registerRelicIcons()
@@ -35,7 +36,7 @@ export function Journal({ tab = 'fish', onTab, entries = [], progress, stitches,
       <div className="jn-page">
         <header className="jn-head">
           <div className="jn-title"><h3>{T.label}</h3>
-            <span className="jn-prog">{cnt ? <>{cnt.seen}<small>/{cnt.of}</small> found</> : <>{entries.length}<small>/12</small> kept</>}</span>
+            <span className="jn-prog">{cnt ? <>{cnt.seen}<small>/{cnt.of}</small> found</> : <>{entries.length}<small>/{PHOTO_MAX}</small> kept</>}</span>
             {onClose && <button className="tpx-x" aria-label="Close journal" onClick={onClose}><X /></button>}
           </div>
           {(tab === 'fish' || tab === 'relics') && progress && <p className="jn-cases">Museum {progress.donated} of {progress.donatedOf}</p>}
@@ -45,7 +46,7 @@ export function Journal({ tab = 'fish', onTab, entries = [], progress, stitches,
           {tab === 'photos' ? (entries.length ? <Photos list={entries} /> : <p className="jn-blank">{T.blank}</p>)
             : (entries.some(e => e.seen) || entries.length ? <div className="jn-grid">{entries.map(e => <Cell key={e.id} e={e} on={pick === e.id} onPick={setPick} />)}</div> : <p className="jn-blank">{T.blank}</p>)}
         </div>
-        <footer className="jn-note">{sel ? (sel.seen ? <><b>{entryName(sel)}.</b> {entryBlurb(sel)}{sel.donated ? <em> Now on show at the ruins museum.</em> : null}</> : <>Still a mystery. {T.blank}</>) : <span className="jn-hint">{tab === 'photos' ? 'Up to twelve photos fit between these pages.' : 'Tap an entry to read her notes.'}</span>}{quiet && <p className="jn-quiet">{quiet}</p>}</footer>
+        <footer className="jn-note">{sel ? (sel.seen ? <><b>{entryName(sel)}.</b> {entryBlurb(sel)}{sel.donated ? <em> Now on show at the ruins museum.</em> : null}</> : <>Still a mystery. {T.blank}</>) : <span className="jn-hint">{tab === 'photos' ? `Up to ${PHOTO_MAX} photos fit between these pages.` : 'Tap an entry to read her notes.'}</span>}{quiet && <p className="jn-quiet">{quiet}</p>}</footer>
       </div>
     </div>
   </div>

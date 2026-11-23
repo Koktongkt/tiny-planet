@@ -53,5 +53,9 @@ export const canDeliver = (e, inv) => !!e && e.accepted && !e.done && e.wants.ev
 export function deliver(errands, id, inv) {
   const e = errands.list.find(x => x.id === id); if (!canDeliver(e, inv)) return null
   for (const w of e.wants) { inv[w.itemId] -= w.count; if (!inv[w.itemId]) delete inv[w.itemId] }
-  e.done = true; return e.reward
+  e.done = true
+  // Journal: finished favours outlive the daily reset (newest first, the last LOG_MAX)
+  errands.log = [{ npcId: e.npcId, wants: e.wants, reward: e.reward, day: e.day }, ...(errands.log || [])].slice(0, LOG_MAX)
+  return e.reward
 }
+export const LOG_MAX = 20

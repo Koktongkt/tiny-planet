@@ -11,6 +11,8 @@ import { startPlace } from '../../game/World.jsx'
 import { TALK } from '../../talk/state.js'
 import frame1x from '../../assets/ui/bag-frame.webp'
 import frame2x from '../../assets/ui/bag-frame@2x.webp'
+import { openRecipes } from '../journal/book/openRecipes.js'
+import { recipeTabFor } from '../../systems/journalPages.js'
 import './bag.css'
 
 const W = 1672, H = 941, MIN_SCALE = 0.5
@@ -98,13 +100,13 @@ function Card({ tab, sel, sbm }) {
   </div>
 }
 function Actions({ tab, sel, sbm }) {
-  if (!sel || tab === 'tools') return <div className="sb-acts">{tab === 'tools' && <button className="sb-bt g" onClick={() => setPanel('recipes')}>{I.hammer}Recipes</button>}</div>
+  if (!sel || tab === 'tools') return <div className="sb-acts">{tab === 'tools' && <button className="sb-bt g" onClick={() => openRecipes({ sub: 'tools' })}>{I.hammer}Recipes</button>}</div>
   const near = TALK.near && window.__sb ? TALK.near : null
   const gift = <button className="sb-bt y" disabled={!near} title={near ? 'Give it as a gift' : 'Walk up to a neighbour to give a gift'} onClick={() => { setPanel(null); window.__sb.openGift(near.key) }}>{I.gift}Gift</button>
   if (tab === 'food') { const b = sbm.m && sbm.m.buffFor(sel.id)
     return <div className="sb-acts"><button className="sb-bt g" disabled={!b} title={b ? 'Eat: ' + b : 'Nothing to gain from eating this now'} onClick={() => sbm.m.eatFood(sel.id)}>{I.bowl}Eat</button>{gift}</div> }
   if (tab === 'decor') return <div className="sb-acts"><button className="sb-bt g" onClick={() => startPlace(sel.id)}>{I.pin}Place</button>{gift}</div>
-  return <div className="sb-acts"><button className="sb-bt g" onClick={() => setPanel('recipes')}>{I.hammer}Craft with</button>{gift}</div>
+  return <div className="sb-acts"><button className="sb-bt g" onClick={() => openRecipes(recipeTabFor(sel.id) || {})}>{I.hammer}Craft with</button>{gift}</div>
 }
 function Discoveries({ d, onClose }) {
   return <div className="sb-disc" role="dialog" aria-label="Discoveries">
