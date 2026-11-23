@@ -16,8 +16,10 @@ export function promptWeight(n) {
 const score = (c, faceK) => c.cos == null ? c.d : c.d * (1 + faceK * (1 - c.cos) / 2)
 export function pickTarget(cands, prevId, { faceK = 0.6, stick = 0.2 } = {}) {
   let best = null, bs = Infinity, prev = null, ps = Infinity
+  // a quiet target (a pet that isn't offering its bubble) only counts when nothing else is in range
+  const loud = cands.some(c => c.d < c.lim && !(c.o && c.o.quiet))
   for (const c of cands) {
-    if (!(c.d < c.lim)) continue
+    if (!(c.d < c.lim) || (loud && c.o && c.o.quiet)) continue
     const s = score(c, faceK)
     if (s < bs) { bs = s; best = c }
     if (prevId != null && c.o && c.o.id === prevId) { prev = c; ps = s }
