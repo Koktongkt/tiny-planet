@@ -8,6 +8,7 @@ import { haveFor, known, owned, canCraft, craft, ITEMS, RECIPES } from './craft.
 import { TOOLS, DECOR } from './items.js'
 import { NEEDS_TOOL } from './recipes.js'
 import { Icon, IconDefs } from './icons.jsx'
+import { WorldPrompt } from './prompt/WorldPrompt.jsx'
 import { GAME, startPlace, confirmPlace } from './World.jsx'
 import './ui.css'
 import '../ui/glass/glass.css'
@@ -70,24 +71,6 @@ function RideChip() {
   const place = rideShows({ touch: TOUCH, mode: m.hudPrompt() })
   if (!place.chip) return null
   return <button className="tp-ride g-glass" onClick={() => m.toggle()}>{!TOUCH && <span className="key">R</span>}<Icon id="bike" size={26} /><span>{place.label}</span></button>
-}
-function Prompt() {
-  const n = G.near; if (!n || G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock) return null
-  let icon = 'hand', verb, name
-  if (n.kind === 'ext') { icon = n.icon; verb = n.verb; name = n.name }
-  else if (n.kind === 'bench') { icon = 'book'; verb = 'Craft at'; name = 'the bench' }
-  else if (n.kind === 'chest') { icon = 'skyseed'; verb = 'Open'; name = 'the picnic chest' }
-  else if (n.kind === 'decor') { icon = n.item; verb = 'Pick up'; name = ITEMS[n.item].name }
-  else { const it = n.spot.item; icon = it; name = ITEMS[it].name; verb = it === 'fish' ? 'Fish for' : it === 'wool' ? 'Shear' : it === 'firefly' ? 'Catch' : it === 'water' ? 'Fill can with' : 'Gather'; if (it === 'wool') name = 'the sheep' }
-  const need = n.kind === 'spot' && NEEDS_TOOL[n.spot.item]; const lack = need && !G.s.tools[need]
-  // round6: compact chips (pets): a small main chip, plus an optional secondary chip (e.g. throw a stick, key F)
-  if (n.chip) return <div className="tp-chips">
-    <button className="tp-chip g-glass" onClick={() => GAME.actions.act?.()}>{!TOUCH && <span className="key">E</span>}<Icon id={icon} size={24} /><span>{verb}{name ? <> <b>{name}</b></> : null}</span></button>
-    {n.alt && <button className="tp-chip tp-chip-alt g-glass" onClick={() => n.alt.act()}>{!TOUCH && <span className="key">{n.alt.key || 'F'}</span>}<Icon id={n.alt.icon} size={20} /><span>{n.alt.verb}</span></button>}
-  </div>
-  return <button className={'tp-prompt g-glass' + (lack ? ' lack' : '')} onClick={() => GAME.actions.act?.()}>
-    {!TOUCH && <span className="key">E</span>}<Icon id={icon} size={38} /><span>{verb} <b>{name}</b>{lack && <em>needs {ITEMS[need].name}</em>}</span>
-  </button>
 }
 function Toasts() { return <div className="tp-toasts">{G.ui.toasts.map(t => <div key={t.id} className="tp-toast g-glass"><Icon id={t.icon || 'leaf'} size={30} /><span>{t.text}</span></div>)}</div> }
 function Fly() {
@@ -274,7 +257,7 @@ export function GameUI() {
     <Clock /><RideChip />
     {TOUCH ? <PhoneCorners /> : <DeskButtons />}
     {!TOUCH && <QuestTracker />}{!TOUCH && <Hotbar sbm={SBM} />}{!TOUCH && <PlanetBtn />}
-    <Prompt /><Toasts /><Fly /><PlaceBar /><Fishing />
+    <WorldPrompt act={() => GAME.actions.act?.()} hidden={!!(G.ui.panel || G.ui.fish || G.ui.place || G.ui.lock)} /><Toasts /><Fly /><PlaceBar /><Fishing />
     {G.ui.cook && <Suspense fallback={null}><CookOverlay /></Suspense>}
     {panel === 'bag' && <BagPanel />}{panel === 'recipes' && <Recipes />}
     {SBM.m && <Suspense fallback={null}><StageBPanels /></Suspense>}

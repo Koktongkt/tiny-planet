@@ -18,6 +18,7 @@ import { openRecipes } from '../ui/journal/book/openRecipes.js'
 import { notePickup } from './prompt/hints.js'
 import { pickTarget, promptWeight } from './prompt/logic.js'
 import { atPlanet, facingCos } from './prompt/anchors.js'
+import { placePrompt } from './prompt/WorldPrompt.jsx'
 const CANDS = []
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
@@ -293,7 +294,7 @@ export function GameWorld() {
     anim.current[sp.id] = { t0: performance.now() + 280 }
     if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); if (sp.item !== 'wool' && sp.item !== 'water') notePickup(G.s.hints, sp.item, G.s.day); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
   }
-  useFrame(() => {
+  useFrame((_, dt) => {
     const P = GAME.P; if (!P || !L) return
     _pp.copy(P.n).multiplyScalar(R + height(P.n) + P.h)
     const night = T.night > 0.5; G.night = night
@@ -334,6 +335,7 @@ export function GameWorld() {
     const id = best ? best.id : null
     if (id !== (G.near && G.near.id)) { G.near = best; emit() } else G.near = best // same target: keep its anchor and fields fresh
     if (G.autoAct && best && best.id === G.autoAct) { G.autoAct = null; GAME.actions.act() }
+    placePrompt(camera, dt, H && H.playerObj) // the in-world bubble follows its anchor
     const hl = refs.current.__hl, bu = refs.current.__burst, now = performance.now() / 1000
     if (hl) { const sp = best && best.kind === 'spot' && !best.spot.water ? best.spot : null; hl.visible = !!sp && !G.ui.panel
       if (sp) { const p = place(sp.stand, 0.006, now * 0.6); hl.position.copy(sp.water ? sp.standPos : p.pos); hl.quaternion.copy(p.q); hl.scale.setScalar(1 + Math.sin(now * 4) * 0.08) } }
