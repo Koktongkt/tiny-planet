@@ -176,3 +176,13 @@ html:has(.jb-veil) .mm-wrap{opacity:0!important;transition:none!important}
 .jb-grp.r .jb-bk:nth-child(2) .jb-hand{transform:rotate(-1.8deg)}
 .jb-st .jb-hand{transform:rotate(-1deg)}
 .jb-st:nth-child(even) .jb-hand{transform:rotate(1.3deg) translateY(1px)}
+/* fit (Gaegu runs wide): each group shares its flat stretch of page edge evenly, so a bookmark can never reach the
+   leather or the dip into the middle; the right page is a little more compact and scrolls rather than spill */
+.jb-grp .jb-bk{flex:1 1 0;min-width:0;padding:6px 8px 0;gap:6px;font-size:25px}
+.jb-grp .jb-bk svg{width:28px;height:28px}
+.jb-grp .jb-bk .jb-hand{white-space:nowrap}
+.jb-R{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#d4a878 transparent}
+.jb-R .jb-blob{height:124px;width:170px}.jb-R .jb-blob .jb-it{width:112px;height:112px}
+.jb-R .jb-rt{font-size:33px;margin-top:0}
+.jb-R .jb-row{padding:3px 2px}
+.jb-scroll{margin:0;padding:4px 2px 6px}
