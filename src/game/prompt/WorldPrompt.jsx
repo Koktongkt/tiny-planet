@@ -75,7 +75,7 @@ export function placePrompt(camera, dt, playerObj) {
   n.at(_v).project(camera)
   const w = innerWidth, h = innerHeight, behind = _v.z > 1
   PROMPT.pt.x = (_v.x + 1) / 2 * w; PROMPT.pt.y = (1 - _v.y) / 2 * h; PROMPT.pt.behind = behind
-  if (!PROMPT.box) { const r = el.getBoundingClientRect(); if (!r.width) return; PROMPT.box = { bw: r.width, bh: r.height + TAIL } }
+  if (!PROMPT.box) { if (!el.offsetWidth) return; PROMPT.box = { bw: el.offsetWidth, bh: el.offsetHeight + TAIL } } // layout size: the pop-in scale doesn't count
   const p = placeBubble(PROMPT.pt, { w, h }, PROMPT.box)
   const tf = `translate(${Math.round(p.left)}px, ${Math.round(p.top)}px)` // whole pixels: crisp text, no sub-pixel shimmer
   if (el.style.transform !== tf) { el.style.transform = tf; el.style.setProperty('--tail', Math.round(p.tail) + 'px') }

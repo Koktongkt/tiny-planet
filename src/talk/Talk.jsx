@@ -76,7 +76,7 @@ export function Talk({ P }) {
     if (!!window.__sb !== BUBBLE.sb) { BUBBLE.sb = !!window.__sb; bump() } // the gift bubble appears once Stage B is up
     if (!who || !who.obj || TALK.open || !talkWins(G.near)) { el.style.opacity = 0; return }
     who.obj.getWorldPosition(_h); _up.set(0, 1, 0).applyQuaternion(who.obj.getWorldQuaternion(new THREE.Quaternion())); _h.addScaledVector(_up, who.h || 0.92).project(camera)
-    if (!BUBBLE.box) { const r = el.getBoundingClientRect(); if (!r.width) return; BUBBLE.box = { bw: r.width, bh: r.height + 10 } }
+    if (!BUBBLE.box) { if (!el.offsetWidth) return; BUBBLE.box = { bw: el.offsetWidth, bh: el.offsetHeight + 10 } }
     const p = placeBubble({ x: (_h.x + 1) / 2 * size.width, y: (1 - _h.y) / 2 * size.height, behind: _h.z > 1 }, { w: size.width, h: size.height }, BUBBLE.box)
     el.style.opacity = 1; el.style.transform = `translate(${p.left.toFixed(1)}px, ${p.top.toFixed(1)}px)`; el.style.setProperty('--tail', p.tail.toFixed(1) + 'px') }
   return null
