@@ -10,7 +10,7 @@ test('hooks: save v6, __T season + weather, deterministic rain days, tutorial no
   test.setTimeout(300_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home'); await scReady(page)
   const h = await page.evaluate(() => ({ v: window.__game.G.s.v, season: window.__T.season, w: window.__T.seasonW, kind: window.__T.kind, rain: window.__T.rain, wet: window.__T.wet, rainDays: Array.from({ length: 14 }, (_, d) => window.__sc.W.isRainDay(d)) }))
-  expect(h.v).toBe(6); expect(h.season).toBe('spring'); expect(h.w).toEqual([1, 0, 0, 0]); expect(h.kind).toBe('clear'); expect(h.rain).toBe(0); expect(h.wet).toBe(0)
+  expect(h.v).toBe(7); expect(h.season).toBe('spring'); expect(h.w).toEqual([1, 0, 0, 0]); expect(h.kind).toBe('clear'); expect(h.rain).toBe(0); expect(h.wet).toBe(0)
   expect(h.rainDays.filter(Boolean).length).toBe(2); expect(h.rainDays[0] || h.rainDays[1]).toBe(false)
   // a rain day at mid-morning: the hooks report rain
   const d = h.rainDays.findIndex(Boolean)

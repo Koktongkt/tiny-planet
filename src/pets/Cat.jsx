@@ -7,6 +7,7 @@ import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
 import { HOME, freeAt, resolve } from '../home/state.js'
+import { atRoom } from '../game/prompt/anchors.js'
 import { SPOTS, LAYOUT, BEAM_SPOT } from '../home/interior.jsx'
 import { GEO, cel, OUT, canvasTex } from '../home/kit.jsx'
 import { T, q } from '../common.jsx'
@@ -44,7 +45,7 @@ export function Cat() {
   useMemo(() => { HOME.near.push((consider) => {
     if (!HOME.inside || HOME.busy || c.hop) return
     const d = Math.hypot(HOME.hp.x - c.x, HOME.hp.z - c.z) + Math.max(0, c.y - 0.3)
-    consider({ kind: 'ext', inside: true, id: 'cat', icon: 'hand', verb: 'Pet', name: c.name, chip: true, act: () => petCat() }, d, 0.38)
+    consider({ kind: 'ext', inside: true, id: 'cat', at: (out) => atRoom(c.x, c.z, (c.y || 0) + 0.3)(out), icon: 'hand', verb: 'Pet', name: c.name, chip: true, act: () => petCat() }, d, 0.38)
   }) }, [])
   function petCat() { startAct('pet', { dur: 1.2 })
     if (c.state === 'nap') { go('stretch', 2.6, { after: Math.random() < 0.6 ? 'petted' : 'ignore' }); toast(`${c.name} opens one eye… then stretches.`, 'leaf'); return }

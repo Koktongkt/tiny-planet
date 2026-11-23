@@ -10,6 +10,7 @@ import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { HOME, ROOM } from './state.js'
+import { atRoom } from '../game/prompt/anchors.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { Box, W } from './interior.jsx'
 import { SPOTS } from './interior.jsx'
@@ -182,13 +183,13 @@ if (!HOME.actHooked) { HOME.actHooked = true
   HOME.near.push((consider) => {
     if (!HOME.inside || HOME.busy || A.doing) return
     const hp = HOME.hp, d = (x, z) => Math.hypot(hp.x - x, hp.z - z)
-    consider({ kind: 'ext', inside: true, id: 'bed', icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => sleep(false) }, act: () => sleep(true) }, d(BED_STAND[0], BED_STAND[1]), 0.26)
-    const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: cook }, d(COOK.stand[0], COOK.stand[1]), 0.22)
-    consider({ kind: 'ext', inside: true, id: 'tub', icon: 'water', verb: 'Take', name: 'a bath', act: bath }, d(BATH_STAND[0], BATH_STAND[1]), 0.3)
-    consider({ kind: 'ext', inside: true, id: 'tea', icon: 'teacup', verb: 'Make', name: 'tea', act: tea }, d(TABLE.x, TABLE.z - 0.32), 0.2)
-    consider({ kind: 'ext', inside: true, id: 'read', icon: 'book', verb: 'Read', name: 'a book', act: read }, d(READ_STAND[0], READ_STAND[1]), 0.22)
-    for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
-    consider({ kind: 'ext', inside: true, id: 'feedcat', icon: 'fish', verb: 'Feed', name: CAT.name, act: feedCat }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
+    consider({ kind: 'ext', inside: true, id: 'bed', at: atRoom(BED.x, BED.z, 0.45), icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => sleep(false) }, act: () => sleep(true) }, d(BED_STAND[0], BED_STAND[1]), 0.26)
+    const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, at: atRoom(COOK.stand[0], COOK.stand[1], 0.75), icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: cook }, d(COOK.stand[0], COOK.stand[1]), 0.22)
+    consider({ kind: 'ext', inside: true, id: 'tub', at: atRoom(BATH_STAND[0], BATH_STAND[1], 0.6), icon: 'water', verb: 'Take', name: 'a bath', act: bath }, d(BATH_STAND[0], BATH_STAND[1]), 0.3)
+    consider({ kind: 'ext', inside: true, id: 'tea', at: atRoom(TABLE.x, TABLE.z, 0.55), icon: 'teacup', verb: 'Make', name: 'tea', act: tea }, d(TABLE.x, TABLE.z - 0.32), 0.2)
+    consider({ kind: 'ext', inside: true, id: 'read', at: atRoom(STOOL.x, STOOL.z, 0.6), icon: 'book', verb: 'Read', name: 'a book', act: read }, d(READ_STAND[0], READ_STAND[1]), 0.22)
+    for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, at: atRoom(pl.stand[0], pl.stand[1], 0.55), icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
+    consider({ kind: 'ext', inside: true, id: 'feedcat', at: atRoom(BOWL.x, BOWL.z, 0.3), icon: 'fish', verb: 'Feed', name: CAT.name, act: feedCat }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
   })
 }
 

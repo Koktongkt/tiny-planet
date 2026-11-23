@@ -9,6 +9,7 @@ import { G, setPanel, subscribe } from '../game/store.js'
 import { TRAIN_STOPS } from '../world/village.js'
 import { SC, PH, RIDE } from './liveC.js'
 import { HOME } from '../home/state.js'
+import { atPlanet } from '../game/prompt/anchors.js'
 const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n) + lift)
 export function layoutStageC(GAME) {
   const ruins = GAME.Zc && GAME.Zc.ruins
@@ -51,9 +52,9 @@ export function StageCWorld({ GAME }) {
     GAME.H.near.push((consider, pp) => {
       if (MUM.m && MUM.m.MU.inside) { MUM.m.nearInside(consider, SC); return }
       if (!LC || GAME.H.inside || G.ui.lock) return
-      for (const st of LC.stations) { const d = pp.distanceTo(st.pos); if (d < 0.7) { const o = SC.stationPrompt(st.id); consider({ kind: 'ext', id: 'station:' + st.id + ':' + (o.ready ? 'ready' : o.name), ...o }, d, 0.7) } }
-      for (const dg of LC.digs) { const d = pp.distanceTo(dg.pos); if (d < 0.3 && SC.C.canDig(G.s.dig, dg.i, G.s.day)) consider({ kind: 'ext', id: 'dig' + dg.i, icon: 'shard', verb: 'Dig at', name: 'the old stones', act: () => SC.digAt(dg.i) }, d, 0.3) }
-      if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', icon: 'book', verb: 'Visit', name: 'the ruins museum', act: visit }, d, 0.5) }
+      for (const st of LC.stations) { const d = pp.distanceTo(st.pos); if (d < 0.7) { const o = SC.stationPrompt(st.id); consider({ kind: 'ext', id: 'station:' + st.id + ':' + (o.ready ? 'ready' : o.name), at: atPlanet(st.pos, 0.7), ...o }, d, 0.7) } }
+      for (const dg of LC.digs) { const d = pp.distanceTo(dg.pos); if (d < 0.3 && SC.C.canDig(G.s.dig, dg.i, G.s.day)) consider({ kind: 'ext', id: 'dig' + dg.i, at: atPlanet(dg.pos, 0.12), icon: 'shard', verb: 'Dig at', name: 'the old stones', act: () => SC.digAt(dg.i) }, d, 0.3) }
+      if (LC.museum) { const d = pp.distanceTo(LC.museum.pos); if (d < 0.5) consider({ kind: 'ext', id: 'museum', at: atPlanet(LC.museum.pos, 0.9), icon: 'book', verb: 'Visit', name: 'the ruins museum', act: visit }, d, 0.5) }
     })
   }, [])
   return <><PhotoCapture /><RidePin /><Suspense fallback={null}><SeasonLayer /></Suspense><Suspense fallback={null}><TrainC riding={RIDE.riding} /></Suspense>{MUM.visited && <Suspense fallback={null}><MuseumHall /></Suspense>}</>

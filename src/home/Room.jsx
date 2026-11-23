@@ -7,6 +7,7 @@ import { actLocked, startAct } from '../act.js'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { HOME, ROOM, DOOR, resolve, freeAt, roomToWorld } from './state.js'
+import { atRoom, atPlanet } from '../game/prompt/anchors.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { T, q, VIEW, setViewMode } from '../common.jsx'
 import { R, height } from '../world.js'
@@ -136,16 +137,17 @@ function InsideDecor() {
 HOME.ghost = (gh, pl, GHOST) => { gh.traverse(o => o.layers.enable(LAYER)); const hp = HOME.hp, x = hp.x + Math.sin(hp.yaw) * 0.26, z = hp.z + Math.cos(hp.yaw) * 0.26; gh.position.set(x * ROOM.S, 0, z * ROOM.S); gh.quaternion.setFromAxisAngle(UP, pl.rot); gh.scale.setScalar(1.15); pl.in = [x, z]; pl.n = HOME.homeN ? HOME.homeN.toArray() : [0, 1, 0]; pl.ok = freeAt(x, z, 0.08); GHOST.color.set(pl.ok ? '#bff0c8' : '#ffb8a8') }
 
 // proximity: door (both sides) + indoor decor pick-up
-const _door = new THREE.Vector3()
+const _door = new THREE.Vector3(), _doorL = new THREE.Vector3()
+const atDoor = (out) => HOME.doorN ? atPlanet(_doorL.copy(HOME.doorN).multiplyScalar(R + height(HOME.doorN)), 0.75)(out) : out
 HOME.near.push((consider, pp) => {
   if (HOME.busy) return
   const hp = HOME.hp
   if (HOME.inside) {
-    consider({ kind: 'ext', inside: true, id: 'door-out', icon: 'leaf', verb: 'Step', name: 'outside', act: HOME.exit }, Math.hypot(hp.x - DOOR.x, hp.z - (DOOR.z - 0.14)), 0.3)
-    if (!G.ui.place) for (const p of G.s.placed) if (p.in) consider({ kind: 'decor', inside: true, id: 'decor' + p.uid, uid: p.uid, item: p.item }, Math.hypot(hp.x - p.in[0], hp.z - p.in[1]), 0.26)
+    consider({ kind: 'ext', inside: true, id: 'door-out', at: atRoom(DOOR.x, DOOR.z, 0.75), icon: 'leaf', verb: 'Step', name: 'outside', act: HOME.exit }, Math.hypot(hp.x - DOOR.x, hp.z - (DOOR.z - 0.14)), 0.3)
+    if (!G.ui.place) for (const p of G.s.placed) if (p.in) consider({ kind: 'decor', inside: true, id: 'decor' + p.uid, uid: p.uid, item: p.item, at: atRoom(p.in[0], p.in[1], 0.3) }, Math.hypot(hp.x - p.in[0], hp.z - p.in[1]), 0.26)
   } else if (HOME.doorN) {
     _door.copy(HOME.doorN).multiplyScalar(R + height(HOME.doorN))
-    consider({ kind: 'ext', id: 'door-in', icon: 'leaf', verb: 'Go', name: 'inside', act: HOME.enter }, pp.distanceTo(_door), 0.5)
+    consider({ kind: 'ext', id: 'door-in', at: atDoor, icon: 'leaf', verb: 'Go', name: 'inside', act: HOME.enter }, pp.distanceTo(_door), 0.5)
   }
 })
 

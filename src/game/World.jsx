@@ -16,6 +16,9 @@ import { FORAGE, forageSpawns } from './forageTable.js'
 import { bakePropMeshes } from './propBake.js'
 import { openRecipes } from '../ui/journal/book/openRecipes.js'
 import { notePickup } from './prompt/hints.js'
+import { pickTarget, promptWeight } from './prompt/logic.js'
+import { atPlanet, facingCos } from './prompt/anchors.js'
+const CANDS = []
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
@@ -294,9 +297,9 @@ export function GameWorld() {
     const P = GAME.P; if (!P || !L) return
     _pp.copy(P.n).multiplyScalar(R + height(P.n) + P.h)
     const night = T.night > 0.5; G.night = night
-    let best = null, bd = 1e9
     const H = GAME.H, inside = !!(H && (H.inside || H.alt)) // H.alt: the Stage C museum interior
-    const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim && d < bd) { bd = d; best = o } } // indoors only the house's own interactables count
+    const cands = CANDS; cands.length = 0
+    const consider = (o, d, lim) => { if (inside && !o.inside) return; if (d < lim) cands.push({ o, d, lim, cos: null }) } // indoors only the house's own interactables count
     forageTick(force); let forageShown = 0
     for (const sp of L.spots) {
       const g = refs.current[sp.id]; if (!g) continue
@@ -317,16 +320,19 @@ export function GameWorld() {
         g.position.copy(sp.pos); g.scale.setScalar(1)
         if (sp.item === 'firefly') g.position.addScaledVector(sp.n, Math.sin(performance.now() / 600 + sp.spin) * 0.05)
         if (sp.item === 'glowmoss') g.scale.setScalar(G.s.tools.lantern && night ? 1.25 : 1)
-        const d = _pp.distanceTo(sp.standPos); consider({ kind: 'spot', spot: sp, id: sp.id }, d, sp.water ? 0.75 : sp.item === 'firefly' ? 0.5 : 0.42)
+        const d = _pp.distanceTo(sp.standPos); consider({ kind: 'spot', spot: sp, id: sp.id, at: atPlanet(sp.water ? sp.standPos : sp.pos, sp.water ? 0.05 : sp.item === 'firefly' ? 0.18 : 0.1), obj: sp.water ? null : g }, d, sp.water ? 0.75 : sp.item === 'firefly' ? 0.5 : 0.42)
       }
     }
-    for (const s of sheep) if (available(s.id)) consider({ kind: 'spot', spot: { ...s, pos: s.pos.clone(), standPos: s.pos.clone(), stand: s.n.clone() }, id: s.id }, _pp.distanceTo(s.pos), 0.45)
-    consider({ kind: 'bench', id: 'bench' }, _pp.distanceTo(L.bench.pos), 0.5)
-    if (G.s.unlocked.bridge && !G.s.chest) consider({ kind: 'chest', id: 'chest' }, _pp.distanceTo(posOf(L.bridge.chest)), 0.45)
-    for (const p of G.s.placed) if (!G.ui.place && !p.in) consider({ kind: 'decor', id: 'decor' + p.uid, uid: p.uid, item: p.item }, _pp.distanceTo(posOf(new THREE.Vector3(...p.n))), 0.35)
+    for (const s of sheep) if (available(s.id)) consider({ kind: 'spot', spot: { ...s, pos: s.pos.clone(), standPos: s.pos.clone(), stand: s.n.clone() }, id: s.id, at: atPlanet(s.pos, 0.3) }, _pp.distanceTo(s.pos), 0.45)
+    consider({ kind: 'bench', id: 'bench', at: atPlanet(L.bench.pos, 0.45) }, _pp.distanceTo(L.bench.pos), 0.5)
+    if (G.s.unlocked.bridge && !G.s.chest) { const cp = posOf(L.bridge.chest); consider({ kind: 'chest', id: 'chest', at: atPlanet(cp, 0.35) }, _pp.distanceTo(cp), 0.45) }
+    for (const p of G.s.placed) if (!G.ui.place && !p.in) { const dp = posOf(new THREE.Vector3(...p.n)); consider({ kind: 'decor', id: 'decor' + p.uid, uid: p.uid, item: p.item, at: atPlanet(dp, 0.25) }, _pp.distanceTo(dp), 0.35) }
     if (H) for (const f of H.near) f(consider, _pp) // door, pets, dug-up finds, indoor decor
+    for (const c of cands) c.cos = facingCos(c.o.at) // in-range only: prefer what she faces, the current target holds
+    const pick = pickTarget(cands, G.near && G.near.id), best = pick ? pick.o : null
+    if (best) best.weight = promptWeight(best)
     const id = best ? best.id : null
-    if (id !== (G.near && G.near.id)) { G.near = best; emit() }
+    if (id !== (G.near && G.near.id)) { G.near = best; emit() } else G.near = best // same target: keep its anchor and fields fresh
     if (G.autoAct && best && best.id === G.autoAct) { G.autoAct = null; GAME.actions.act() }
     const hl = refs.current.__hl, bu = refs.current.__burst, now = performance.now() / 1000
     if (hl) { const sp = best && best.kind === 'spot' && !best.spot.water ? best.spot : null; hl.visible = !!sp && !G.ui.panel

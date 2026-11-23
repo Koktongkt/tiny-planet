@@ -1,0 +1,36 @@
+/* In-world action prompt: head bubble (full weight) + pickup chip (light weight). Glass & Gold tokens from glass.css.
+   The wrapper is moved by placePrompt() (translate to the bubble's top-left; --tail = the tail's x inside it). */
+.tp-ui .tp-bubble-wrap{position:fixed;left:0;top:0;z-index:6;pointer-events:none;will-change:transform}
+.tp-ui .tp-bubble-wrap.tp-dock{left:50%;top:auto;bottom:118px;transform:translateX(-50%)!important}
+html.tp-touch .tp-ui .tp-bubble-wrap.tp-dock{bottom:calc(env(safe-area-inset-bottom,0px) + 220px)}
+.tp-bubble-in{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+  animation:tpb-pop .35s cubic-bezier(.3,1.6,.5,1) both,tpb-bob 2.4s ease-in-out .35s infinite}
+@keyframes tpb-pop{from{opacity:0;scale:.6;translate:0 6px}}
+@keyframes tpb-bob{50%{translate:0 -4px}}
+
+/* the buttons live inside the wrapper: drop the old bottom-of-screen placement */
+html .tp-ui .tp-bubble-wrap .tp-prompt,html .tp-ui .tp-bubble-wrap .tp-chip{position:relative!important;left:auto!important;bottom:auto!important;top:auto!important;transform:none!important;margin:0;max-width:none;pointer-events:auto;white-space:nowrap}
+.tp-ui .tp-bubble-wrap .tp-prompt.tp-bubble{min-height:46px;padding:5px 18px 5px 6px;font-size:17px;gap:8px;animation:none}
+.tp-bubble .tp-bw{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}
+.tp-bubble .tp-bw em{font-size:13px}
+
+/* the tail: a glass diamond under the main bubble, pointing at the target */
+.tp-bubble-in::after{content:'';position:absolute;left:var(--tail,50%);bottom:-8px;width:16px;height:16px;transform:translateX(-50%) rotate(45deg);pointer-events:none;
+  background:rgba(38,33,42,.86);border-right:1.5px solid var(--g-rim);border-bottom:1.5px solid var(--g-rim);border-bottom-right-radius:3px}
+.tp-dock .tp-bubble-in::after,.tp-behind .tp-bubble-in::after{display:none}
+
+/* the stacked second action (F / G) */
+.tp-ui .tp-bubble-wrap .tp-bubble-alt{font-size:13.5px;min-height:30px;padding:2px 12px 2px 4px;opacity:.95}
+
+/* light weight: the pickup chip (no tail, no bounce, fades in) */
+.tp-pickwrap .tp-pick{display:flex;align-items:center;gap:5px;min-height:34px;padding:3px 12px 3px 4px;font-size:14px;animation:tpb-fade .25s ease-out both}
+.tp-pickwrap .tp-pick:not(:has(span:not(.key))){padding-right:6px}
+.tp-pickwrap.tp-off{opacity:0;visibility:hidden}
+.tp-pickwrap.tp-off .tp-pick{pointer-events:none}
+@keyframes tpb-fade{from{opacity:0}}
+
+/* phones: same bubble, no key coin (touch.css hides .key), every tap target at least 44px tall */
+html.tp-touch .tp-ui .tp-bubble-wrap .tp-prompt.tp-bubble,html.tp-touch .tp-ui .tp-bubble-wrap .tp-chip{min-height:44px}
+
+@media (prefers-reduced-motion:reduce){.tp-bubble-in,.tp-pickwrap .tp-pick{animation:none}}
+.tp-ui .tp-bubble-wrap .tp-chip{zoom:var(--tpts,1)}
