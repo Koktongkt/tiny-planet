@@ -161,14 +161,15 @@ function MemoriesPage({ sub, pick, setPick, refresh }) {
   const list = SC.journal('photos'), sel = list.find(p => p.id === pick) || list[list.length - 1]
   const idx = sel ? list.indexOf(sel) : 0, page = Math.floor(idx / PER_PAGE), pages = pageCount(list.length), first = page * PER_PAGE
   const turn = (d) => { const np = Math.max(0, Math.min(pages - 1, page + d)); setPick(list[Math.min(list.length - 1, np * PER_PAGE)].id) }
-  const left = <><div className="jb-scroll">{list.length ? <div className="jb-mgrid">{Array.from({ length: PER_PAGE }, (_, k) => { const i = first + k, p = list[i]
+  // empty places are dotted outlines; only photos she has taken become polaroids
+  const left = <><div className="jb-scroll">{!list.length && <p className="jb-empty jb-albumhint">{blank('photos')}</p>}<div className="jb-mgrid">{Array.from({ length: PER_PAGE }, (_, k) => { const i = first + k, p = list[i]
     return p ? <button key={p.id} data-pick={p.id} className={'jb-pol' + (sel && p.id === sel.id ? ' on' : '')} style={{ '--r': ((i * 37) % 9 - 4) * 0.8 + 'deg' }} onClick={() => setPick(p.id)}>
-      {p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jb-slot" />}<span>{D(p.day)}</span></button> : <div key={'s' + k} className="jb-slot" /> })}</div>
-    : <p className="jb-empty">{blank('photos')}</p>}</div>
+      {p.src ? <img src={p.src} alt={'Photo from day ' + (p.day + 1)} /> : <div className="jb-slot" />}<span>{D(p.day)}</span></button> : <div key={'s' + k} className="jb-slot" aria-hidden /> })}</div></div>
     <div className="jb-lfoot jb-pager">{pages > 1 && <button className="jb-turn" data-turn="-1" disabled={page === 0} onClick={() => turn(-1)} aria-label="Previous page">‹</button>}
       <span>{pages > 1 ? `${page + 1} / ${pages} · ` : ''}{list.length} of {MAX} kept</span>
       {pages > 1 && <button className="jb-turn" data-turn="1" disabled={page === pages - 1} onClick={() => turn(1)} aria-label="Next page">›</button>}</div></>
-  if (!sel) return [left, null]
+  if (!sel) return [left, <><div className="jb-bigslot" aria-hidden><span>Your photos are pinned here</span></div>
+    <div className="jb-hint" style={{ marginTop: 18 }}>Use Photo (P) to take one.</div></>]
   const remove = () => { if (confirm('Remove this photo from your journal?')) { const next = list[idx + 1] || list[idx - 1]; SC.removePhoto(sel.id); setPick(next ? next.id : null); refresh() } }
   return [left, <><div className="jb-pol jb-bigpol" style={{ marginTop: 30 }}>{sel.src ? <img src={sel.src} alt={'Photo from day ' + (sel.day + 1)} /> : <div className="jb-slot" />}<span>{D(sel.day)}</span></div>
     <div className="jb-rsub" style={{ marginTop: 22 }}>Photo {idx + 1} of {list.length}</div>
