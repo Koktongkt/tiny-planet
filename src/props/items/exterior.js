@@ -183,7 +183,7 @@ const gableGeo = (w, h, d) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 
   const g = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 }); g.translate(0, 0, -d / 2); g.computeVertexNormals(); return g }
 defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags: ['outdoor', 'pet'],
   pal: { base: '#c98552', wood: '#f2b274', plank: '#dc9658', roof: '#9cc65a', roof2: '#88b74c', roof3: '#b2d672', f1: '#f7b5c8', f2: '#ffe07a', eye: '#f2b33c', clover: '#86b545', clover2: '#9cc952', cloverStem: '#6f9e3a', scallop: '#7fae45', ridge: '#e3843f', hole: '#4a2f24', trim: '#fff4e2', cushion: '#f29a46', cushion2: '#f7b56a', plaque: '#fff4e2', pawInk: '#c98552', sidePaw: '#e3843f', bone: '#fff4e2', mat: '#fbf1e0', matEdge: '#e6b98a' },
-  opts: { bowl: true, bowlSide: 1, bone: true, shadow: false } }, (k, o) => {
+  opts: { bowl: true, bowlSide: 1, bowlZ: 0.12, bone: true, shadow: false } }, (k, o) => {
   const W = 0.3, D = 0.28, B = 0.03, H = 0.2, top = B + H, GH = 0.14, ang = Math.atan2(GH, W / 2) // body, gable rise, roof pitch
   k.box([W + 0.06, B, D + 0.06], [0, B / 2, 0], 'base', { r: 0.014, seg: 2 }) // the little base it stands on
   k.box([W, H + 0.02, D], [0, B + H / 2, 0], 'wood', { r: 0.035, belly: 0.05, hi: 0.08 })
@@ -226,10 +226,10 @@ defineProp('dogHouse', { name: "Pip's dog house", size: [0.62, 0.46, 0.46], tags
   // the name plaque on the gable, paw prints on the sides
   bone(k, [0, top + 0.045, fz - 0.002], 0.065, 0.014, 'plaque'); paw(k, 0, top + 0.04, fz + 0.01, 0.006, 'pawInk')
   for (const sd of [-1, 1]) k.within(mat(sd * (W / 2 + 0.004), B + H * 0.5, 0, sd * PI / 2), () => paw(k, 0, -0.01, 0, 0.016, 'sidePaw'))
-  if (o.bone) bone(k, [0.13 * o.bowlSide, 0.012, 0.3], 0.06, 0.013, 'bone', { flat: true, rot: [0, 0.6, PI / 2] })
-  const bx = 0.3 * o.bowlSide // bowlSide: 1 = on the door's right, -1 = its left
-  if (o.bowl) k.use('dogBowl', mat(bx, 0, 0.12, -0.4 * o.bowlSide), { shadow: false })
-  k.shadow(0.5, 0.44, [0, 0.003, 0.02]); if (o.bowl) k.shadow(0.16, 0.16, [bx, 0.003, 0.12])
+  if (o.bone) bone(k, [-0.12 * o.bowlSide, 0.012, 0.3], 0.06, 0.013, 'bone', { flat: true, rot: [0, 0.6, PI / 2] })
+  const bx = o.bowlX ?? 0.3 * o.bowlSide // bowlSide: 1 = on the door's right, -1 = its left; bowlX / bowlZ place it exactly
+  if (o.bowl) k.use('dogBowl', mat(bx, 0, o.bowlZ, -0.4 * o.bowlSide), { shadow: false })
+  k.shadow(0.5, 0.44, [0, 0.003, 0.02]); if (o.bowl) k.shadow(0.16, 0.16, [bx, 0.003, o.bowlZ])
 })
 // his food bowl: a classic flared feeding bowl, hollow: a wide heavy base, sloped orange sides and a rolled rim, a
 // cream glaze inside, kibble heaped in the dip and a paw print on the side. opts: food (0..1, how full)
