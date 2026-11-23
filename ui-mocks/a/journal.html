@@ -247,22 +247,29 @@ if (q.has('debug')) document.body.classList.add('debug')
 function questList() {
   const out = [], tut = ['move', 'look', 'gather', 'craft', 'talk', 'garden', 'sleep'], n = tut.filter(t => S.tutorial.done[t]).length
   if (n < tut.length) out.push({ id: 'tut', kind: 'tut', title: 'Settle In', desc: `Granny Fuku's first-day list · ${n}/${tut.length}`, st: 'active', group: 'Today' })
-  for (const e of S.errands.list) out.push({ id: e.id, kind: 'errand', e, title: `A favour for ${P[e.npcId].name}`, desc: e.wants.map(w => `${w.count} × ${nm(w.itemId)}`).join(', '), st: e.done ? 'done' : e.accepted ? 'active' : 'avail', group: 'Today' })
+  // only errands she has accepted at the notice board get a page; notes still on the board are one hint card, details hidden
+  for (const e of S.errands.list.filter(e => e.accepted)) out.push({ id: e.id, kind: 'errand', e, title: `A favour for ${P[e.npcId].name}`, desc: e.wants.map(w => `${w.count} × ${nm(w.itemId)}`).join(', '), st: e.done ? 'done' : 'active', group: 'Today' })
+  const waiting = S.errands.list.filter(e => !e.accepted && !e.done).length
+  if (waiting) out.push({ id: 'board', kind: 'board', title: 'New notes on the board', desc: `${waiting} request${waiting > 1 ? 's' : ''} pinned up in the village`, st: 'avail', group: 'Today' })
   for (const [i, e] of S.errands.log.entries()) out.push({ id: 'log' + i, kind: 'log', e, title: `A favour for ${P[e.npcId].name}`, desc: `Done on ${D(e.day)}`, st: 'done', group: 'Finished' })
   return out
 }
-const PILL = { active: 'Active', avail: 'On the board', done: 'Done' }
+const PILL = { active: 'Active', avail: 'Go and see', done: 'Done' }
 function quests() {
   const list = questList(), sel = list.find(x => x.id === pick.quests) || list[0]
   let g = ''
   const L = `<div class="ph">Quests <small>Day ${S.day + 1}</small></div><div class="scroll">${list.map(x => { const h = x.group !== g ? `<div class="qh">${(g = x.group)}</div>` : ''
-    return h + `<button class="qc${x.id === sel.id ? ' on' : ''}${x.st === 'done' ? ' done' : ''}" data-pick="${x.id}"><span class="ic">${x.kind === 'tut' ? icon('book', 58) : med(x.e.npcId, 54, 26)}</span><span><b>${x.title}</b><span class="d">${x.desc}</span></span><span class="pill ${x.st}">${PILL[x.st]}</span></button>` }).join('')}</div>
+    return h + `<button class="qc${x.id === sel.id ? ' on' : ''}${x.st === 'done' ? ' done' : ''}" data-pick="${x.id}"><span class="ic">${x.kind === 'tut' ? icon('book', 58) : x.kind === 'board' ? icon('board', 58) : med(x.e.npcId, 54, 26)}</span><span><b>${x.title}</b><span class="d">${x.desc}</span></span><span class="pill ${x.st}">${PILL[x.st]}</span></button>` }).join('')}</div>
     <div class="lfoot">${S.errands.log.length} favours finished</div>`
   let R
   if (sel.kind === 'tut') {
     const steps = [['move', 'Walk around'], ['look', 'Look around'], ['gather', 'Gather something that shimmers'], ['craft', 'Craft at the bench by Home'], ['talk', 'Say hello to a villager'], ['garden', 'Plant a seed in the garden beds'], ['sleep', 'Sleep in your bed']]
     R = `<div class="blob">${icon('book', 120)}</div><div class="rt">Settle In</div><div class="rule"></div><p class="rdesc">Granny Fuku wrote you a little list for your first days on the planet.</p>
       <div class="box"><b class="lab">Steps</b>${steps.map(([id, t]) => `<div class="row${S.tutorial.done[id] ? ' ok' : ''}"><span class="chk"></span><span class="t">${t}</span></div>`).join('')}</div>`
+  } else if (sel.kind === 'board') {
+    R = `<div class="blob">${icon('board', 120)}</div><div class="rt">New notes on the board</div><div class="rule"></div>
+      <p class="rdesc">Neighbours have pinned up requests on the notice board in the village. Walk over and read them; a favour you take shows up here with everything you need.</p>
+      <div style="margin-top:auto;padding-bottom:6px"><div class="hint">Details appear here once you take a note at the board.</div></div>`
   } else {
     const e = sel.e, p = P[e.npcId], ready = e.wants.every(w => have(w.itemId) >= w.count)
     const rew = [e.reward.coins && `${icon('coin', 30)} ${e.reward.coins} coins`, e.reward.hearts && `${heart1(26)} +${e.reward.hearts} heart`, e.reward.itemId && `${icon(e.reward.itemId, 30)} ${nm(e.reward.itemId)}`].filter(Boolean)
@@ -271,7 +278,7 @@ function quests() {
         return `<div class="row${ok ? ' ok' : ''}"><span class="chk"></span>${icon(w.itemId, 34)}<span class="t">Bring ${w.count > 1 ? w.count + ' × ' : ''}${nm(w.itemId)}</span><span class="c">${sel.kind === 'log' ? w.count : h}/${w.count}</span></div>` }).join('')}
         <div class="row${sel.kind === 'log' ? ' ok' : ''}"><span class="chk"></span><span class="t">Take it to ${p.name}</span></div></div>
       <div class="box" style="margin-top:22px"><b class="lab">Reward</b><div class="row" style="justify-content:center;gap:22px">${rew.map(x => `<span style="display:inline-flex;align-items:center;gap:6px">${x}</span>`).join('')}</div></div>
-      <div style="margin-top:auto;padding-bottom:6px">${sel.st === 'active' ? `<button class="btn g">${icon('check', 30)}Tracking</button><div class="hint">${ready ? `You have everything. Take it to ${p.name}.` : 'Shown on your quest tracker.'}</div>` : sel.st === 'avail' ? `<button class="btn y">Take this note</button><div class="hint">Pinned on the notice board in the village.</div>` : `<div class="hint">Finished on ${D(e.day)}.</div>`}</div>`
+      <div style="margin-top:auto;padding-bottom:6px">${sel.st === 'active' ? `<button class="btn g">${icon('check', 30)}Track</button><div class="hint">${ready ? `You have everything. Take it to ${p.name}.` : 'Shows this favour on your quest tracker.'}</div>` : `<div class="hint">Finished on ${D(e.day)}.</div>`}</div>`
   }
   return [L, R]
 }

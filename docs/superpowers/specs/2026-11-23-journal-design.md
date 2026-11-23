@@ -31,9 +31,12 @@ replaces the spiral-notebook Journal (J), and later the separate Recipe Book. Th
 - No counts on bookmarks; a gold dot means something new.
 
 ## Pages
-- **Quests.** Left: Settle In (n/7 while steps remain), the errand taken from the board (Active), board notes not
-  taken (Available), finished ones (Done, dimmed). Right: who asked and their request, a checklist of what to bring
-  with have/need counts from the bag, who to bring it to, the reward, and a Track button that pins it to the HUD tracker.
+- **Quests.** Left: Settle In (n/7 while steps remain), errands accepted at the board (Active), finished ones (Done,
+  dimmed). Notes still on the board are never listed one by one: a single "New notes on the board" card ("Go and see")
+  says how many are waiting, and its page only sends her to the board. A note gets its own page only once she accepts
+  it at the board; nothing can be accepted from the Journal. Right (accepted errand): who asked, a checklist of what
+  to bring with have/need counts from the bag, who to bring it to, the reward, and a Track button.
+  Track is a placeholder for now: picking which quest the HUD tracker follows is future work.
 - **People.** Left: the 22 villagers as cards with name, role and hearts; villagers you haven't met are silhouettes marked "???".
   Right: name, role, favourite thing, 5 hearts with the return gifts at 3 and 5, "Gifted today", and gift shelves
   Loves / Likes / Dislikes, filled only with items she has learned by giving them.
@@ -44,7 +47,8 @@ replaces the spiral-notebook Journal (J), and later the separate Recipe Book. Th
 - **Discoveries.** Left: icon grid, silhouettes for unfound, "7/12 found · Museum 3/8" at the bottom. Right: name,
   description, first found day, count, best size (fish), a where/when hint (fish: spot, season, time, weather;
   forage: season), museum stamp or a nudge to bring it to Professor Hoshino.
-- **Memories.** Photos: up to 12 taped polaroids, the picked one large on the right with its day. Firsts: a short
+- **Memories.** Photos: up to 12 taped polaroids, the picked one large on the right with its day and caption, with
+  "Set as cover" and "Remove" (both new). Firsts: a short
   diary written from data the game already keeps (first catch of each fish, relics found, museum donations, perfect
   dishes, and with the save additions below, people met and heart milestones).
 
