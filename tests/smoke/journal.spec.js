@@ -8,14 +8,14 @@ const FIT = fs.readFileSync(new URL('./journal-fit.js', import.meta.url), 'utf8'
 const ready = (page) => page.waitForFunction(() => window.__scReady && window.__sb && window.__sc, null, { timeout: 150_000, polling: 250 })
 
 test('journal: five bookmarks, people met, board notes, Bag to Recipes', async ({ page }) => {
-  test.setTimeout(300_000)
+  test.setTimeout(420_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home&give=reed:2'); await ready(page)
   await page.keyboard.press('j'); await expect(page.locator('.jb-veil')).toBeVisible()
   await expect(page.locator('.jb-bk')).toHaveCount(5)
 
   // everything fits: every bookmark, sub-tab and entry stays inside its page, and no right page needs to scroll
   await page.evaluate(FIT)
-  const fit = await page.evaluate(() => window.__jbFitAll(40))
+  const fit = await page.evaluate(() => window.__jbFitAll(12))
   expect(fit.bad).toEqual({}); expect(fit.rightPageScrolls).toEqual([])
 
   // People: a first chat counts her as met

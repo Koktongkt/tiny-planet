@@ -17,7 +17,8 @@ window.__jbFit = () => {
 
 // visit every bookmark, sub-tab and the first picks in-page (clicks are instant here; Playwright clicks wait on frames)
 window.__jbFitAll = async (maxPicks = 8) => {
-  const tick = () => new Promise(r => setTimeout(r, 30)), out = {}, scrolls = []
+  // React updates the page synchronously on a click event, so there is no need to wait for a frame
+  const tick = () => Promise.resolve(), out = {}, scrolls = []
   for (const tab of ['quests', 'people', 'recipes', 'discoveries', 'memories']) {
     document.querySelector(`.jb-bk[data-id="${tab}"]`).click(); await tick()
     const subs = [...document.querySelectorAll('.jb-st')].map(e => e.dataset.sub)
