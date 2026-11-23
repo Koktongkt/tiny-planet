@@ -12,10 +12,10 @@ html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#3a2a20}
 /* ---- bookmarks: fabric ribbons standing up out of each page's top edge (art y 238), in front of the leather, never over the paper ---- */
 /* two groups, one over each page, so nothing sits across the gutter between them */
 .bm{position:absolute;inset:0;pointer-events:none}
-.grp{position:absolute;top:140px;height:98px;display:flex;align-items:flex-end;justify-content:center;gap:12px;pointer-events:auto;filter:drop-shadow(0 4px 3px rgba(60,24,6,.38)) drop-shadow(0 1px 1px rgba(60,24,6,.3))}
-.grp.l{left:166px;width:534px}
-.grp.r{left:752px;width:512px}
-.bk{position:relative;flex:none;height:70px;border:0;padding:6px 22px 0;cursor:pointer;font:600 26px Fredoka,system-ui,sans-serif;
+.grp{position:absolute;top:140px;height:98px;display:flex;align-items:flex-end;justify-content:center;gap:8px;pointer-events:auto;filter:drop-shadow(0 4px 3px rgba(60,24,6,.38)) drop-shadow(0 1px 1px rgba(60,24,6,.3))}
+.grp.l{left:160px;width:492px} /* page top edge is flat (y 238) from x 160 to ~655, then curls down into the gutter */
+.grp.r{left:796px;width:466px} /* flat again from ~795 */
+.bk{position:relative;flex:none;height:70px;border:0;padding:6px 17px 0;cursor:pointer;font:600 26px Fredoka,system-ui,sans-serif;
   display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;text-shadow:0 1.5px 1px rgba(60,20,10,.35);
   /* swallowtail cut at the top, like the ribbons painted at the bottom of the book */
   clip-path:polygon(0 0,calc(50% - 18px) 0,50% 11px,calc(50% + 18px) 0,100% 0,100% 100%,0 100%);
