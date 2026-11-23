@@ -23,7 +23,7 @@ A cozy, watercolour-toon 3D tiny planet you can walk around. Every mesh is gener
 - **WASD / arrow keys:** walk · **Shift:** run · **Space:** jump · **tap or click:** walk to that spot
 - **V:** toggle planet view (drag to spin, with inertia) / walk view
 
-URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
+URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=zone&z=home|home-garden|home-yard` (her cottage, crop beds, whole yard), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
 
 ## Tech stack
 
@@ -75,6 +75,7 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Fishing:** cast, wait for a bite, then hold to reel. Keep the net on the fish. Twelve species, one generic fish in the bag.
 - **Crafting:** 12 recipes across tools (Rod, Watering Can, Lantern), food, decor and the Rope Bridge unlock, which leads to a clifftop picnic spot with a chest. Undiscovered recipes show as "???".
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
+- **Home:** a chibi round cottage in a fenced yard with puffy trees and the crop garden (see ART_DIRECTION.md, "Her home, outside").
 - **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a procedural Ghibli-style score (a different piece outdoors, at home, in the museum and on the train) and activity sound effects, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
 - **Relaxing + world (Stage C):** a calmer fishing reel with 12 species and a catch card, seasons every 7 in-game days and seeded rain days, train rides between two stations, photo mode (free camera, filters, PNG + journal album), a collection journal, ruins dig spots and Professor Hoshino's museum, and Grandma's first-day note.
 - **Day cycle and saves:** items respawn each in-game sunrise (one day is one real hour); progress, including the time of day, saves to localStorage and carries over across reloads. Reset from the Bag or with `?reset`.

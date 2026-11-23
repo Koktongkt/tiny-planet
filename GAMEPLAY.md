@@ -31,7 +31,7 @@
 **Fishing:** cast, wait for a bite, then hold to reel and keep the net on the fish. It fills while the net is on the fish and slips only after a long miss. The bag stores one generic fish; the species log remembers which kind you caught.
 
 ## Crafting
-The bench is beside the house marked **Home**, near spawn. The Recipe Book shows every recipe:
+The bench is in the fenced yard beside her round cottage (the **Home** sign stands by the front gate), near spawn. The Recipe Book shows every recipe:
 - Recipes whose ingredients you haven't discovered show as "???".
 - Known recipes show counts and what's missing.
 - The Craft buttons only appear at the bench.
@@ -56,7 +56,7 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 **Decor:** tap a decor item in the Bag to place it. A ghost preview appears ahead of you. It is green when valid (within about 2.2 units of Home) and red otherwise. Stand next to placed decor and press E to pick it back up.
 
 ## The daily loop (Stage B)
-- **Garden:** six beds left of the Home sign. You start with 2 Seed Packets. Press E at an empty bed to plant a Seed Packet (turnip, carrot or herbs) or F for a Sky Seed (from the cliff-top chest). Water each bed once a day with the Watering Can. A bed that starts the morning watered grows one stage (seed → sprout → young → mature → ripe). Herbs take 2 watered days, turnips 3, carrots 4 and the Sky Seed 5. Dry days only pause growth. A ripe crop left for 3 mornings withers; clear the bed and replant. The harvest is 2 turnips, 2 carrots, 3 herbs, or 3 skyberries plus a Sky Seed back.
+- **Garden:** six beds inside the yard fence, left of the house (come in through the front gate). You start with 2 Seed Packets. Press E at an empty bed to plant a Seed Packet (turnip, carrot or herbs) or F for a Sky Seed (from the cliff-top chest). Water each bed once a day with the Watering Can. A bed that starts the morning watered grows one stage (seed → sprout → young → mature → ripe). Herbs take 2 watered days, turnips 3, carrots 4 and the Sky Seed 5. Dry days only pause growth. A ripe crop left for 3 mornings withers; clear the bed and replant. The harvest is 2 turnips, 2 carrots, 3 herbs, or 3 skyberries plus a Sky Seed back.
 - **Gifts and friendship:** near a villager press **G**, or tap **♥ Gift** in the dialogue box, then pick something from your bag. Each villager has loves, likes and dislikes based on their profile: love +1 heart, like +½, neutral +¼, dislike −¼, on a 0–5 scale. You can give one gift per villager per day. Hearts appear on the dialogue name plate, and friendlier villagers have extra lines. At 3 hearts they give you 2 Seed Packets, and at 5 hearts a Sky Seed.
 - **Errands board:** at the edge of the village square. One request on day 1, then two a day, pinned up each morning; unfinished ones are taken down. Take a note, bring the items, and hand them over for coins, seeds and hearts. From day 3, requests can ask for crops and cooked food.
 - **New recipes:** every item that had no use now has one. Acorn Cookie (acorns + rice), Pine Needle Tea (pinecones + water), Seed Packet (fluff + an Old Coin), Fluff Pillow, Wool Scarf, Crystal Lamp and Shard Charm (keepsakes that make good gifts). The crops are used too: Berry Jam from skyberries, Mushroom Soup from a turnip, a carrot and water, and herbs for tea.
