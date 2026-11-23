@@ -1,6 +1,6 @@
 // Dev-only chibi prop studio (not a build input; `vite build` only bundles index.html).
 // /propstudio.html            every item in a grid, with her standing in the middle for scale
-// /propstudio.html?id=bed     one item, turning      &spin=0 to hold still   &yaw=0.6   &her=0 to hide her
+// /propstudio.html?id=bed     one item, turning      &spin=0 to hold still   &yaw=0.6   &her=0 to hide her (centred, closer)
 import React, { Suspense, lazy, useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
@@ -16,10 +16,10 @@ function Turn({ children, x, z }) { const r = useRef(); useFrame((_, dt) => { if
 const st = { phase: 0, move: 0, t: 0, turn: 0, dist: 0, seed: 0 }
 function Her({ x, z }) { return HER ? <group position={[x, 0, z]} rotation={[0, 0.25, 0]}><Suspense fallback={null}><ChibiHer st={st} /></Suspense></group> : null }
 function Label({ y, text }) { return <Html position={[0, y, 0.5]} center style={{ pointerEvents: 'none', whiteSpace: 'nowrap', font: '600 13px Fredoka, system-ui', color: '#6a4632', background: 'rgba(255,250,242,.85)', padding: '2px 8px', borderRadius: 10 }}>{text}</Html> }
-function Cam() { const cam = useThree(s => s.camera); useEffect(() => { if (ONE) { const [w, h] = CATALOG[ONE].size, R = Math.max(w * S + 0.6, h * S * 1.15, 0.65); cam.position.set(0, 0.3 + R * 0.75, R * 2.6); cam.lookAt(0, Math.min(h * S, 0.6) * 0.45, 0) } else { cam.position.set(0, 4.6, 7.6); cam.lookAt(0, 0.1, 0.25) } }, []); return null }
+function Cam() { const cam = useThree(s => s.camera); useEffect(() => { if (ONE) { const [w, h] = CATALOG[ONE].size, R = Math.max(w * S + 0.6, h * S * 1.15, 0.65) * (HER ? 1 : 0.62); cam.position.set(0, 0.3 + R * 0.75, R * 2.6); cam.lookAt(0, Math.min(h * S, 0.6) * 0.45, 0) } else { cam.position.set(0, 4.6, 7.6); cam.lookAt(0, 0.1, 0.25) } }, []); return null }
 const ids = ONE ? [ONE] : ['her', ...Object.keys(CATALOG)], COLS = 4, GAP = 1.35
 function Grid() {
-  return ids.map((id, i) => { const c = i % COLS, r = Math.floor(i / COLS), x = ONE ? 0.25 : (c - (COLS - 1) / 2) * GAP, z = ONE ? 0 : (r - 1) * 1.25
+  return ids.map((id, i) => { const c = i % COLS, r = Math.floor(i / COLS), x = ONE ? (HER ? 0.25 : 0) : (c - (COLS - 1) / 2) * GAP, z = ONE ? 0 : (r - 1) * 1.25
     if (id === 'her') return <group key={id}><Her x={x} z={z} /><group position={[x, 0, z]}><Label y={-0.02} text="her (for scale)" /></group></group>
     return <group key={id}><Turn x={x} z={z}><group scale={S}><Prop id={id} /></group></Turn>{!ONE && <group position={[x, 0, z]}><Label y={-0.02} text={CATALOG[id].name} /></group>}</group> })
 }

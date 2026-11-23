@@ -31,7 +31,7 @@
 **Fishing:** cast, wait for a bite, then hold to reel and keep the net on the fish. It fills while the net is on the fish and slips only after a long miss. The bag stores one generic fish; the species log remembers which kind you caught.
 
 ## Crafting
-The bench is in the fenced yard beside her round cottage (the **Home** sign stands by the front gate), near spawn. The Recipe Book shows every recipe:
+The bench is in the fenced yard beside her round cottage, near spawn. The Recipe Book shows every recipe:
 - Recipes whose ingredients you haven't discovered show as "???".
 - Known recipes show counts and what's missing.
 - The Craft buttons only appear at the bench.

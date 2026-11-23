@@ -33,10 +33,15 @@ export function buildYard(homeN, onHouse, lift) {
     ;[[-150, 1, 5], [150, 1, 4], [-100, 0.9, 3], [100, 0.95, 4], [-65, 0.85, 0], [70, 0.85, 2], [-20, 0.8, 0], [20, 0.8, 0]].forEach(([deg, sc, fl], i) => {
       const [x, z] = polar(deg, 0.66 * S), m = at(x, z, -deg * Math.PI / 180 + Math.PI, S * sc)
       fl ? k.use('flowerBush', m, { flowers: fl }) : k.use('bush', m) })
+    { const d = YARD.dogHouse; k.use('dogHouse', at(d.x, d.z, d.yaw), { bowlSide: -1, bowlX: d.bowlX, bowlZ: d.bowlZ, food: 0 }) } // Pip's house; his bowl baked empty (the kibble is Dog.jsx's, shown when she fills it)
     for (const t of YARD.trees) k.use('puffTree', at(t.x, t.z, t.seed), { seed: t.seed, crown: t.crown })
     for (const [x, z, a] of YARD.stones) k.use('stepStone', at(x, z, a, S, 0.0))
     for (const [x, z, a] of YARD.rocks) k.use('rocks', at(x, z, a))
     YARD.sprouts.forEach(([x, z], i) => k.use('sprout', at(x, z, i * 1.7)))
+    // the crop corner (the beds themselves are the Stage B garden's, art/garden): path, watering can, bushes
+    for (const [x, z, a] of YARD.gardenStones) k.use('stepStone', at(x, z, a, S * 0.8, 0.0))
+    k.use('wateringCan', at(YARD.gardenCan[0], YARD.gardenCan[1], YARD.gardenCan[2]))
+    YARD.gardenBushes.forEach(([x, z, sc], i) => k.use('flowerBush', at(x, z, i * 2.1, S * sc), { flowers: 3 }))
     // the yard fence: an oval of fence runs round everything (a post where each run starts, so joints aren't doubled)
     const runs = fenceRuns()
     runs.forEach(([[x0, z0], [x1, z1]], i) => {
