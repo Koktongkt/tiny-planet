@@ -16,7 +16,7 @@ replaces the spiral-notebook Journal (J), and later the separate Recipe Book. Th
 ## Non-goals (for now)
 - Removing the old Recipe Book button and the C key: they keep working until the Journal's Recipes section is done.
 - Hotkeys: whether R opens Recipes (R is the bicycle today) is on hold.
-- Phones: whether a plain list replaces the book on small screens, like the Bag does, is still open.
+- Phones: when the book is too small to read (scale < 0.5, like the Bag), J opens the old notebook and the bench / Bag open the old Recipe Book.
 - Villager portraits: none exist except the professor's, so People uses name medallions until art is made.
 
 ## Anti-goals
@@ -55,8 +55,8 @@ replaces the spiral-notebook Journal (J), and later the separate Recipe Book. Th
 ## Save additions (agreed)
 Old saves carry over: each new field starts empty.
 1. **Met:** `friends.list[npcId].metDay`: the day of the first chat. People shows only villagers you have met.
-2. **Gift memory:** `friends.list[npcId].learned`: `{ itemId: 'love' | 'like' | 'neutral' | 'dislike' }`, recorded
-   every time a gift is given. This fills the gift shelves on People.
+2. **Gift memory:** already in the save: `friends.list[npcId].seen = { itemId: 'love' | 'like' | 'neutral' | 'dislike' }`,
+   written on every gift (systems/live.js `giveGift`). The gift shelves read it; no new field.
 3. **Quest history:** `errands.log`: the last 20 finished errands `{ npcId, wants, reward, day }`, so Done
    survives the daily reset and Firsts can mention them.
 
