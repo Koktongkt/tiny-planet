@@ -136,8 +136,8 @@ test('phone menu, hidden map, note hint, auto-hide, ride key, no pad overlaps', 
     const x = box.x + box.width / 2, y = box.y + box.height * 0.62
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] })
     // SwiftShader draws a phone frame in ~0.7-1 s at DPR 3, and the touch lands on the next one, so the stick lights
-    // 1-2 s after touchStart. Watch for the class change itself (not once per frame) and allow a few frames.
-    const on = await page.waitForFunction(() => !!document.querySelector('.tp-stick.on'), null, { timeout: 8000, polling: 'mutation' }).then(() => true).catch(() => false)
+    // 1-2 s after touchStart. Poll every 100 ms (not once per frame) and allow several frames.
+    const on = await page.waitForFunction(() => !!document.querySelector('.tp-stick.on'), null, { timeout: 8000, polling: 100 }).then(() => true).catch(() => false)
     if (!on) {
       const info = await page.evaluate(({ x, y }) => {
         const hit = document.elementFromPoint(x, y)
