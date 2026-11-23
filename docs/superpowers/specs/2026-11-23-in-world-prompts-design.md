@@ -82,6 +82,12 @@ For gather spots, forage, fireflies, dug-up finds and placed decor ("Pick up").
 - **Water** (lake and spring) has no item mesh, so it gets a small ring of gold sparkles on the water surface.
   Those spots use the full bubble anyway (fishing and filling the can).
 
+### Pets (added after the first release)
+Pip and Mochi follow the traveller, so being close is not an invitation. A pet is a **quiet target** (no bubble; E still
+pets them, but anything else in range wins E) until she has stood still beside them for **3 s**, or the pet is asking
+(Pip greeting her or waiting with the stick, Mochi rubbing her ankles). Once the bubble has been up and she pets them
+or walks away, it rests for **10 minutes**; an asking pet still shows it. Rule: `src/pets/petPrompt.js`.
+
 ### Edges and hiding
 - Near the screen edge, the bubble is pushed back inside the frame and its tail keeps pointing at the target.
 - Target behind the camera: the bubble sits at the bottom edge with its tail pointing down, toward where the target is.

@@ -77,3 +77,15 @@ test('villagers: Talk to bubble with Give a gift stacked above, one bubble at a 
   await expect(tb.locator('.tp-bubble')).toBeHidden()
   w.check()
 })
+
+test('Pip stays quiet beside her until she stands still 3 s, then offers Pet', async ({ page }) => {
+  const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=village')
+  await page.waitForFunction(() => { const D = window.__dog; return !!(D && D.n && D.init && !D.onBike && !(D.hop > 0) && D.state === 'follow') }, null, { timeout: 30_000 })
+  await go(page, () => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
+  await nearIs(page, () => /^dog/.test(window.__game.G.near?.id || ''))
+  expect(await page.evaluate(() => window.__game.G.near.quiet)).toBe(true) // just arrived: no bubble
+  await expect(page.locator('.tp-bubble-wrap .tp-prompt')).toHaveCount(0)
+  await nearIs(page, () => /^dog/.test(window.__game.G.near?.id || '') && window.__game.G.near.quiet === false)
+  await expect(page.locator('.tp-bubble-wrap .tp-prompt')).toContainText('Pip', { timeout: 20_000 })
+  w.check()
+})

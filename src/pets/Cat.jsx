@@ -8,6 +8,9 @@ import { useFrame } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
 import { HOME, freeAt, resolve } from '../home/state.js'
 import { atRoom } from '../game/prompt/anchors.js'
+import { STILL } from '../game/prompt/still.js'
+import { newRest, petOffer, petLeft } from './petPrompt.js'
+const CREST = newRest() // Mochi's bubble: offered after 3 s standing still beside him (or when he rubs her ankles), then rests 10 min
 import { SPOTS, LAYOUT, BEAM_SPOT } from '../home/interior.jsx'
 import { GEO, cel, OUT, canvasTex } from '../home/kit.jsx'
 import { T, q } from '../common.jsx'
@@ -45,9 +48,11 @@ export function Cat() {
   useMemo(() => { HOME.near.push((consider) => {
     if (!HOME.inside || HOME.busy || c.hop) return
     const d = Math.hypot(HOME.hp.x - c.x, HOME.hp.z - c.z) + Math.max(0, c.y - 0.3)
-    consider({ kind: 'ext', inside: true, id: 'cat', at: (out) => atRoom(c.x, c.z, (c.y || 0) + 0.3)(out), icon: 'hand', verb: 'Pet', name: c.name, chip: true, act: () => petCat() }, d, 0.38)
+    if (d >= 0.38) { petLeft(CREST, performance.now()); return }
+    const quiet = petOffer(CREST, { asking: c.state === 'rub', stillMs: STILL.ms, now: performance.now() }) === 'quiet'
+    consider({ kind: 'ext', inside: true, id: 'cat' + (quiet ? '~q' : ''), quiet, at: (out) => atRoom(c.x, c.z, (c.y || 0) + 0.3)(out), icon: 'hand', verb: 'Pet', name: c.name, chip: true, act: () => petCat() }, d, 0.38)
   }) }, [])
-  function petCat() { startAct('pet', { dur: 1.2 })
+  function petCat() { petLeft(CREST, performance.now()); startAct('pet', { dur: 1.2 })
     if (c.state === 'nap') { go('stretch', 2.6, { after: Math.random() < 0.6 ? 'petted' : 'ignore' }); toast(`${c.name} opens one eye… then stretches.`, 'leaf'); return }
     if (c.state === 'ignore' || c.ignoreCD > 0 || Math.random() < 0.22) { go('ignore', 3.5); c.ignoreCD = 4; toast(`${c.name} flicks his tail and looks the other way.`, 'leaf'); return }
     go('petted', 3.8); c.mood = Math.min(1, c.mood + 0.25); burst(hearts.current, 6); toast(`${c.name} purrs happily ♥`, 'hand')
