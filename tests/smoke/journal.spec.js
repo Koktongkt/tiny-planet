@@ -10,7 +10,12 @@ const ready = (page) => page.waitForFunction(() => window.__scReady && window.__
 test('journal: five bookmarks, people met, board notes, Bag to Recipes', async ({ page }) => {
   test.setTimeout(420_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home&give=reed:2'); await ready(page)
-  await page.keyboard.press('j'); await expect(page.locator('.jb-veil')).toBeVisible()
+  // opens instantly: the book's code, leather art and handwriting font loaded quietly after the game came up
+  await page.waitForFunction(() => window.__jbArt && window.__jbArt.ready && window.__jbArt.code && window.__jbArt.font, null, { timeout: 60_000 })
+  const t0 = Date.now(); await page.keyboard.press('j')
+  await expect(page.locator('.jb-book:not(.jb-wait)')).toBeVisible()
+  console.log(`journal open: ${Date.now() - t0} ms from J to the drawn book`)
+  expect(await page.evaluate(() => document.fonts.check('700 24px JBHand'))).toBe(true)
   await expect(page.locator('.jb-bk')).toHaveCount(5)
 
   // everything fits: every bookmark, sub-tab and entry stays inside its page, and no right page needs to scroll

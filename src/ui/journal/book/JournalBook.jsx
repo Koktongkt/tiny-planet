@@ -8,8 +8,7 @@ import { G, emit } from '../../../game/store.js'
 import { newDots } from '../../../systems/journalPages.js'
 import { bookScale } from './fit.js'
 import { PAGES, SUBS } from './pages.jsx'
-import frame1x from '../../../assets/ui/journal-frame.webp'
-import frame2x from '../../../assets/ui/journal-frame@2x.webp'
+import { FRAME, ART } from './preload.js'
 import './book.css'
 
 const svg = (d) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
@@ -34,6 +33,7 @@ const pickKey = (tab, sub) => (sub ? tab + '/' + sub : tab)
 export { useBookFits } from './useBookFits.js'
 export function JournalBook({ onClose }) {
   const [, redraw] = useState(0), bump = () => redraw(x => x + 1)
+  const [shown, setShown] = useState(ART.ready) // opened before the preload finished: fade in once the art is decoded
   const [s, setS] = useState(() => bookScale(innerWidth, innerHeight))
   useEffect(() => { const f = () => setS(bookScale(innerWidth, innerHeight)); addEventListener('resize', f); return () => removeEventListener('resize', f) }, [])
   const at = G.ui.journalAt
@@ -49,8 +49,8 @@ export function JournalBook({ onClose }) {
   const dots = newDots(G.s)
   const go = (id) => { MEM.tab = id; bump() }
   return <div className="jb-veil" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
-    <div className="jb-book" style={{ '--s': s }} role="dialog" aria-label="Journal">
-      <img className="jb-art" src={frame1x} srcSet={`${frame1x} 1x, ${frame2x} 2x`} alt="" draggable="false" />
+    <div className={'jb-book' + (shown ? '' : ' jb-wait')} style={{ '--s': s }} role="dialog" aria-label="Journal">
+      <img className="jb-art" src={FRAME} alt="" draggable="false" decoding="sync" onLoad={() => { ART.ready = true; setShown(true) }} ref={el => { if (el && el.complete && el.naturalWidth && !shown) { ART.ready = true; setShown(true) } }} />
       <nav className="jb-bm" role="tablist" aria-label="Journal sections">
         {['l', 'r'].map(side => <div key={side} className={'jb-grp ' + side}>{BOOKMARKS.filter(b => b.side === side).map(b =>
           <button key={b.id} data-id={b.id} className={'jb-bk' + (b.id === tab ? ' on' : '')} role="tab" aria-selected={b.id === tab} style={{ '--c1': b.c[0], '--c2': b.c[1] }} onClick={() => go(b.id)}>
