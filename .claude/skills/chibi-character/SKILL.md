@@ -44,6 +44,6 @@ character's concept sheet asks for.
    ten angles). The studio camera aims at the body, so the plain side shot needs cropping to the face.
 2. Show KT side-by-side sheets: concept or golden reference, previous, new. For taste calls, offer a ladder of small,
    equal steps and let KT pick; commit only the chosen one (keep the rest as patches).
-3. Check the game camera (`?view=hero`) and a walk pose (`?view=charstudio&pose=walk&freeze=1.2`).
+3. Check the real follow camera in the game (`?at=lake`, `?at=home`...; not `?view=hero`, which clips through scenery) and a walk pose (`?view=charstudio&pose=walk&freeze=1.2`).
 4. `npm run build` and `node --test tests/unit/*.test.mjs` must pass.
 5. Record the outcome in the design doc (what changed, the numbers, what KT rejected and why).
