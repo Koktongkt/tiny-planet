@@ -121,16 +121,20 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // mid-face around the nose blends into the head: in profile the line dips just under the eye, comes out to a rounded
 // nose point and slopes back to the mouth and chin. Broad enough (about 6 bake cells tall) for the marching-cubes body to
 // keep it. The body bake shades it with the normals of the head without the swell, so from the front it is invisible.
-// 12g (KT): the nose (a step out under the eye, a rounded top), then from its tip one smooth line down that curves
-// back into the chin: no dip, no visible second bump. The second swell only fills under the nose; its fullest point
-// sits behind the nose tip, so below the nose its front only recedes.
-// [[y, z, rx, ry, rz, smin k], ...]  (nose, then mouth)
-const MIDFACE = [[-0.0258, 0.041, 0.0112, 0.0082, 0.0172, 0.003], [-0.032, 0.0395, 0.0148, 0.012, 0.017, 0.005]]
+// 12h (KT, a red line drawn over the profile): straight down from under the eye, a sharp step out, a vertical front
+// that stays forward down past the mouth, then a gradual curve back into the chin. The step and the vertical front are
+// a rounded box (an ellipsoid cannot make a flat front with a crisp top corner); a tall ellipsoid under it starts the
+// curve into the chin, its front level with the box's at their seam.
+// [y, z, rx, ry, rz, smin k]           ellipsoid (radii)
+// [y, z, hx, hy, hz, smin k, round r]  rounded box (half extents + corner radius)
+const MIDFACE = [[-0.0278, 0.0518, 0.0085, 0.0058, 0.0052, 0.0012, 0.001], [-0.0328, 0.0382, 0.013, 0.0148, 0.0198, 0.005]]
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
+const rbox = (x, y, z, cx, cy, cz, hx, hy, hz, r) => { const qx = Math.abs(x - cx) - hx, qy = Math.abs(y - cy) - hy, qz = Math.abs(z - cz) - hz
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
   let h = smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
-  for (const [my, mz, mrx, mry, mrz, mk] of MIDFACE) h = smin(h, ell(x, y, z, 0, my, mz, mrx, mry, mrz), mk)
+  for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, r != null ? rbox(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c), mk)
   return h }
 // the decal: a grid over the face region, each vertex shot onto the head surface from the front and lifted a hair
 const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
