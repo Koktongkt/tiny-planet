@@ -181,7 +181,7 @@ function Butterflies() {
     if (g0) g0.visible = true
     const t = wind.time.value
     const stat = window.__bfly || (window.__bfly = { updates: 0, resting: false })
-    stat.updates++; stat.resting = false; stat.resumed = waking
+    stat.updates++; stat.resting = false; stat.resumed = waking; stat.list = refs.current // her life layer looks at / dodges these
     bs.forEach((b, i) => { const g = refs.current[i]; if (!g) return; const a = butterflyAngle(t, b.ph); const n = _wn.copy(b.base).applyAxisAngle(b.ax, Math.sin(a) * 0.08).applyAxisAngle(b.base, a * 0.6).normalize(); const n2 = _wf.copy(b.base).applyAxisAngle(b.ax, Math.sin(a + 0.02) * 0.08).applyAxisAngle(b.base, (a + 0.02) * 0.6).normalize(); const f = n2.sub(n).normalize(); g.position.copy(n).multiplyScalar(R + height(n) + 0.22 + Math.sin(t * 2 + i) * 0.06); g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, f), n, f)); const fl = Math.sin(t * 16 + i) * 0.9; g.children[0].rotation.z = 0.2 + fl; g.children[1].rotation.z = -0.2 - fl })
   })
   return <group ref={root} visible={false}>{bs.map((b, i) => <group key={i} ref={el => refs.current[i] = el} scale={0.8}>{[1, -1].map(s => <group key={s}><mesh position={[s * 0.022, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={b.m}><circleGeometry args={[0.024, 8]} /></mesh></group>)}</group>)}</group>

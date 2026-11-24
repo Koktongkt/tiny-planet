@@ -24,7 +24,7 @@ export const FACES = ['happy', 'blink', 'sleepy', 'excited', 'focus']
 // anim1: the atlas now only holds brows, nose and mouth (cells: happy, focus, sleepy, excited). Eyes and blush are drawn
 // analytically in the face shader (same shapes/colours as pass 8) so lids can blink partway, irises can dart, the lower lid
 // can squint, the blush can pulse and expressions crossfade instead of swapping.
-const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3 }
+const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3, yawn: 3 } // yawn: the open mouth, eyes shut by the life layer
 // pass 6 (KT): features a touch smaller, higher and closer together. FT scales the tweak (1 = chosen, 1.5 = 'stronger').
 const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
 // pass 10 (KT, turnaround sheet): the eye line sits lower in the face, a touch closer together; nose, mouth and blush

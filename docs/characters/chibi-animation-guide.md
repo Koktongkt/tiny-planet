@@ -43,7 +43,19 @@ Scale every additive angle and offset by `MOT` (`1`, or **0.35** when `prefers-r
 | `catch` | 3.2 s | Rain only. Holds her right hand out, palm up, looking up at the sky. |
 | `shiver` | 1.6 s | Rain only. A quick shiver, shoulders up and arms in, eyes squeezed. |
 
-Dry weather picks from look, stretch, rock, satchel, hum, pebble, hands and tiptoe; when `T.rain > 0.3` she picks from catch, shiver, look, satchel and hands, and walks with her shoulders a little hunched. `L.fsq` narrows the eyes during a fidget; `fidLookY` points the eyes up or down. Studio: `window.__herFids = ['hum']` forces a fidget (set `__herLife.fidN = 0` to start it now).
+| `yawn` | 2.6 s | Night only. Hand to her mouth, eyes shut (`L.shut`), the open-mouth cell (mood `yawn`), head back a touch. |
+
+**More behaviours (anim pass 3)**, all in the life layer:
+
+- **Happy skip.** After 9-21 s of steady walking (not running) in fine daytime weather, a 2.2 s skip: a little hop on each step (`0.014 * max(0, sin 2φ)²`), bigger arm swing, head bob, excited face.
+- **Skid.** Stopping hard from a run (`dm < -2.2` with recent run > 0.5): 0.75 s braced stop, leaning back with the front foot out and arms out.
+- **Sit on the grass.** After 18 s idle (not in rain): sits, legs out, hands on the ground (`L.sit`, root down 0.088). Stands back up quickly when she moves. Only look / hum fidgets while seated; the sleepy face still comes at 25 s.
+- **Wave at villagers.** A villager close by (`near > 0.3`), at most every 40-70 s: the upper arm out to the side, the forearm up and waving, excited face.
+- **Butterflies.** `window.__bfly.list` (from `App.jsx`) is scanned with the look-at targets: a butterfly within 2.4 head-heights wins her gaze and is tracked every frame; one inside 0.95 head-heights makes her blink, duck and lean away (0.7 s).
+
+Studio triggers for captures: `__herLife.skipU = 0`, `waveU = 0`, `dodgeU = 0` (with `dodgeSd = ±1`), `idle = 17.6` (sit), `__herFids = ['yawn']`. Set `window.__herNoSit = true` to keep her standing.
+
+Dry weather picks from look, stretch, rock, satchel, hum, pebble, hands and tiptoe; at night (`T.night > 0.6`) from yawn, look, rock and hum; when `T.rain > 0.3` she picks from catch, shiver, look, satchel and hands, and walks with her shoulders a little hunched. `L.fsq` narrows the eyes during a fidget; `fidLookY` points the eyes up or down. Studio: `window.__herFids = ['hum']` forces a fidget (set `__herLife.fidN = 0` to start it now).
 
 **Walk and run.** Anim pass 2 (KT: the old walk was too bouncy, a hop): her walk is `{ stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' }`. `walk.smooth` (shared rig, default off) makes the bob a rounded `1 - sin²` wave instead of the hop-shaped `1 - |sin|` (a sharp corner at every step); `walk.land` scales the footfall squash. Weight shows in hip sway and shoulder twist, not vertical bounce: the measured body bob is about half the old one. Turns lean `-0.07 * turn * move`, up to 1.6x when running (clamp ±0.14). The old walk was `{ rate: 11, stride: 0.55, bounce: 0.026, arm: 0.7, twist: 0.12, sway: 0.075 }`. Run is detected from the phase rate (walk ~7.4/s, run ~10/s): `clamp((rate - 8.3) / 1.6, 0, 1)`. Extra forward lean **0.13 rad**, small extra bounce `0.004 * run * (1 − |sin phase|)`, bigger arm swing, head overlap spring on the bob (`freq 3.2`, `zeta 0.5`, clamp ±0.08).
 
