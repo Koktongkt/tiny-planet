@@ -262,7 +262,7 @@ function stepIdleDirector(dt) {
   if (HOME.idleAct && ACT.kind !== HOME.idleAct) HOME.cancelIdle() // it ran its course
   if (A.walk || HOME.idleAct) return // her own idle walk / pose: still the same idle stretch
   const still = HOME.inside && !moved && !HOME.busy && !A.doing && !G.ui.panel
-  const blocked = !!G.near || CAT.state === 'rub' || CAT.state === 'petted' || (window.__herNoIdleWalk ?? false)
+  const blocked = /^cat/.test(G.near?.id || '') || CAT.state === 'rub' || CAT.state === 'petted' || (window.__herNoIdleWalk ?? false)
   if (stepIdle(IDLE, { still, blocked }, dt) !== 'walk') return
   const sp = pickSpot(hp, IDLE_SPOTS, { day: T.day ?? 1 - T.night, night: T.night }); if (sp) startIdle(sp)
 }

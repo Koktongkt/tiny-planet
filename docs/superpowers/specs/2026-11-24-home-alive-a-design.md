@@ -42,8 +42,9 @@ she can't reach.
 
 ## Interplay with the existing life layer
 - The outdoor floor-sit (after 18 s idle) is kept indoors only on the round rug. Lying back to watch the sky is off indoors.
-- No idle walk while Mochi is weaving round her ankles or being petted, while an activity prompt is showing, while a
-  panel is open, or while an activity is running.
+- No idle walk while Mochi is weaving round her ankles or being petted (or his "Pet" prompt is up), while a panel is
+  open, or while an activity is running. (Other prompts don't block: the plant and bed prompts cover the spots beside
+  them, and after 15 s still the player clearly isn't about to press E.)
 
 ## Approaches considered
 1. **Reuse tap-to-walk's `hp.target` plus a small pure "home life" module (chosen).** Straight-line walking with the
