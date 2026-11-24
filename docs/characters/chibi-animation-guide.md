@@ -23,7 +23,7 @@ Everything a character's personality needs is data. Most characters need only st
    ```
    Fields: `lively`, `fidgets` (name -> seconds), `sets` (day, rain, night, seated, hungry), `fidgetAfter`,
    `fidgetEvery`, `sitAfter`, `lieChance`, `lieAfter`, `sleepyAfter`, `can` (skip, skid, wave, dodge, sit, lie,
-   rainHunch, glanceAtCamera), `skipEvery`, `waveEvery`, `sighEvery`, `tiredBelow`, `hungryAt`, `yawnUp`, `lieLift`,
+   rainHunch, glanceAtCamera), `skipEvery`, `skidAfterRun`, `skidChance`, `skidEvery`, `waveEvery`, `sighEvery`, `tiredBelow`, `hungryAt`, `yawnUp`, `lieLift`,
    `gestures`. All commented in the file.
 2. **How they walk**: `cfg.walk` in their character config (`rate`, `stride`, `bounce`, `smooth`, `land`, `arm`,
    `lean`, `twist`, `sway`). Her values are the starting point; an elder walks slower and lower, a kid bouncier.
@@ -155,7 +155,7 @@ Scale every additive angle and offset by `MOT` (`1`, or **0.35** when `prefers-r
 **More behaviours (anim pass 3)**, all in the life layer:
 
 - **Happy skip.** After 9-21 s of steady walking (not running) in fine daytime weather, a 2.2 s skip: a little hop on each step (`0.014 * max(0, sin 2φ)²`), bigger arm swing, head bob, excited face.
-- **Skid.** Stopping hard from a run (`dm < -2.2` with recent run > 0.5): 0.75 s braced stop, leaning back with the front foot out and arms out.
+- **Skid** (KT: it fired on every stop and read as a frozen lean). Now only when stopping hard (`dm < -2.2`) after sprinting at least `skidAfterRun` (1.2 s), with a `skidChance` (0.45) and a `skidEvery` cooldown (10-20 s) after any hard stop. 1.05 s of motion, not a held pose: the body carries a touch forward, a damped wobble (`-exp(-3.3u)·cos(7.6u)`) rocks her back onto her heels then past upright and back, front heel sliding with toes up, back foot dragging, arms flung out and flailing, a 'whoa' (excited) face, then a relieved breath and smile. Speed rising again cancels it.
 - **Sit on the grass.** After 18 s idle (not in rain): sits, legs out, hands on the ground (`L.sit`, root down 0.088). Stands back up quickly when she moves. Only look / hum fidgets while seated; the sleepy face still comes at 25 s.
 - **Lie back and watch the sky.** Rarer than sitting: once she has sat down, one roll per idle spell (`LIE_CHANCE` 0.35); if it hits, she lies back at 32 s idle (`LIE_AFTER`). Only when it is not raining or snowing and the ground is dry (`T.rain < 0.05`, `T.wet < 0.3`). The hips tip back 1.32 rad with the thighs counter-rotated so the legs stay on the ground; arms out to the sides; the head drifts slowly (watching clouds). Eyes stay open and happy (not sleepy) while lying. Gets up quickly when she moves. Studio: `window.__herLie = 1` forces it.
 - **Energy (tired and hungry).** Reads `window.__game.G.s.energy` (0-100; `systems/energy.js`, LOW = 25; there is no separate hunger stat, and eating is what refills energy). Studio override: `window.__herEnergy`.
