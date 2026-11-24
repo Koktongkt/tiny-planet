@@ -8,7 +8,7 @@ import { buildCoachGeometry, buildOpenCarGeometry, applyTrainSkin, RIDE_SEAT } f
 import { rideSit, holdRidePose, releaseRidePose } from '../../src/art/train/ridePose.js'
 import { POSES, ACT } from '../../src/act.js'
 import { fareText, stopName, rideStatus } from '../../src/ui/ride/fareText.js'
-import { R, TRAIN_LAT, dir } from '../../src/world.js'
+import { R, TRAIN_LAT, dir, height } from '../../src/world.js'
 import { fare } from '../../src/systems/train.js'
 globalThis.window ??= {} // world/village.js publishes debug handles on window
 const { TRAIN_STOPS } = await import('../../src/world/village.js')
@@ -29,7 +29,7 @@ test('kit merges parts into body / hull / glow with vertex colours (hull has non
 test('station: few draw calls, small tris, every stop on its platform facing the rails', () => {
   for (const touch of [false, true]) { const g = buildStationGeometry({ touch }); const t = T(g.body) + T(g.hull) + T(g.glow); assert.ok(t <= 600, `station ${t} tris`); assert.ok(T(g.glow) > 0) }
   for (const s of TRAIN_STOPS) { assert.ok(STATION_NAMES[s.id]); assert.equal(T(buildBoardsGeometry(s.id)), 8) }
-  const n = platformN('village'), f = platformFrame(n, 0.75), back = new THREE.Vector3(0, 0, -1).applyQuaternion(f.q), rail = dir(TRAIN_LAT, 0.75).multiplyScalar(R).sub(f.pos).normalize()
+  const n = platformN('village'), f = platformFrame(n, 0.75), back = new THREE.Vector3(0, 0, -1).applyQuaternion(f.q), railN = dir(TRAIN_LAT, 0.75), rail = railN.clone().multiplyScalar(R + height(railN)).sub(f.pos).normalize() // the rails sit on the ground (zones.jsx ringPos)
   assert.ok(back.dot(rail) > 0.9, 'local -z points at the rails'); assert.ok(new THREE.Vector3(0, 1, 0).applyQuaternion(f.q).dot(n.clone().normalize()) > 0.999)
   const M = { body: new THREE.MeshBasicMaterial(), glow: new THREE.MeshBasicMaterial() }
   const root = createStations(TRAIN_STOPS, platformN, M); assert.equal(root.children.length, TRAIN_STOPS.length)

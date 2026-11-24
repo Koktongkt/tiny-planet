@@ -5,10 +5,63 @@ export const DENS = 1.5 // scatter density factor so the bigger surface isn't sp
 export const K = 5 / R // converts old angular sizes (tuned at R=5) to the bigger world
 import { OLD_WORLD } from './world/flag.js'
 import * as LEGACY from './world/legacy.js'
-import { region } from './world/regions.js'
-// The layout (zones, terrain, curves) comes from one source. The reworked layout will replace NEW in later tasks;
-// until then both are today's values, and ?world=old (dev only) keeps selecting the frozen legacy module.
-const NEW = { ...LEGACY, ZONES: { ...Object.fromEntries(['lake', 'cliff', 'terraces', 'harbour', 'ruins', 'forest', 'giant', 'meadow', 'mills', 'peak', 'museum'].map(id => [id, region(id)])) } }
+import { region, OPEN_PLOTS, HOME_DIR, SEA_LAT, SEA_W } from './world/regions.js'
+export { SEA_LAT, SEA_W }
+// The layout (zones, terrain, curves) comes from one source. The reworked layout replaces NEW piece by piece in later
+// tasks (what it doesn't override is still today's), and ?world=old (dev only) keeps selecting the frozen legacy module.
+const ZN = Object.fromEntries(['lake', 'cliff', 'terraces', 'harbour', 'ruins', 'forest', 'giant', 'meadow', 'mills', 'peak', 'museum', 'village'].map(id => [id, region(id)]))
+
+// ---- the slope terrain: Keepers' Peak at the north pole, village and fields across the middle, sea at the south cap ----
+// A closed-form sum of cheap terms (height() runs for every terrain vertex, every placement and the player each frame).
+// Each local term tests a dot product against a precomputed cosine before paying for the acos.
+const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+const NOISE_K = 0.6, RAMP_H = 0.9, PEAK_H = 1.6, PEAK_W = 2.5 // base noise scale; latitude ramp; Peak dome height / width (x r)
+const SEA_FLOOR = SEA_W - 0.4, SHELF = SEA_W - 0.06 // the sea bed, and the wadeable shelf just off the shore
+const TERR_STEP = 0.15, TERR_HILL = 1.05, LAKE_FLOOR = -0.55, HARB_FLOOR = -0.6
+const LAKE_DIP = 0.22 // the ramp sags around the lake so its shore sits just above LAKE_W (see lakeDip)
+const latRamp = (lat) => RAMP_H * sst(SEA_LAT, Math.PI / 2, lat)
+const sp = (z, lim) => ({ x: z.x, y: z.y, z: z.z, r: z.r, c: Math.cos(lim) }) // a term's centre + the cosine of its reach
+const T = { peak: sp(ZN.peak, ZN.peak.r * PEAK_W), meadow: sp(ZN.meadow, ZN.meadow.r + 0.2), giant: sp(ZN.giant, ZN.giant.r * 2.6), cliff: sp(ZN.cliff, ZN.cliff.r + 0.04),
+  terraces: sp(ZN.terraces, ZN.terraces.r + 0.05), lake: sp(ZN.lake, ZN.lake.r * 2.6), harbour: sp(ZN.harbour, ZN.harbour.r * 1.3) }
+const TERR_BASE = latRamp(ZN.terraces.lat) + 0.04 // the steps sit level on the ramp at the terraces' centre
+const lakeDip = (a) => LAKE_DIP * sst(ZN.lake.r * 2.6, ZN.lake.r * 1.2, a)
+// rolling ground before any flattening: noise (calmer on the Peak and along the coast), ramp, dome, meadow bumps, giant hill
+function land(x, y, z) {
+  const lat = Math.asin(Math.max(-1, Math.min(1, y)))
+  let calm = 0.45 + 0.55 * sst(SEA_LAT, SEA_LAT + 0.3, lat), h = 0
+  let d = x * T.peak.x + y * T.peak.y + z * T.peak.z
+  if (d > T.peak.c) { const a = Math.acos(Math.min(1, d)), k = sst(ZN.peak.r * PEAK_W, 0, a); h += PEAK_H * k; calm *= 1 - 0.85 * k }
+  h += calm * NOISE_K * (0.29 * Math.sin(2.7 * x + 1.3) * Math.sin(3.1 * y + 0.4) * Math.sin(2.3 * z + 2.1) + 0.08 * Math.sin(7 * x + 5 * z)) + latRamp(lat)
+  d = x * T.meadow.x + y * T.meadow.y + z * T.meadow.z
+  if (d > T.meadow.c) h += sst(ZN.meadow.r + 0.2, ZN.meadow.r * 0.4, Math.acos(Math.min(1, d))) * 0.38 * (0.5 + 0.5 * Math.sin(x * 15 + 1) * Math.sin(z * 13 + y * 9))
+  d = x * T.giant.x + y * T.giant.y + z * T.giant.z
+  if (d > T.giant.c) h += 0.85 * sst(ZN.giant.r * 2.6, ZN.giant.r * 0.3, Math.acos(Math.min(1, d)))
+  d = x * T.lake.x + y * T.lake.y + z * T.lake.z
+  if (d > T.lake.c) h -= lakeDip(Math.acos(Math.min(1, d)))
+  return h
+}
+// level spots: blended toward the ground height at their centre (flat inside r, eased out over the next `ease` rad)
+const flatSpot = (lat, lon, r, ease) => { const c = Math.cos(lat); const x = c * Math.sin(lon), y = Math.sin(lat), z = c * Math.cos(lon); return { x, y, z, r, ease, c: Math.cos(r + ease), h: land(x, y, z) } }
+const FLAT = [flatSpot(ZN.village.lat, ZN.village.lon, ZN.village.r, 0.06), flatSpot(HOME_DIR.lat, HOME_DIR.lon, 2.6 / R, 0.08), ...OPEN_PLOTS.map(p => flatSpot(p.lat, p.lon, p.r, 0.06))]
+const CLIFF_TOP = land(ZN.cliff.x, ZN.cliff.y, ZN.cliff.z) + LEGACY.CLIFF_H // a level mesa top, CLIFF_H above the ground at its centre
+function slopeHeight(n) {
+  const L = Math.hypot(n.x, n.y, n.z), x = n.x / L, y = n.y / L, z = n.z / L
+  let h = land(x, y, z), d, a
+  for (let i = 0; i < FLAT.length; i++) { const f = FLAT[i]; d = x * f.x + y * f.y + z * f.z; if (d > f.c) h += (f.h - h) * sst(f.r + f.ease, f.r, Math.acos(Math.min(1, d))) }
+  const zc = ZN.cliff; d = x * T.cliff.x + y * T.cliff.y + z * T.cliff.z
+  if (d > T.cliff.c) { a = Math.acos(Math.min(1, d)); h += (CLIFF_TOP - h) * sst(zc.r + 0.03, zc.r, a) + 0.04 * Math.sin(x * 40) * sst(zc.r, 0, a) }
+  const zt = ZN.terraces; d = x * T.terraces.x + y * T.terraces.y + z * T.terraces.z
+  if (d > T.terraces.c) { a = Math.acos(Math.min(1, d)); const f = TERR_HILL * Math.max(0, 1 - a / zt.r) / TERR_STEP, st = (Math.floor(f) + sst(0.82, 1, f - Math.floor(f))) * TERR_STEP; h += (st + TERR_BASE - h) * sst(zt.r + 0.05, zt.r - 0.01, a) }
+  const zl = ZN.lake; d = x * T.lake.x + y * T.lake.y + z * T.lake.z
+  if (d > T.lake.c) h += (LAKE_FLOOR - h) * sst(zl.r * 1.15, zl.r * 0.55, Math.acos(Math.min(1, d)))
+  const zh = ZN.harbour; d = x * T.harbour.x + y * T.harbour.y + z * T.harbour.z
+  if (d > T.harbour.c) h += (HARB_FLOOR - h) * sst(zh.r * 1.12, zh.r * 0.6, Math.acos(Math.min(1, d)))
+  // the sea: a 0.06-wide shoreline band drops to a wadeable shelf, which falls away to the sea bed further out
+  const lat = Math.asin(Math.max(-1, Math.min(1, y)))
+  if (lat < SEA_LAT + 0.02) h += (SHELF - (SHELF - SEA_FLOOR) * sst(SEA_LAT - 0.03, SEA_LAT - 0.08, lat) - h) * sst(SEA_LAT + 0.02, SEA_LAT - 0.04, lat)
+  return h
+}
+const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), height: slopeHeight }
 const W = OLD_WORLD ? LEGACY : NEW
 // biome / zone centres (lat, lon, angular radius)
 export const ZONES = W.ZONES
