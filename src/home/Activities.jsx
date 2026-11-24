@@ -9,16 +9,17 @@ import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { HOME, ROOM } from './state.js'
+import { HOME, ROOM, freeAt, roomToWorld } from './state.js'
 import { atRoom } from '../game/prompt/anchors.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { Box, W } from './interior.jsx'
-import { SPOTS } from './interior.jsx'
+import { SPOTS, LAYOUT, polar } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { T, q } from '../common.jsx'
+import { makeWalk, stepWalk, makeIdle, stepIdle, pickSpot, pickGlance } from './homeLife.js'
 import { G, emit, toast, newDay } from '../game/store.js'
 import { haveFor, RECIPES, ITEMS, playFood, finishDish } from '../game/craft.js'
-import { startAct, POSES } from '../act.js'
+import { startAct, POSES, ACT } from '../act.js'
 import { CAT } from '../pets/catState.js'
 
 // ---------- layout (room-local) ----------
@@ -58,6 +59,27 @@ Object.assign(POSES, {
     B.root.position.y -= 0.07 * w; mix(B.root, 'x', 0.3); mix(B.chest, 'x', 0.4); mix(B.head, 'x', 0.4)
     for (const k of ['L', 'R']) { mix(B['th' + k], 'x', k === 'L' ? -1.25 : -0.55); mix(B['sh' + k + 'n'], 'x', k === 'L' ? 1.55 : 1.05); mix(B['ft' + k], 'x', -0.25) }
     mix(B.upR, 'x', -1.2 + shake); mix(B.upR, 'z', 0.15); mix(B.foR, 'x', -0.6); mix(B.upL, 'x', -1.1); mix(B.upL, 'z', -0.15); mix(B.foL, 'x', -0.7) },
+  // ---- part A: idle moments (eased in and out by her act weight w; small, readable gestures) ----
+  perch(B, mix, st, t, w) { seat(B, mix, w, 0); const k = st.actT || 0
+    mix(B.head, 'y', Math.sin(k * 0.45) * 0.4); mix(B.head, 'x', 0.05 + Math.sin(k * 0.3) * 0.05); mix(B.chest, 'x', 0.1); mix(B.head, 'z', Math.sin(k * 0.8) * 0.05)
+    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -0.55); mix(B['up' + k2], 'z', sd * -0.12); mix(B['fo' + k2], 'x', -0.55) } },
+  smell(B, mix, st, t, w) { const k = st.actT || 0, lean = Math.min(1, k / 0.8), ah = Math.max(0, Math.sin(Math.min(1, Math.max(0, (k - 1.6) / 1.2)) * Math.PI))
+    mix(B.root, 'x', 0.1 * lean); mix(B.chest, 'x', 0.2 * lean - 0.12 * ah); mix(B.head, 'x', 0.22 * lean - 0.2 * ah); mix(B.head, 'z', 0.15 * ah)
+    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', 0.45); mix(B['up' + k2], 'z', sd * 0.08); mix(B['fo' + k2], 'x', -0.35) } },
+  leaf(B, mix, st, t, w) { const k = st.actT || 0, stroke = Math.sin(k * 4) * 0.12 * Math.min(1, k / 0.6)
+    mix(B.chest, 'x', 0.15); mix(B.head, 'x', 0.15); mix(B.head, 'z', 0.1); mix(B.upR, 'x', -1.15 + stroke); mix(B.upR, 'z', 0.12); mix(B.foR, 'x', -0.35 - stroke)
+    mix(B.upL, 'x', -0.15); mix(B.foL, 'x', -0.4) },
+  browse(B, mix, st, t, w) { const k = st.actT || 0
+    mix(B.head, 'x', -0.3); mix(B.head, 'y', Math.sin(k * 0.9) * 0.25); mix(B.head, 'z', 0.08); mix(B.chest, 'x', -0.05)
+    mix(B.upR, 'x', -0.85); mix(B.upR, 'z', -0.15); mix(B.foR, 'x', -1.9); mix(B.upL, 'x', -0.45); mix(B.upL, 'z', 0.2); mix(B.foL, 'x', -1.25) },
+  warm(B, mix, st, t, w) { const k = st.actT || 0, rub = Math.sin(k * 7) * 0.1 * (Math.sin(k * 0.8) > 0.2 ? 1 : 0)
+    mix(B.chest, 'x', 0.12); mix(B.head, 'x', 0.12); mix(B.root, 'x', 0.05)
+    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -1.5); mix(B['up' + k2], 'z', sd * -0.12); mix(B['fo' + k2], 'x', -0.7); mix(B['fo' + k2], 'y', sd * rub) } }, // hands up at chest height, palms to the fire
+  gaze(B, mix, st, t, w) { const k = st.actT || 0
+    // the sill is above her head: hands clasped behind her, chin up, a slow look along the view, up on her toes now and then
+    const toe = Math.max(0, Math.sin(k * 1.3) - 0.6) * 2.5
+    mix(B.head, 'x', -0.3); mix(B.head, 'y', Math.sin(k * 0.6) * 0.3); mix(B.chest, 'x', -0.06); mix(B.hips, 'z', Math.sin(k * 0.5) * 0.04); B.root.position.y += 0.008 * toe * w
+    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', 0.5); mix(B['up' + k2], 'z', sd * -0.1); mix(B['fo' + k2], 'x', -0.4); mix(B['ft' + k2], 'x', 0.5 * toe) } },
 })
 
 // ---------- particles: soft steam, gold sparkles, sleepy z's (one Points call each, room-local) ----------
@@ -178,18 +200,107 @@ async function feedCat() {
 }
 if (typeof window !== 'undefined') window.__homeAct = { sleep: () => sleep(true), nap: () => sleep(false), cook, bath, tea, read, water: (i = 0) => water(PLANTS[i]), feed: feedCat, A }
 
+// ---------- part A: she walks the last steps to an activity, turns to face it, then starts ----------
+// (the __homeAct debug calls above stay direct: no walk)
+const faceTo = (from, x, z) => Math.atan2(x - from[0], z - from[1])
+function goThen(stand, yaw, fn, idle = false) {
+  if (HOME.busy || A.doing) return
+  if (HOME.cancelIdle) HOME.cancelIdle()
+  A.doing = 'walk'; A.walk = { W: makeWalk(HOME.hp, stand, yaw), fn, idle }
+}
+function stepWalkTo(dt) {
+  const w = A.walk; if (!w) return
+  const st = HOME.inside ? stepWalk(w.W, HOME.hp, dt) : 'cancelled'
+  if (st === 'walking' || st === 'turning') return
+  A.walk = null; A.doing = null
+  if (st === 'done' || st === 'stuck') w.fn()
+}
+const GO = {
+  sleep: (full) => goThen(BED_STAND, Math.atan2(BED.head[0], BED.head[1]), () => sleep(full)),
+  cook: () => goThen(COOK.stand, COOK.yaw, cook),
+  bath: () => goThen(BATH_STAND, Math.PI, bath),
+  tea: () => goThen([TABLE.x, TABLE.z - 0.32], 0, tea),
+  read: () => goThen(READ_STAND, STOOL.face, read),
+  water: (pl) => goThen(pl.stand, faceTo(pl.stand, pl.x, pl.z), () => water(pl)),
+  feed: () => { if (CAT.bowl > 0) return feedCat(); goThen(FEED_STAND, faceTo(FEED_STAND, BOWL.x, BOWL.z), feedCat) },
+}
+
+// ---------- part A: idle moments. After a long stand she walks to one thing close by and does something small ----------
+// a spot: where to stand (the first free candidate), which way to face, her pose and for how long; poufs seat her
+const firstFree = (cands) => cands.find(([x, z]) => freeAt(x, z, 0.09))
+const spot = (id, cands, look, pose, dur, o = {}) => { const stand = firstFree(cands); return stand && { id, stand, face: o.face ?? faceTo(stand, look[0], look[1]), pose, dur, ...o } }
+const STOVE = LAYOUT.stove, STOVE_FIRE = (() => { const c = Math.cos(STOVE.yaw), s = Math.sin(STOVE.yaw); return [STOVE.x + 0.24 * s, STOVE.z + 0.24 * c] })()
+const along = (pl, d) => { const c = Math.cos(pl.yaw), s = Math.sin(pl.yaw); return [pl.x + d * s, pl.z + d * c] } // d in front of a placed item
+const WIN = SPOTS.window, WIN_AT = polar(-112, ROOM.A)
+const pouf = (id, pl) => spot(id, [[pl.x, pl.z + 0.2], [pl.x + Math.sign(pl.x) * 0.2, pl.z + 0.1]], [pl.x, pl.z + 1], 'perch', 60,
+  { face: Math.atan2(Math.sign(pl.x) * 0.35, 1), seat: { x: pl.x, z: pl.z, y: 0.015 } })
+const IDLE_SPOTS = [
+  pouf('poufL', LAYOUT.poufL), pouf('poufR', LAYOUT.poufR),
+  spot('flowers', [PLANTS[2].stand, toward(PLANTS[2].x, PLANTS[2].z, 0.34)], [PLANTS[2].x, PLANTS[2].z], 'smell', 3.2),
+  spot('plant', [PLANTS[0].stand, toward(PLANTS[0].x, PLANTS[0].z, 0.4), toward(PLANTS[0].x, PLANTS[0].z, 0.48)], [PLANTS[0].x, PLANTS[0].z], 'leaf', 3),
+  spot('books', [polar(-37, 1.05), polar(-33, 0.95), polar(-40, 0.9)], polar(-37, ROOM.A), 'browse', 3.6),
+  spot('stove', [along(STOVE, 0.45), along(STOVE, 0.55)], [STOVE.x, STOVE.z], 'warm', 4.5, { when: c => c.night > 0.4 }),
+  spot('window', [polar(-100, 1.05), polar(-124, 1.05), polar(-112, 0.85)], WIN_AT, 'gaze', 4, { when: c => c.day > 0.5 }),
+].filter(Boolean)
+const IDLE = makeIdle(), _last = { x: 0, z: 0, yaw: 0 }
+function startIdle(sp) {
+  goThen(sp.stand, sp.face, () => {
+    if (!HOME.inside) return
+    startAct(sp.pose, { dur: sp.dur, lock: sp.dur, ease: 0.35, sound: false }); HOME.idleAct = sp.pose
+    if (sp.seat) pose({ ...sp.seat, yaw: sp.face, rate: 6, cam: false, idle: true })
+  }, true)
+}
+// any key, stick or tap, or leaving the house: she stops at once (off a pouf, an eased stand-up)
+HOME.cancelIdle = () => {
+  if (A.walk && A.walk.idle) { if (HOME.hp.target === A.walk.W.tgt) HOME.hp.target = null; A.walk = null; A.doing = null }
+  if (!HOME.idleAct) return
+  if (ACT.kind === HOME.idleAct) ACT.kind = null
+  if (HOME.pose && HOME.pose.idle) HOME.pose.goal = 0
+  HOME.idleAct = null
+}
+function stepIdleDirector(dt) {
+  const hp = HOME.hp, moved = Math.abs(hp.x - _last.x) + Math.abs(hp.z - _last.z) + Math.abs(hp.yaw - _last.yaw) > 1e-4
+  _last.x = hp.x; _last.z = hp.z; _last.yaw = hp.yaw
+  if (HOME.idleAct && ACT.kind !== HOME.idleAct) HOME.cancelIdle() // it ran its course
+  if (A.walk || HOME.idleAct) return // her own idle walk / pose: still the same idle stretch
+  const still = HOME.inside && !moved && !HOME.busy && !A.doing && !G.ui.panel
+  const blocked = /^cat/.test(G.near?.id || '') || CAT.state === 'rub' || CAT.state === 'petted' || (window.__herNoIdleWalk ?? false)
+  if (stepIdle(IDLE, { still, blocked }, dt) !== 'walk') return
+  const sp = pickSpot(hp, IDLE_SPOTS, { day: T.day ?? 1 - T.night, night: T.night }); if (sp) startIdle(sp)
+}
+if (typeof window !== 'undefined') window.__homeIdle = { spots: IDLE_SPOTS, start: (id) => { const sp = IDLE_SPOTS.find(s => s.id === id); if (sp) startIdle(sp) }, IDLE }
+
+// ---------- part A: glances. Now and then she looks at Mochi (when he's up to something), the window, the fire ----------
+const GL = { what: null, until: 0, next: 3 }, _gv = new THREE.Vector3()
+const CAT_BUSY = new Set(['wander', 'chase', 'groom', 'stretch', 'knead', 'rub', 'bat', 'eat', 'pounce', 'stalk'])
+function stepGlance(now) {
+  const hp = HOME.hp, d = (p) => Math.hypot(hp.x - p[0], hp.z - p[1])
+  if (typeof window === 'undefined') return
+  window.__herNearStove = HOME.inside && d(STOVE_FIRE) < 0.6
+  window.__herOnRug = HOME.inside && Math.hypot(hp.x, hp.z) < 0.95
+  if (now < GL.next) return
+  GL.next = now + 5 + Math.random() * 4; GL.until = now + 1.6 + Math.random() * 1.0
+  GL.what = pickGlance({ catD: Math.hypot(hp.x - CAT.x, hp.z - CAT.z), catBusy: CAT_BUSY.has(CAT.state), day: T.day ?? 1 - T.night, night: T.night, windowD: d([WIN.x, WIN.z]), stoveD: d(STOVE_FIRE) })
+}
+if (typeof window !== 'undefined') window.__herInterest = () => {
+  if (!HOME.inside || !GL.what || performance.now() / 1000 > GL.until || !HOME.roomObj) return null
+  if (GL.what === 'cat') return roomToWorld(CAT.x, (CAT.y || 0) + 0.08, CAT.z, _gv)
+  if (GL.what === 'window') return roomToWorld(WIN.x, WIN.y + 0.12, WIN.z, _gv)
+  return roomToWorld(STOVE_FIRE[0], 0.12, STOVE_FIRE[1], _gv)
+}
+
 // ---------- prompts ----------
 if (!HOME.actHooked) { HOME.actHooked = true
   HOME.near.push((consider) => {
     if (!HOME.inside || HOME.busy || A.doing) return
     const hp = HOME.hp, d = (x, z) => Math.hypot(hp.x - x, hp.z - z)
-    consider({ kind: 'ext', inside: true, id: 'bed', at: atRoom(BED.x, BED.z, 0.45), icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => sleep(false) }, act: () => sleep(true) }, d(BED_STAND[0], BED_STAND[1]), 0.26)
-    const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, at: atRoom(COOK.stand[0], COOK.stand[1], 0.75), icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: cook }, d(COOK.stand[0], COOK.stand[1]), 0.22)
-    consider({ kind: 'ext', inside: true, id: 'tub', at: atRoom(BATH_STAND[0], BATH_STAND[1], 0.6), icon: 'water', verb: 'Take', name: 'a bath', act: bath }, d(BATH_STAND[0], BATH_STAND[1]), 0.3)
-    consider({ kind: 'ext', inside: true, id: 'tea', at: atRoom(TABLE.x, TABLE.z, 0.55), icon: 'teacup', verb: 'Make', name: 'tea', act: tea }, d(TABLE.x, TABLE.z - 0.32), 0.2)
-    consider({ kind: 'ext', inside: true, id: 'read', at: atRoom(STOOL.x, STOOL.z, 0.6), icon: 'book', verb: 'Read', name: 'a book', act: read }, d(READ_STAND[0], READ_STAND[1]), 0.22)
-    for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, at: atRoom(pl.stand[0], pl.stand[1], 0.55), icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
-    consider({ kind: 'ext', inside: true, id: 'feedcat', at: atRoom(BOWL.x, BOWL.z, 0.3), icon: 'fish', verb: 'Feed', name: CAT.name, act: feedCat }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
+    consider({ kind: 'ext', inside: true, id: 'bed', at: atRoom(BED.x, BED.z, 0.45), icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => GO.sleep(false) }, act: () => GO.sleep(true) }, d(BED_STAND[0], BED_STAND[1]), 0.26)
+    const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, at: atRoom(COOK.stand[0], COOK.stand[1], 0.75), icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: GO.cook }, d(COOK.stand[0], COOK.stand[1]), 0.22)
+    consider({ kind: 'ext', inside: true, id: 'tub', at: atRoom(BATH_STAND[0], BATH_STAND[1], 0.6), icon: 'water', verb: 'Take', name: 'a bath', act: GO.bath }, d(BATH_STAND[0], BATH_STAND[1]), 0.3)
+    consider({ kind: 'ext', inside: true, id: 'tea', at: atRoom(TABLE.x, TABLE.z, 0.55), icon: 'teacup', verb: 'Make', name: 'tea', act: GO.tea }, d(TABLE.x, TABLE.z - 0.32), 0.2)
+    consider({ kind: 'ext', inside: true, id: 'read', at: atRoom(STOOL.x, STOOL.z, 0.6), icon: 'book', verb: 'Read', name: 'a book', act: GO.read }, d(READ_STAND[0], READ_STAND[1]), 0.22)
+    for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, at: atRoom(pl.stand[0], pl.stand[1], 0.55), icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => GO.water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
+    consider({ kind: 'ext', inside: true, id: 'feedcat', at: atRoom(BOWL.x, BOWL.z, 0.3), icon: 'fish', verb: 'Feed', name: CAT.name, act: GO.feed }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
   })
 }
 
@@ -207,7 +318,9 @@ function Dynamic() {
     dt = Math.min(dt, 0.05); const now = performance.now() / 1000, ps = HOME.pose
     if (ps) { ps.k += ((ps.goal) - ps.k) * Math.min(1, dt * ps.rate); if (ps.goal === 0 && ps.k < 0.01) HOME.pose = null }
     const scale = size.height * gl.getPixelRatio() / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)); for (const k in fx) fx[k].tick(dt, scale)
-    if (!HOME.inside) return
+    stepWalkTo(dt)
+    if (!HOME.inside) { if (HOME.idleAct) HOME.cancelIdle(); return }
+    stepIdleDirector(dt); stepGlance(now)
     // steam: always a wisp from the tub, lots while she soaks; the kettle / pot while cooking or making tea
     if (Math.random() < dt * (A.soak ? 14 : 1.2)) fx.steam.emit(TUB.x + (Math.random() - 0.5) * 0.2, TUB.h, TUB.z + (Math.random() - 0.5) * 0.2, 1, { spread: 0.05, up: 0.09, size: A.soak ? 0.16 : 0.11, life: 2.4 })
     if (A.pot && Math.random() < dt * 10) fx.steam.emit(COOK.x, COOK.y + 0.13, COOK.z, 1, { spread: 0.04, up: 0.12, size: 0.09, life: 1.4 })

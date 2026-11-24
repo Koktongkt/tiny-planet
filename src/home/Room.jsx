@@ -40,7 +40,7 @@ HOME.enter = async () => {
   await fadeTo(0, 520)
 }
 HOME.exit = async () => {
-  if (HOME.busy || !HOME.inside || fading()) return; HOME.needDog && HOME.needDog(); HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
+  if (HOME.busy || !HOME.inside || fading()) return; if (HOME.cancelIdle) HOME.cancelIdle(); HOME.needDog && HOME.needDog(); HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
   await fadeTo(1, 380)
   const P = HOME.P; HOME.inside = false
   if (P && HOME.outN) { P.n.copy(HOME.outN); const f = HOME.outN.clone().sub(HOME.homeN); P.fwd.copy(f.addScaledVector(P.n, -f.dot(P.n)).normalize()).applyAxisAngle(P.n, 1.25); /* step out along the porch so the follow camera clears the house */ P.target = null; P.h = 0; P.vy = 0 }
@@ -57,6 +57,7 @@ HOME.stepInside = (dt, KEYS, P, obj) => {
   if (CAM.yaw) { hp.yaw -= CAM.yaw; CAM.yaw = 0 }
   if (PAD.active && PAD.mag > 0.12 && !f && !turn) { const want = HOME.camYaw - Math.atan2(PAD.x, PAD.y); /* camera-relative: up = away from the camera, right = screen right (the old +PI mirrored both axes) */ let d = want - hp.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); hp.yaw += d * Math.min(1, dt * 9); f = Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(d) < 1.6 ? 1 : 0.3) }
   if (f || turn) hp.target = null
+  if ((f || turn) && HOME.cancelIdle) HOME.cancelIdle() // part A: any input ends an idle walk / idle pose at once
   if (hp.target) { const dx = hp.target.x - hp.x, dz = hp.target.z - hp.z, d = Math.hypot(dx, dz); if (d < 0.05) hp.target = null; else { let dd = Math.atan2(dx, dz) - hp.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); hp.yaw += dd * Math.min(1, dt * 10); f = Math.abs(dd) < 1.2 ? 1 : 0.2 } }
   if (HOME.busy || (G.ui.panel) || actLocked()) f = turn = 0
   const run = KEYS.shift || (PAD.active && PAD.run)
@@ -163,7 +164,7 @@ export function Room() {
       if (HOME.playerObj) HOME.playerObj.traverse(o => o.layers.enable(LAYER))
     }
   })
-  const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
+  const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); if (HOME.cancelIdle) HOME.cancelIdle(); const l = ref.current.worldToLocal(e.point.clone()); HOME.hp.target = { x: l.x, z: l.z } }
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
     <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><WindowLight /><Lamp /><NightGlow />
     <Merge><Shell /></Merge><BathWalls />

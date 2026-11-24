@@ -1,6 +1,6 @@
 // Her action animations (polish): a tiny shared state read by the traveller rig + movement, set by the game layer.
 // Kept dependency-free so it sits in the startup chunk for ~1 KB; sparkles render from the lazy game chunk.
-export const ACT = { kind: null, item: null, t0: 0, dur: 0, lock: 0, spark: null }
+export const ACT = { kind: null, item: null, t0: 0, dur: 0, lock: 0, ease: 0, spark: null }
 // debug: ?act=pick&actt=0.4 freezes her in an action pose (with sparkles) for screenshots
 const Q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams()
 export const FREEZE = Q.get('act') ? { kind: Q.get('act'), item: Q.get('item'), t: +(Q.get('actt') ?? 0.4) } : null
@@ -21,7 +21,7 @@ export function blip(kind = 'pick') {
 }
 /** start an action pose; movement locks for its duration. spark: a world position (THREE.Vector3, planet-local) for the sparkle burst */
 export function startAct(kind, o = {}) {
-  ACT.kind = kind; ACT.item = o.item ?? null; ACT.t0 = performance.now(); ACT.dur = o.dur ?? DURS[kind] ?? 0.8; ACT.lock = o.lock ?? ACT.dur
+  ACT.kind = kind; ACT.item = o.item ?? null; ACT.t0 = performance.now(); ACT.dur = o.dur ?? DURS[kind] ?? 0.8; ACT.lock = o.lock ?? ACT.dur; ACT.ease = o.ease ?? 0 // ease: fixed in/out seconds (long idle poses), instead of the 16% / 22% ramps
   if (o.sound !== false) blip(o.sound || kind)
   if (o.spark) ACT.spark = { t0: performance.now() + (o.sparkDelay ?? 0) , pos: o.spark.clone ? o.spark.clone() : o.spark, n: o.sparkN ?? 10, col: o.sparkCol }
   return ACT.dur
@@ -31,7 +31,7 @@ export function tickAct(st) {
   if (FREEZE) { st.act = FREEZE.kind; st.actItem = FREEZE.item; st.ownAct = true; st.actT = FREEZE.t; st.actW = 1; ACT.kind = FREEZE.kind; ACT.t0 = performance.now() - FREEZE.t * 1000; ACT.lock = 1e9; return true }
   if (!ACT.kind) { if (st.act && st.actW > 0.01 && st.ownAct) { st.actW *= 0.8 } else if (st.ownAct) { st.act = null; st.actW = 0; st.ownAct = false } return false }
   const e = (performance.now() - ACT.t0) / 1000, k = Math.min(1, e / Math.max(0.001, ACT.dur))
-  st.act = ACT.kind; st.actItem = ACT.item; st.actDur = ACT.dur; st.ownAct = true; st.actT = e; st.actW = k < 0.16 ? k / 0.16 : k > 0.78 ? Math.max(0, (1 - k) / 0.22) : 1
+  st.act = ACT.kind; st.actItem = ACT.item; st.actDur = ACT.dur; st.ownAct = true; st.actT = e; st.actW = ACT.ease ? Math.max(0, Math.min(1, e / ACT.ease, (ACT.dur - e) / ACT.ease)) : k < 0.16 ? k / 0.16 : k > 0.78 ? Math.max(0, (1 - k) / 0.22) : 1
   if (e >= ACT.lock) { ACT.kind = null; return false }
   return true
 }

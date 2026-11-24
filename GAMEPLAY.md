@@ -132,6 +132,12 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
   - The camera renders only layer 5, which holds the room, her and the lights. The outside world costs nothing and can't show through.
   - The interior camera stays inside the walls. It eases after her and leans toward Mochi when he's close.
 - **The door:** press E at the blue door (inside) or at the Home house's front door (outside). A warm iris closes, she crosses over, and the follow camera lands behind her.
+- **She lives there** (`src/home/homeLife.js`, wired in `Activities.jsx`):
+  - Pressing E at an activity makes her walk the last steps to it and turn to face it before she starts. Any key cancels the walk.
+  - She glances at Mochi when he's close and up to something, at the window by day, and at the stove fire in the evening.
+  - Indoor fidgets suit a room: no kicking pebbles and no catching rain. She hums more by the warm stove. She only sits on the floor on the big round rug, and never lies back indoors.
+  - After about 15 s standing still, she walks once to something within about two steps and does a small thing there: sits on a pouf (until you move), smells the door flowers, touches a leaf of the big plant, browses the bookshelf, warms her hands at the stove (evening), or looks out of the window (daytime). Any key or tap ends it at once. Mochi's pet prompt or his ankle rubs hold it off.
+  - Debug: `__homeIdle.start('poufL'|'poufR'|'flowers'|'plant'|'books'|'stove'|'window')`.
 - **Decor:** placing a decor item from the Bag while indoors puts it on the floor in front of her. The ghost preview is green on free floor. The item is saved in `placed` with an `in: [x, z]` room position. Press E next to it to pick it up again.
 - **Mochi, the cat** (`src/pets/Cat.jsx`):
   - He stays indoors and runs a small state machine: nap (curled in the sunbeam, or on the bed), groom, stretch then yawn, chase the yarn ball (stalk, butt-wiggle, pounce), sit on the windowsill, knead the quilt, and wander.
