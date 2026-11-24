@@ -538,7 +538,8 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     if (aw > 0.001 && st.act) {
       const a = st.act, w = aw, cyc = t * (a === 'hoe' ? 2.2 : a === 'sweep' ? 3.2 : 1)
       const mix = (o, k, v) => { o.rotation[k] += (v - o.rotation[k]) * w }
-      if (a === 'sit') { B.root.position.y -= (st.seatDrop ?? 0.06) * w; for (const k of ['L', 'R']) { mix(B['th' + k], 'x', -1.5); mix(B['th' + k], 'z', 0); mix(B['sh' + k + 'n'], 'x', 1.45); mix(B['ft' + k], 'x', 0.05) }
+      if (cfg.ext?.act && cfg.ext.act(a, B, mix, st, t, w)) { /* her own action poses (lazy chunk) */ }
+      else if (a === 'sit') { B.root.position.y -= (st.seatDrop ?? 0.06) * w; for (const k of ['L', 'R']) { mix(B['th' + k], 'x', -1.5); mix(B['th' + k], 'z', 0); mix(B['sh' + k + 'n'], 'x', 1.45); mix(B['ft' + k], 'x', 0.05) }
         mix(B.chest, 'x', 0.06); mix(B.root, 'x', -0.04); for (const k of ['L', 'R']) { mix(B['up' + k], 'x', -0.45); mix(B['fo' + k], 'x', -0.6) }
         if (st.sitTalk) { mix(B.head, 'y', st.look || 0) } }
       else if (a === 'stretch') { const e = 0.5 - 0.5 * Math.cos(Math.min(1, ((t * 0.35) % 1) * 1.6) * Math.PI * 2); for (const [k, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k], 'z', sd * (-0.15 - 2.65 * e)); mix(B['up' + k], 'x', -0.2 * e); mix(B['fo' + k], 'x', -0.25 - 0.3 * e) } mix(B.chest, 'x', -0.18 * e); mix(B.head, 'x', -0.35 * e); B.root.position.y += 0.006 * e * w }
