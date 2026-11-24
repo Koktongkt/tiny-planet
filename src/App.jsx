@@ -162,6 +162,7 @@ function Moss() { // moss cushions on the tile rows (follow the roof slope) and 
   return <Instanced items={items} geo={geo} mat={useMemo(() => toon('#ffffff'), [])} />
 }
 const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3), c = i === 0 ? new THREE.Vector3(...CHIMNEY_TOP) : houseVariant(i).chimney; return { top: p.pos.clone().add(c.clone().applyQuaternion(p.q)), up: p.n } })
+const FZ = { k: 0, side: 1 } // fishing camera blend (see the follow camera)
 const SmokeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Smoke }))) // r7-ship: lazy (startup budget)
 
 function Butterflies() {
@@ -535,11 +536,13 @@ function Rig() {
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 2.2)) // polish: softer follow lag
     if (VIEW.mode === 'follow') {
       const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))
+      FZ.k += ((window.__game?.G?.ui?.fish ? 1 : 0) - FZ.k) * Math.min(1, dt * 1.6) // fishing: swing round to her side (her, the rod and the bobber in view)
+      if (FZ.k > 0.001) { _s.crossVectors(P.wUp, P.wFwd); goal.addScaledVector(_s, FZ.side * 1.8 * cz * FZ.k).addScaledVector(P.wFwd, 1.6 * cz * FZ.k).addScaledVector(P.wUp, -0.25 * cz * FZ.k) }
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
       const hit = RC.intersectObjects(OCC, false)[0]; if (hit) goal.copy(_v).addScaledVector(_u, Math.max(0.35, hit.distance - 0.12)).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist))
       camera.position.lerp(goal, k); camera.up.lerp(P.wUp, k).normalize()
-      look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.32).addScaledVector(P.wFwd, 0.35), k); camera.lookAt(look) // polish: gentler look-ahead
+      look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.32 - 0.12 * FZ.k).addScaledVector(P.wFwd, 0.35 + 0.15 * FZ.k), k); camera.lookAt(look) // polish: gentler look-ahead
     } else if (VIEW.mode === 'hero') {
       _s.crossVectors(P.wUp, P.wFwd)
       goal.copy(P.wPos).addScaledVector(P.wFwd, 0.95).addScaledVector(_s, 0.45).addScaledVector(P.wUp, 0.42)

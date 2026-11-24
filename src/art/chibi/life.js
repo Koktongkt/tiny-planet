@@ -41,7 +41,7 @@ export function makeLife(rnd = Math.random) {
 
 export function lifeStep(L, B, st, dt, t, R_, camera) {
   if (!(dt > 0)) return
-  const m = st.move || 0, act = st.act, aw = act ? st.actW ?? 1 : 0, ride = act === 'ride_bike' && aw > 0.3, busy = !!act && aw > 0.05 && !ride
+  const m = st.move || 0, act = st.act, aw = act ? st.actW ?? 1 : 0, ride = act === 'ride_bike' && aw > 0.3, busy = (!!act && aw > 0.05 && !ride) || !!st.fishing
   // ---- speed / run (phase advances ~7.4/s walking, ~10/s running) ----
   const dph = st.phase - L.ph; L.ph = st.phase; const rate = m > 0.05 ? dph / dt / m : 0
   L.run = approach(L.run, m > 0.3 && !ride && !busy ? clamp((rate - 8.3) / 1.6, 0, 1) : 0, 5, dt)
@@ -220,7 +220,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   if (ride) L.rideT += dt; else L.rideT = 0
   const W_ = typeof window !== 'undefined' ? window : null // debug hooks for the studio captures: __herMood, __herNear
   // her action poses (acts.js) say how an action feels: strain = effort, calm = eyes softly closed, wow = delighted
-  const am = busy && aw > 0.3 ? st.actMood : null; if (am === 'calm') L.fsq = Math.max(L.fsq, 0.75 * aw)
+  const am = (busy && aw > 0.3) || st.fishing ? st.actMood : null; if (am === 'calm') L.fsq = Math.max(L.fsq, 0.75 * aw)
   const hungryFace = L.fid === 'tummy' || L.fid === 'growl' || (L.fid === 'peek' && L.fu > FID.peek * 0.55)
   const mood = W_ && W_.__herMood ? W_.__herMood : am === 'strain' ? 'focus' : am === 'calm' ? 'happy' : am === 'wow' ? 'excited' : L.shut > 0.35 ? 'yawn' : (L.skip > 0.3 || wve > 0.3 || yme > 0.3) ? 'excited' : sleepy ? 'sleepy' : hungryFace ? 'hungry' : L.tired > 0.5 && !busy ? 'tired' : sleepy ? 'sleepy' : busy && EXCITED_ACTS.has(act) && aw > 0.3 ? 'excited' : ride ? (L.rideT % 7 < 4.6 ? 'focus' : 'happy') : 'happy'
   if (mood !== L.mood) { L.mood = mood; L.moodT = 0 } else L.moodT += dt
