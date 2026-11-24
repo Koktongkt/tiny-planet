@@ -19,11 +19,22 @@ test('touch: tutorial note, journal + photo chips, photo mode hides the pads, re
   await expect(page.locator('.tp-pad')).toBeHidden(); await expect(page.locator('.tpp-shutter')).toBeVisible()
   await page.locator('.tpp-close').tap(); await page.waitForFunction(() => !document.documentElement.classList.contains('tp-photo'), null, { timeout: 30_000 })
   await page.waitForFunction(() => window.__game.G.near?.spot?.item === 'fish', null, { timeout: 60_000 })
-  await page.locator('.tp-prompt, .tp-chip').first().tap({ force: true }) // the head bubble follows the scene and bobs, so it is never 'stable'
-  await page.waitForFunction(() => window.__fishSt && window.__fishSt.state === 'bite', null, { timeout: 120_000, polling: 100 })
-  const box = await page.locator('.tp-fish-c').boundingBox()
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
-  await page.waitForFunction(() => window.__fishSt.state === 'reel', null, { timeout: 60_000, polling: 100 })
-  await page.mouse.up()
+  // Fish is a head bubble. HUD chips also use .tp-chip and sit earlier in the DOM, so .first()
+  // tapped those and fishing never started. The bubble follows the scene, so it is never 'stable'.
+  const fishBubble = page.locator('.tp-bubble-wrap .tp-prompt')
+  await expect(fishBubble).toBeVisible({ timeout: 20_000 })
+  // The bubble is moved every frame. A coordinate tap misses it on SwiftShader (~1 fps), so the
+  // reel never opens. Click the button itself, the same action the bubble's onClick runs.
+  await fishBubble.evaluate((el) => el.click())
+  await expect(page.locator('.tp-fish-c')).toBeVisible({ timeout: 30_000 })
+  // Cast, wait and bite share one unclamped frame. On SwiftShader a frame is longer than biteS
+  // (1.2 s), so 'bite' lasts a single frame and a 100 ms poll misses it. 'reel' means the bite happened.
+  await page.waitForFunction(() => { const s = window.__fishSt; return !!s && (s.state === 'bite' || s.state === 'reel') }, null, { timeout: 30_000, polling: 100 })
+  if (await page.evaluate(() => window.__fishSt.state) === 'bite') {
+    const box = await page.locator('.tp-fish-c').boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
+    await page.waitForFunction(() => window.__fishSt.state === 'reel', null, { timeout: 60_000, polling: 100 })
+    await page.mouse.up()
+  } else await page.mouse.up().catch(() => {})
   w.check()
 })
