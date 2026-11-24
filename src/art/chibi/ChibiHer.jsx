@@ -121,11 +121,11 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // mid-face around the nose blends into the head: in profile the line dips just under the eye, comes out to a rounded
 // nose point and slopes back to the mouth and chin. Broad enough (about 6 bake cells tall) for the marching-cubes body to
 // keep it. The body bake shades it with the normals of the head without the swell, so from the front it is invisible.
-// 12e (KT): smaller swells, and under the nose the line drops straight down to the mouth (no notch back into the face),
-// then curves gradually into the chin: a second, wider swell for the mouth overlaps the nose, its front almost level
-// with the nose tip.
+// 12f (KT, the sheet's side view): two bumps. The nose (12d's shape: a step out under the eye, a rounded top), then from
+// its tip the line goes down into a shallow dip and a second, slightly lower bump at the mouth, a touch behind the nose,
+// which curves smoothly back into the chin.
 // [[y, z, rx, ry, rz, smin k], ...]  (nose, then mouth)
-const MIDFACE = [[-0.0258, 0.0392, 0.0102, 0.0078, 0.0166, 0.003], [-0.0395, 0.0378, 0.0148, 0.0118, 0.0168, 0.0045]]
+const MIDFACE = [[-0.0258, 0.041, 0.0112, 0.0082, 0.0172, 0.003], [-0.0405, 0.0402, 0.0148, 0.0105, 0.0172, 0.0075]]
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
