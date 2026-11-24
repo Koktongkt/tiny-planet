@@ -25,7 +25,7 @@ Use this when designing or implementing a human in the approved "Cozy Chibi" sty
   - Kept pass 11's continuous lobe (KT preferred it over the pass-10 puffs after trying both).
   - Side locks slimmer again (azimuth ±1.04..±1.42, tip -0.041).
   - Ears small and flat against the head, turned forward (`EAR`, radii 0.0042 / 0.0094 / 0.0072), not round balls.
-  - Nose: a small skin bump in the hair geometry (`NOSE`, aSkin 2 = a touch pinker), centred just under the face surface so its ink only outlines it in profile; the hair ink hull reads a per-vertex `aInk` (nose 0.4) for a fine line.
+  - Nose (12b, KT: the shaded bump looked ugly from the front): a small skin bump in the hair geometry (`NOSE`, aSkin 2) that only shapes the profile. Its normals are the face's surface normal at the nose, so from the front it shades like the face (within ~1%, `uNoseK`), and it carries the painted nose dot (`uNoseDot`), so the front reads like pass 11. Centred just under the face surface so its ink only outlines it in profile; the hair ink hull reads a per-vertex `aInk` (nose 0.4) for a fine line.
   - Skin `#f3bf98` (warmer, deeper peach measured off the sheet; was `#f7d3b8`).
   - Satchel `BAG_S` 0.079.
 - Source of truth: `src/art/chibi/ChibiHer.jsx` and the optional hooks in `src/GhibliPerson.jsx`.
