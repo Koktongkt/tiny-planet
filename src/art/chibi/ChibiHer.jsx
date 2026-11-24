@@ -127,10 +127,10 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // curve into the chin, its front level with the box's at their seam.
 // [y, z, rx, ry, rz, smin k]           ellipsoid (radii)
 // [y, z, rx, hy, rz, smin k, round r]  oval column (cross-section radii, half height, edge radius)
-const MIDFACE = [[-0.0278, 0.043, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0336, 0.03, 0.0162, 0.0243, 0.0055]] // 12k values (KT's pick)
+const MIDFACE = [[-0.0278, 0.0397, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]] // LOCKED (KT, template): the 12k shapes moved back 0.0033, a soft nose and chin
 // 12m (KT: smoother in 3/4 without touching the side view): every swell recedes as MID_FADE * x^2 away from the centre
 // line. Zero on the centre line, so the profile is exactly the same; in 3/4 the swells ease back into the cheeks.
-const MID_FADE = 0 // KT went back to 12k (no fade); raise it to ease the swells into the cheeks in 3/4
+const MID_FADE = 0 // locked at 0; raise it to ease the swells into the cheeks in 3/4 (never changes the profile)
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 // a short vertical column with an oval cross-section (rx, rz), half height hy, rounded top/bottom edges r: a flat vertical
 // front with a crisp step in profile, but sides that round back into the cheeks in 3/4 (a box's side edge read as a beak)
