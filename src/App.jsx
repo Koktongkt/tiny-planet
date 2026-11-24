@@ -162,7 +162,7 @@ function Moss() { // moss cushions on the tile rows (follow the roof slope) and 
   return <Instanced items={items} geo={geo} mat={useMemo(() => toon('#ffffff'), [])} />
 }
 const CHIMNEYS = HOUSES.map((hn, i) => { const p = place(hn, HOUSE_LIFT, i * 1.3), c = i === 0 ? new THREE.Vector3(...CHIMNEY_TOP) : houseVariant(i).chimney; return { top: p.pos.clone().add(c.clone().applyQuaternion(p.q)), up: p.n } })
-const FZ = { k: 0, side: 1 } // fishing camera blend (see the follow camera)
+const FZ = { k: 0, side: 1 }, FZ_ACTS = { water: 0.7 } // tool-camera blend (see the follow camera)
 const SmokeLazy = lazy(() => import('./riverProps.jsx').then(m => ({ default: m.Smoke }))) // r7-ship: lazy (startup budget)
 
 function Butterflies() {
@@ -536,7 +536,8 @@ function Rig() {
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 2.2)) // polish: softer follow lag
     if (VIEW.mode === 'follow') {
       const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))
-      FZ.k += ((window.__game?.G?.ui?.fish ? 1 : 0) - FZ.k) * Math.min(1, dt * 1.6) // fishing: swing round to her side (her, the rod and the bobber in view)
+      const fzT = window.__game?.G?.ui?.fish ? 1 : FZ_ACTS[window.__act?.kind] || 0 // fishing / watering: swing round to her side (her, the tool and the water in view)
+      FZ.k += (fzT - FZ.k) * Math.min(1, dt * (fzT && fzT < 1 ? 3 : 1.6))
       if (FZ.k > 0.001) { _s.crossVectors(P.wUp, P.wFwd); goal.addScaledVector(_s, FZ.side * 1.8 * cz * FZ.k).addScaledVector(P.wFwd, 1.6 * cz * FZ.k).addScaledVector(P.wUp, -0.25 * cz * FZ.k) }
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist

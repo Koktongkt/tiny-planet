@@ -292,7 +292,7 @@ export function GameWorld() {
     if (anim.current[sp.id]) return
     camera.updateMatrixWorld(); _w.copy(sp.pos).applyMatrix4(planetRef.current.matrixWorld).project(camera)
     G.ui.fly = [...G.ui.fly, { id: sp.id + performance.now(), item: sp.item, x: (_w.x * 0.5 + 0.5) * innerWidth, y: (-_w.y * 0.5 + 0.5) * innerHeight }]; emit()
-    const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { item: sp.item, dur: isWater ? 1.0 : GESTURE_DUR[gestureOf(sp.item)], spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
+    const isWater = sp.item === 'water'; startAct(isWater ? 'water' : 'pick', { item: sp.item, dur: isWater ? 1.6 : GESTURE_DUR[gestureOf(sp.item)], spark: sp.pos, sparkDelay: 280, sparkN: 12, sparkCol: isWater ? 'water' : 'gold', sound: isWater ? 'water' : 'pick' })
     anim.current[sp.id] = { t0: performance.now() + 280 }
     if (freezePick == null) setTimeout(() => { markTaken(sp.id); add(sp.item); if (sp.item !== 'wool' && sp.item !== 'water') notePickup(G.s.hints, sp.item, G.s.day); G.onGather && G.onGather(sp.item); G.onActivity && G.onActivity(sp.forage !== undefined ? 'forage' : 'gather'); delete anim.current[sp.id]; force() }, 980)
   }
