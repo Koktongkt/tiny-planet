@@ -105,25 +105,25 @@ function cupGeo() {
 const cupMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
 
 function collarGeo() {
-  // cream wrap collar: short panels at the neck V, not hanging down the apron
+  // cream kimono-style V collar at the neck, visible in the cardigan opening
   const parts = []
   for (const sd of [-1, 1]) {
     const shape = new THREE.Shape()
-    shape.moveTo(sd * 0.002, 0.016)
-    shape.lineTo(sd * 0.018, 0.014)
-    shape.lineTo(sd * 0.016, -0.002)
-    shape.lineTo(sd * 0.004, 0.000)
+    shape.moveTo(sd * 0.002, 0.028)
+    shape.lineTo(sd * 0.024, 0.022)
+    shape.lineTo(sd * 0.016, -0.018)
+    shape.lineTo(0, -0.006)
     shape.closePath()
-    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false, steps: 1 })
-    g.translate(0, 0, -0.001)
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.007, bevelEnabled: false, steps: 1 })
+    g.translate(0, 0, 0.000)
     parts.push(paint(g, COLLAR))
   }
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
 function mittenGeo() {
-  const g = new THREE.SphereGeometry(0.0185, 12, 10)
-  g.scale(1.15, 0.95, 0.90)
+  const g = new THREE.SphereGeometry(0.0125, 10, 8)
+  g.scale(1.12, 0.92, 0.88)
   return paint(g, SKIN)
 }
 
@@ -145,7 +145,7 @@ function skirtGeo() {
 
 function apronGeo() {
   // hangs below the hands, wraps the belly, scalloped hem — not a flat chest rectangle
-  const w0 = 0.044, w1 = 0.072, top = 0.012, bot = -0.062, nx = 24, ny = 16, nSc = 5, amp = 0.014
+  const w0 = 0.048, w1 = 0.058, top = 0.010, bot = -0.036, nx = 24, ny = 16, nSc = 5, amp = 0.012
   const pos = [], idx = []
   for (let j = 0; j <= ny; j++) {
     for (let i = 0; i <= nx; i++) {
@@ -206,17 +206,25 @@ function tubeBetween(a, b, r0, r1, hex) {
 // still-pose arm: hanging sleeve, bent forearm, ends at the prop mitten (chest-local)
 function stillArmGeo(sd, sh, hand, hex) {
   const elbow = [
-    (sh[0] + hand[0]) * 0.40 + sd * 0.020,
-    Math.min(sh[1], hand[1]) - 0.046,
-    (sh[2] + hand[2]) * 0.40 + 0.010,
+    sh[0] * 0.72 + hand[0] * 0.28 + sd * 0.018,
+    Math.min(sh[1], hand[1]) - 0.050,
+    Math.max(sh[2], hand[2]) * 0.40 + 0.022,
   ]
-  const cap = new THREE.SphereGeometry(0.015, 10, 8); cap.translate(...sh)
-  const joint = new THREE.SphereGeometry(0.0135, 10, 8); joint.translate(...elbow)
+  const capPos = [sh[0], sh[1], sh[2]]
+  const cap = new THREE.SphereGeometry(0.017, 10, 8)
+  cap.scale(1.10, 0.95, 0.86)
+  cap.translate(...capPos)
+  // flattened yoke covers the torso's neck-skin armhole in 3/4 without a round back puff
+  const yoke = new THREE.SphereGeometry(0.022, 10, 8)
+  yoke.scale(0.90, 1.15, 1.25)
+  yoke.translate(sh[0] - sd * 0.004, sh[1] - 0.014, sh[2] - 0.022)
+  const joint = new THREE.SphereGeometry(0.0098, 8, 7); joint.translate(...elbow)
   const parts = [
+    paint(yoke, hex),
     paint(cap, hex),
-    tubeBetween(sh, elbow, 0.0160, 0.0138, hex),
+    tubeBetween(capPos, elbow, 0.0130, 0.0105, hex),
     paint(joint, hex),
-    tubeBetween(elbow, hand, 0.0138, 0.0112, hex),
+    tubeBetween(elbow, hand, 0.0105, 0.0085, hex),
   ]
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
@@ -239,32 +247,31 @@ function attachLook(root) {
   }
   const chestZ = (S.chest?.[1]?.z ?? 0.05)
   const bellyZ = (S.belly?.[1]?.z ?? 0.055)
-  add(chest, collarGeo(), [0, S.neckY - chestY - 0.026, chestZ * 0.58 + 0.004])
+  add(chest, collarGeo(), [0, S.neckY - chestY - 0.018, chestZ * 0.62 + 0.006])
   // skirt + apron on the hips; the painted cardigan hem (hemY: 'hip') is the wrap hem — no 3D peplum
   add(hips, skirtGeo(), [0, 0.000, 0], skirtMat)
   add(hips, apronGeo(), [0, 0.008, bellyZ + 0.002])
   const pin = new THREE.Mesh(pincushionGeo(), propMat)
-  pin.position.set(0.038, -0.048, bellyZ + 0.020)
+  pin.position.set(0.036, -0.028, bellyZ + 0.020)
   pin.scale.setScalar(1.28)
   pin.traverse(o => { o.layers.mask = root.layers.mask })
   hips.add(pin); out.push(pin)
   const cup = new THREE.Mesh(cupGeo(), cupMat)
-  cup.position.set(0, 0.018, chestZ + 0.050)
+  cup.position.set(0, 0.018, chestZ + 0.058)
   cup.rotation.set(0.32, 0.0, 0)
-  cup.scale.setScalar(1.70)
+  cup.scale.setScalar(1.88)
   cup.traverse(o => { o.layers.mask = root.layers.mask })
   chest.add(cup); out.push(cup)
   if (LIFE_OFF) {
-    const chestY = (S.bellyY + S.chestY) / 2
+    // two small hands cup the mug from the sides, mug clearly in front
     for (const sd of [-1, 1]) {
+      const hand = [sd * 0.042, 0.016, chestZ + 0.048]
       const mit = new THREE.Mesh(mittenGeo(), propMat)
-      mit.position.set(sd * (sd > 0 ? -0.002 : 0.024), 0.004, 0.013)
+      mit.position.set(...hand)
       mit.rotation.set(0.20, sd * -0.45, sd * 0.35)
-      mit.scale.set(1.10, 1.00, 0.96)
       mit.traverse(o => { o.layers.mask = root.layers.mask })
-      cup.add(mit)
-      const sh = [sd * (Math.abs(S.shL.x) + 0.000), S.shY - chestY - 0.002, S.shL.z + 0.014]
-      const hand = [sd * 0.031, 0.029, chestZ + 0.058]
+      chest.add(mit); out.push(mit)
+      const sh = [sd * Math.abs(S.shL.x), S.shY - chestY - 0.002, S.shL.z + 0.006]
       add(chest, stillArmGeo(sd, sh, hand, CARDIGAN), [0, 0, 0])
     }
   }
@@ -297,8 +304,8 @@ export const FUKU = {
   // no SDF long-skirt: a painted sack buries the arms so the hands cannot wrap the cup.
   // plump barrel torso; a 3D lilac skirt and cardigan flaps carry the silhouette instead.
   // still pose draws custom sleeves; body.arm / hand stay tiny so the skinned rig is hidden.
-  body: { H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.04, girth: 1.26, shoulder: 1.08, chestW: 1.14, bellyZ: 0.96, shX: 1.22, armA: 0.52,
-    armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.18, bootW: 1.20, bootH: 1.05, bootL: 0.92, hand: 0.08,
+  body: { H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.02, girth: 1.26, shoulder: 1.08, chestW: 1.14, bellyZ: 0.96, shX: 1.22, armA: 0.52,
+    armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.18, bootW: 1.20, bootH: 1.05, bootL: 0.92, hand: 0.01,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.20,
     anY: 0.036, footY: 0.014, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },

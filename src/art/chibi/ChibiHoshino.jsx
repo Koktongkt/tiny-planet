@@ -16,9 +16,9 @@ import { q } from '../../common.jsx'
 const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').matches
 const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f0c7a4'
-const HAIR_C = '#3f3732'
-const HAIR_GREY = '#7a736c'
-const HAIR_BAND = '#5c564f'
+const HAIR_C = '#4e3a2c'
+const HAIR_GREY = '#8a847c'
+const HAIR_BAND = '#7a5a44'
 const GLASS = '#2e2420'
 const JACKET = '#c09a66'
 const VEST = '#4e5238'
@@ -30,40 +30,40 @@ const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, bl
 const EAR = { x: 0.061, y: -0.012, z: 0.006 }
 function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 12, 9)
-  // skull-hugging cap; side part on -X; soft swept waves with volume on the top-right; forehead open
+  // small under-cap (not the silhouette). 4 chunky locks roll up and right from a left part,
+  // spilling past the head on the top-right and sides. Forehead stays open; no hook, no cloud.
   const parts = [
-    part(ball, [0.003, 0.010, -0.006], [0.061, 0.050, 0.056]),
-    part(ball, [0, -0.006, -0.028], [0.048, 0.031, 0.036]), // tight nape
-    // elongated waves, not round clumps. part on the left (-X), flow back and to the right.
-    part(ballS, [0.008, 0.048, 0.006], [0.032, 0.009, 0.022], [0.68, 0.38, 0.06]),
-    part(ballS, [0.026, 0.050, -0.004], [0.026, 0.009, 0.020], [0.62, 0.50, 0.08]),
-    part(ballS, [0.038, 0.040, 0.000], [0.020, 0.009, 0.018], [0.46, 0.72, 0.06]),
-    part(ballS, [0.016, 0.044, -0.022], [0.024, 0.008, 0.018], [0.56, 0.16, -0.05]),
-    part(ballS, [-0.028, 0.042, -0.002], [0.016, 0.007, 0.016], [0.52, -0.50, -0.06]),
-    part(ballS, [-0.014, 0.038, -0.022], [0.018, 0.007, 0.016], [0.48, -0.20, -0.04]),
-    // hairline covers the crown-front; stays above the brows, no hook or fringe bar
-    part(ballS, [0.010, 0.032, 0.044], [0.026, 0.011, 0.012], [0.20, 0.30, 0.04]),
-    part(ballS, [-0.018, 0.030, 0.042], [0.018, 0.010, 0.011], [0.16, -0.32, -0.03]),
+    // under-cap covers the scalp; locks hug it as elongated waves, spilling out to the sides
+    part(ball, [0.003, 0.008, -0.006], [0.058, 0.047, 0.054]),
+    part(ball, [0, -0.006, -0.028], [0.046, 0.030, 0.034]),
+    // 1. left of the part: low chunky lock, swept back, hugging
+    part(ballS, [-0.032, 0.028, 0.010], [0.018, 0.015, 0.024], [0.40, -0.55, -0.10]),
+    // 2. from the part, an elongated wave rolling over the crown toward the right (ridge, not a bun)
+    part(ballS, [0.008, 0.046, 0.006], [0.036, 0.012, 0.026], [0.58, 0.40, 0.08]),
+    // 3. top-right spill, more to the side than up
+    part(ballS, [0.048, 0.044, 0.008], [0.022, 0.013, 0.020], [0.40, 0.68, 0.08]),
+    // 4. right-side lock, past the temple
+    part(ballS, [0.060, 0.026, 0.006], [0.016, 0.020, 0.018], [0.25, 0.70, 0.08]),
+    // front hairline waves (above the brows, not a hanging hook)
+    part(ballS, [0.012, 0.032, 0.046], [0.026, 0.011, 0.010], [0.20, 0.30, 0.04]),
+    part(ballS, [-0.016, 0.030, 0.042], [0.016, 0.010, 0.010], [0.16, -0.30, -0.03]),
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
   ]
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
-  for (const k of [2, 3, 4, 5, 6, 7]) tagAW(parts[k], () => [2, 0.55])
-  for (const k of [8, 9]) tagAW(parts[k], () => [3, 0.30])
-  for (const k of [10, 11]) tagAW(parts[k], () => [3, 0])
+  for (const k of [2, 3, 4, 5, 6, 7]) tagAW(parts[k], () => [2, 0.6])
+  for (const k of [8, 9]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 function hoshinoGrey() {
   const ballS = new THREE.SphereGeometry(1, 10, 8)
-  // grey blended into the right temple, above the ear, following the swept waves
+  // soft grey streak in the right temple lock, blended, not a hard patch
   const parts = [
-    part(ballS, [0.050, 0.024, 0.004], [0.014, 0.018, 0.016], [0.16, 0.42, 0.08]),
-    part(ballS, [0.044, 0.038, -0.006], [0.013, 0.016, 0.015], [0.28, 0.52, 0.06]),
-    part(ballS, [0.052, 0.014, 0.002], [0.011, 0.014, 0.013], [0.10, 0.32, 0.06]),
+    part(ballS, [0.050, 0.032, 0.006], [0.015, 0.018, 0.016], [0.28, 0.55, 0.08]),
+    part(ballS, [0.048, 0.018, 0.002], [0.012, 0.014, 0.013], [0.16, 0.40, 0.06]),
   ]
-  tagAW(parts[0], () => [1, 0.45])
+  tagAW(parts[0], () => [1, 0.5])
   tagAW(parts[1], () => [1, 0.4])
-  tagAW(parts[2], () => [2, 0.4])
   return mergeHair(parts)
 }
 const HAIR_GEO = hoshinoHair()
@@ -89,35 +89,35 @@ const paint = (g, hex) => {
 let NB = null
 function notebookGeo() {
   if (NB) return NB
-  const open = 0.40
-  const coverW = 0.054, coverH = 0.056, coverT = 0.0032
-  const pageW = 0.047, pageH = 0.049, pageT = 0.0020
+  const open = 0.48
+  const coverW = 0.060, coverH = 0.064, coverT = 0.012
+  const pageW = 0.050, pageH = 0.054, pageT = 0.007
   const parts = []
+  const COVER = '#7a3224'
   for (const sd of [-1, 1]) {
     const yaw = sd * -open // outer edges toward +Z (camera)
     const cover = new THREE.BoxGeometry(coverW, coverH, coverT)
     cover.translate(sd * coverW * 0.5, 0, -coverT * 0.5)
     cover.rotateY(yaw)
-    parts.push(paint(cover, '#8a2e28'))
+    parts.push(paint(cover, COVER))
     const page = new THREE.BoxGeometry(pageW, pageH, pageT)
-    page.translate(sd * (pageW * 0.5 + 0.001), 0, pageT * 0.5 + 0.0005)
+    page.translate(sd * (pageW * 0.5 + 0.0015), 0, pageT * 0.5 + 0.0008)
     page.rotateY(yaw)
     parts.push(paint(page, '#f7f1e4'))
   }
-  const spine = new THREE.BoxGeometry(0.007, coverH, 0.006)
-  spine.translate(0, 0, -0.001)
-  parts.push(paint(spine, '#6e241e'))
-  // faint ruled lines on the right page
+  const spine = new THREE.BoxGeometry(0.012, coverH, 0.014)
+  spine.translate(0, 0, -0.004)
+  parts.push(paint(spine, '#5c241c'))
   for (const y of [0.010, -0.006]) {
-    const line = new THREE.BoxGeometry(0.030, 0.0007, 0.0005)
-    line.translate(pageW * 0.5 + 0.002, y, pageT + 0.0012)
+    const line = new THREE.BoxGeometry(0.032, 0.0007, 0.0005)
+    line.translate(pageW * 0.5 + 0.002, y, pageT + 0.0014)
     line.rotateY(-open)
     parts.push(paint(line, '#c8b09a'))
   }
   const book = mergeGeometries(parts); book.computeVertexNormals()
-  const shaft = new THREE.CylinderGeometry(0.0026, 0.0026, 0.044, 8)
-  const tip = new THREE.CylinderGeometry(0.0004, 0.0026, 0.009, 8)
-  tip.translate(0, 0.0265, 0)
+  const shaft = new THREE.CylinderGeometry(0.0024, 0.0024, 0.068, 8)
+  const tip = new THREE.CylinderGeometry(0.0004, 0.0024, 0.010, 8)
+  tip.translate(0, 0.039, 0)
   const pencil = mergeGeometries([paint(shaft, '#2a241c'), paint(tip, '#d2b48a')])
   pencil.computeVertexNormals()
   NB = { book, pencil }; return NB
@@ -143,77 +143,79 @@ function shirtCollarGeo() {
   // small points at the sides of the neck, tucked under the scarf — not a white blob under the chin
   const parts = []
   for (const sd of [-1, 1]) {
-    const g = new THREE.BoxGeometry(0.016, 0.010, 0.005)
-    g.rotateZ(sd * -0.55)
-    g.rotateX(-0.22)
-    g.translate(sd * 0.024, -0.002, 0.008)
+    const g = new THREE.BoxGeometry(0.016, 0.016, 0.006)
+    g.rotateZ(sd * -0.32)
+    g.rotateX(-0.36)
+    g.translate(sd * 0.014, 0.022, 0.016)
     parts.push(paint(g, SHIRT))
   }
   return mergeGeometries(parts)
 }
 
 function mittenGeo() {
-  const g = new THREE.SphereGeometry(0.0180, 12, 10)
-  g.scale(1.15, 0.95, 0.90)
+  const g = new THREE.SphereGeometry(0.0125, 10, 8)
+  g.scale(1.12, 0.92, 0.88)
   return paint(g, SKIN)
 }
 
 
 function scarfGeo() {
-  // knotted rust scarf with two hanging ends over the chest (custom mesh in the lazy chunk)
+  // one knotted rust scarf at the neck; two tails hang down the centre over the waistcoat
   const rust = '#c05438', rustD = '#9a3c28'
   const parts = []
-  const ring = new THREE.TorusGeometry(0.032, 0.0065, 10, 24)
+  const ring = new THREE.TorusGeometry(0.028, 0.0075, 10, 24)
   ring.rotateX(Math.PI / 2)
-  ring.scale(1.16, 0.68, 1.06)
-  ring.translate(0, 0.002, 0.006)
+  ring.scale(1.10, 0.72, 1.02)
+  ring.translate(0, 0.006, 0.004)
   parts.push(paint(ring, rust))
-  const knot1 = new THREE.SphereGeometry(0.010, 10, 8)
-  knot1.scale(1.45, 0.72, 1.05)
-  knot1.translate(0.000, -0.008, 0.030)
+  const knot1 = new THREE.SphereGeometry(0.011, 10, 8)
+  knot1.scale(1.35, 0.80, 1.10)
+  knot1.translate(0.000, -0.006, 0.028)
   parts.push(paint(knot1, rustD))
   const knot2 = new THREE.SphereGeometry(0.008, 8, 7)
-  knot2.scale(1.35, 0.65, 0.95)
-  knot2.translate(-0.006, -0.014, 0.032)
+  knot2.scale(1.25, 0.70, 0.95)
+  knot2.translate(-0.005, -0.012, 0.030)
   parts.push(paint(knot2, rust))
-  // two hanging ends over the upper chest, inside the jacket opening, above the small book
-  const endL = new THREE.BoxGeometry(0.024, 0.078, 0.011)
-  endL.rotateZ(0.18)
-  endL.translate(-0.030, -0.048, 0.040)
+  const endL = new THREE.BoxGeometry(0.015, 0.072, 0.008)
+  endL.rotateZ(0.06)
+  endL.translate(-0.009, -0.046, 0.032)
   parts.push(paint(endL, rust))
-  const endR = new THREE.BoxGeometry(0.022, 0.070, 0.011)
-  endR.rotateZ(-0.22)
-  endR.translate(0.028, -0.044, 0.042)
+  const endR = new THREE.BoxGeometry(0.014, 0.064, 0.008)
+  endR.rotateZ(-0.08)
+  endR.translate(0.009, -0.042, 0.034)
   parts.push(paint(endR, rustD))
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
 function lapelGeo() {
   const parts = []
-  const shade = '#a88454'
+  const shade = '#a88252' // slightly darker tan than the jacket, never red
   for (const sd of [-1, 1]) {
     const shape = new THREE.Shape()
-    shape.moveTo(sd * 0.002, 0.042)
-    shape.lineTo(sd * 0.030, 0.012)
-    shape.lineTo(sd * 0.022, -0.010)
-    shape.lineTo(sd * 0.002, 0.014)
+    shape.moveTo(sd * 0.006, 0.036)
+    shape.lineTo(sd * 0.028, 0.016)
+    shape.lineTo(sd * 0.022, -0.004)
+    shape.lineTo(sd * 0.008, 0.010)
     shape.closePath()
-    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.008, bevelEnabled: false, steps: 1 })
-    g.translate(sd * 0.014, 0.008, 0)
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.007, bevelEnabled: false, steps: 1 })
+    g.translate(sd * 0.020, 0.016, 0)
     parts.push(paint(g, shade))
   }
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
 function pocketGeo() {
-  const shade = '#a88454', slit = '#8a6a40'
+  const shade = '#a88252', bag = '#b08a58', slit = '#8a6a40'
   const parts = []
   for (const sd of [-1, 1]) {
-    const flap = new THREE.BoxGeometry(0.026, 0.020, 0.007)
-    flap.translate(sd * 0.044, 0, 0)
+    const pouch = new THREE.BoxGeometry(0.030, 0.024, 0.009)
+    pouch.translate(sd * 0.048, -0.008, 0.004)
+    parts.push(paint(pouch, bag))
+    const flap = new THREE.BoxGeometry(0.032, 0.011, 0.010)
+    flap.translate(sd * 0.048, 0.007, 0.007)
     parts.push(paint(flap, shade))
-    const line = new THREE.BoxGeometry(0.022, 0.0020, 0.002)
-    line.translate(sd * 0.044, 0.008, 0.004)
+    const line = new THREE.BoxGeometry(0.026, 0.0020, 0.002)
+    line.translate(sd * 0.048, 0.003, 0.010)
     parts.push(paint(line, slit))
   }
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
@@ -232,20 +234,34 @@ function tubeBetween(a, b, r0, r1, hex) {
 }
 
 // still-pose arm: hanging sleeve, bent forearm, ends at the prop mitten (chest-local)
-function stillArmGeo(sd, sh, hand, hex) {
+function stillArmGeo(sd, sh, hand, hex, cuff) {
   const elbow = [
-    (sh[0] + hand[0]) * 0.40 + sd * 0.020,
-    Math.min(sh[1], hand[1]) - 0.046,
-    (sh[2] + hand[2]) * 0.40 + 0.010,
+    sh[0] * 0.70 + hand[0] * 0.30 + sd * 0.016,
+    Math.min(sh[1], hand[1]) - 0.028,
+    Math.max(sh[2], hand[2]) * 0.45 + 0.016,
   ]
-  const cap = new THREE.SphereGeometry(0.015, 10, 8); cap.translate(...sh)
-  const joint = new THREE.SphereGeometry(0.0135, 10, 8); joint.translate(...elbow)
+  // pad sits on the real shoulder (covers the skin nub) and is flattened so 3/4 has no back ball
+  const capPos = [sh[0], sh[1], sh[2]]
+  const cap = new THREE.SphereGeometry(0.017, 10, 8)
+  cap.scale(1.10, 0.95, 0.86)
+  cap.translate(...capPos)
+  const yoke = new THREE.SphereGeometry(0.022, 10, 8)
+  yoke.scale(0.90, 1.15, 1.25)
+  yoke.translate(sh[0] - sd * 0.004, sh[1] - 0.014, sh[2] - 0.022)
+  const joint = new THREE.SphereGeometry(0.0098, 8, 7); joint.translate(...elbow)
   const parts = [
+    paint(yoke, hex),
     paint(cap, hex),
-    tubeBetween(sh, elbow, 0.0160, 0.0138, hex),
+    tubeBetween(capPos, elbow, 0.0125, 0.0100, hex),
     paint(joint, hex),
-    tubeBetween(elbow, hand, 0.0138, 0.0112, hex),
+    tubeBetween(elbow, hand, 0.0100, 0.0082, hex),
   ]
+  if (cuff) {
+    const t0 = 0.72, t1 = 0.92
+    const c0 = [elbow[0] + (hand[0] - elbow[0]) * t0, elbow[1] + (hand[1] - elbow[1]) * t0, elbow[2] + (hand[2] - elbow[2]) * t0]
+    const c1 = [elbow[0] + (hand[0] - elbow[0]) * t1, elbow[1] + (hand[1] - elbow[1]) * t1, elbow[2] + (hand[2] - elbow[2]) * t1]
+    parts.push(tubeBetween(c0, c1, 0.0094, 0.0092, cuff))
+  }
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
@@ -265,13 +281,13 @@ function attachLook(root) {
       return m
     }
     add(vestGeo(), [0, -0.012, chestZ + 0.014])
-    add(shirtCollarGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.010, chestZ * 0.40])
-    add(lapelGeo(), [0, 0.010, chestZ + 0.018])
-    add(pocketGeo(), [0, -0.058, chestZ + 0.022])
-    add(scarfGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.004, chestZ * 0.55])
-    // small hardback at mid-chest, shallow V tilted toward the camera
-    const bookY = -0.042, bookZ = chestZ + 0.050
-    const bookRX = -0.50
+    add(lapelGeo(), [0, 0.012, chestZ + 0.018])
+    add(pocketGeo(), [0, -0.064, chestZ + 0.024])
+    add(scarfGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.002, chestZ * 0.55])
+    // white collar points peek above the scarf
+    add(shirtCollarGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) + 0.016, chestZ * 0.62])
+    const bookY = -0.040, bookZ = chestZ + 0.052
+    const bookRX = -0.55
     const book = add(g.book, [0, bookY, bookZ], vestMat, [bookRX, 0.02, 0])
     const toChest = (lx, ly, lz) => {
       const cy = ly * Math.cos(bookRX) - lz * Math.sin(bookRX)
@@ -289,16 +305,16 @@ function attachLook(root) {
         book.add(m); out.push(m)
         return m
       }
-      // left mitten supports from below; right holds a dark pencil on the page
-      const locL = [-0.018, -0.034, 0.002], locR = [0.028, 0.004, 0.012]
-      addOnBook(mittenGeo(), locL, [0.55, 0.25, 0.30], 1.08)
-      addOnBook(g.pencil, [0.016, 0.000, 0.016], [Math.PI * 0.50 - 0.40, 0.18, 0.10], 1)
-      addOnBook(mittenGeo(), locR, [0.20, -0.25, -0.15], 1.08)
+      // left mitten supports from below (book -X / viewer's right); right holds a long pencil at the top-left
+      const locL = [-0.022, -0.030, 0.004], locR = [0.018, 0.022, 0.016]
+      addOnBook(mittenGeo(), locL, [0.55, 0.25, 0.30], 1)
+      addOnBook(g.pencil, [0.010, 0.018, 0.018], [Math.PI * 0.50 - 0.28, 0.12, 0.08], 1)
+      addOnBook(mittenGeo(), locR, [0.15, -0.20, -0.10], 1)
       const handL = toChest(...locL), handR = toChest(...locR)
-      const shL = [-(Math.abs(S.shL.x) + 0.000), S.shY - chestY - 0.002, S.shL.z + 0.014]
-      const shR = [ (Math.abs(S.shR.x) + 0.000), S.shY - chestY - 0.002, S.shR.z + 0.014]
-      add(stillArmGeo(-1, shL, handL, JACKET), [0, 0, 0])
-      add(stillArmGeo( 1, shR, handR, JACKET), [0, 0, 0])
+      const shL = [-(Math.abs(S.shL.x)), S.shY - chestY - 0.002, S.shL.z + 0.006]
+      const shR = [ (Math.abs(S.shR.x)), S.shY - chestY - 0.002, S.shR.z + 0.006]
+      add(stillArmGeo(-1, shL, handL, JACKET, SHIRT), [0, 0, 0])
+      add(stillArmGeo( 1, shR, handR, JACKET, SHIRT), [0, 0, 0])
     }
   }
   return () => out.forEach(h => h.removeFromParent())
@@ -322,8 +338,8 @@ function readHold(B, st) {
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
   // still pose draws custom sleeves; body.arm / hand stay tiny so the skinned rig is hidden.
-  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 0.04, girth: 1.20, shoulder: 1.08, chestW: 1.12, bellyZ: 0.96, shX: 1.18, armA: 0.50,
-    armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.08,
+  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 0.02, girth: 1.20, shoulder: 1.08, chestW: 1.12, bellyZ: 0.96, shX: 1.18, armA: 0.50,
+    armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.01,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16,
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
