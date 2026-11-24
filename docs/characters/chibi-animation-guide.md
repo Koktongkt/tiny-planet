@@ -6,6 +6,82 @@ Companion design guide (proportions, face, hair, colours, mesh perf): [`chibi-ch
 
 Procedural "life" for Cozy Chibi humans: breathing, fidgets, a bouncier walk, head-led turns, look-at, blinks, saccades, expression crossfades, and secondary motion on hair, scarf and satchel. The approved baseline is her (`src/art/chibi/`). Reuse this layer for any new chibi human; do not invent a second animation system.
 
+## Animation template (approved with KT on her): start every character here
+
+Her motion is the **template for every chibi character's animation**, the same way her look is the template for their
+design (`chibi-character-design.md`). A new character reuses this system and these rules, and changes only what its
+personality and props ask for. The sections after this one hold her exact numbers.
+
+### What KT approved, and what KT rejected
+
+| Area | Keep | Rejected (do not go back to it) |
+|---|---|---|
+| Walk | A low, rounded bob (`walk.smooth`, `bounce ~0.011`); weight shown by hip sway and shoulder twist; a longer stride; lean into turns | The old hop (`1 - abs(sin)`, `bounce 0.026`): it read as bouncing, not walking |
+| Idle | Many small fidgets, never the same twice in a row; seated and lying variants for long idles | Overhead arm stretches (hands through the hair) |
+| Yawn | Both arms up and out, beside the hair | A hand to the mouth (read as a tiny gesture) |
+| Rare moments | Lie back and watch the sky: rarer than sitting, dry days only | Anything that fires every time she stands still |
+| Reel | Both hands on the rod, heaving it up from a braced stance | One hand cranking while the other hangs |
+| Actions | A different gesture per item, a different touch per pet | One generic crouch-and-reach for everything |
+
+### Principles
+
+1. **Alive, not busy.** Motion is layered on the base rig (breathing, weight shift, blinks, glances), always additive,
+   frame-rate independent, and scaled down under `prefers-reduced-motion`.
+2. **Weight over bounce.** Show effort and weight with lean, crouch depth, a braced stance and a slower lift, not with
+   vertical hops.
+3. **Context changes behaviour.** The same idle reads differently with weather (rain: catch drops, shiver, hunched
+   walk), time (night: yawns, stargazing), energy (tired walk, hungry fidgets, a happy pat after eating) and company
+   (waving at a villager, following a butterfly, ducking one at her face).
+4. **Rare things stay rare.** Use cooldowns and one roll per idle spell (the wave: 40-70 s; lying back: 35% after she
+   has sat). Surprise beats repetition.
+5. **Every action is specific.** Pick the gesture from what she touches (`src/game/actItems.js`), give each its own
+   duration, and finish with a beat (look at it, smell it, step back to admire it).
+6. **The face carries the feeling.** Each pose names its mood: `strain` (focus face) for effort, `calm` (eyes softly
+   closed) for gentle moments, `wow` (excited) for discoveries and catches; tired and hungry have their own faces.
+7. **Tools are real objects in her hands.** If an action uses a tool, the tool appears in her hand at the start and
+   goes away at the end, and it does what it does (the line flies out, water pours).
+8. **Make it readable from the game camera.** The follow camera sits behind her. If her body hides the action, swing
+   the camera partway round while it plays (`FZ`, `FZ_ACTS` in `App.jsx`).
+
+### Recipes (how to build each kind of behaviour)
+
+- **Idle fidget.** Add it to `FID` (duration) and a pick list (`FIDS`, or the rain, night, seated or hungry lists) in
+  `life.js`, then pose it inside the fidget block with an envelope `e` (0..1, eased in and out). Point the eyes with
+  `fidLookY` and narrow them with `L.fsq`. Keep arms clear of the hair and the head pitch small (the face decal reads as
+  sliding when the head tips far).
+- **One-shot reaction** (wave, skid, dodge, yum): a timer in the life state (`waveU`, `skidU`...) reset to 0 by a
+  trigger and shaped by `envelope(timer, duration, ramp)`; add a cooldown so it cannot repeat back to back.
+- **Long state** (sit, lie, tired): a 0..1 value eased with `approach()` toward the wanted state, blended into the
+  pose; leave it quickly (rate 5-6) and enter it slowly (1-1.5).
+- **Item gesture.** Map the item to a gesture in `actItems.js` (with its duration), write the gesture in
+  `src/art/chibi/acts.js` from the shared helpers (`crouch`, `kneel`, `arm`), and return its mood.
+- **Tool action** (rod, watering can): see `fishing.js` and `watering.js`.
+  - The tool hangs from her fist through the shared `ext.HandR` hook and is oriented each frame in her root frame
+    (pitch and yaw values set by the pose), not by the arm, so the tool's motion stays clean whatever the arm does.
+  - World-space parts (the line, the bobber, the water drops) are added to the scene once and moved each frame in
+    `ext.post`. Keep them to one draw each (an InstancedMesh for particles).
+  - Drive the phases from the game's own state (`window.__fishSt`, `st.act` plus `st.actItem`), and add a studio
+    override (`window.__herFish`, `__herWater`) for captures.
+  - Put targets where the game's surfaces are (the bobber floats at `R + LAKE_W`, not at the spot's buried position).
+  - Mark the character as busy (`st.fishing`) so idle fidgets, sitting and glances stay out of the way.
+- **Faces.** New moods map onto the existing atlas cells (`CELL` in `ChibiHer.jsx`) plus the continuous controls
+  (lids, squint, blush); do not add atlas cells for a mood the existing ones can express.
+
+### Adapting it to another character
+
+- **Keep:** the life layer and its hooks, the principles above, the reduced-motion scaling, the glitch checklist and
+  the capture workflow.
+- **Tune per character:** walk numbers (an elder walks slower and lower), which fidgets they own (Grandma Fuku might
+  hum and sweep, not tiptoe), their tools and gestures, reaction rarity, and hair or costume spring limits.
+- **Do not fork:** parameterise `life.js`, `acts.js` and the tool modules (or wrap them) rather than copying them.
+
+### Reviewing motion
+
+- Film frame-exact clips with `node tools/chibi-clip.mjs` (studio or game; see the script header), then make an MP4
+  with ffmpeg and show KT side by side (before | after, or several options).
+- Check from the front, 3/4, side and behind, and from the real follow camera in the game.
+- For a taste call (how big, how often), show a few small steps and let KT pick.
+
 ## Architecture
 
 All motion is **additive** on bones the shared base pose already resets each frame. Never write `root.rotation.y` or `root.rotation.z` (the base does not reset those; values accumulate). Frame-rate independent. No per-frame allocations.
@@ -89,7 +165,7 @@ Dry weather picks from look, stretch, rock, satchel, hum, pebble, hands and tipt
 
 ## Perf rules
 
-- **No new draw calls.** Hair stays two draws (cel + ink); face stays one. No new meshes or textures for life. The atlas stays 2×2 cells.
+- **No new draw calls for life.** Hair stays two draws (cel + ink); face stays one. No new meshes or textures for life. Tools are the exception, and only while in use: hidden otherwise, one cel + one ink mesh per tool, one draw per world-space part. The atlas stays 2×2 cells.
 - **No per-frame allocations.** Reuse module-level scratch vectors; springs and schedulers mutate existing state.
 - **Life-layer CPU:** keep it well under **0.2 ms/frame** even with 4× mobile CPU throttle (her baseline ≈ 0.03–0.05 ms desktop, 0.09–0.15 ms on iPhone 13 emulation at 4×). Profile with `window.__herProf = { ms: 0, n: 0 }` around `lifeStep`.
 - **Startup chunk** (entry, gzip **level 9**, `tests/perf/budget.mjs`): target **≤ 70 KB**, fail **> 80 KB**. New animation code belongs in the lazy character chunk. A hook in `GhibliPerson.jsx` must stay tiny (her life layer added **+0.03 KB**; the cap for that hook is about **+0.3 KB**).
