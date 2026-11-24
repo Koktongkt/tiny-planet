@@ -504,7 +504,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     if (R_.shadow) { const air = Math.max(0, st.air || 0) / (S.H * scale), k = 1 / (1 + air * 7); R_.shadow.visible = level < 2 && !(SEATED.has(st.act) && (st.actW ?? 1) > 0.3); /* seated on a bench / chair: no shadow on the grass below */ R_.shadow.position.y = 0.002 - air; R_.shadow.scale.setScalar(k) }
     if (level === 2 && !st.force) return // far: skip the per-frame posing work too
     const m = st.move, i = 1 - m, p = st.phase, s = Math.sin(p), c = Math.cos(p), t = (st.t ?? 0) + prev.current.seed, hc = S.hc
-    const bob = (1 - Math.abs(s)) * W.bounce * m, land = Math.pow(Math.abs(s), 4) * m * (W.bounce / 0.02)
+    const bob = (W.smooth ? 1 - s * s : 1 - Math.abs(s)) * W.bounce * m, land = Math.pow(Math.abs(s), 4) * m * (W.bounce / 0.02) * (W.land ?? 1) // walk.smooth: a rounded bob (no hop corner); walk.land: footfall squash scale
     const bobVel = (bob - prev.current.bob) / Math.max(dt, 1e-3); prev.current.bob = bob
     const br = Math.sin(t * 2.1)
     B.root.position.y = bob; B.root.rotation.x = W.lean * m + hc * 0.12

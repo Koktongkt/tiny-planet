@@ -24,7 +24,7 @@ export const FACES = ['happy', 'blink', 'sleepy', 'excited', 'focus']
 // anim1: the atlas now only holds brows, nose and mouth (cells: happy, focus, sleepy, excited). Eyes and blush are drawn
 // analytically in the face shader (same shapes/colours as pass 8) so lids can blink partway, irises can dart, the lower lid
 // can squint, the blush can pulse and expressions crossfade instead of swapping.
-const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3 }
+const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3, yawn: 3, tired: 1, hungry: 2 } // yawn: open mouth (eyes shut by the life layer); tired: flat mouth, droopy lids; hungry: little frown, eyes open
 // pass 6 (KT): features a touch smaller, higher and closer together. FT scales the tweak (1 = chosen, 1.5 = 'stronger').
 const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
 // pass 10 (KT, turnaround sheet): the eye line sits lower in the face, a touch closer together; nose, mouth and blush
@@ -163,7 +163,7 @@ function ChibiFace({ st, lod }) {
       mood = st.act === 'nap' || (T.night > 0.7 && o.idle > 4) || o.idle > 25 ? 'sleepy' : st.act && EXCITED_ACTS.has(st.act) && (st.actW ?? 1) > 0.3 ? 'excited' : 'happy'
       open = o.blinkT < 0.12 ? 0 : 1 }
     // sleepy: drowsy half-lids at night, fully shut on a nap or a long idle
-    const shut = st.act === 'nap' || (L && L.idle > 25), moT = mood === 'sleepy' ? (shut ? 0 : 0.42) : 1
+    const shut = st.act === 'nap' || (L && L.idle > 25 && !(L.lie > 0.3)), moT = mood === 'sleepy' ? (shut ? 0 : 0.42) : mood === 'tired' ? 0.66 : 1
     o.mo = approach(o.mo, moT, moT < o.mo ? 1.6 : 6, dt)
     let cell = CELL[mood] ?? 0, gx = L ? L.gx : 0, gy = L ? L.gy : 0, squint = L ? L.squint : 0, blush = L ? 1 + 0.32 * L.blush * (0.75 + 0.25 * Math.sin(clock.elapsedTime * 2.6)) : 1
     open = Math.min(open, 1) * o.mo
@@ -349,7 +349,9 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   scarf: '#d9503f', // pass 12 skin: warmer, deeper peach measured off the sheet
   // pass 10: palette from the turnaround sheet (warmer shirt, deeper denim and scarf), stitched seams
   outfit: { ...TRAVELLER.outfit, skin: '#f3bf98', top: '#f7ead3', bottom: '#4271b8', shoe: '#83492a', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.05, seams: true },
-  walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }, // life pass: a bouncier chibi walk
+  // anim pass 2 (KT: too bouncy): a low rounded bob instead of a hop, weight carried in the hips and shoulders (more sway
+  // and twist), a softer footfall squash, a slightly longer stride
+  walk: { rate: 11, stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' },
   ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)

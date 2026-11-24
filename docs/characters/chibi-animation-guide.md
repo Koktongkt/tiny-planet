@@ -36,8 +36,33 @@ Scale every additive angle and offset by `MOT` (`1`, or **0.35** when `prefers-r
 | `stretch` | 2.6 s | **Forward reach, not overhead.** Upper arms `x −1.55`, `z ±0.55`; forearms `x −0.15`; chest `x −0.05`; head `x −0.08`; a little rise and heel press. Peak head pitch stays ~0.13 rad so the face does not appear to slide, and the hands stay clear of the side buns. An overhead yawn (`z ±2.3`, head `−0.3`, chest `−0.16`) put the hands through the buns and pitched the head so far back the decal looked like it was sliding up the forehead — do not go back to that. |
 | `rock` | 2.8 s | Rocks on the heels; arms settle slightly. |
 | `satchel` | 2.0 s | Right arm reaches to the bag; a small bag kick. |
+| `hum` | 3.6 s | Anim pass 2. Hums a tune: head and body sway in time, hands clasped behind, eyes happily narrowed. |
+| `pebble` | 2.6 s | Eyes and head down, two small kicks at a pebble with the right foot. |
+| `hands` | 2.8 s | Brings both mittens up in front and looks at them, turning the wrists. |
+| `tiptoe` | 2.4 s | Bounces up onto her toes twice, arms out a little, pleased with herself. |
+| `catch` | 3.2 s | Rain only. Holds her right hand out, palm up, looking up at the sky. |
+| `shiver` | 1.6 s | Rain only. A quick shiver, shoulders up and arms in, eyes squeezed. |
 
-**Walk and run.** Chibi walk params (her): `{ rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }`. Run is detected from the phase rate (walk ~7.4/s, run ~10/s): `clamp((rate - 8.3) / 1.6, 0, 1)`. Extra forward lean **0.13 rad**, small extra bounce `0.004 * run * (1 − |sin phase|)`, bigger arm swing, head overlap spring on the bob (`freq 3.2`, `zeta 0.5`, clamp ±0.08).
+| `yawn` | 2.6 s | Night only. Both arms up and out (KT; `YAWN_UP` 1.75 plus forearms 0.6, so the hands sit beside the hair, not in it), eyes shut (`L.shut`), the open-mouth cell (mood `yawn`), head back a touch. |
+
+**More behaviours (anim pass 3)**, all in the life layer:
+
+- **Happy skip.** After 9-21 s of steady walking (not running) in fine daytime weather, a 2.2 s skip: a little hop on each step (`0.014 * max(0, sin 2φ)²`), bigger arm swing, head bob, excited face.
+- **Skid.** Stopping hard from a run (`dm < -2.2` with recent run > 0.5): 0.75 s braced stop, leaning back with the front foot out and arms out.
+- **Sit on the grass.** After 18 s idle (not in rain): sits, legs out, hands on the ground (`L.sit`, root down 0.088). Stands back up quickly when she moves. Only look / hum fidgets while seated; the sleepy face still comes at 25 s.
+- **Lie back and watch the sky.** Rarer than sitting: once she has sat down, one roll per idle spell (`LIE_CHANCE` 0.35); if it hits, she lies back at 32 s idle (`LIE_AFTER`). Only when it is not raining or snowing and the ground is dry (`T.rain < 0.05`, `T.wet < 0.3`). The hips tip back 1.32 rad with the thighs counter-rotated so the legs stay on the ground; arms out to the sides; the head drifts slowly (watching clouds). Eyes stay open and happy (not sleepy) while lying. Gets up quickly when she moves. Studio: `window.__herLie = 1` forces it.
+- **Energy (tired and hungry).** Reads `window.__game.G.s.energy` (0-100; `systems/energy.js`, LOW = 25; there is no separate hunger stat, and eating is what refills energy). Studio override: `window.__herEnergy`.
+  - *Tired* (`L.tired` ramps from 0 at 35 energy to 1 at 5): walking slouched (chest +0.17, head +0.13), arm swing -60%, knees and shins lifted less, flatter bob, more hip sway; the `tired` face (flat mouth, lids at 0.66); a sigh every 6-12 s. The game already slows her to x0.75 at LOW.
+  - *Hungry* (energy <= LOW, idle): fidgets `tummy` (hands on her tummy, slow rub), `growl` (a rumble jolt, hugging her middle, blushing), `peek` (reaches into the satchel, nothing, a sigh), with the odd `look`; the `hungry` face (the little frown, eyes open).
+  - *Yum*: when energy jumps up by 8 or more (she ate), a 1.6 s happy tummy pat with a little bounce and the excited face.
+- **Wave at villagers.** A villager close by (`near > 0.3`), at most every 40-70 s: the upper arm out to the side, the forearm up and waving, excited face.
+- **Butterflies.** `window.__bfly.list` (from `App.jsx`) is scanned with the look-at targets: a butterfly within 2.4 head-heights wins her gaze and is tracked every frame; one inside 0.95 head-heights makes her blink, duck and lean away (0.7 s).
+
+Studio triggers for captures: `__herLife.skipU = 0`, `waveU = 0`, `dodgeU = 0` (with `dodgeSd = ±1`), `idle = 17.6` (sit), `__herFids = ['yawn']`. Set `window.__herNoSit = true` to keep her standing.
+
+Dry weather picks from look, stretch, rock, satchel, hum, pebble, hands and tiptoe; at night (`T.night > 0.6`) from yawn, look, rock and hum; when `T.rain > 0.3` she picks from catch, shiver, look, satchel and hands, and walks with her shoulders a little hunched. `L.fsq` narrows the eyes during a fidget; `fidLookY` points the eyes up or down. Studio: `window.__herFids = ['hum']` forces a fidget (set `__herLife.fidN = 0` to start it now).
+
+**Walk and run.** Anim pass 2 (KT: the old walk was too bouncy, a hop): her walk is `{ stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' }`. `walk.smooth` (shared rig, default off) makes the bob a rounded `1 - sin²` wave instead of the hop-shaped `1 - |sin|` (a sharp corner at every step); `walk.land` scales the footfall squash. Weight shows in hip sway and shoulder twist, not vertical bounce: the measured body bob is about half the old one. Turns lean `-0.07 * turn * move`, up to 1.6x when running (clamp ±0.14). The old walk was `{ rate: 11, stride: 0.55, bounce: 0.026, arm: 0.7, twist: 0.12, sway: 0.075 }`. Run is detected from the phase rate (walk ~7.4/s, run ~10/s): `clamp((rate - 8.3) / 1.6, 0, 1)`. Extra forward lean **0.13 rad**, small extra bounce `0.004 * run * (1 − |sin phase|)`, bigger arm swing, head overlap spring on the bob (`freq 3.2`, `zeta 0.5`, clamp ±0.08).
 
 **Start / stop.** A spring (`freq 1.7`, `zeta 0.42`) kicked by `−Δspeed * 1.6`: a small rock back on start, a forward pitch and settle on a sudden stop, hip squash. Lean clamp `−0.18 … 0.2`.
 
