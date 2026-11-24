@@ -77,6 +77,7 @@ const WIDE = q.get('homecam') === 'wide' // debug: the whole room, concept-style
 const FREECAM = /,/.test(q.get('homecam') || '') ? q.get('homecam').split(',').map(Number) : null // debug: ?homecam=x,y,z,lookX,lookY,lookZ (room units)
 let fov0 = null
 HOME.camera = (camera, g, dt) => {
+  HOME.cam = camera // debug + screenshot tooling: project room points to the screen
   if (!HOME.inside && HOME.snapOut > 0) { window.__snap = true; if (--HOME.snapOut === 0) setTimeout(() => { window.__snap = HOME.snap0 }, 0) } // land the follow camera behind her at once
   if (!HOME.inside) { if (fov0 != null) { camera.fov = fov0; fov0 = null; camera.updateProjectionMatrix(); camera.layers.set(0) } return HOME.camOverride ? HOME.camOverride(camera, g) : false }
   if (VIEW.mode !== 'follow') setViewMode('follow')

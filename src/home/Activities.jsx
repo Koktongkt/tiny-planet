@@ -13,7 +13,7 @@ import { HOME, ROOM, freeAt, roomToWorld } from './state.js'
 import { atRoom } from '../game/prompt/anchors.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { Box, W } from './interior.jsx'
-import { SPOTS, LAYOUT, polar, local } from './interior.jsx'
+import { SPOTS, LAYOUT, polar, local, NIGHT_STAND } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { T, q } from '../common.jsx'
 import { makeWalk, stepWalk, makeIdle, stepIdle, pickSpot, pickGlance, homeState, fireFlare, tossVel } from './homeLife.js'
@@ -313,7 +313,7 @@ const firstFreeOr = (cands) => firstFree(cands) || cands[0]
 const DESK = LAYOUT.desk, NS = LAYOUT.nightstand
 const LAMPS = {
   desk: { name: 'the desk lamp', stand: firstFreeOr([local(DESK, 0.17, 0.4), local(DESK, 0.24, 0.42), local(DESK, 0.12, 0.48)]), at: local(DESK, 0.07, -0.08), y: 0.42 },
-  night: { name: 'the bedside lamp', stand: firstFreeOr([local(NS, 0, 0.3), local(NS, 0.06, 0.36), local(NS, -0.06, 0.36)]), at: [NS.x, NS.z], y: 0.27 },
+  night: { name: 'the bedside lamp', stand: firstFreeOr([NIGHT_STAND, local(NS, 0, 0.3), local(NS, 0.06, 0.36)]), at: [NS.x, NS.z], y: 0.27 },
 }
 for (const k in LAMPS) { const l = LAMPS[k]; l.face = faceTo(l.stand, l.at[0], l.at[1]) }
 const CURT = { stand: firstFreeOr([polar(-100, 1.05), polar(-124, 1.05), polar(-112, 0.85)]), pl: LAYOUT.leftWindow }

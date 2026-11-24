@@ -264,7 +264,9 @@ export function Smoke() {
 // the bed alcove half-wall, with a little shelf, a picture and a plant on the bed side
 // part C: the half-wall stands between the camera and the wardrobe, so it fades while she's at the wardrobe
 export const WARDROBE_FRONT = local(P.wardrobe, 0, 0.36)
-export const atWardrobe = (hp) => Math.hypot(hp.x - WARDROBE_FRONT[0], hp.z - WARDROBE_FRONT[1]) < 0.42
+// the only free floor in front of the bedside lamp is the tight gap between the alcove wall and the bed
+export const NIGHT_STAND = (() => { const a = Math.atan2(P.nightstand.x, P.nightstand.z) + 0.2; return [P.nightstand.x - Math.sin(a) * 0.2, P.nightstand.z - Math.cos(a) * 0.2] })()
+export const atWardrobe = (hp) => Math.hypot(hp.x - WARDROBE_FRONT[0], hp.z - WARDROBE_FRONT[1]) < 0.42 || Math.hypot(hp.x - NIGHT_STAND[0], hp.z - NIGHT_STAND[1]) < 0.22
 function Alcove() {
   const [x, z] = polar(ALCOVE.phi, R + 0.02), dx = -Math.sin(ALCOVE.phi * D2R), dz = Math.cos(ALCOVE.phi * D2R), rot = Math.atan2(-dz, dx) // local +x runs in toward the middle
   const ref = useRef(); useSeeThrough(ref, atWardrobe)
