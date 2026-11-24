@@ -9,8 +9,10 @@ she walks over, turns, does it. Wardrobe (outfits), fridge, coat stand (straw ha
    beside the stove (a log in her hands), turns to the stove, crouches and pushes it in. The fire flares (bigger flame,
    sparks, brighter floor glow) and settles back over ~3 minutes. If Mochi isn't asleep he walks to the hearth and sits
    facing the fire, then curls up there. By day the same spot says "Tidy the woodpile": a short crouch, no flare.
-2. **Sunny window: curtains.** The left window gets cream curtains on a rod. E opens or closes them: she reaches up, the
-   panels slide. Closed hides the sunbeam, its floor patch and the dust motes. Saved. Start open.
+2. **Kitchen window: curtains.** Its cream curtains become animated. She stands at the sink, and E opens or closes them:
+   she reaches up and the panels slide across. Closed hides that window's sunlight patch on the floor. Saved. Start open.
+   (Changed from the sunny side window: that window sits in the cut-away front-left wall and the game camera only sees it
+   edge-on, so curtains there were invisible.)
 3. **Lamps: the desk lamp and the nightstand mushroom lamp.** E switches each on or off: she reaches out, a click, the
    bulb and its warm floor patch fade in or out. Saved. Start on (today's look). The hanging lantern stays automatic.
 4. **Yarn ball: toss it.** Near the ball (on the floor, Mochi not already chasing it), E: she crouches, picks it up (it's in

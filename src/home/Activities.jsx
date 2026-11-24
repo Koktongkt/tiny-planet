@@ -257,7 +257,7 @@ const IDLE_SPOTS = [
   spot('plant', [PLANTS[0].stand, toward(PLANTS[0].x, PLANTS[0].z, 0.4), toward(PLANTS[0].x, PLANTS[0].z, 0.48)], [PLANTS[0].x, PLANTS[0].z], 'leaf', 3),
   spot('books', [polar(-37, 1.05), polar(-33, 0.95), polar(-40, 0.9)], polar(-37, ROOM.A), 'browse', 3.6),
   spot('stove', [along(STOVE, 0.45), along(STOVE, 0.55)], [STOVE.x, STOVE.z], 'warm', 4.5, { when: c => c.night > 0.4 }),
-  spot('window', [polar(-100, 1.05), polar(-124, 1.05), polar(-112, 0.85)], WIN_AT, 'gaze', 4, { when: c => c.day > 0.5 && c.curt }),
+  spot('window', [polar(-100, 1.05), polar(-124, 1.05), polar(-112, 0.85)], WIN_AT, 'gaze', 4, { when: c => c.day > 0.5 }),
 ].filter(Boolean)
 const IDLE = makeIdle(), _last = { x: 0, z: 0, yaw: 0 }
 function startIdle(sp) {
@@ -316,8 +316,9 @@ const LAMPS = {
   night: { name: 'the bedside lamp', stand: firstFreeOr([NIGHT_STAND, local(NS, 0, 0.3), local(NS, 0.06, 0.36)]), at: [NS.x, NS.z], y: 0.27 },
 }
 for (const k in LAMPS) { const l = LAMPS[k]; l.face = faceTo(l.stand, l.at[0], l.at[1]) }
-const CURT = { stand: firstFreeOr([polar(-100, 1.05), polar(-124, 1.05), polar(-112, 0.85)]), pl: LAYOUT.leftWindow }
-CURT.face = faceTo(CURT.stand, WIN_AT[0], WIN_AT[1])
+// the kitchen window (back wall, facing the camera; the sunny side window is edge-on to it): she draws them from the sink
+const CURT = { stand: firstFreeOr([local(LAYOUT.counter, -0.12, 0.36), local(LAYOUT.counter, -0.18, 0.4)]), pl: LAYOUT.kitchenWindow, w: 0.36, h: 0.4 }
+CURT.face = LAYOUT.counter.yaw + Math.PI
 const WOOD = LAYOUT.firewood, STOVE_STAND = firstFreeOr([along(STOVE, 0.45), along(STOVE, 0.55)])
 const evening = () => T.dusk > 0.3 || T.night > 0.4
 async function lampSwitch(which) {
@@ -394,7 +395,7 @@ if (!HOME.actHooked) { HOME.actHooked = true
     // part C
     const h = H()
     for (const k of ['desk', 'night']) { const l = LAMPS[k]; consider({ kind: 'ext', inside: true, id: 'lamp-' + k, at: atRoom(l.at[0], l.at[1], l.y + 0.1), icon: h.lamps[k] ? 'moon' : 'sun', verb: h.lamps[k] ? 'Switch off' : 'Switch on', name: l.name, act: () => goThen(l.stand, l.face, () => lampSwitch(k)) }, d(l.stand[0], l.stand[1]), 0.22) }
-    consider({ kind: 'ext', inside: true, id: 'curtains', at: atRoom(WIN_AT[0] * 0.92, WIN_AT[1] * 0.92, 0.75), icon: h.curtains ? 'moon' : 'sun', verb: h.curtains ? 'Close' : 'Open', name: 'the curtains', act: () => goThen(CURT.stand, CURT.face, curtains) }, d(CURT.stand[0], CURT.stand[1]), 0.24)
+    consider({ kind: 'ext', inside: true, id: 'curtains', at: atRoom(CURT.pl.x * 0.95, CURT.pl.z * 0.95, 0.9), icon: h.curtains ? 'moon' : 'sun', verb: h.curtains ? 'Close' : 'Open', name: 'the curtains', act: () => goThen(CURT.stand, CURT.face, curtains) }, d(CURT.stand[0], CURT.stand[1]), 0.24)
     consider({ kind: 'ext', inside: true, id: 'stove-log', at: atRoom(STOVE_FIRE[0], STOVE_FIRE[1], 0.5), icon: 'leaf', verb: evening() ? 'Add a log' : 'Tidy', name: evening() ? 'to the fire' : 'the woodpile', act: () => goThen(STOVE_STAND, faceTo(STOVE_STAND, WOOD.x, WOOD.z), stoveLog) }, d(STOVE_STAND[0], STOVE_STAND[1]), 0.24)
     const b = CAT.ball; if (!b.held && CAT.state !== 'chase' && CAT.state !== 'bat' && Math.hypot(b.vx, b.vz) < 0.05) { const bs = ballStand(); consider({ kind: 'ext', inside: true, id: 'yarn', at: atRoom(b.x, b.z, 0.25), icon: 'hand', verb: 'Toss', name: 'the yarn ball', act: () => goThen(bs, faceTo(bs, b.x, b.z), tossBall) }, d(b.x, b.z), 0.3) }
     consider({ kind: 'ext', inside: true, id: 'feedcat', at: atRoom(BOWL.x, BOWL.z, 0.3), icon: 'fish', verb: 'Feed', name: CAT.name, act: GO.feed }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
@@ -464,10 +465,10 @@ function Dynamic() {
     <group ref={quilt} visible={false}><O geo={GEO.pillow} mat={tm(W.quilt, 0)} position={[BED.x - 0.06, BED.top + 0.07, BED.z]} scale={[0.4, 0.06, 0.4]} out={OUT.fine} /></group>
   </group>
 }
-// part C: cream curtains on a rod at the sunny window; HOME.curtK 1 = gathered at the sides with tie-backs, 0 = drawn
+// part C: cream curtains on a rod at the kitchen window; HOME.curtK 1 = gathered at the sides with tie-backs, 0 = drawn
 function Curtains() {
-  const L = useRef(), Rr = useRef(), tl = useRef(), tr = useRef(), pl = CURT.pl, w = 0.34, ry = 0.39 + 0.05, rw = w + 0.22
-  useFrame(() => { const c = HOME.curtK ?? 1, wid = 0.2 + (0.075 - 0.2) * c, x = 0.1 + (w / 2 + 0.03 - 0.1) * c
+  const L = useRef(), Rr = useRef(), tl = useRef(), tr = useRef(), pl = CURT.pl, w = CURT.w, ry = CURT.h + 0.05, rw = w + 0.22
+  useFrame(() => { const c = HOME.curtK ?? 1, wid = w / 2 + 0.04 + (0.075 - w / 2 - 0.04) * c, x = (w / 2 + 0.04) / 2 + (w / 2 + 0.03 - (w / 2 + 0.04) / 2) * c
     for (const [g, sd] of [[L.current, -1], [Rr.current, 1]]) { if (!g) continue; g.position.x = sd * x; g.scale.x = wid / 0.075 }
     for (const [g, sd] of [[tl.current, -1], [tr.current, 1]]) { if (!g) continue; g.position.x = sd * x; g.scale.setScalar(Math.max(0.001, c)) } })
   const panel = <O geo={GEO.pillow} mat={tm('#fbf1e0')} scale={[0.075, ry - 0.02, 0.022]} out={OUT.fine} />

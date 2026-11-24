@@ -226,7 +226,7 @@ export function Sunbeam() {
     const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); return [g, f, mg] }, [])
   const mm = useMemo(() => new THREE.PointsMaterial({ color: '#fff6d0', size: 0.012, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }), [])
   const mref = useRef()
-  useFrame(() => { const d = Math.max(0, T.day - T.night) * (HOME.curtK ?? 1) /* part C: the curtains hide the beam */; m.opacity = 0.035 * d + 0.02 * T.dusk; fl.opacity = 0.2 * d; mm.opacity = 0.6 * d; /* a faint shaft only: a strong one hazed the left of the room */ if (mref.current) mref.current.position.y = Math.sin(performance.now() / 3000) * 0.01 })
+  useFrame(() => { const d = Math.max(0, T.day - T.night); m.opacity = 0.035 * d + 0.02 * T.dusk; fl.opacity = 0.2 * d; mm.opacity = 0.6 * d; /* a faint shaft only: a strong one hazed the left of the room */ if (mref.current) mref.current.position.y = Math.sin(performance.now() / 3000) * 0.01 })
   return <group><mesh geometry={geo} material={m} renderOrder={3} /><mesh geometry={floor} material={fl} renderOrder={2} /><points ref={mref} geometry={motes} material={mm} /></group>
 }
 export const BEAM_SPOT = (() => { const L = OPEN[0], [cx, cz] = polar(L.phi, R - 0.02), t = ((L.y0 + L.ys) / 2) / -SUN_DIR.y; return { x: cx + SUN_DIR.x * t, z: cz + SUN_DIR.z * t } })()
@@ -282,7 +282,7 @@ const paneTex = () => { const c = document.createElement('canvas'); c.width = c.
   for (const [px, py] of [[18, 18], [68, 18], [18, 68], [68, 68]]) { x.beginPath(); x.roundRect(px, py, 42, 42, 8); x.fill() } const t = new THREE.CanvasTexture(c); return t }
 export function WindowLight() {
   const m = useMemo(() => new THREE.MeshBasicMaterial({ map: paneTex(), color: '#ffe6a8', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), [])
-  useFrame(() => { m.opacity = 0.55 * Math.max(0, T.day - T.night) })
+  useFrame(() => { m.opacity = 0.55 * Math.max(0, T.day - T.night) * (HOME.curtK ?? 1) }) // part C: drawn curtains hide it
   const [x, z] = local(P.counter, -0.14, 0.5)
   return <mesh position={[x, 0.009, z]} rotation={[-Math.PI / 2, 0, P.counter.yaw + 0.25]} material={m} renderOrder={2}><planeGeometry args={[0.42, 0.34]} /></mesh>
 }
@@ -320,7 +320,7 @@ export function Shell() {
     <Prop id="counter" {...at(P.counter)} />
     <Prop id="fridge" {...at(P.fridge)} /><Prop id="firewood" {...at(P.firewood)} /><Prop id="woodStove" {...at(P.stove)} opts={{ flue: FLUE }} />
     <Prop id="jarShelf" {...at(P.jarShelf)} /><Prop id="bookShelf" {...at(P.bookShelf)} />
-    <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4, curtains: true, sillPlant: true }} /><Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39, sillPlant: true }} />
+    <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4, curtains: false, sillPlant: true }} />{/* part C: its curtains are animated, in Activities.jsx */}<Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39, sillPlant: true }} />
     <Prop id="mat" {...at(P.kitchenMat)} opts={{ w: 0.42, d: 0.2, shadow: false }} /><Prop id="mat" {...at(P.deskMat)} opts={{ w: 0.36, d: 0.26, shadow: false }} />
     <group position={[P.shelfPlant.x, P.shelfPlant.y, P.shelfPlant.z]} rotation-y={P.shelfPlant.yaw} scale={0.75}><Prop id="plant" opts={{ shadow: false }} /></group>
     {[-64, -100, 34, 72].map(ph => { const pl = onWall(ph, 0), z = polar(ph, R)[1]; return <Prop key={ph} id="timber" opts={{ h: wallH(z) - 0.02 }} {...at(pl)} /> })}
