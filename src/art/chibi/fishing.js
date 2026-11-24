@@ -45,14 +45,20 @@ export function fishPose(F, B, st, dt, t, L) {
     st.footBack = wind * (1 - snap)
   } else if (P === 'wait') { rp = 0.45 + 0.04 * Math.sin(t * 1.7); head = 0.1 + 0.02 * Math.sin(t * 0.7) }
   else if (P === 'bite') { const yank = Math.max(0, Math.sin(t * 15)) * 0.25; rp = 0.2 - yank; lean = 0.1; head = 0.16; upR = -1.0; foR = -0.45; mood = 'wow' }
-  else if (P === 'reel') { const pull = Math.sin(t * 6) * 0.1, side = ((F.fx ?? 0.5) - 0.5) * 0.8
-    rp = 0.85 + pull + (F.hold ? 0.12 : 0); ry = side; lean = -0.12 - (F.hold ? 0.06 : 0); twist = -side * 0.3; upR = -1.15; foR = -0.9; upL = -0.85; foL = -1.2 + 0.25 * Math.sin(t * 14); zL = -0.3 + 0.1 * Math.cos(t * 14); head = 0.02; mood = 'strain' }
+  else if (P === 'reel') { // KT: both hands on the rod, heaving it up in pumps from a braced, knees-bent stance
+    const pp = 0.5 + 0.5 * Math.sin(t * 4.2), hard = F.hold ? 1 : 0.6, side = ((F.fx ?? 0.5) - 0.5) * 0.8
+    rp = 0.5 + 0.55 * pp * hard; ry = side; lean = -0.06 - 0.16 * pp * hard; twist = -side * 0.35 + 0.22
+    upR = -0.85 - 0.45 * pp * hard; foR = -0.75 - 0.2 * pp; zR = -0.18; upL = -1.05 - 0.45 * pp * hard; foL = -1.0 - 0.2 * pp; zL = 0.62 // left hand across onto the rod, just above the right
+    head = -0.04 * pp; mood = 'strain'; st.brace = 1 }
   else if (P === 'caught') { const up = sst(0, 0.35, k); rp = lerp(0.85, 1.45, up); lean = -0.08; upR = -1.5; foR = -1.05; upL = -1.4; foL = -1.2; head = -0.06; mood = 'wow'; st.hop = Math.sin(Math.min(1, k * 1.6) * Math.PI) }
   else if (P === 'slipped') { const sl = sst(0, 0.3, k); rp = lerp(0.85, 0.25, sl); lean = 0.08 * sl; head = 0.2 * sl; upR = -0.85; foR = -0.45 }
   L.rodP = rp; L.rodY = ry; st.actMood = mood
   m(B.upR, 'x', upR); m(B.foR, 'x', foR); m(B.upR, 'z', zR); m(B.upL, 'x', upL); m(B.foL, 'x', foL); m(B.upL, 'z', zL)
   m(B.chest, 'y', twist); m(B.root, 'x', lean); m(B.chest, 'x', lean * 0.6); B.head.rotation.x += (head - 0.04) * w
   if (st.footBack) { B.thR.rotation.x += 0.35 * st.footBack * w; B.thL.rotation.x -= 0.2 * st.footBack * w } st.footBack = 0
+  if (st.brace) { const b = st.brace * w // braced stance: knees bent, feet apart, weight back
+    B.root.position.y -= 0.012 * b; B.thL.rotation.x -= 0.45 * b; B.thR.rotation.x -= 0.15 * b; B.shLn.rotation.x += 0.55 * b; B.shRn.rotation.x += 0.35 * b
+    B.thL.rotation.z -= 0.12 * b; B.thR.rotation.z += 0.12 * b; B.ftL.rotation.x -= 0.1 * b } st.brace = 0
   if (st.hop) { B.root.position.y += 0.008 * st.hop * w } st.hop = 0
 }
 
