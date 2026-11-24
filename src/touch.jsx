@@ -7,12 +7,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import { q, VIEW, subscribeView, subscribeStick } from './common.jsx'
 import { emitStick } from './signals.js'
 import './touch.css'
+import { ZOOM0, zoomStep, ZMIN, ZMAX } from './camInput.js'
 import { GL } from './ui/glass/glyphs.js'
 const Glyph = ({ id }) => <span className="g-pg" dangerouslySetInnerHTML={{ __html: GL[id] }} />
 const tq = q.get('touch')
 export const TOUCH = tq === '1' || (tq !== '0' && typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && matchMedia('(hover: none)').matches)))
 export const PAD = { x: 0, y: 0, mag: 0, run: false, runLock: false, active: false } // runLock: the Run toggle button
-export const CAM = { yaw: 0, pitch: 0, zoom: 1, drag: false } // yaw: radians the player turns by (camera follows); pitch / zoom scale the follow camera
+export const CAM = { yaw: 0, pitch: 0.12, zoom: ZOOM0, drag: false } // yaw: radians the camera orbits by (consumed by the outdoor / indoor camera); pitch / zoom scale the follow camera
 const buzz = (ms = 8) => { try { navigator.vibrate && navigator.vibrate(ms) } catch {} }
 const key = (type, k, code) => window.dispatchEvent(new KeyboardEvent(type, { key: k, code, bubbles: true, cancelable: true }))
 const tapKey = (k, code) => { key('keydown', k, code); setTimeout(() => key('keyup', k, code), 60) }
@@ -96,31 +97,37 @@ export function TouchPad() {
     <RotateHint />
   </div>
 }
-// One finger on empty screen: horizontal drag turns (camera follows), vertical tilts. Two fingers: pinch zoom.
-// A drag (or a second finger) cancels the pending tap-to-walk, so only clean taps walk.
+// The orbit camera's input. Drag on the canvas (one finger, or the mouse with either button) orbits sideways and tilts up and
+// down; two fingers pinch to zoom; the mouse wheel zooms. A drag (or a second finger) cancels the pending tap-to-walk,
+// so only clean taps / clicks walk. Photo mode keeps its own wheel.
+const photoOn = () => typeof window !== 'undefined' && window.__game?.G?.ui?.lock === 'photo'
 export function useTouchCamera(el) {
   useEffect(() => {
-    if (!TOUCH || !el) return
-    el.style.touchAction = 'none'
+    if (!el) return
+    if (TOUCH) el.style.touchAction = 'none'
     const pts = new Map(); let start = null, pinch0 = 0, zoom0 = 1, last = null
-    const dn = (e) => { if (e.pointerType === 'mouse') return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const dn = (e) => { if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, t: performance.now() }; last = { x: e.clientX, y: e.clientY }; CAM.drag = false }
       if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = CAM.zoom; CAM.drag = true } }
     const mv = (e) => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pts.size >= 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinch0 > 10) CAM.zoom = Math.min(1.9, Math.max(0.55, zoom0 * pinch0 / d)); return }
+      if (pts.size >= 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinch0 > 10) CAM.zoom = Math.min(ZMAX, Math.max(ZMIN, zoom0 * pinch0 / d)); return }
       if (!start) return
-      if (!CAM.drag && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) CAM.drag = true
-      if (CAM.drag && VIEW.mode === 'follow') { const dx = e.clientX - last.x, dy = e.clientY - last.y; CAM.yaw += dx * 0.008; CAM.pitch = Math.min(1, Math.max(-0.6, CAM.pitch + dy * 0.004)) }
+      if (!CAM.drag && Math.hypot(e.clientX - start.x, e.clientY - start.y) > (e.pointerType === 'mouse' ? 6 : 10)) CAM.drag = true
+      if (CAM.drag && VIEW.mode === 'follow' && !photoOn()) { const dx = e.clientX - last.x, dy = e.clientY - last.y; CAM.yaw += dx * 0.008; CAM.pitch = Math.min(1, Math.max(-0.5, CAM.pitch + dy * 0.004)) }
       last = { x: e.clientX, y: e.clientY } }
     const up = (e) => { pts.delete(e.pointerId); if (!pts.size) { start = null; setTimeout(() => { CAM.drag = false }, 0) } }
+    const wheel = (e) => { if (photoOn()) return; e.preventDefault(); CAM.zoom = zoomStep(CAM.zoom, e.deltaY) }
+    const menu = (e) => e.preventDefault() // right-drag orbits: no context menu on the canvas
     el.addEventListener('pointerdown', dn); addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up)
-    return () => { el.removeEventListener('pointerdown', dn); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up) }
+    el.addEventListener('wheel', wheel, { passive: false }); el.addEventListener('contextmenu', menu)
+    return () => { el.removeEventListener('pointerdown', dn); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); el.removeEventListener('wheel', wheel); el.removeEventListener('contextmenu', menu) }
   }, [el])
 }
-// Tap helper for 3D targets: mouse acts on press (unchanged desktop feel); touch waits for the finger to lift
-// and only fires if it was a clean tap (no drag, no second finger) — so camera drags never walk you somewhere.
+// Tap helper for 3D targets: waits for the finger / mouse button to lift and only fires on a clean tap or click (no drag,
+// no second finger), so camera drags never walk you somewhere. Only the main mouse button walks or gathers.
 export function onTap(e, fn) {
-  if (!TOUCH || e.pointerType === 'mouse') { fn(); return }
+  if (e.pointerType === 'mouse' && e.button !== 0) return
   const id = e.pointerId, t0 = performance.now()
   const up = (u) => { if (u.pointerId !== id) return; removeEventListener('pointerup', up, true); removeEventListener('pointercancel', cancel, true); if (!CAM.drag && performance.now() - t0 < 600) fn() }
   const cancel = (u) => { if (u.pointerId === id) { removeEventListener('pointerup', up, true); removeEventListener('pointercancel', cancel, true) } }
