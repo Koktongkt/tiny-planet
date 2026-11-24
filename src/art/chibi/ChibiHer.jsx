@@ -42,7 +42,7 @@ function drawFaces(W) {
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     // brows: short, thick, softly arched, round ends, tucked just under the bangs (focus: a touch lower and flatter)
     const by = (name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : name === 'focus' ? 0.0093 : 0.0098) + 0.0004 * FT, arc = name === 'focus' ? 0.0022 : 0.0031
-    g.strokeStyle = BROW; g.lineWidth = 0.0034 * s
+    g.strokeStyle = BROW; g.lineWidth = 0.0040 * s // pass 12c: a touch thicker
     for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0015 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0012)); g.stroke() }
     // nose: a tiny warm dot
     g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10), 0.0017 * s, 0.0011 * s); g.fill()
@@ -117,10 +117,16 @@ const faceMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: 
   fragmentShader: FACE_FS })
 // head shape in the head frame (same SDF as the baked body: head ellipsoid smooth-unioned with two mochi cheeks)
 const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide jaw ellipsoid (two cheek blobs left a dip / double bump at the chin), softer blend
+// pass 12c (KT, side view of the sheet): the profile shows a nose through the face's own contour. A soft swell of the
+// mid-face around the nose blends into the head: in profile the line dips just under the eye, comes out to a rounded
+// nose point and slopes back to the mouth and chin. Broad enough (about 6 bake cells tall) for the marching-cubes body to
+// keep it. The body bake shades it with the normals of the head without the swell, so from the front it is invisible.
+// [y, z, rx, ry, rz, smin k]
+const MIDFACE = [-0.0258, 0.041, 0.0112, 0.0082, 0.0172, 0.003]
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
-const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
-  return smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k) }
+const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK, [my, mz, mrx, mry, mrz, mk] = MIDFACE
+  return smin(smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k), ell(x, y, z, 0, my, mz, mrx, mry, mrz), mk) }
 // the decal: a grid over the face region, each vertex shot onto the head surface from the front and lifted a hair
 const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
   for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = (u * 2 - 1) * FX, y = FY0 + v * (FY1 - FY0)
@@ -236,11 +242,6 @@ const part = (geo, [x, y, z], [sx, sy, sz], [rx, ry, rz] = [0, 0, 0], skin = 0) 
   g.scale(sx, sy, sz); g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); g.computeVertexNormals()
   g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(skin), 1)); return g }
 const PT = 1
-// pass 12 nose: centred on the painted nose dot; the bump pokes out of the face, its centre just under the surface
-const NOSE = (() => { const y = -0.0238 + FDY + 0.0005 * FT - 0.0026 * F10; let z = 0.09; while (z > 0 && headSDF(0, y, z) > 0) z -= 0.0002
-  // the face's surface direction at the nose: the bump is shaded with it, so from the front it melts into the face
-  const e = 1e-4, n = new THREE.Vector3(headSDF(e, y, z) - headSDF(-e, y, z), headSDF(0, y + e, z) - headSDF(0, y - e, z), headSDF(0, y, z + e) - headSDF(0, y, z - e)).normalize()
-  return { p: [0, y + 0.0004, z - 0.0006], r: [0.0046, 0.0038, 0.0066], dot: [0, y], n } })()
 let HAIR_INK_GEO = null
 const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
@@ -248,10 +249,8 @@ const HAIR_GEO = (() => {
     part(ball, [0, -0.02, -0.024], [0.071, 0.061, 0.058]), // back volume of the bob (pass 10: fuller)
     part(ball, [0, 0.0715, -0.008], [0.0168, 0.016, 0.017]), // top bun
     part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0042, 0.0094, 0.0072], [0, d * 0.75, d * 0.1], 1)), // pass 12 ears (skin)
-    (() => { const g = part(ballS, NOSE.p, NOSE.r, [0, 0, 0], 2), nn = g.attributes.normal; for (let i = 0; i < nn.count; i++) nn.setXYZ(i, NOSE.n.x, NOSE.n.y, NOSE.n.z); return g })()]
-  // pass 12b: the nose bump only shapes the profile. It is shaded with the face normal (no blob of light and shadow
-  // from the front) and carries the painted nose dot; aSkin 2 = nose
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0042, 0.0122, 0.0076], [0, d * 0.75, d * 0.1], 1)), // pass 12 ears (skin); 12c: longer vertically
+]
   // life layer: aW = (part, weight) for the secondary springs (0/1 side puffs, 2 top bun, 3 front + side locks); 0 weight = rigid
   const W = (g, f) => { const p = g.attributes.position, a = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { const r = f(p.getX(i), p.getY(i), p.getZ(i)); a[i * 2] = r[0]; a[i * 2 + 1] = r[1] } g.setAttribute('aW', new THREE.BufferAttribute(a, 2)); return g }
   const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
@@ -259,27 +258,23 @@ const HAIR_GEO = (() => {
   // the flared lobe rides the side springs (0 = her right / -x, 1 = left); the fringe and side locks keep spring 3
   W(parts[0], (x, y, z) => { const wf = sm(0.03, -0.04, y) * sm(-0.01, 0.035, z), ws = sm(0.06, 0.088, Math.abs(x)) * sm(-0.012, -0.045, y); return ws > wf ? [x < 0 ? 0 : 1, ws] : [3, wf] }); W(parts[1], () => [3, 0])
   W(parts[2], (x, y) => [2, sm(0.058, 0.085, y)]); W(parts[3], () => [2, 0.35])
-  for (const k of [4, 5, 6]) W(parts[k], () => [3, 0]) // ears and nose: rigid
-  // aInk scales the hair ink width per part: the nose gets a fine line (a full-width one made a dark hook in 3/4 view)
-  parts.forEach((g, k) => g.setAttribute('aInk', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(k === 6 ? 0.4 : 1), 1)))
+  for (const k of [4, 5]) W(parts[k], () => [3, 0]) // ears: rigid
   const g = mergeGeometries(parts); g.computeBoundingSphere()
-  // the nose is inked too: its centre sits just behind the face surface, so its hull hides from the front and only
-  // outlines the bump in profile
   HAIR_INK_GEO = g; return g })()
 const HOFF = `attribute vec2 aW; uniform vec3 uOff[4];
   vec3 hoff(){ vec3 o = aW.x < .5 ? uOff[0] : aW.x < 1.5 ? uOff[1] : aW.x < 2.5 ? uOff[2] : uOff[3]; return o*aW.y; }
 `
 // the hair's own ink hull gets the same spring offsets, so the outline follows the moving buns (still 1 draw)
-const hairInk = (() => { const m = mkOutline(false); m.uniforms.uOff = { value: HAIR_OFF }; m.vertexShader = HOFF + 'attribute float aInk;\n' + m.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += hoff();').replace('mv.xyz += n*uT*', 'mv.xyz += n*uT*aInk*'); return m })()
+const hairInk = (() => { const m = mkOutline(false); m.uniforms.uOff = { value: HAIR_OFF }; m.vertexShader = HOFF + m.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += hoff();'); return m })()
 let hairShader = null
 const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMaterial({
-  uniforms: { uOff: { value: HAIR_OFF }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim, uHair: { value: new THREE.Color('#432c22') }, uBand: { value: new THREE.Color('#7a5641') }, uSkin: { value: new THREE.Color(skin) }, uNoseK: { value: new THREE.Vector3(1.007, 1.005, 1.0025) }, uNoseDot: { value: new THREE.Vector2(NOSE.dot[0], NOSE.dot[1]) } },
+  uniforms: { uOff: { value: HAIR_OFF }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim, uHair: { value: new THREE.Color('#432c22') }, uBand: { value: new THREE.Color('#7a5641') }, uSkin: { value: new THREE.Color(skin) } },
   vertexShader: HOFF + `attribute float aSkin; varying vec3 vN, vV, vO; varying float vSkin;
     void main(){ vO = position; vSkin = aSkin; vec4 mv = modelViewMatrix*vec4(position + hoff(),1.); vN = normalize(normalMatrix*normal); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`,
-  fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin, uNoseK; uniform vec2 uNoseDot; varying vec3 vN, vV, vO; varying float vSkin;
+  fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin; varying vec3 vN, vV, vO; varying float vSkin;
     void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
       float ndl = dot(N, L), lit = smoothstep(-.04, .12, ndl), sk = step(.5, vSkin);
-      vec3 base = mix(uHair, uSkin*mix(vec3(1.), uNoseK, step(1.5, vSkin)), sk), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
+      vec3 base = mix(uHair, uSkin, sk), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
       vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
       // glossy toon sheen: a soft lighter band around the crown, broken into strands
       vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
@@ -288,8 +283,6 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
       c *= 1. - (1. - sk)*.3*smoothstep(.1, .38, vSkin); // painted grooves between the fringe locks
       c = mix(c, vec3(.17,.1,.08), (1. - sk)*smoothstep(.455, .488, vSkin)); // ink along the fringe tips
       float fr = 1. - max(dot(N, V), 0.); c += uRim*smoothstep(.62, .92, fr)*(.2 + .5*lit)*.22;
-      if (vSkin > 1.5) { vec2 q = (vO.xy - uNoseDot)/vec2(${f5(0.0017)}, ${f5(0.0011)}); float k = length(q), w = fwidth(k);
-        c = mix(c, ${lin('#e89480')}*(uLight*.92 + uAmb), .9*(1. - smoothstep(1. - w, 1. + w, k))); } // the painted nose dot (as on the face decal)
       gl_FragColor = vec4(c, 1.);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
@@ -333,7 +326,7 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // pass 4 arms (measured on the concept front): longer soft forearm ~70% of the puff-sleeve width, rounder mitten hands,
   // hanging a little further from the body
   body: { H: 0.89, head: 1.45, leg: 0.96, torso: 1.13, arm: 0.92, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.26, armA: 0.5,
-    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.45, bootL: 1.04, hand: 1.2, cheek: CHEEK,
+    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.45, bootL: 1.04, hand: 1.2, cheek: CHEEK, midface: MIDFACE,
     // pass 11 boots (KT): taller chunky boots that stand on a flat sole. The ankle rises 0.01 and the shin shortens to
     // match (leg 1.06 -> 0.96 keeps the hip where it was), so the cuffs ride higher and more boot shows below them.
     anY: 0.044, footY: 0.017, soleY: 0.0012, bootShaft: [0.0228, 0.0165, 0.0238, -0.009] },

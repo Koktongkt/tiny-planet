@@ -240,6 +240,7 @@ export function spec(b = {}) {
   S.headR = V3(0.068 * hd, 0.0584 * hd, 0.0648 * hd)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
+  if (b.midface) { const [y, z, rx, ry, rz, k] = b.midface, s = 1.17 * hd; S.mf = [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] } // optional mid-face swell (head-frame units): a nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
   const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
@@ -264,6 +265,7 @@ function core(S, p) {
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
   let h = ell(p, S.headC, S.headR); if (S.ck) h = smin(h, Math.min(ell(p, S.ck[0], S.ck[2]), ell(p, S.ck[1], S.ck[2])), S.ck[3])
+  if (S.mf) h = smin(h, ell(p, S.mf[0], S.mf[1]), S.mf[2])
   return smin(d, h, 0.012)
 }
 function armD(S, p, k) {
@@ -326,9 +328,13 @@ function bake(S, RES = 72) {
   const BONES = bonesOf(S), wb = BONES.map((b, i) => [i, b]).filter(([, b]) => b[3])
   for (let i = 0; i < cnt; i++) {
     p.fromBufferAttribute(P, i)
+    // a mid-face swell (S.mf) shapes the silhouette only: normals and AO come from the head without it, so the face
+    // still shades like a smooth round face from the front (no muzzle shadow) while the profile shows the nose
+    const mf = S.mf; S.mf = null
     nn.set(sdf(S, q.copy(p).setX(p.x + e)) - sdf(S, q.copy(p).setX(p.x - e)), sdf(S, q.copy(p).setY(p.y + e)) - sdf(S, q.copy(p).setY(p.y - e)), sdf(S, q.copy(p).setZ(p.z + e)) - sdf(S, q.copy(p).setZ(p.z - e))).normalize()
     nor.set([nn.x, nn.y, nn.z], i * 3)
-    let o = 0; for (let k = 1; k <= 4; k++) { const h = 0.0055 * k; o += (h - sdfOcc(S, q.copy(p).addScaledVector(nn, h))) / h * (0.5 ** k) }
+    let o = 0; for (let k = 1; k <= 4; k++) { const h = 0.0055 * k; o += (h - sdfOcc(S, q.copy(p).addScaledVector(nn, h))) / h * (0.5 ** k) } // (no crease shadow round the swell either)
+    S.mf = mf
     ao[i] = Math.max(0, Math.min(1, 1 - o * 1.4))
     const hipsF = THREE.MathUtils.smoothstep(p.y, S.hipY - 0.023, S.hipY + 0.025)
     let ws = wb.map(([bi, b]) => [bi, (b[0] === 'hips' ? hipsF : 1) / (Math.pow(segD(p, b[3][0], b[3][1]) / b[4], 6) + 1e-4), b[0]])
