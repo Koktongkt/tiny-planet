@@ -23,7 +23,8 @@ const walk = (a, b) => { const L = angle(a, b) * R, k = Math.ceil(L / 0.1), out 
 
 test('peak is the highest point', () => {
   const top = height(unit(region('peak')))
-  for (let i = 0; i < 2000; i++) { const n = randDir(); assert.ok(height(n) < top, `higher than the Peak at ${JSON.stringify(n)}`) }
+  for (let i = 0; i < 4000; i++) { const n = randDir(), c = unit(region('peak')); const near = n.x * c.x + n.y * c.y + n.z * c.z > Math.cos(0.06); assert.ok(near ? height(n) <= top : height(n) < top - 0.05, `not clearly below the Peak at ${JSON.stringify(n)}`) }
+  const cliff = height(unit(region('cliff'))); assert.ok(top - cliff >= 0.8, `Peak only ${(top - cliff).toFixed(2)} above the cliff top`)
 })
 test('sea floor below the surface', () => {
   for (let i = 0; i < 4000; i++) { const n = randDir(); if (Math.asin(n.y) < SEA_LAT - 0.08) assert.ok(height(n) < SEA_W - 0.12, `shallow at ${JSON.stringify(n)}`) }

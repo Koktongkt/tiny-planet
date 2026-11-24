@@ -15,7 +15,7 @@ const ZN = Object.fromEntries(['lake', 'cliff', 'terraces', 'harbour', 'ruins', 
 // A closed-form sum of cheap terms (height() runs for every terrain vertex, every placement and the player each frame).
 // Each local term tests a dot product against a precomputed cosine before paying for the acos.
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
-const NOISE_K = 0.6, RAMP_H = 0.9, PEAK_H = 1.6, PEAK_W = 2.5 // base noise scale; latitude ramp; Peak dome height / width (x r)
+const NOISE_K = 0.6, RAMP_H = 0.9, PEAK_H = 2.1, PEAK_W = 1.6 // base noise scale; latitude ramp; Peak dome height / width (x r)
 const SEA_FLOOR = SEA_W - 0.4, SHELF = SEA_W - 0.06 // the sea bed, and the wadeable shelf just off the shore
 const TERR_STEP = 0.15, TERR_HILL = 1.05, LAKE_FLOOR = -0.55, HARB_FLOOR = -0.6
 const LAKE_DIP = 0.22 // the ramp sags around the lake so its shore sits just above LAKE_W (see lakeDip)
