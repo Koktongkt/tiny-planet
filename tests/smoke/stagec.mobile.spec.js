@@ -23,7 +23,9 @@ test('touch: tutorial note, journal + photo chips, photo mode hides the pads, re
   // tapped those and fishing never started. The bubble follows the scene, so it is never 'stable'.
   const fishBubble = page.locator('.tp-bubble-wrap .tp-prompt')
   await expect(fishBubble).toBeVisible({ timeout: 20_000 })
-  await fishBubble.tap({ force: true })
+  // The bubble is moved every frame. A coordinate tap misses it on SwiftShader (~1 fps), so the
+  // reel never opens. Click the button itself, the same action the bubble's onClick runs.
+  await fishBubble.evaluate((el) => el.click())
   await expect(page.locator('.tp-fish-c')).toBeVisible({ timeout: 30_000 })
   // Cast, wait and bite share one unclamped frame. On SwiftShader a frame is longer than biteS
   // (1.2 s), so 'bite' lasts a single frame and a 100 ms poll misses it. 'reel' means the bite happened.
