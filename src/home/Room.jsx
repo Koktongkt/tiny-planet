@@ -77,6 +77,7 @@ const WIDE = q.get('homecam') === 'wide' // debug: the whole room, concept-style
 const FREECAM = /,/.test(q.get('homecam') || '') ? q.get('homecam').split(',').map(Number) : null // debug: ?homecam=x,y,z,lookX,lookY,lookZ (room units)
 let fov0 = null
 HOME.camera = (camera, g, dt) => {
+  HOME.cam = camera // debug + screenshot tooling: project room points to the screen
   if (!HOME.inside && HOME.snapOut > 0) { window.__snap = true; if (--HOME.snapOut === 0) setTimeout(() => { window.__snap = HOME.snap0 }, 0) } // land the follow camera behind her at once
   if (!HOME.inside) { if (fov0 != null) { camera.fov = fov0; fov0 = null; camera.updateProjectionMatrix(); camera.layers.set(0) } return HOME.camOverride ? HOME.camOverride(camera, g) : false }
   if (VIEW.mode !== 'follow') setViewMode('follow')
@@ -105,13 +106,16 @@ HOME.sun = () => { if (HOME.roomObj) T.sun.copy(_a.set(-0.8, 0.55 - 0.85 * T.nig
 // lights: a new light would recompile every material in the world). The cool fill is dimmed in Lights() while inside.
 const glowTex = () => canvasTex(128, 128, (x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.45, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h) })
 function NightGlow() {
-  const [lamp, stove] = useMemo(() => { const t = glowTex(); const mk = (c) => new THREE.MeshBasicMaterial({ map: t, color: c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }); return [mk('#ffb860'), mk('#ff8a3a')] }, [])
-  useFrame(() => { const t = performance.now() / 1000, k = HOME.inside ? Math.min(1, 0.22 + T.night + 0.4 * T.dusk) : 0; lamp.opacity = 0.42 * k; stove.opacity = k * (0.5 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.04) })
+  // part C: the desk and bedside patches follow her lamp switches (HOME.lampK, eased 0..1), the stove patch the log flare (HOME.fire)
+  const [lamp, stove, desk, night] = useMemo(() => { const t = glowTex(); const mk = (c) => new THREE.MeshBasicMaterial({ map: t, color: c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }); return [mk('#ffb860'), mk('#ff8a3a'), mk('#ffb860'), mk('#ffb860')] }, [])
+  useFrame(() => { const t = performance.now() / 1000, k = HOME.inside ? Math.min(1, 0.22 + T.night + 0.4 * T.dusk) : 0, lk = HOME.lampK || { desk: 1, night: 1 }, fl = HOME.fire || 0
+    lamp.opacity = 0.42 * k; desk.opacity = 0.62 * k * lk.desk; night.opacity = 0.62 * k * lk.night // a lamp's own pool reads stronger, so switching it off shows
+    stove.opacity = k * (0.5 + 0.45 * fl + Math.sin(t * 7) * (0.05 + 0.05 * fl) + Math.sin(t * 13) * 0.04) })
   return <group>
     <mesh position={[0, 0.007, 0.1]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.6, 1.3]} /></mesh>
     <mesh position={[LAMP.lx, 0.008, LAMP.lz + 0.3]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[1.0, 0.7]} /></mesh>
-    <mesh position={[LAYOUT.nightstand.x - 0.1, 0.008, LAYOUT.nightstand.z]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.6, 0.6]} /></mesh>
-    <mesh position={[LAYOUT.desk.x + 0.15, 0.008, LAYOUT.desk.z]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.6, 0.6]} /></mesh>
+    <mesh position={[LAYOUT.nightstand.x - 0.12, 0.008, LAYOUT.nightstand.z]} rotation={[-Math.PI / 2, 0, 0]} material={night} renderOrder={2}><planeGeometry args={[0.8, 0.8]} /></mesh>
+    <mesh position={[LAYOUT.desk.x + 0.18, 0.008, LAYOUT.desk.z]} rotation={[-Math.PI / 2, 0, 0]} material={desk} renderOrder={2}><planeGeometry args={[0.8, 0.8]} /></mesh>
     <mesh position={[LAYOUT.stove.x + 0.12, 0.009, LAYOUT.stove.z + 0.15]} rotation={[-Math.PI / 2, 0, 0]} material={stove} renderOrder={2}><planeGeometry args={[0.8, 0.7]} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[DOOR.x + s * 0.38, 0.009, DOOR.z - 0.2]} rotation={[-Math.PI / 2, 0, 0]} material={lamp} renderOrder={2}><planeGeometry args={[0.5, 0.45]} /></mesh>)}
   </group>

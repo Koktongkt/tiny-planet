@@ -92,6 +92,7 @@ export const SPOTS = {
   petBed: { x: P.petBed.x, z: P.petBed.z, r: 0.15 },
   window: (() => { const [x, z] = polar(LW, R - 0.07), [fx, fz] = polar(LW, R - 0.36); return { x, z, y: 0.395, from: { x: fx, z: fz }, face: -LW * D2R + Math.PI } })(),
   shelf: (() => { const [x, z] = local(P.bookShelf, 0.14, 0.06), [fx, fz] = local(P.bookShelf, 0.14, 0.42); return { x, z, y: 0.6, from: { x: fx, z: fz } } })(),
+  hearth: (() => { const [x, z] = local(P.stove, -0.2, 0.33); return { x, z, face: P.stove.yaw + Math.PI + 0.35 } })(), // part C: where Mochi sits to watch the fire
   plants: { big: P.bigPlant, counter: (() => { const [x, z] = local(P.counter, -0.37, -0.02); return { x, z, y: 0.227, yaw: P.counter.yaw } })(), door: P.flowerPot },
 }
 
@@ -261,9 +262,15 @@ export function Smoke() {
 }
 
 // the bed alcove half-wall, with a little shelf, a picture and a plant on the bed side
+// part C: the half-wall stands between the camera and the wardrobe, so it fades while she's at the wardrobe
+export const WARDROBE_FRONT = local(P.wardrobe, 0, 0.36)
+// the only free floor in front of the bedside lamp is the tight gap between the alcove wall and the bed
+export const NIGHT_STAND = (() => { const a = Math.atan2(P.nightstand.x, P.nightstand.z) + 0.2; return [P.nightstand.x - Math.sin(a) * 0.2, P.nightstand.z - Math.cos(a) * 0.2] })()
+export const atWardrobe = (hp) => Math.hypot(hp.x - WARDROBE_FRONT[0], hp.z - WARDROBE_FRONT[1]) < 0.42 || Math.hypot(hp.x - NIGHT_STAND[0], hp.z - NIGHT_STAND[1]) < 0.22
 function Alcove() {
   const [x, z] = polar(ALCOVE.phi, R + 0.02), dx = -Math.sin(ALCOVE.phi * D2R), dz = Math.cos(ALCOVE.phi * D2R), rot = Math.atan2(-dz, dx) // local +x runs in toward the middle
-  return <group position={[x, 0, z]} rotation-y={rot}>
+  const ref = useRef(); useSeeThrough(ref, atWardrobe)
+  return <group ref={ref} position={[x, 0, z]} rotation-y={rot}>
     <Prop id="alcoveWall" opts={{ len: ALCOVE.len + 0.02, h: 0.85, low: 0.3, d: 0.07, shadow: false }} />
     <group position={[0.2, 0.3, -0.04]} rotation-y={Math.PI}><Prop id="bookShelf" opts={{}} scale={[0.55, 1, 0.7]} /></group>
     <group position={[0.17, 0.52, -0.045]} rotation-y={Math.PI}><Prop id="picture" /></group>
@@ -275,7 +282,7 @@ const paneTex = () => { const c = document.createElement('canvas'); c.width = c.
   for (const [px, py] of [[18, 18], [68, 18], [18, 68], [68, 68]]) { x.beginPath(); x.roundRect(px, py, 42, 42, 8); x.fill() } const t = new THREE.CanvasTexture(c); return t }
 export function WindowLight() {
   const m = useMemo(() => new THREE.MeshBasicMaterial({ map: paneTex(), color: '#ffe6a8', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), [])
-  useFrame(() => { m.opacity = 0.55 * Math.max(0, T.day - T.night) })
+  useFrame(() => { m.opacity = 0.55 * Math.max(0, T.day - T.night) * (HOME.curtK ?? 1) }) // part C: drawn curtains hide it
   const [x, z] = local(P.counter, -0.14, 0.5)
   return <mesh position={[x, 0.009, z]} rotation={[-Math.PI / 2, 0, P.counter.yaw + 0.25]} material={m} renderOrder={2}><planeGeometry args={[0.42, 0.34]} /></mesh>
 }
@@ -284,14 +291,20 @@ export function WindowLight() {
 // set because it changes: when she walks into the bath the walls fade to see-through (their outlines hide) so you can
 // see her in there; they turn solid again when she walks out. They get their own material copies so nothing else fades.
 export const inBath = (hp) => hp.x > NOOK.x0 - 0.03 && hp.z < NOOK.z1 + 0.06
-export function BathWalls() {
-  const ref = useRef(), st = useRef(0), mats = useRef(null), nookFront = 1.6 - NOOK.x0
+// see-through when want() holds: a group's solid parts fade (own material copies), its outlines hide. Bath walls, alcove.
+function useSeeThrough(ref, want) {
+  const st = useRef(0), mats = useRef(null)
   useFrame((_, dt) => { const g = ref.current; if (!g) return
     if (!mats.current) { const fill = [], outl = []; g.traverse(m => { if (!m.isMesh) return; if (m.userData.outline || m.material.isShaderMaterial) { outl.push(m); return } if (m.material.transparent) return
       m.material = m.material.clone(); m.material.transparent = true; fill.push(m) }); mats.current = { fill, outl } }
-    const want = HOME.inside && inBath(HOME.hp) ? 1 : 0; st.current += (want - st.current) * Math.min(1, dt * 6); const k = st.current
+    const w = HOME.inside && want(HOME.hp) ? 1 : 0; if (!w && st.current === 0) return // settled solid: nothing to do
+    st.current += (w - st.current) * Math.min(1, dt * 6); if (st.current < 1e-3) st.current = 0; const k = st.current
     for (const m of mats.current.fill) { m.material.opacity = 1 - 0.72 * k; m.material.depthWrite = k < 0.02; m.renderOrder = k > 0.02 ? 6 : 0 }
     for (const m of mats.current.outl) m.visible = k < 0.15 })
+}
+export function BathWalls() {
+  const ref = useRef(), nookFront = 1.6 - NOOK.x0
+  useSeeThrough(ref, inBath)
   return <group ref={ref}>
     <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
     <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
@@ -307,7 +320,7 @@ export function Shell() {
     <Prop id="counter" {...at(P.counter)} />
     <Prop id="fridge" {...at(P.fridge)} /><Prop id="firewood" {...at(P.firewood)} /><Prop id="woodStove" {...at(P.stove)} opts={{ flue: FLUE }} />
     <Prop id="jarShelf" {...at(P.jarShelf)} /><Prop id="bookShelf" {...at(P.bookShelf)} />
-    <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4, curtains: true, sillPlant: true }} /><Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39, sillPlant: true }} />
+    <Prop id="archWindow" {...at(P.kitchenWindow)} opts={{ w: 0.36, h: 0.4, curtains: false, sillPlant: true }} />{/* part C: its curtains are animated, in Activities.jsx */}<Prop id="archWindow" {...at(P.leftWindow)} opts={{ w: 0.34, h: 0.39, sillPlant: true }} />
     <Prop id="mat" {...at(P.kitchenMat)} opts={{ w: 0.42, d: 0.2, shadow: false }} /><Prop id="mat" {...at(P.deskMat)} opts={{ w: 0.36, d: 0.26, shadow: false }} />
     <group position={[P.shelfPlant.x, P.shelfPlant.y, P.shelfPlant.z]} rotation-y={P.shelfPlant.yaw} scale={0.75}><Prop id="plant" opts={{ shadow: false }} /></group>
     {[-64, -100, 34, 72].map(ph => { const pl = onWall(ph, 0), z = polar(ph, R)[1]; return <Prop key={ph} id="timber" opts={{ h: wallH(z) - 0.02 }} {...at(pl)} /> })}

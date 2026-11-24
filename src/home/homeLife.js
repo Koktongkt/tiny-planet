@@ -50,3 +50,18 @@ export function pickGlance(ctx, rnd = Math.random) {
   if (ctx.night > 0.4 && ctx.stoveD < 1.2) opts.push('stove')
   return opts.length ? opts[Math.floor(rnd() * opts.length) % opts.length] : null
 }
+
+// ---------- part C: things she can use ----------
+/** her house's saved bits on the save blob s (s.home), with defaults filled in: curtains open, both lamps on */
+export function homeState(s) {
+  const h = s.home && typeof s.home === 'object' ? s.home : (s.home = {})
+  if (typeof h.curtains !== 'boolean') h.curtains = true
+  if (!h.lamps || typeof h.lamps !== 'object') h.lamps = {}
+  for (const k of ['desk', 'night']) if (typeof h.lamps[k] !== 'boolean') h.lamps[k] = true
+  return h
+}
+export const FLARE_SECS = 180 // a fresh log's flare settles back over about three minutes
+/** a 0..1 fire flare, settling linearly to 0 */
+export const fireFlare = (level, dt) => Math.max(0, level - dt / FLARE_SECS)
+/** the yarn ball's velocity when she tosses it, along her facing (yaw 0 = +z) */
+export const tossVel = (yaw, speed = 1.1) => [Math.sin(yaw) * speed, Math.cos(yaw) * speed]
