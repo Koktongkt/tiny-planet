@@ -37,7 +37,7 @@ export function StageBWorld({ L, GAME }) {
     return SL
   }, [L])
   useEffect(() => {
-    window.__sbAct = (kind, p) => startAct(kind, { dur: kind === 'water' ? 1.0 : kind === 'feed' ? 1.2 : 0.85, spark: p ? new THREE.Vector3(...p.pos) : null, sparkCol: kind === 'water' ? 'water' : 'gold', sound: kind === 'water' ? 'water' : 'pick' })
+    window.__sbAct = (kind, p) => startAct(kind, { dur: kind === 'water' ? 1.8 : kind === 'feed' ? 1.2 : 0.85, spark: p ? new THREE.Vector3(...p.pos) : null, sparkCol: kind === 'water' ? 'water' : 'gold', sound: kind === 'water' ? 'water' : 'pick' })
     if (hooked || !GAME.H) return; hooked = true
     GAME.H.near.push((consider, pp) => {
       if (!SL || GAME.H.inside) return
