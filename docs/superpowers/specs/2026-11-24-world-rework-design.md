@@ -49,6 +49,26 @@ like the river does today.
 | 9 | Coast Railway | Carries rice and flour to the harbour and people between village and sea | Train rides | Exists; the ring follows the coast, platform with goods |
 | 10 | Hoshino's Museum | The last keeper hall still above the lake; Hoshino patched it up and moved in | Dig at the trench, sort finds, donate relics and rare fish | Museum exists beside today's ruins; moves to the lake shore, new exterior around the existing interior |
 
+**Activities: lean first (decided).** Each region gets one real activity this project, reusing today's actions (gather,
+fish, dig, give, shop, ride) wherever possible. New items are added only where a chain needs them to make sense: **wheat**
+(Meadow) ground to **flour** at the windmills, and a **rice sack** (Terraces) hulled at the water mill; the bakery and
+store use them. Everything else on the cards stays scenery or animation for now: kites, windy-day weather, the shrine
+bell buff, the spring bottle, rowing out, loading cargo, sorting finds. The plan is to observe how the world looks and
+feels first, then push activities further in a later project.
+
+| # | Region | This project's real activity |
+|---|---|---|
+| 1 | Keepers' Peak | Dig at the stone circle (bell, spring: scenery) |
+| 2 | Waterfall Cliff | Stone and crystal, rope bridge picnic and chest (as today) |
+| 3 | The Old Forest | Wood, mushrooms, night moss and fireflies (as today); dig at the torii footings |
+| 4 | Terraces and the Water Mill | Rice and tea (as today); new: rice sack, taken to the mill |
+| 5 | The Village | Errands, gifts, chat (as today); bakery and store use flour and rice |
+| 6 | The Windy Meadow | Wool and flowers (as today); new: wheat, ground to flour at the windmills |
+| 7 | The Lake and the Sunken Town | Lake fishing (as today); dig at the drowned columns |
+| 8 | Harbour and Lighthouse | Sea fishing and shells (as today); dig at the lighthouse base |
+| 9 | Coast Railway | Train rides (as today) |
+| 10 | Hoshino's Museum | Dig at the trench, donate (as today) |
+
 **Dig spots across all keeper sites** (Peak circle, torii footings, lake ruins, lighthouse base, bridge footings, museum
 trench) replace today's five stones at the ruins. *(Builder's call, settled in review:)* one spot per site, six in all,
 each diggable once a day (today: five); every spot draws from today's shared loot pool via `digFind(day, spot)`; the save
@@ -76,7 +96,9 @@ migration remaps the old five `dig.taken` keys to the new spot ids.
   terraces turning gold after you help, keeper spirals glowing as you donate). Parked for later. Build each chain so it
   can gain states later, but add none now.
 - New areas beyond the ten regions (tunnels, island, sky shrine). Only the room for them.
-- Changes to recipes, items, fish tables or loot tables, beyond moving where they are found.
+- Changes to recipes, items, fish tables or loot tables beyond moving where they are found, except the lean additions
+  above (wheat, flour, rice sack and the recipes that use them).
+- The richer activities (kites, windy days, bell buff, spring bottle, rowing, cargo, sorting finds). A later project.
 - Changes to her home's interior or the museum's interior.
 - New characters. Villagers move with their regions and keep their looks.
 
