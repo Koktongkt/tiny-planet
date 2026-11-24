@@ -4,7 +4,7 @@
 | Action | Keyboard | Touch |
 |---|---|---|
 | Walk | WASD / arrow keys move her up, left, down and right on screen (she turns to face the way she walks); Shift runs; click the ground | Stick (screen-relative), or tap the ground |
-| Camera | Drag with the mouse (either button) to orbit and tilt; the wheel zooms (it starts wide) | Drag one finger to orbit and tilt; pinch to zoom |
+| Camera | Drag with the mouse (either button) to orbit and tilt; the wheel zooms (it starts wide). Leave it alone about 2 s while she walks and it eases round behind her (not when she walks toward you; Settings: Camera follows her). Holding the same keys keeps her path straight while it swings | Drag one finger to orbit and tilt; pinch to zoom |
 | Ride (once you own the bicycle) | R | Menu, then Ride. Menu, then Hop off, to stop |
 | Jump | Space | Jump button |
 | Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
