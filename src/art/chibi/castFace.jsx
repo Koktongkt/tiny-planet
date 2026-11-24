@@ -30,20 +30,20 @@ function drawFaces(W, kind) {
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
   const fuku = kind === 'fuku'
-  const BROW = fuku ? '#5a4a42' : '#2a211c'
+  const BROW = fuku ? '#5c5854' : '#1a1614'
   ;['happy', 'focus', 'sleepy', 'excited'].forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
-    const by = (name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : name === 'focus' ? 0.0093 : 0.0098) + 0.0004 * FT + (fuku ? 0.0006 : 0)
+    const by = (name === 'excited' ? 0.0078 : name === 'sleepy' ? 0.0060 : name === 'focus' ? 0.0065 : 0.0068) + 0.0004 * FT + (fuku ? 0.0004 : 0)
     const arc = fuku ? (name === 'focus' ? 0.0026 : 0.0038) : (name === 'focus' ? 0.0014 : 0.0022)
-    g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0038) * s
+    g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0034 : 0.0048) * s
     for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0015 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0012)); g.stroke() }
-    if (fuku) { // kind, slightly crinkled corners (crow's feet), soft and short
-      g.strokeStyle = 'rgba(90,70,60,0.42)'; g.lineWidth = 0.00085 * s
+    if (fuku) { // soft grey-brown smile lines at the eye corners
+      g.strokeStyle = 'rgba(120,100,90,0.62)'; g.lineWidth = 0.0011 * s
       for (const sd of [-1, 1]) {
-        const ex = sd * (EYE.x + EYE.rx * 1.02), ey = EYE.y + 0.0004
-        g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0012)); g.lineTo(X(ex + sd * 0.0042), Y(ey + 0.0036)); g.stroke()
-        g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0016)); g.lineTo(X(ex + sd * 0.0036), Y(ey - 0.0002)); g.stroke()
+        const ex = sd * (EYE.x + EYE.rx * 1.04), ey = EYE.y + 0.0002
+        g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0010)); g.lineTo(X(ex + sd * 0.0052), Y(ey + 0.0042)); g.stroke()
+        g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0014)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0004)); g.stroke()
       }
     }
     g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10), 0.0017 * s, 0.0011 * s); g.fill()
@@ -56,7 +56,11 @@ function drawFaces(W, kind) {
       else if (name === 'focus') { g.moveTo(X(-0.0054), Y(my + 0.0004)); g.quadraticCurveTo(X(0), Y(my - 0.0018), X(0.0054), Y(my + 0.0004)) }
       else if (fuku) { g.moveTo(X(-0.0076), Y(my + 0.0016)); g.quadraticCurveTo(X(0), Y(my - 0.0050), X(0.0076), Y(my + 0.0016)) }
       else { g.moveTo(X(-0.0058), Y(my + 0.0008)); g.quadraticCurveTo(X(0), Y(my - 0.0032), X(0.0058), Y(my + 0.0008)) }
-      g.stroke() }
+      g.stroke()
+      if (fuku && name === 'happy') {
+        g.strokeStyle = 'rgba(140,90,80,0.45)'; g.lineWidth = 0.00095 * s
+        for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0078), Y(my + 0.0006)); g.quadraticCurveTo(X(sd * 0.0104), Y(my - 0.0004), X(sd * 0.0096), Y(my - 0.0026)); g.stroke() }
+      } }
     g.restore()
   })
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t
@@ -133,7 +137,7 @@ function glassesGeo() {
   const rim = new THREE.TorusGeometry(0.0128, 0.0011, 8, 18)
   for (const sd of [-1, 1]) { const g = rim.clone(); g.rotateY(sd * 0.2); g.translate(sd * EYE.x, EYE.y + 0.0008, 0.0545); parts.push(g) }
   const bridge = new THREE.BoxGeometry(0.011, 0.00115, 0.00115); bridge.translate(0, EYE.y + 0.0022, 0.0555); parts.push(bridge)
-  for (const sd of [-1, 1]) { const t = new THREE.BoxGeometry(0.024, 0.0011, 0.0011); t.rotateY(sd * -0.42); t.translate(sd * 0.043, EYE.y + 0.0016, 0.040); parts.push(t) }
+  for (const sd of [-1, 1]) { const t = new THREE.BoxGeometry(0.028, 0.00105, 0.00105); t.rotateY(sd * -1.15); t.translate(sd * 0.040, EYE.y + 0.0016, 0.040); parts.push(t) }
   const g = mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p)); g.computeVertexNormals(); return g
 }
 let GLASSES = null
