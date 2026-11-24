@@ -23,8 +23,9 @@ const NEW = {
   MILLS: [near('mills', 0.05, 35), near('mills', 0.06, 205)],
   SPOT_DIRS: { shrine: zv(region('peak')), bus: at(0.2788, 0.3714) }, // the shrine on the Peak top; the bus stop by the square's south side of the path
   TRAIN_STOPS: [{ id: 'village', lon: TRAIN_STOP_LONS.village }, { id: 'forest', lon: TRAIN_STOP_LONS.forest }],
-  // lamp posts a step off the path: round the square, where the path passes south of her home, by the museum
-  LAMPS: [[0.3706, 0.4089], [0.3098, 0.4185], [0.2032, 0.2089], [0.3669, 0.6421], [0.1829, 0.1666], [0.1379, 0.0353], [0.1249, 1.1444], [-0.0205, 1.1189]].map(([la, lo]) => at(la, lo)),
+  // lamp posts a step off the path: at the bridge's east end (clear of the footings dig site on the village bank), round
+  // the square, where the path passes south of her home, by the museum
+  LAMPS: [[0.3117, 0.5256], [0.3098, 0.4185], [0.2032, 0.2089], [0.3669, 0.6421], [0.1829, 0.1666], [0.1379, 0.0353], [0.1249, 1.1444], [-0.0205, 1.1189]].map(([la, lo]) => at(la, lo)),
 }
 const W = OLD_WORLD ? LEGACY : NEW
 export const VILLAGE = W.VILLAGE

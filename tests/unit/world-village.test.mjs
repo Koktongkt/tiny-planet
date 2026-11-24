@@ -50,7 +50,8 @@ test('arrivals are dry', () => {
 })
 test('spots, lamps and the Peak stair', () => {
   for (const k of ['cat', 'laundryA', 'laundryB', 'view1', 'view2', 'bus']) assert.ok(dry(SPOTS[k]) && !onBridge(SPOTS[k]), `${k} in water`)
-  assert.ok(SPOTS.cat.angleTo(DIG_SITE_POS(4)) * R >= 0.6, 'cat on the footings dig site')
+  for (const k of ['cat', 'laundryA', 'laundryB', 'view1', 'view2']) assert.ok(SPOTS[k].angleTo(DIG_SITE_POS(4)) * R >= 0.6, `${k} on the footings dig site`)
+  LAMPS.forEach((l, i) => assert.ok(l.angleTo(DIG_SITE_POS(4)) * R >= 0.6, `lamp ${i} on the footings dig site`))
   assert.ok(SPOTS.bus.angleTo(VILLAGE) * R < 1.5, 'bus stop by the square')
   assert.ok(SPOTS.shrine.angleTo(zv(region('peak'))) < 1e-6, 'shrine on the Peak top')
   for (const l of LAMPS) assert.ok(dry(l) && !onBridge(l) && HOUSES.slice(1).every(h => h.angleTo(l) * R > 0.5), 'lamp placement')
