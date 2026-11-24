@@ -557,7 +557,7 @@ function Rig() {
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
       let hit = RC.intersectObjects(OCC, false)[0]
       if (hit) for (const t of [0.3, 0.55, 0.8]) { _cv.copy(_u).lerp(P.wUp, t).normalize(); RC.set(_v, _cv); RC.far = dist // a house in the way: first try looking down at her from higher up, over the roof
-        if (!RC.intersectObjects(OCC, false).length) { goal.copy(_v).addScaledVector(_cv, dist); hit = null; break } }
+        if (!RC.intersectObjects(OCC, false).length) { _cv.copy(_u).lerp(P.wUp, Math.min(0.9, t + 0.18)).normalize(); goal.copy(_v).addScaledVector(_cv, dist); hit = null; break } } // a little higher than just clear: the blocker is a simple shape
       if (hit) { const d = hit.distance - 0.12, minD = 0.9 * cz // still blocked (the free orbit swings round houses often)
         if (d >= minD) goal.copy(_v).addScaledVector(_u, d).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist)) // room before the wall: stop in front of it
         else goal.copy(_v).addScaledVector(P.wUp, minD).addScaledVector(_u, Math.max(0.08, d)) } // she's right by the wall: tip up over her head and look down (never through the wall, never a head-filling close-up)
