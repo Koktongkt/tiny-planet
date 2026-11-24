@@ -64,7 +64,7 @@ Object.assign(POSES, {
     mix(B.head, 'y', Math.sin(k * 0.45) * 0.4); mix(B.head, 'x', 0.05 + Math.sin(k * 0.3) * 0.05); mix(B.chest, 'x', 0.1); mix(B.head, 'z', Math.sin(k * 0.8) * 0.05)
     for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -0.55); mix(B['up' + k2], 'z', sd * -0.12); mix(B['fo' + k2], 'x', -0.55) } },
   smell(B, mix, st, t, w) { const k = st.actT || 0, lean = Math.min(1, k / 0.8), ah = Math.max(0, Math.sin(Math.min(1, Math.max(0, (k - 1.6) / 1.2)) * Math.PI))
-    mix(B.root, 'x', 0.18 * lean); mix(B.chest, 'x', 0.3 * lean - 0.15 * ah); mix(B.head, 'x', 0.3 * lean - 0.25 * ah); mix(B.head, 'z', 0.15 * ah)
+    mix(B.root, 'x', 0.1 * lean); mix(B.chest, 'x', 0.2 * lean - 0.12 * ah); mix(B.head, 'x', 0.22 * lean - 0.2 * ah); mix(B.head, 'z', 0.15 * ah)
     for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', 0.45); mix(B['up' + k2], 'z', sd * 0.08); mix(B['fo' + k2], 'x', -0.35) } },
   leaf(B, mix, st, t, w) { const k = st.actT || 0, stroke = Math.sin(k * 4) * 0.12 * Math.min(1, k / 0.6)
     mix(B.chest, 'x', 0.15); mix(B.head, 'x', 0.15); mix(B.head, 'z', 0.1); mix(B.upR, 'x', -1.15 + stroke); mix(B.upR, 'z', 0.12); mix(B.foR, 'x', -0.35 - stroke)
@@ -74,10 +74,12 @@ Object.assign(POSES, {
     mix(B.upR, 'x', -0.85); mix(B.upR, 'z', -0.15); mix(B.foR, 'x', -1.9); mix(B.upL, 'x', -0.45); mix(B.upL, 'z', 0.2); mix(B.foL, 'x', -1.25) },
   warm(B, mix, st, t, w) { const k = st.actT || 0, rub = Math.sin(k * 7) * 0.1 * (Math.sin(k * 0.8) > 0.2 ? 1 : 0)
     mix(B.chest, 'x', 0.12); mix(B.head, 'x', 0.12); mix(B.root, 'x', 0.05)
-    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -1.2); mix(B['up' + k2], 'z', sd * -0.1); mix(B['fo' + k2], 'x', -0.35); mix(B['fo' + k2], 'y', sd * rub) } },
+    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -1.5); mix(B['up' + k2], 'z', sd * -0.12); mix(B['fo' + k2], 'x', -0.7); mix(B['fo' + k2], 'y', sd * rub) } }, // hands up at chest height, palms to the fire
   gaze(B, mix, st, t, w) { const k = st.actT || 0
-    mix(B.head, 'x', -0.08); mix(B.head, 'y', Math.sin(k * 0.6) * 0.3); mix(B.hips, 'z', Math.sin(k * 0.5) * 0.04)
-    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -0.95); mix(B['up' + k2], 'z', sd * -0.05); mix(B['fo' + k2], 'x', -0.7) } },
+    // the sill is above her head: hands clasped behind her, chin up, a slow look along the view, up on her toes now and then
+    const toe = Math.max(0, Math.sin(k * 1.3) - 0.6) * 2.5
+    mix(B.head, 'x', -0.3); mix(B.head, 'y', Math.sin(k * 0.6) * 0.3); mix(B.chest, 'x', -0.06); mix(B.hips, 'z', Math.sin(k * 0.5) * 0.04); B.root.position.y += 0.008 * toe * w
+    for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', 0.5); mix(B['up' + k2], 'z', sd * -0.1); mix(B['fo' + k2], 'x', -0.4); mix(B['ft' + k2], 'x', 0.5 * toe) } },
 })
 
 // ---------- particles: soft steam, gold sparkles, sleepy z's (one Points call each, room-local) ----------
