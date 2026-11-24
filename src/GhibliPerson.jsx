@@ -223,7 +223,7 @@ const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; retu
 const _t = new THREE.Vector3(), _u = new THREE.Vector3()
 function cap(p, a, b, ra, rb) { _t.subVectors(p, a); _u.subVectors(b, a); const h = Math.min(1, Math.max(0, _t.dot(_u) / _u.lengthSq())); return _t.addScaledVector(_u, -h).length() - (ra + (rb - ra) * h) }
 function ell(p, c, r) { const x = (p.x - c.x) / r.x, y = (p.y - c.y) / r.y, z = (p.z - c.z) / r.z; return (Math.sqrt(x * x + y * y + z * z) - 1) * Math.min(r.x, r.y, r.z) }
-function rbox(p, c, h, r) { const qx = Math.abs(p.x - c.x) - h.x, qy = Math.abs(p.y - c.y) - h.y, qz = Math.abs(p.z - c.z) - h.z; return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r }
+function ocol(p, c, h, r) { const a = (p.x - c.x) / h.x, b = (p.z - c.z) / h.z, qx = (Math.sqrt(a * a + b * b) - 1) * Math.min(h.x, h.z), qy = Math.abs(p.y - c.y) - h.y; return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r } // vertical oval column (radii h.x, h.z; half height h.y), rounded edges r
 function torus(p, c, R, r) { const dx = p.x - c.x, dz = p.z - c.z, q = Math.sqrt(dx * dx + dz * dz) - R; return Math.sqrt(q * q + (p.y - c.y) ** 2) - r }
 
 // body spec from parameters (unit space; the whole character is then scaled by H)
@@ -241,7 +241,7 @@ export function spec(b = {}) {
   S.headR = V3(0.068 * hd, 0.0584 * hd, 0.0648 * hd)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
-  if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]) } // optional mid-face shapes (head-frame units): ellipsoids, or rounded boxes when a corner radius r is given; the nose in profile
+  if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]) } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
   const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
@@ -266,7 +266,7 @@ function core(S, p) {
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
   let h = ell(p, S.headC, S.headR); if (S.ck) h = smin(h, Math.min(ell(p, S.ck[0], S.ck[2]), ell(p, S.ck[1], S.ck[2])), S.ck[3])
-  if (S.mf) for (const [c, r, k, rr] of S.mf) h = smin(h, rr == null ? ell(p, c, r) : rbox(p, c, r, rr), k)
+  if (S.mf) for (const [c, r, k, rr] of S.mf) h = smin(h, rr == null ? ell(p, c, r) : ocol(p, c, r, rr), k)
   return smin(d, h, 0.012)
 }
 function armD(S, p, k) {
