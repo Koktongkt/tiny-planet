@@ -31,36 +31,36 @@ const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, bl
 const EAR = { x: 0.061, y: -0.012, z: 0.006 }
 function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 10, 8)
-  // short dark cap hugging the skull, a few soft swept clumps on top and right, ears visible
+  // short dark cap, forehead left open, swept clumps on top and right, ears visible
   const parts = [
-    part(ball, [0, 0.008, -0.008], [0.062, 0.050, 0.056]),
+    part(ball, [0, 0.010, -0.010], [0.061, 0.050, 0.055]),
     part(ball, [0, -0.006, -0.028], [0.050, 0.032, 0.038]), // tight nape
-    // a few soft swept clumps on top and the right (viewer's right / +X)
-    part(ballS, [0.018, 0.052, 0.008], [0.017, 0.013, 0.014], [0.42, 0.50, 0.12]),
-    part(ballS, [-0.010, 0.048, 0.002], [0.013, 0.010, 0.011], [0.28, -0.22, -0.08]),
-    part(ballS, [0.032, 0.044, -0.002], [0.015, 0.012, 0.013], [0.30, 0.60, 0.10]),
-    part(ballS, [0.008, 0.046, -0.018], [0.013, 0.010, 0.012], [0.32, 0.10, 0]),
-    // short fringe, not a heavy brow cloud
-    part(ballS, [0, 0.026, 0.046], [0.020, 0.008, 0.009]),
-    ...[-1, 1].map(d => part(ballS, [d * 0.022, 0.022, 0.042], [0.012, 0.008, 0.008], [0.12, d * 0.22, 0])),
+    // more top / right volume — swept clumps, hairline lifted off the brow
+    part(ballS, [0.020, 0.056, 0.004], [0.020, 0.016, 0.016], [0.48, 0.55, 0.12]),
+    part(ballS, [0.036, 0.048, 0.000], [0.018, 0.015, 0.015], [0.35, 0.65, 0.12]),
+    part(ballS, [0.010, 0.054, -0.016], [0.016, 0.013, 0.014], [0.38, 0.15, 0]),
+    part(ballS, [-0.012, 0.050, 0.000], [0.014, 0.012, 0.012], [0.30, -0.25, -0.08]),
+    part(ballS, [0.028, 0.040, 0.018], [0.014, 0.012, 0.012], [0.25, 0.45, 0.10]),
+    // high, separated swept fringe clumps — no bar across the forehead
+    part(ballS, [0.016, 0.036, 0.044], [0.013, 0.009, 0.010], [0.20, 0.35, 0.06]),
+    part(ballS, [-0.014, 0.034, 0.042], [0.011, 0.008, 0.009], [0.18, -0.30, -0.04]),
     // ears stick out past the tight cap
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
   ]
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
-  for (const k of [2, 3, 4, 5]) tagAW(parts[k], () => [2, 0.55])
-  tagAW(parts[6], () => [3, 0.4])
+  for (const k of [2, 3, 4, 5, 6]) tagAW(parts[k], () => [2, 0.55])
   for (const k of [7, 8]) tagAW(parts[k], () => [3, 0.35])
   for (const k of [9, 10]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 function hoshinoGrey() {
   const ballS = new THREE.SphereGeometry(1, 10, 8)
-  // soft blended grey patch at the temple on +X (viewer's right), hugging the cap
+  // soft blended grey patch at the side, above the ear (viewer's right / +X)
   const parts = [
-    part(ballS, [0.046, 0.018, 0.018], [0.010, 0.016, 0.010], [0.12, 0.28, 0.06]),
-    part(ballS, [0.048, 0.006, 0.008], [0.009, 0.014, 0.009], [0.08, 0.30, 0.08]),
-    part(ballS, [0.040, 0.032, 0.004], [0.009, 0.012, 0.008], [0.15, 0.35, 0.06]),
+    part(ballS, [0.050, 0.022, 0.008], [0.011, 0.016, 0.012], [0.12, 0.30, 0.08]),
+    part(ballS, [0.048, 0.034, 0.000], [0.010, 0.014, 0.010], [0.18, 0.35, 0.06]),
+    part(ballS, [0.052, 0.012, 0.004], [0.009, 0.012, 0.009], [0.08, 0.28, 0.06]),
   ]
   tagAW(parts[0], () => [1, 0.45])
   tagAW(parts[1], () => [1, 0.4])
@@ -146,6 +146,7 @@ function mittenGeo() {
   return paint(g, SKIN)
 }
 
+
 function scarfGeo() {
   // knotted rust scarf with two hanging ends over the chest (custom mesh in the lazy chunk)
   const rust = '#c05438', rustD = '#9a3c28'
@@ -163,31 +164,76 @@ function scarfGeo() {
   knot2.scale(1.35, 0.65, 0.95)
   knot2.translate(-0.006, -0.014, 0.032)
   parts.push(paint(knot2, rust))
-  // two flat hanging ends, clearly separated over the chest
-  const endL = new THREE.BoxGeometry(0.024, 0.058, 0.007)
-  endL.rotateZ(0.42)
-  endL.translate(-0.022, -0.048, 0.030)
+  // two longer, fuller hanging ends, set wide of the book so they read over the chest
+  const endL = new THREE.BoxGeometry(0.034, 0.132, 0.012)
+  endL.rotateZ(0.32)
+  endL.translate(-0.058, -0.086, 0.044)
   parts.push(paint(endL, rust))
-  const endR = new THREE.BoxGeometry(0.022, 0.046, 0.007)
-  endR.rotateZ(-0.52)
-  endR.translate(0.024, -0.040, 0.030)
+  const endR = new THREE.BoxGeometry(0.032, 0.118, 0.012)
+  endR.rotateZ(-0.38)
+  endR.translate(0.056, -0.078, 0.046)
   parts.push(paint(endR, rustD))
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
 function lapelGeo() {
   const parts = []
+  const shade = '#a88454'
   for (const sd of [-1, 1]) {
     const shape = new THREE.Shape()
-    shape.moveTo(0, 0.030)
-    shape.lineTo(sd * 0.018, 0.008)
-    shape.lineTo(sd * 0.010, -0.006)
-    shape.lineTo(0, 0.008)
+    shape.moveTo(sd * 0.002, 0.038)
+    shape.lineTo(sd * 0.026, 0.010)
+    shape.lineTo(sd * 0.018, -0.008)
+    shape.lineTo(sd * 0.002, 0.012)
     shape.closePath()
-    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.004, bevelEnabled: false, steps: 1 })
-    g.translate(sd * 0.014, 0.004, 0)
-    parts.push(paint(g, JACKET))
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.007, bevelEnabled: false, steps: 1 })
+    g.translate(sd * 0.012, 0.006, 0)
+    parts.push(paint(g, shade))
   }
+  const g = mergeGeometries(parts); g.computeVertexNormals(); return g
+}
+
+function pocketGeo() {
+  const shade = '#a88454', slit = '#8a6a40'
+  const parts = []
+  for (const sd of [-1, 1]) {
+    const flap = new THREE.BoxGeometry(0.024, 0.018, 0.006)
+    flap.translate(sd * 0.034, 0, 0)
+    parts.push(paint(flap, shade))
+    const line = new THREE.BoxGeometry(0.020, 0.0018, 0.002)
+    line.translate(sd * 0.034, 0.007, 0.003)
+    parts.push(paint(line, slit))
+  }
+  const g = mergeGeometries(parts); g.computeVertexNormals(); return g
+}
+
+
+function tubeBetween(a, b, r0, r1, hex) {
+  const A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b)
+  const len = Math.max(A.distanceTo(Bv), 0.001)
+  const g = new THREE.CylinderGeometry(r1, r0, len, 12)
+  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), Bv.clone().sub(A).normalize())
+  g.applyQuaternion(quat)
+  const mid = A.clone().add(Bv).multiplyScalar(0.5)
+  g.translate(mid.x, mid.y, mid.z)
+  return paint(g, hex)
+}
+
+// still-pose arm: hanging sleeve, bent forearm, ends at the prop mitten (chest-local)
+function stillArmGeo(sd, sh, hand, hex) {
+  const elbow = [
+    (sh[0] + hand[0]) * 0.40 + sd * 0.020,
+    Math.min(sh[1], hand[1]) - 0.046,
+    (sh[2] + hand[2]) * 0.40 + 0.010,
+  ]
+  const cap = new THREE.SphereGeometry(0.015, 10, 8); cap.translate(...sh)
+  const joint = new THREE.SphereGeometry(0.0135, 10, 8); joint.translate(...elbow)
+  const parts = [
+    paint(cap, hex),
+    tubeBetween(sh, elbow, 0.0160, 0.0138, hex),
+    paint(joint, hex),
+    tubeBetween(elbow, hand, 0.0138, 0.0112, hex),
+  ]
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
@@ -209,28 +255,34 @@ function attachLook(root) {
     add(vestGeo(), [0, -0.012, chestZ + 0.014])
     add(shirtCollarGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.010, chestZ * 0.40])
     add(lapelGeo(), [0, 0.010, chestZ + 0.018])
+    add(pocketGeo(), [0, -0.052, chestZ + 0.022])
     add(scarfGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.004, chestZ * 0.55])
     // open book at chest height, pages toward the camera
     const book = add(g.book, [-0.002, 0.016, chestZ + 0.050], g.m, [Math.PI * 0.50, 0.02, 0.04])
-    book.scale.setScalar(1.55)
+    book.scale.setScalar(1.95)
     if (LIFE_OFF) {
-      // left mitten under the book, right mitten and pencil on the page (parented so they stay put)
-      const mitL = add(mittenGeo(), [-0.032, 0.006, chestZ + 0.046])
+      const chestY = (S.bellyY + S.chestY) / 2
+      const mitL = add(mittenGeo(), [-0.038, 0.004, chestZ + 0.052])
       mitL.rotation.set(0.25, 0.45, 0.35)
-      mitL.scale.setScalar(1.12)
-      const pencil = add(g.pencil, [0.016, 0.028, chestZ + 0.062], g.m, [1.20, 0.40, 0.60])
-      const mitR = add(mittenGeo(), [0.034, 0.016, chestZ + 0.050])
+      mitL.scale.setScalar(1.28)
+      const pencil = add(g.pencil, [0.018, 0.034, chestZ + 0.070], g.m, [1.20, 0.40, 0.60])
+      const mitR = add(mittenGeo(), [0.040, 0.018, chestZ + 0.056])
       mitR.rotation.set(0.20, -0.35, -0.25)
-      mitR.scale.setScalar(1.08)
+      mitR.scale.setScalar(1.24)
+      const shL = [-(Math.abs(S.shL.x) + 0.000), S.shY - chestY - 0.002, S.shL.z + 0.014]
+      const shR = [ (Math.abs(S.shR.x) + 0.000), S.shY - chestY - 0.002, S.shR.z + 0.014]
+      add(stillArmGeo(-1, shL, [-0.038, 0.004, chestZ + 0.052], JACKET), [0, 0, 0])
+      add(stillArmGeo( 1, shR, [ 0.040, 0.018, chestZ + 0.056], JACKET), [0, 0, 0])
     }
   }
   return () => out.forEach(h => h.removeFromParent())
 }
 
 function readHold(B, st) {
-  // still pose: long sleeves reach the book; mittens parented to the book cover the skinned hands.
+  // still pose: custom chest-parented sleeves (stillArmGeo) hang and bend in to the book.
+  // the skinned rig is shortened (body.arm / hand) so it does not draw extra shoulder stubs.
   // window.__poseH = [upLX, upLY, upLZ, foLX, foLY, foLZ, upRX, upRY, upRZ, foRX, foRY, foRZ]
-  const d = (typeof window !== 'undefined' && window.__poseH) || [-0.65, 0.45, 0.12, -1.75, 0.22, 0.12, -0.85, -0.38, -0.12, -1.70, -0.20, -0.10]
+  const d = (typeof window !== 'undefined' && window.__poseH) || [0.20, 0.10, -0.40, -0.80, 0.0, 0.0, 0.20, -0.10, 0.40, -0.80, 0.0, 0.0]
   B.upL.rotation.set(d[0], d[1], d[2])
   B.foL.rotation.set(d[3], d[4], d[5])
   B.upR.rotation.set(d[6], d[7], d[8])
@@ -243,15 +295,16 @@ function readHold(B, st) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 0.92, girth: 1.20, shoulder: 1.08, chestW: 1.12, bellyZ: 0.96, shX: 1.18, armA: 0.50,
-    armR: [1.12, 1.30, 1.38], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 1.28,
+  // still pose draws custom sleeves; body.arm / hand stay tiny so the skinned rig is hidden.
+  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 0.04, girth: 1.20, shoulder: 1.08, chestW: 1.12, bellyZ: 0.96, shX: 1.18, armA: 0.50,
+    armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.08,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16,
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
   face: { glasses: GLASS },
   // openJacket painter: acc = khaki jacket to mid-thigh, top = vest shown in the opening,
   // bottom = olive trousers. Custom knotted scarf, small shirt collar, and lapels are chest meshes.
-  outfit: { type: 'openJacket', hemY: 'thigh', skin: SKIN, top: VEST, acc: JACKET, acc2: JACKET, bottom: '#4e4f38', shoe: '#4e321c', shoeY: 0.044, long: true, sleeve: 'puff', seams: true },
+  outfit: { type: 'openJacket', hemY: 'thigh', skin: SKIN, top: VEST, acc: JACKET, acc2: JACKET, bottom: '#4e4f38', shoe: '#4e321c', shoeY: 0.044, long: true, sleeve: 'none', seams: true },
   hold: {},
   walk: { rate: 8, stride: 0.48, knee: 0.6, bounce: 0.008, smooth: true, land: 0.28, arm: 0.45, lean: 0.12, twist: 0.1, sway: 0.07, idle: 'look' },
   ext: {
