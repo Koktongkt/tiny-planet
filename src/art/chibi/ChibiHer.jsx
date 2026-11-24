@@ -127,7 +127,10 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // curve into the chin, its front level with the box's at their seam.
 // [y, z, rx, ry, rz, smin k]           ellipsoid (radii)
 // [y, z, rx, hy, rz, smin k, round r]  oval column (cross-section radii, half height, edge radius)
-const MIDFACE = [[-0.0285, 0.0425, 0.016, 0.0052, 0.0135, 0.0035, 0.002], [-0.0345, 0.0322, 0.03, 0.0162, 0.0245, 0.0075]]
+const MIDFACE = [[-0.0285, 0.0425, 0.03, 0.0052, 0.0135, 0.0035, 0.002], [-0.0345, 0.0322, 0.038, 0.0162, 0.0245, 0.0075]]
+// 12m (KT: smoother in 3/4 without touching the side view): every swell recedes as MID_FADE * x^2 away from the centre
+// line. Zero on the centre line, so the profile is exactly the same; in 3/4 the swells ease back into the cheeks.
+const MID_FADE = 16
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 // a short vertical column with an oval cross-section (rx, rz), half height hy, rounded top/bottom edges r: a flat vertical
 // front with a crisp step in profile, but sides that round back into the cheeks in 3/4 (a box's side edge read as a beak)
@@ -136,7 +139,8 @@ const ocol = (x, y, z, cx, cy, cz, rx, hy, rz, r) => { const a = (x - cx) / rx, 
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
   let h = smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
-  for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c), mk)
+  const fade = MID_FADE * x * x
+  for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)
   return h }
 // the decal: a grid over the face region, each vertex shot onto the head surface from the front and lifted a hair
 const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
@@ -337,7 +341,7 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // pass 4 arms (measured on the concept front): longer soft forearm ~70% of the puff-sleeve width, rounder mitten hands,
   // hanging a little further from the body
   body: { H: 0.89, head: 1.45, leg: 0.96, torso: 1.13, arm: 0.92, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.26, armA: 0.5,
-    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.45, bootL: 1.04, hand: 1.2, cheek: CHEEK, midface: MIDFACE,
+    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.45, bootL: 1.04, hand: 1.2, cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE,
     // pass 11 boots (KT): taller chunky boots that stand on a flat sole. The ankle rises 0.01 and the shin shortens to
     // match (leg 1.06 -> 0.96 keeps the hip where it was), so the cuffs ride higher and more boot shows below them.
     anY: 0.044, footY: 0.017, soleY: 0.0012, bootShaft: [0.0228, 0.0165, 0.0238, -0.009] },
