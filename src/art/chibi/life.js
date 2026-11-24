@@ -13,7 +13,10 @@ const MOT = REDUCED ? 0.35 : 1
 /** hair secondary offsets (head-local units): side bun L, side bun R, top bun, front locks — read by the hair shaders */
 export const HAIR_OFF = new Float32Array(12)
 export const EXCITED_ACTS = new Set(['wave', 'play', 'reel', 'pick', 'pet', 'photo_wave', 'photo_peace', 'photo_hold_fish', 'photo_twirl', 'photo_kneel'])
-const FID = { look: 3.4, stretch: 2.6, rock: 2.8, satchel: 2.0 }, FIDS = Object.keys(FID)
+const FID = { look: 3.4, stretch: 2.6, rock: 2.8, satchel: 2.0, hum: 3.6, pebble: 2.6, hands: 2.8, tiptoe: 2.4, catch: 3.2, shiver: 1.6 }
+// which fidgets she picks from: dry weather, and in the rain (catch the drops, shiver, still the odd look round)
+const FIDS = ['look', 'stretch', 'rock', 'satchel', 'hum', 'pebble', 'hands', 'tiptoe'], FIDS_RAIN = ['catch', 'shiver', 'catch', 'look', 'satchel', 'hands']
+const bump = (k, n) => Math.max(0, Math.sin(k * Math.PI * n)) // n soft pulses over the fidget
 const KE = 0.3 // knee smoothing width
 const _p = new THREE.Vector3(), _v = new THREE.Vector3(), _a = new THREE.Vector3(), _q = new THREE.Quaternion(), _t = new THREE.Vector3(), _r = new THREE.Vector3()
 const V3S = () => [SPR(), SPR(), SPR()]
@@ -23,7 +26,7 @@ export function makeLife(rnd = Math.random) {
   return { rnd, m: 0, ph: 0, run: 0, lean: SPR(), turn: 0, idle: 0, fid: null, fu: 0, fidN: 4 + rnd() * 4, fidPrev: '',
     bobY: 0, bobV: 0, headBob: SPR(), lookYaw: SPR(), lookPitch: SPR(), tilt: SPR(), nod: SPR(),
     blink: BLINKER(rnd), open: 1, lid: 0, gaze: GAZE(rnd), gx: 0, gy: 0, scanT: 0, tgt: new THREE.Vector3(), tk: 0, near: 0, camT: 0, camWait: 8 + rnd() * 8,
-    mood: 'happy', scf: SPR(), scfZ: SPR(), bagKick: 0, moodT: 0, rideT: 0, blush: 0, squint: 0, yawn: 0, talk: 0,
+    mood: 'happy', scf: SPR(), scfZ: SPR(), bagKick: 0, moodT: 0, rideT: 0, blush: 0, squint: 0, yawn: 0, fsq: 0, talk: 0,
     hp: new THREE.Vector3(), hv: new THREE.Vector3(), init: 0, hy: 0, hair: [V3S(), V3S(), V3S(), V3S()] }
 }
 
@@ -49,8 +52,9 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   // ---- idle fidgets: look around, stretch, rock on the heels, fix the satchel ----
   let fidLookX = 0
   if (L.fid && (m > 0.2 || busy || ride)) L.fid = null
-  if (!L.fid && L.idle > 2.5) { L.fidN -= dt; if (L.fidN <= 0) { let f = FIDS[Math.floor(L.rnd() * FIDS.length)]; if (f === L.fidPrev) f = FIDS[(FIDS.indexOf(f) + 1) % FIDS.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = 5 + L.rnd() * 6 } }
-  L.yawn = 0; L.bagKick = 0
+  const rainy = (T.rain || 0) > 0.3
+  if (!L.fid && L.idle > 2.5) { L.fidN -= dt; if (L.fidN <= 0) { const set = (typeof window !== 'undefined' && window.__herFids) || (rainy ? FIDS_RAIN : FIDS); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = 5 + L.rnd() * 6 } }
+  L.yawn = 0; L.bagKick = 0; L.fsq = 0; let fidLookY = 0
   if (L.fid) {
     const d = FID[L.fid], u0 = L.fu; L.fu += dt; const u = L.fu, e = envelope(u, d, 0.45) * idleK * MOT, k = u / d
     if (L.fid === 'look') { const y = Math.sin(k * Math.PI * 2) * 0.6 * e; B.head.rotation.y += y; B.chest.rotation.y += y * 0.25; fidLookX = Math.sign(Math.cos(k * Math.PI * 2 - Math.PI / 2)) * 0.9 * e
@@ -62,17 +66,36 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
       B.upL.rotation.x += 0.35 * e; B.upR.rotation.x += 0.35 * e; B.upL.rotation.z += 0.1 * e; B.upR.rotation.z -= 0.1 * e; B.foL.rotation.x -= 0.5 * e; B.foR.rotation.x -= 0.5 * e; B.head.rotation.z += 0.06 * e }
     else if (L.fid === 'satchel') { B.upR.rotation.x -= 0.95 * e; B.upR.rotation.z -= 0.05 * e; B.foR.rotation.x -= 1.45 * e; B.chest.rotation.y += 0.12 * e; B.head.rotation.x += 0.18 * e
       L.bagKick = Math.sin(u * 10) * 0.22 * e * (1 - k) }
+    else if (L.fid === 'hum') { // humming a little tune: head and body sway in time, hands clasped behind, eyes happily narrowed
+      const sw = Math.sin(k * Math.PI * 4) * e; B.head.rotation.z += 0.14 * sw; B.chest.rotation.z -= 0.04 * sw; B.hips.rotation.z += 0.025 * sw; B.root.position.y += 0.002 * Math.abs(sw)
+      B.upL.rotation.x += 0.55 * e; B.upR.rotation.x += 0.55 * e; B.upL.rotation.z += 0.18 * e; B.upR.rotation.z -= 0.18 * e; B.foL.rotation.x -= 0.25 * e; B.foR.rotation.x -= 0.25 * e; L.fsq = 0.55 * e }
+    else if (L.fid === 'pebble') { // eyes down, a couple of little kicks at a pebble with the right foot
+      const kk = bump(Math.min(1, k * 1.25), 2) * e; B.head.rotation.x += 0.2 * e; fidLookY = -0.9 * e
+      B.thR.rotation.x -= 0.9 * kk; B.shRn.rotation.x += 0.5 * kk; B.ftR.rotation.x -= 0.3 * kk; B.chest.rotation.x += 0.03 * e; B.upL.rotation.z -= 0.12 * kk; B.upR.rotation.z += 0.12 * kk }
+    else if (L.fid === 'hands') { // looks at her hands (mittens up in front, a little turn of the wrists)
+      B.upL.rotation.x -= 0.85 * e; B.upR.rotation.x -= 0.85 * e; B.foL.rotation.x -= 0.9 * e; B.foR.rotation.x -= 0.9 * e; B.upL.rotation.z += 0.42 * e; B.upR.rotation.z -= 0.42 * e
+      const tw = Math.sin(k * Math.PI * 3) * 0.25 * e; B.foL.rotation.y += tw; B.foR.rotation.y -= tw; B.head.rotation.x += 0.2 * e; fidLookY = -1 * e }
+    else if (L.fid === 'tiptoe') { // bounces up onto her toes twice, arms out a little: pleased with herself
+      const up = bump(k, 2) * e; B.root.position.y += 0.012 * up; B.ftL.rotation.x += 0.7 * up; B.ftR.rotation.x += 0.7 * up; B.shLn.rotation.x -= 0.15 * up; B.shRn.rotation.x -= 0.15 * up
+      B.upL.rotation.z -= 0.3 * up; B.upR.rotation.z += 0.3 * up; B.head.rotation.x -= 0.05 * up; L.fsq = 0.3 * up }
+    else if (L.fid === 'catch') { // rain: holds her hand out, palm up, and looks up at the sky
+      B.upR.rotation.x -= 1.2 * e; B.upR.rotation.z -= 0.1 * e; B.foR.rotation.x -= 0.35 * e; B.foR.rotation.y += 0.6 * e; B.head.rotation.x -= 0.12 * e; fidLookY = 0.9 * e
+      B.chest.rotation.y -= 0.08 * e }
+    else if (L.fid === 'shiver') { // rain: a quick shiver, shoulders up, arms in
+      const sh = Math.sin(u * 46) * e * (1 - k * 0.6); B.chest.rotation.z += 0.03 * sh; B.head.rotation.z -= 0.025 * sh; B.hips.position.x += 0.0012 * sh
+      B.upL.rotation.z += 0.25 * e; B.upR.rotation.z -= 0.25 * e; B.foL.rotation.x -= 0.5 * e; B.foR.rotation.x -= 0.5 * e; B.chest.rotation.x += 0.05 * e; L.fsq = 0.45 * e }
     if (u >= d) L.fid = null
   }
   // ---- walk / run: deeper bounce and forward lean when running, bigger arm swing, head overlap on the bob ----
   if (m > 0.01 && !ride && !busy) {
     const run = L.run * m * MOT, s = Math.sin(st.phase)
-    B.root.rotation.x += 0.13 * run; B.chest.rotation.x += 0.05 * run; B.root.position.y += 0.004 * run * (1 - Math.abs(s))
+    B.root.rotation.x += 0.13 * run; B.chest.rotation.x += 0.05 * run; B.root.position.y += 0.005 * run * (1 - s * s)
     // knees: the base uses max(0, cos) for the knee (a kink where the leg straightens: the visible "pop", worse with the bigger bounce).
     // Replace the kink with a smooth rectifier so the knee never snaps or locks straight (never mind the villagers: only her rig runs this).
     const c = Math.cos(st.phase), mm = m * MOT
     for (let k = 0; k < 2; k++) { const sg = k ? 1 : -1, x = sg * c, raw = x > 0 ? x : 0, sm = 0.5 * (x + Math.sqrt(x * x + KE * KE)), xf = -x, rf = xf > 0 ? xf : 0, sf = 0.5 * (xf + Math.sqrt(xf * xf + KE * KE))
       const dk = 0.8 * mm * (sm - raw), sn = k ? B.shRn : B.shLn, ft = k ? B.ftR : B.ftL; sn.rotation.x += dk; ft.rotation.x += -dk * 0.75 + 0.25 * mm * (sf - rf) }
+    if (rainy) { const h = m * MOT; B.chest.rotation.x += 0.05 * h; B.head.rotation.x += 0.04 * h; B.upL.rotation.z += 0.06 * h; B.upR.rotation.z -= 0.06 * h } // rain: shoulders a little hunched
     B.upL.rotation.x *= 1 + 0.55 * L.run; B.upR.rotation.x *= 1 + 0.55 * L.run; B.foL.rotation.x -= 0.35 * run; B.foR.rotation.x -= 0.35 * run
   }
   const by = B.root.position.y, bv = (by - L.bobY) / dt, ba = (bv - L.bobV) / dt; L.bobY = by; L.bobV = bv
@@ -81,7 +104,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   const tu0 = L.turn; L.turn = approach(L.turn, st.turn || 0, 8, dt)
   // (the shared base rig turns the head ~0.22*turn *against* the turn; cancel that and lead into it instead, plus a small lean)
   B.head.rotation.y += (L.turn * 0.22 + clamp(L.turn * 0.2, -0.4, 0.4) * MOT) * (ride ? 0.6 : 1)
-  if (!ride && !busy) { const tl = clamp(-L.turn * 0.04 * m, -0.08, 0.08) * MOT; B.hips.rotation.z += tl; B.chest.rotation.z += tl * 0.5 }
+  if (!ride && !busy) { const tl = clamp(-L.turn * 0.07 * m * (1 + 0.6 * L.run), -0.14, 0.14) * MOT; B.hips.rotation.z += tl; B.chest.rotation.z += tl * 0.5 } // lean into turns, more when running
   if (Math.abs(L.turn) > 1.1 && Math.abs(tu0) <= 1.1) triggerBlink(L.blink)
   // ---- bike: lean into turns, a happy wobble and a little bop ----
   if (ride) { const lt = clamp(-L.turn * 0.12, -0.2, 0.2) * MOT; B.hips.rotation.z += lt; B.chest.rotation.z += lt * 0.5 + 0.025 * Math.sin(t * 2.1) * MOT
@@ -114,13 +137,13 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   if (mood !== L.mood) { L.mood = mood; L.moodT = 0 } else L.moodT += dt
   L.talk = approach(L.talk, TALK.open ? 1 : 0, 4, dt)
   const friendly = W_ && W_.__herNear != null ? W_.__herNear : Math.max(L.near * (L.tk === 1 || L.tk === 2 ? 1 : 0), L.talk)
-  L.blush = approach(L.blush, mood === 'excited' ? 1 : friendly, 2.5, dt); L.squint = approach(L.squint, mood === 'excited' ? 0.15 : friendly * 0.28 + L.yawn * 0.5, 4, dt)
+  L.blush = approach(L.blush, mood === 'excited' ? 1 : friendly, 2.5, dt); L.squint = approach(L.squint, mood === 'excited' ? 0.15 : friendly * 0.28 + L.yawn * 0.5 + L.fsq, 4, dt)
   // head: tilt with emotion, nod while listening, droop when sleepy
   B.head.rotation.z += spring(L.tilt, (mood === 'excited' ? 0.09 * Math.sin(t * 3.2) : 0) + friendly * 0.07 * Math.sin(t * 0.9 + 0.6), 2, 0.6, dt) * MOT
   B.head.rotation.x += spring(L.nod, L.talk * 0.06 * Math.max(0, Math.sin(t * 2.4)) + (mood === 'sleepy' ? 0.06 : 0), 2.5, 0.6, dt) * MOT
   // ---- eyes: blinks, gaze (look target remainder + turn lead + fidget look + saccades) ----
   L.open = stepBlink(L.blink, dt)
-  const ey = clamp((yaw - hy) / 0.55 + L.turn * 0.25 + fidLookX, -1, 1), ex = clamp((pitch - hp) / -0.4, -1, 1)
+  const ey = clamp((yaw - hy) / 0.55 + L.turn * 0.25 + fidLookX, -1, 1), ex = clamp((pitch - hp) / -0.4 + fidLookY, -1, 1)
   stepGaze(L.gaze, ey, ex, dt, REDUCED ? 0.4 : mood === 'focus' ? 0.4 : 1); L.gx = L.gaze.x; L.gy = L.gaze.y
   // ---- secondary motion: head acceleration (in the head frame) drives damped springs on buns, top bun and front locks ----
   if (!L.init) { L.hp.copy(_p); L.hv.set(0, 0, 0); L.init = 1 }

@@ -349,7 +349,9 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   scarf: '#d9503f', // pass 12 skin: warmer, deeper peach measured off the sheet
   // pass 10: palette from the turnaround sheet (warmer shirt, deeper denim and scarf), stitched seams
   outfit: { ...TRAVELLER.outfit, skin: '#f3bf98', top: '#f7ead3', bottom: '#4271b8', shoe: '#83492a', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.05, seams: true },
-  walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }, // life pass: a bouncier chibi walk
+  // anim pass 2 (KT: too bouncy): a low rounded bob instead of a hop, weight carried in the hips and shoulders (more sway
+  // and twist), a softer footfall squash, a slightly longer stride
+  walk: { rate: 11, stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' },
   ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)

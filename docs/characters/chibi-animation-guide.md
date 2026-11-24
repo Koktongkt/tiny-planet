@@ -36,8 +36,16 @@ Scale every additive angle and offset by `MOT` (`1`, or **0.35** when `prefers-r
 | `stretch` | 2.6 s | **Forward reach, not overhead.** Upper arms `x −1.55`, `z ±0.55`; forearms `x −0.15`; chest `x −0.05`; head `x −0.08`; a little rise and heel press. Peak head pitch stays ~0.13 rad so the face does not appear to slide, and the hands stay clear of the side buns. An overhead yawn (`z ±2.3`, head `−0.3`, chest `−0.16`) put the hands through the buns and pitched the head so far back the decal looked like it was sliding up the forehead — do not go back to that. |
 | `rock` | 2.8 s | Rocks on the heels; arms settle slightly. |
 | `satchel` | 2.0 s | Right arm reaches to the bag; a small bag kick. |
+| `hum` | 3.6 s | Anim pass 2. Hums a tune: head and body sway in time, hands clasped behind, eyes happily narrowed. |
+| `pebble` | 2.6 s | Eyes and head down, two small kicks at a pebble with the right foot. |
+| `hands` | 2.8 s | Brings both mittens up in front and looks at them, turning the wrists. |
+| `tiptoe` | 2.4 s | Bounces up onto her toes twice, arms out a little, pleased with herself. |
+| `catch` | 3.2 s | Rain only. Holds her right hand out, palm up, looking up at the sky. |
+| `shiver` | 1.6 s | Rain only. A quick shiver, shoulders up and arms in, eyes squeezed. |
 
-**Walk and run.** Chibi walk params (her): `{ rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }`. Run is detected from the phase rate (walk ~7.4/s, run ~10/s): `clamp((rate - 8.3) / 1.6, 0, 1)`. Extra forward lean **0.13 rad**, small extra bounce `0.004 * run * (1 − |sin phase|)`, bigger arm swing, head overlap spring on the bob (`freq 3.2`, `zeta 0.5`, clamp ±0.08).
+Dry weather picks from look, stretch, rock, satchel, hum, pebble, hands and tiptoe; when `T.rain > 0.3` she picks from catch, shiver, look, satchel and hands, and walks with her shoulders a little hunched. `L.fsq` narrows the eyes during a fidget; `fidLookY` points the eyes up or down. Studio: `window.__herFids = ['hum']` forces a fidget (set `__herLife.fidN = 0` to start it now).
+
+**Walk and run.** Anim pass 2 (KT: the old walk was too bouncy, a hop): her walk is `{ stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' }`. `walk.smooth` (shared rig, default off) makes the bob a rounded `1 - sin²` wave instead of the hop-shaped `1 - |sin|` (a sharp corner at every step); `walk.land` scales the footfall squash. Weight shows in hip sway and shoulder twist, not vertical bounce: the measured body bob is about half the old one. Turns lean `-0.07 * turn * move`, up to 1.6x when running (clamp ±0.14). The old walk was `{ rate: 11, stride: 0.55, bounce: 0.026, arm: 0.7, twist: 0.12, sway: 0.075 }`. Run is detected from the phase rate (walk ~7.4/s, run ~10/s): `clamp((rate - 8.3) / 1.6, 0, 1)`. Extra forward lean **0.13 rad**, small extra bounce `0.004 * run * (1 − |sin phase|)`, bigger arm swing, head overlap spring on the bob (`freq 3.2`, `zeta 0.5`, clamp ±0.08).
 
 **Start / stop.** A spring (`freq 1.7`, `zeta 0.42`) kicked by `−Δspeed * 1.6`: a small rock back on start, a forward pitch and settle on a sudden stop, hip squash. Lean clamp `−0.18 … 0.2`.
 
