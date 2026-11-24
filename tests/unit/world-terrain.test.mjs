@@ -1,6 +1,6 @@
 // node --test tests/unit — the reworked planet's terrain: one slope, Keepers' Peak at the north pole, sea at the south cap.
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { height, dir, R, SEA_LAT, SEA_W, LAKE_W } from '../../src/world.js'
+import { height, dir, R, SEA_LAT, SEA_W, LAKE_W, streamNear } from '../../src/world.js'
 import { region, OPEN_PLOTS, HOME_DIR } from '../../src/world/regions.js'
 
 let seed = 12345
@@ -71,5 +71,6 @@ test('lake: shore above the water, basin and drowned ruins below it', () => {
   const e1 = dir(0, 0).cross(lake).normalize(), e2 = lake.clone().cross(e1)
   for (let k = 0; k < 48; k++) { const b = k / 48 * Math.PI * 2, d = lr * 1.3
     const p = lake.clone().multiplyScalar(Math.cos(d)).addScaledVector(e1, Math.sin(d) * Math.cos(b)).addScaledVector(e2, Math.sin(d) * Math.sin(b)).normalize()
+    if (streamNear(p).d < streamNear(p).half + 0.8) continue // the river's outlet valley (Task 4) leaves the lake here
     assert.ok(height(p) > LAKE_W + 0.02, `shore dips into the lake at bearing ${k}`) }
 })

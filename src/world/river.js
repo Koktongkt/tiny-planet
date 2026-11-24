@@ -12,26 +12,30 @@ export const RIVER_PTS = [
   { lat: 1.212, lon: 0.247 }, // the spring, on the Peak rim (0.18 rad from its centre) at the top of the spring spur
   { lat: 1.173, lon: 0.274 }, // down the spur crest (the spur runs straight from the Peak centre to the cliff centre)
   { lat: 1.124, lon: 0.301 }, // onto the mesa top
-  { lat: 1.060, lon: 0.335 }, // across the mesa (level)
-  { lat: 1.000, lon: 0.395 },
+  { lat: 1.067, lon: 0.353 }, // straight across the mesa (level; world.js calms the mesa ripple along this run)
+  { lat: 1.009, lon: 0.395 },
   { lat: 0.950, lon: 0.430 }, // the lip: the waterfall drops off the downhill face toward the Terraces
   { lat: 0.885, lon: 0.505 }, // the plunge pool at the cliff foot
   { lat: 0.800, lon: 0.535 }, // the foot of the Terraces' west side (bottom step)
   { lat: 0.700, lon: 0.525 },
   { lat: 0.560, lon: 0.470 },
-  { lat: 0.440, lon: 0.430 }, // the Village's north-east corner (HOME_DIR is ~3.6 world units west)
-  { lat: 0.330, lon: 0.445 }, // the Village's east side
+  { lat: 0.440, lon: 0.452 }, // past the Village's north-east corner (HOME_DIR is ~3.8 world units west)
+  { lat: 0.330, lon: 0.467 }, // the Village's east side, just outside its square
   { lat: 0.200, lon: 0.520 },
   { lat: 0.060, lon: 0.680 }, // into the Lake
   { lat: -0.150, lon: 0.870 }, // across the Lake, east of the drowned ruins
-  { lat: -0.360, lon: 0.930 }, // the outlet on the south shore
-  { lat: -0.540, lon: 1.020 },
-  { lat: -0.660, lon: 1.200 }, // along the coast
-  { lat: -0.700, lon: 1.420 }, // into the Harbour bay
-  { lat: -0.760, lon: 1.580 },
+  { lat: -0.300, lon: 1.000 }, // the outlet on the south-east shore; world.js carves its valley down to the Harbour
+  { lat: -0.400, lon: 1.120 },
+  { lat: -0.400, lon: 1.260 }, // well north of the coast railway's village stop (lon 1.25): dry room for the platform
+  { lat: -0.450, lon: 1.420 },
+  { lat: -0.560, lon: 1.530 }, // into the Harbour bay from the north
+  { lat: -0.720, lon: 1.590 },
   { lat: -0.880, lon: 1.640 }, // out past the shoreline
   { lat: -0.980, lon: 1.680 }, // the sea
 ]
+
+// the straight run across the cliff mesa (world.js calms the mesa's ripple along it so the water stays level)
+export const RIVER_MESA_RUN = [RIVER_PTS[2], RIVER_PTS[5]]
 
 const unitOf = ({ lat, lon }) => new THREE.Vector3(Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon))
 const CP = RIVER_PTS.map(unitOf)

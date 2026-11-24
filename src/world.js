@@ -63,19 +63,40 @@ function spurLift(x, y, z, h) {
   const t = crest - S.fl * (Math.sqrt(da * da + S.e * S.e) - S.e)
   return t > h ? t : h
 }
+// the river's run across the mesa: the normal of its great circle (the mesa ripple calms within ~0.03 rad of it)
+const MESA_RUN = (() => { const [a, b] = RIVER.RIVER_MESA_RUN.map(p => new THREE.Vector3(Math.cos(p.lat) * Math.sin(p.lon), Math.sin(p.lat), Math.cos(p.lat) * Math.cos(p.lon))); return a.cross(b).normalize() })()
+// the Lake's outlet valley: from inside the lake to inside the harbour the ground along the river is carved down to a
+// bed easing from just under LAKE_W to HARB_W (flat under the water, banks at rise/run 0.5), so the water runs downhill
+// to the sea (the lake hollow otherwise leaves the lake below the coastal land). Only lowers ground; one riverNear call
+// for points inside its cap.
+const OUTLET = (() => { const lake = ZN.lake, harb = ZN.harbour, an = (p, z) => Math.acos(Math.min(1, p.x * z.x + p.y * z.y + p.z * z.z))
+  let ua = 0, ub = 1, i = 0; const N = 2000
+  while (i < N && an(RIVER.riverDir(i / N), lake) > lake.r * 0.5) i++ // into the lake...
+  while (i < N && an(RIVER.riverDir(i / N), lake) < lake.r * 0.75) i++; ua = i / N // ...and out past 0.75 r
+  while (i < N && an(RIVER.riverDir(i / N), harb) > harb.r * 0.75) i++; ub = i / N // into the harbour to 0.75 r
+  const c = RIVER.riverDir((ua + ub) / 2); let reach = 0; for (let k = 0; k <= 40; k++) reach = Math.max(reach, c.angleTo(RIVER.riverDir(ua + (ub - ua) * k / 40)))
+  return { ua, ub, x: c.x, y: c.y, z: c.z, c: Math.cos(reach + 0.2), near: { d: 9, u: 0, half: 0, side: 1 } } })()
+function outletValley(x, y, z, h) {
+  const O = OUTLET; if (x * O.x + y * O.y + z * O.z < O.c) return h
+  const q = RIVER.riverNear({ x, y, z }, O.near), u = q.u; if (u < O.ua - 0.03 || u > O.ub + 0.03) return h
+  const bed = LEGACY.LAKE_W - 0.02 + (LEGACY.HARB_W - LEGACY.LAKE_W + 0.02) * Math.min(1, Math.max(0, (u - O.ua) / (O.ub - O.ua)))
+  const v = bed + 0.5 * Math.max(0, q.d - q.half - 0.15); if (v >= h) return h
+  return h + (v - h) * sst(O.ua - 0.03, O.ua, u) * sst(O.ub + 0.03, O.ub, u)
+}
 function slopeHeight(n) {
   const L = Math.hypot(n.x, n.y, n.z), x = n.x / L, y = n.y / L, z = n.z / L
   let h = land(x, y, z), d, a
   for (let i = 0; i < FLAT.length; i++) { const f = FLAT[i]; d = x * f.x + y * f.y + z * f.z; if (d > f.c) h += (f.h - h) * sst(f.r + f.ease, f.r, Math.acos(Math.min(1, d))) }
   h = spurLift(x, y, z, h)
   const zc = ZN.cliff; d = x * T.cliff.x + y * T.cliff.y + z * T.cliff.z
-  if (d > T.cliff.c) { a = Math.acos(Math.min(1, d)); h += (CLIFF_TOP - h) * sst(zc.r + 0.03, zc.r, a) + 0.04 * Math.sin(x * 40) * sst(zc.r, 0, a) }
+  if (d > T.cliff.c) { a = Math.acos(Math.min(1, d)); h += (CLIFF_TOP - h) * sst(zc.r + 0.03, zc.r, a) + 0.04 * Math.sin(x * 40) * sst(zc.r, 0, a) * sst(0.012, 0.04, Math.abs(x * MESA_RUN.x + y * MESA_RUN.y + z * MESA_RUN.z)) }
   const zt = ZN.terraces; d = x * T.terraces.x + y * T.terraces.y + z * T.terraces.z
   if (d > T.terraces.c) { a = Math.acos(Math.min(1, d)); const f = TERR_HILL * Math.max(0, 1 - a / zt.r) / TERR_STEP, st = (Math.floor(f) + sst(0.82, 1, f - Math.floor(f))) * TERR_STEP; h += (st + TERR_BASE - h) * sst(zt.r + 0.05, zt.r - 0.01, a) }
   const zl = ZN.lake; d = x * T.lake.x + y * T.lake.y + z * T.lake.z
   if (d > T.lake.c) h += (LAKE_FLOOR - h) * sst(zl.r * 1.15, zl.r * 0.55, Math.acos(Math.min(1, d)))
   const zh = ZN.harbour; d = x * T.harbour.x + y * T.harbour.y + z * T.harbour.z
   if (d > T.harbour.c) h += (HARB_FLOOR - h) * sst(zh.r * 1.12, zh.r * 0.6, Math.acos(Math.min(1, d)))
+  h = outletValley(x, y, z, h)
   // the sea: a 0.06-wide shoreline band drops to a wadeable shelf, which falls away to the sea bed further out
   const lat = Math.asin(Math.max(-1, Math.min(1, y)))
   if (lat < SEA_LAT + 0.02) h += (SHELF - (SHELF - SEA_FLOOR) * sst(SEA_LAT - 0.03, SEA_LAT - 0.08, lat) - h) * sst(SEA_LAT + 0.02, SEA_LAT - 0.04, lat)
@@ -207,6 +228,28 @@ function loopNear(n, out = _sr) {
 const _rv = { d: 9, u: 0, half: 0, side: 1 }
 function openNear(n, out = _sr) { RIVER.riverNear(n, _rv); out.d = _rv.d; out.t = _rv.u * TAU; out.half = streamHalf(out.t); out.side = _rv.side; return out }
 export const streamNear = OLD_WORLD ? loopNear : openNear
+// which river side a and b are on, and whether they share it: { same, a, b } (sides as streamNear reports them).
+// Legacy: the loop splits the planet in two, so each point's own side decides. The open river doesn't split the planet
+// (far away, the nearest point jumps between its two ends), so sides are only compared where the straight walk from
+// a to b actually crosses the river: same = an even number of crossings, a / b = the sides just before the first and
+// just after the last crossing (or a's own side when there is none).
+const _sa = { d: 9, half: 0, t: 0, side: 1 }, _sb = { d: 9, half: 0, t: 0, side: 1 }, _sw = new THREE.Vector3(), _wa = new THREE.Vector3(), _wb = new THREE.Vector3(), _ss = { same: true, a: 1, b: 1 }
+export function streamSides(a, b, out = _ss) {
+  const sa = streamNear(a, _sa).side, da = _sa.d - _sa.half, sb = streamNear(b, _sb).side, db = _sb.d - _sb.half
+  if (OLD_WORLD) { out.a = sa; out.b = sb; out.same = sa === sb; return out }
+  out.a = out.b = sa; out.same = true
+  const L = a.angleTo(b) * R; if (Math.min(da, db) > L / 2 + 0.05) return out // the walk can't reach the water
+  const k = Math.min(40, Math.max(2, Math.ceil(L / 0.2))), step = L / k
+  _wa.copy(a).normalize(); _wb.copy(b).normalize()
+  let prev = sa, prevNear = da < step + 0.3 && _sa.t > 0.01 && _sa.t < TAU - 0.01, n = 0
+  for (let i = 1; i <= k; i++) {
+    const s = i === k ? _sb : streamNear(_sw.copy(_wa).multiplyScalar(1 - i / k).addScaledVector(_wb, i / k).normalize(), _sa)
+    const near = s.d - s.half < step + 0.3 && s.t > 0.01 && s.t < TAU - 0.01 // round the spring (u = 0) is not a crossing
+    if (near && prevNear && s.side !== prev) { if (n === 0) out.a = prev; out.b = s.side; n++ }
+    prev = s.side; prevNear = near
+  }
+  out.same = n % 2 === 0; if (n === 0) out.b = out.a; return out
+}
 // n moved `dist` world units toward river side `side` (as streamNear reports sides): legacy along the meridian, new
 // across the river's local flow direction (for the dog's bank-finding, which used to step in latitude)
 const _ac = new THREE.Vector3()

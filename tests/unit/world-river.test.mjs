@@ -1,6 +1,7 @@
 // node --test tests/unit — the reworked planet's river: one open curve, downhill from the Peak spring to the sea
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { height, dir, R, SEA_LAT, SEA_W, LAKE_W, HARB_W, streamDir, streamNear, waterAt, JUMPS, BRIDGES, ZONES } from '../../src/world.js'
+import { height, dir, R, SEA_LAT, SEA_W, LAKE_W, HARB_W, streamDir, streamNear, streamSides, waterAt, JUMPS, BRIDGES, ZONES } from '../../src/world.js'
+import { HOME_DIR } from '../../src/world/regions.js'
 import { region } from '../../src/world/regions.js'
 import { RIVER_PTS, riverDir, riverNear, riverHalf, RIVER_HALF } from '../../src/world/river.js'
 
@@ -22,8 +23,9 @@ test('river flows downhill', () => {
     if (angle(p, lake) < lr * 1.3) return Math.max(h, LAKE_W)
     if (angle(p, harb) < hr * 1.3 || latOf(p) < SEA_LAT) return Math.max(h, Math.max(HARB_W, SEA_W))
     return h }
-  let prev = surface(riverDir(0))
-  for (let i = 1; i < 400; i++) { const u = i / 399, h = surface(riverDir(u)); assert.ok(h - prev <= 0.03, `rises ${(h - prev).toFixed(3)} at u=${u.toFixed(3)}`); prev = h }
+  // cumulative: the water never sits more than 0.03 above any point upstream of it (big drops are fine)
+  let low = surface(riverDir(0))
+  for (let i = 1; i < 400; i++) { const u = i / 399, h = surface(riverDir(u)); assert.ok(h - low <= 0.03, `${(h - low).toFixed(3)} above the water upstream at u=${u.toFixed(3)}`); low = Math.min(low, h) }
   // and it really falls: the spring is well above the cliff foot, which is above the sea
   assert.ok(height(riverDir(0)) > 2, 'spring high on the Peak')
 })
@@ -89,4 +91,32 @@ test('compat', () => {
   assert.ok(streamDir(0).distanceTo(riverDir(0)) < 1e-12)
   assert.ok(streamDir(Math.PI).distanceTo(riverDir(0.5)) < 1e-12)
   for (const p of [unit(region('village')), unit(region('lake')), dir(0, 3), dir(-1, 1), dir(1.4, 2)]) { const s = streamNear(p); assert.ok(s.t >= 0 && s.t <= Math.PI * 2, `t ${s.t}`); assert.ok(Number.isFinite(s.d) && Number.isFinite(s.half)) }
+})
+
+test('the village, her home and the railway stop have dry room', () => {
+  const v = unit(region('village')), vr = region('village').r
+  for (let i = 0; i <= 2000; i++) assert.ok(angle(riverDir(i / 2000), v) > vr, 'river centre outside the village square')
+  const home = dir(HOME_DIR.lat, HOME_DIR.lon), h = streamNear(home)
+  assert.ok(h.d >= 1.5 && h.d <= 4, `home ${h.d.toFixed(2)} from the river`); assert.ok(h.d - h.half > 2.6, 'yard dry')
+  // the coast railway's village stop (lat -0.62, lon 1.25): its 1.3 x 0.34 platform sits 0.3 north of the rails
+  const la = -0.62 + 0.3 / R; let gap = 9
+  for (const dz of [-0.17, 0, 0.17]) for (let dx = -0.65; dx <= 0.651; dx += 0.13) { const q = streamNear(dir(la + dz / R, 1.25 + dx / (R * Math.cos(la)))); gap = Math.min(gap, q.d - q.half) }
+  assert.ok(gap >= 1.0, `platform ${gap.toFixed(2)} from the water`)
+})
+
+test('river sides: only the water divides the land', () => {
+  // walking latitude circles, the side may only change where the step actually meets the river
+  for (const lat of [0, 0.3, 0.5, -0.4, 0.9, -0.6]) for (let k = 0; k < 126; k++) {
+    const a = dir(lat, k * 0.05), b = dir(lat, (k + 1) * 0.05), s = streamSides(a, b)
+    if (s.same) continue
+    let wet = false; for (let i = 0; i <= 20; i++) { const q = streamNear(a.clone().lerp(b, i / 20).normalize()); if (q.d < q.half + 0.3) wet = true }
+    assert.ok(wet, `phantom side change at lat ${lat}, lon ${(k * 0.05).toFixed(2)}`)
+  }
+  // far apart but on dry land the same side of nothing: the meadow and open plot A
+  assert.equal(streamSides(dir(0.3, 4.6), dir(0.0, 3.6)).same, true)
+  // across the river: opposite sides, labelled like streamNear reports them locally
+  for (const u of [0.25, 0.32, 0.45, 0.72]) { const c = riverDir(u), t = riverDir(u + 0.002).sub(c), left = c.clone().cross(t).normalize()
+    const a = c.clone().addScaledVector(left, 1.2 / R).normalize(), b = c.clone().addScaledVector(left, -1.2 / R).normalize(), s = streamSides(a, b)
+    assert.equal(s.same, false, `crossing at u=${u}`); assert.equal(s.a, 1); assert.equal(s.b, -1)
+    assert.equal(streamSides(a, a.clone().addScaledVector(t.normalize(), 1 / R).normalize()).same, true, 'along one bank') }
 })
