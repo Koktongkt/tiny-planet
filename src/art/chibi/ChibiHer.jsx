@@ -127,7 +127,7 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // curve into the chin, its front level with the box's at their seam.
 // [y, z, rx, ry, rz, smin k]           ellipsoid (radii)
 // [y, z, rx, hy, rz, smin k, round r]  oval column (cross-section radii, half height, edge radius)
-const MIDFACE = [[-0.0278, 0.043, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0336, 0.03, 0.0162, 0.0243, 0.0055]]
+const MIDFACE = [[-0.0285, 0.0425, 0.016, 0.0052, 0.0135, 0.0035, 0.002], [-0.0345, 0.0322, 0.03, 0.0162, 0.0245, 0.0075]]
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 // a short vertical column with an oval cross-section (rx, rz), half height hy, rounded top/bottom edges r: a flat vertical
 // front with a crisp step in profile, but sides that round back into the cheeks in 3/4 (a box's side edge read as a beak)
