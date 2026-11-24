@@ -169,13 +169,13 @@ const RH = [0.069, 0.0712, 0.0668], HC = [0, 0.003, -0.005], TUCK = 0.85 // the 
 // widths, and outer locks that curve down over the temples into the side locks, so the forehead reads as a soft arch.
 // [a0, a1, tipY, rise, bulge, slope]  (slope tilts the tip line across the lock: y += slope * u)
 const LOCKS = [
-  [-1.42, -0.9, -0.043, 0.016, 0.014, 0.004], // side lock framing the face, down to the jaw (pass 10: thicker and longer, as on the sheet)
+  [-1.42, -1.04, -0.041, 0.016, 0.012, 0.003], // side lock framing the face, down to the jaw (pass 12: slimmer than pass 10's)
   [-1.12, -0.45, 0.0128, 0.012, 0.02, 0.0075], // outer lock curving down over the temple
   [-0.47, -0.14, 0.0186, 0.009, 0.024, -0.005],
   [-0.17, 0.17, 0.0184, 0.004, 0.028], // the big centre lock
   [0.14, 0.47, 0.0186, 0.009, 0.024, 0.005],
   [0.45, 1.12, 0.0128, 0.012, 0.02, -0.0075],
-  [0.9, 1.42, -0.043, 0.016, 0.014, -0.004]]
+  [1.04, 1.42, -0.041, 0.016, 0.012, -0.003]]
 function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.052 - y) * ss(1.3, 1.62, t); return y } // pass 4: the bob comes down right behind the side locks (no gap above the puffs)
 // -> [edge y, lock bulge (shell units), groove 0..1 (1 = between locks)]
 function edge(a) {
@@ -188,16 +188,18 @@ function edge(a) {
 }
 // azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
 const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.095 } return out })() // pass 11: denser behind (the flared bob's silhouette)
-// pass 11 (KT): the bob's lower half flares out into one continuous curled lobe at the sides and back (it replaces the
-// separate side-puff spheres, whose own ink ring read as a second ball in profile). Horizontal only, so the hem does
-// not drop onto the shoulders. FL = flare at the sides; it eases off toward the back and is zero across the face.
+// pass 11 (KT, kept in pass 12): the bob's lower half flares out into one continuous curled lobe at the sides and back
+// (it replaces the separate side-puff spheres, whose own ink ring read as a second ball in profile). Horizontal only, so
+// the hem does not drop onto the shoulders. FL = flare at the sides; it eases off toward the back and is zero across the
+// face and side locks.
 const FL = 0.34, FL_BACK = 0.25
 function flare(t, th, thE) { // a round bulge (circular profile) over the lower band, so the lobe curls instead of making a wing
   const w = ss(1.4, 1.75, t) * (FL + (FL_BACK - FL) * ss(1.9, 2.9, t)), a = 1.62, c = a + 0.52 * (thE - a), h = 0.6 * (thE - a), u = (th - c) / h
   return th <= a ? 0 : w * Math.sqrt(Math.max(0, 1 - u * u))
 }
-// the ears rest on the hair just behind the side locks, above the flare (as drawn on the sheet)
-const EAR = { x: 0.0705, y: -0.0165, z: 0.0015 }
+// ears (pass 12): small and flat, lying against the side of the head between the side lock and the bob; turned a
+// little forward so they read from the front without poking out like a ball
+const EAR = { x: 0.068, y: -0.0165, z: 0.0025 }
 function helmetGeo(NT = 18, NL = 5) {
   const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
   for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
@@ -234,30 +236,37 @@ const part = (geo, [x, y, z], [sx, sy, sz], [rx, ry, rz] = [0, 0, 0], skin = 0) 
   g.scale(sx, sy, sz); g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); g.computeVertexNormals()
   g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(skin), 1)); return g }
 const PT = 1
+// pass 12 nose: centred on the painted nose dot; the bump pokes out of the face, its centre just under the surface
+const NOSE = (() => { const y = -0.0238 + FDY + 0.0005 * FT - 0.0026 * F10; let z = 0.09; while (z > 0 && headSDF(0, y, z) > 0) z -= 0.0002
+  return { p: [0, y + 0.0004, z - 0.0006], r: [0.0046, 0.0038, 0.0066] } })()
+let HAIR_INK_GEO = null
 const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
   const parts = [hel,
     part(ball, [0, -0.02, -0.024], [0.071, 0.061, 0.058]), // back volume of the bob (pass 10: fuller)
     part(ball, [0, 0.0715, -0.008], [0.0168, 0.016, 0.017]), // top bun
     part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
-    // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
-    // pass 9 (KT): lower (centre near the blush/mouth line) and fuller/rounder, as on the concept. PT scales the change (1 chosen, 1.5 'stronger').
-    // pass 10: the puffs become the bob's curled ends: a little further out and back, flatter on top so the bob runs into them
-    // pass 11: ears (skin, aSkin = 1) sitting in the niche in front of the flared bob; a little cup turned forward
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0072, 0.0112, 0.009], [0, d * 0.5, d * 0.12], 1))]
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0042, 0.0094, 0.0072], [0, d * 0.75, d * 0.1], 1)), // pass 12 ears (skin)
+    part(ballS, NOSE.p, NOSE.r, [0, 0, 0], 2)] // pass 12: a small nose bump, so the profile has a nose (aSkin 2 = a touch pinker)
   // life layer: aW = (part, weight) for the secondary springs (0/1 side puffs, 2 top bun, 3 front + side locks); 0 weight = rigid
   const W = (g, f) => { const p = g.attributes.position, a = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { const r = f(p.getX(i), p.getY(i), p.getZ(i)); a[i * 2] = r[0]; a[i * 2 + 1] = r[1] } g.setAttribute('aW', new THREE.BufferAttribute(a, 2)); return g }
   const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
   // the flared lobe rides the side springs (0 = her right / -x, 1 = left); the fringe and side locks keep spring 3
+  // the flared lobe rides the side springs (0 = her right / -x, 1 = left); the fringe and side locks keep spring 3
   W(parts[0], (x, y, z) => { const wf = sm(0.03, -0.04, y) * sm(-0.01, 0.035, z), ws = sm(0.06, 0.088, Math.abs(x)) * sm(-0.012, -0.045, y); return ws > wf ? [x < 0 ? 0 : 1, ws] : [3, wf] }); W(parts[1], () => [3, 0])
   W(parts[2], (x, y) => [2, sm(0.058, 0.085, y)]); W(parts[3], () => [2, 0.35])
-  W(parts[4], () => [3, 0]); W(parts[5], () => [3, 0])
-  const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
+  for (const k of [4, 5, 6]) W(parts[k], () => [3, 0]) // ears and nose: rigid
+  // aInk scales the hair ink width per part: the nose gets a fine line (a full-width one made a dark hook in 3/4 view)
+  parts.forEach((g, k) => g.setAttribute('aInk', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(k === 6 ? 0.4 : 1), 1)))
+  const g = mergeGeometries(parts); g.computeBoundingSphere()
+  // the nose is inked too: its centre sits just behind the face surface, so its hull hides from the front and only
+  // outlines the bump in profile
+  HAIR_INK_GEO = g; return g })()
 const HOFF = `attribute vec2 aW; uniform vec3 uOff[4];
   vec3 hoff(){ vec3 o = aW.x < .5 ? uOff[0] : aW.x < 1.5 ? uOff[1] : aW.x < 2.5 ? uOff[2] : uOff[3]; return o*aW.y; }
 `
 // the hair's own ink hull gets the same spring offsets, so the outline follows the moving buns (still 1 draw)
-const hairInk = (() => { const m = mkOutline(false); m.uniforms.uOff = { value: HAIR_OFF }; m.vertexShader = HOFF + m.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += hoff();'); return m })()
+const hairInk = (() => { const m = mkOutline(false); m.uniforms.uOff = { value: HAIR_OFF }; m.vertexShader = HOFF + 'attribute float aInk;\n' + m.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += hoff();').replace('mv.xyz += n*uT*', 'mv.xyz += n*uT*aInk*'); return m })()
 let hairShader = null
 const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMaterial({
   uniforms: { uOff: { value: HAIR_OFF }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim, uHair: { value: new THREE.Color('#432c22') }, uBand: { value: new THREE.Color('#7a5641') }, uSkin: { value: new THREE.Color(skin) } },
@@ -266,7 +275,7 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
   fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin; varying vec3 vN, vV, vO; varying float vSkin;
     void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
       float ndl = dot(N, L), lit = smoothstep(-.04, .12, ndl), sk = step(.5, vSkin);
-      vec3 base = mix(uHair, uSkin, sk), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
+      vec3 base = mix(uHair, uSkin*mix(vec3(1.), vec3(1., .9, .86), step(1.5, vSkin)), sk), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
       vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
       // glossy toon sheen: a soft lighter band around the crown, broken into strands
       vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
@@ -280,7 +289,7 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
       #include <colorspace_fragment>
     }` }))
 function ChibiHair({ set }) {
-  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={chibiHairMat(CHIBI.outfit.skin)} /><mesh geometry={HAIR_GEO} material={hairInk} /></group>
+  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={chibiHairMat(CHIBI.outfit.skin)} /><mesh geometry={HAIR_INK_GEO} material={hairInk} /></group>
 }
 
 // satchel (turnaround sheet): top handle, stitched flap with two buckled straps, side pockets (daisy, scroll), a plaid
@@ -323,8 +332,9 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
     // match (leg 1.06 -> 0.96 keeps the hip where it was), so the cuffs ride higher and more boot shows below them.
     anY: 0.044, footY: 0.017, soleY: 0.0012, bootShaft: [0.0228, 0.0165, 0.0238, -0.009] },
   hair: { style: 'chibi', c: '#3b2a22' },
-  scarf: '#d9503f', // pass 10: palette from the turnaround sheet (warmer shirt, deeper denim and scarf), stitched seams
-  outfit: { ...TRAVELLER.outfit, top: '#f7ead3', bottom: '#4271b8', shoe: '#83492a', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.05, seams: true },
+  scarf: '#d9503f', // pass 12 skin: warmer, deeper peach measured off the sheet
+  // pass 10: palette from the turnaround sheet (warmer shirt, deeper denim and scarf), stitched seams
+  outfit: { ...TRAVELLER.outfit, skin: '#f3bf98', top: '#f7ead3', bottom: '#4271b8', shoe: '#83492a', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.05, seams: true },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }, // life pass: a bouncier chibi walk
   ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0

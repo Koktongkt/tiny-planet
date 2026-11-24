@@ -21,6 +21,13 @@ Use this when designing or implementing a human in the approved "Cozy Chibi" sty
   - Satchel `BAG_S` 0.1 -> 0.088.
   - Boots: optional body knobs `anY` (ankle up 0.01, with `leg` 1.06 -> 0.96 so the hip stays put), `footY`, `soleY` (flat sole cut), `bootShaft` (chunky ankle); `bootH` 1.45, `bootL` 1.04, `shoeY` 0.05, shoe `#83492a`; a darker painted sole band with a welt line (`outfit.seams`). All knobs default to the old foot.
   - Cost: draw calls unchanged (studio 26); her tris ~64.7k -> ~67.5k; startup entry +0.2 KB gz.
+- **Pass 12** (KT feedback on pass 11): before/after [`ref/pass12-turnaround-compare.jpg`](ref/pass12-turnaround-compare.jpg). Not approved yet (awaiting KT).
+  - Kept pass 11's continuous lobe (KT preferred it over the pass-10 puffs after trying both).
+  - Side locks slimmer again (azimuth ±1.04..±1.42, tip -0.041).
+  - Ears small and flat against the head, turned forward (`EAR`, radii 0.0042 / 0.0094 / 0.0072), not round balls.
+  - Nose: a small skin bump in the hair geometry (`NOSE`, aSkin 2 = a touch pinker), centred just under the face surface so its ink only outlines it in profile; the hair ink hull reads a per-vertex `aInk` (nose 0.4) for a fine line.
+  - Skin `#f3bf98` (warmer, deeper peach measured off the sheet; was `#f7d3b8`).
+  - Satchel `BAG_S` 0.079.
 - Source of truth: `src/art/chibi/ChibiHer.jsx` and the optional hooks in `src/GhibliPerson.jsx`.
 - Canonical picture: [`ref/her-B-chibi.jpg`](ref/her-B-chibi.jpg).
 - Approved in-game eye and bun shots: [`ref/pass8-eye-closeup.jpg`](ref/pass8-eye-closeup.jpg), [`ref/pass9-front-compare.jpg`](ref/pass9-front-compare.jpg).

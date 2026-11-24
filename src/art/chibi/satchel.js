@@ -43,7 +43,7 @@ function dashes(parts, ink, pts, { z = 0, len = 0.045, gap = 0.032, w = 0.013, h
       make(parts, ink, g, hex) } }
 }
 
-export const BAG_S = 0.088 // pass 11 (KT): a little smaller
+export const BAG_S = 0.079 // pass 11 / 12 (KT): a little smaller each time
 export function buildSatchel(P = BAG_PAL) {
   const parts = [], ink = []
   const sph = new THREE.SphereGeometry(1, 12, 9), cyl = new THREE.CylinderGeometry(1, 1, 1, 18, 1), box = new THREE.BoxGeometry(1, 1, 1)
