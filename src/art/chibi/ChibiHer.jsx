@@ -187,14 +187,24 @@ function edge(a) {
   return [y, bulge, groove]
 }
 // azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
-const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.17 } return out })()
-function helmetGeo(NT = 10, NL = 5) {
+const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.095 } return out })() // pass 11: denser behind (the flared bob's silhouette)
+// pass 11 (KT): the bob's lower half flares out into one continuous curled lobe at the sides and back (it replaces the
+// separate side-puff spheres, whose own ink ring read as a second ball in profile). Horizontal only, so the hem does
+// not drop onto the shoulders. FL = flare at the sides; it eases off toward the back and is zero across the face.
+const FL = 0.34, FL_BACK = 0.25
+function flare(t, th, thE) { // a round bulge (circular profile) over the lower band, so the lobe curls instead of making a wing
+  const w = ss(1.4, 1.75, t) * (FL + (FL_BACK - FL) * ss(1.9, 2.9, t)), a = 1.62, c = a + 0.52 * (thE - a), h = 0.6 * (thE - a), u = (th - c) / h
+  return th <= a ? 0 : w * Math.sqrt(Math.max(0, 1 - u * u))
+}
+// the ears rest on the hair just behind the side locks, above the flare (as drawn on the sheet)
+const EAR = { x: 0.0705, y: -0.0165, z: 0.0015 }
+function helmetGeo(NT = 18, NL = 5) {
   const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
   for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
     const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
     const P = (th) => { let st = Math.sin(th); const ct = Math.cos(th), w = ss(0.55, 1.3, th), front = ss(1.2, 0.2, t) * ss(0.55, 1.3, th) /* pass 4: by polar angle, so neighbouring locks meet without a ridge up to the crown */
       if (th > Math.PI / 2) st = 1 - 0.42 * (1 - st) // below the equator the hair hangs straight down instead of hugging the jaw
-      const r = 1 + 0.026 * front + bulge * w, Q = [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r]
+      const r = 1 + 0.026 * front + bulge * w, rh = r + flare(t, th, thE), Q = [HC[0] + RH[0] * st * sa * rh, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * rh]
       // pass 4: the fringe tips come down onto the forehead (no see-through gap under the bangs, so no stray ink lines)
       const tk = TUCK * ss(thE - 0.2, thE, th) * ss(1.06, 0.72, t) /* only the tip curls in (a wider band makes flaps where locks hand over) */; if (tk <= 0) return Q
       const d = [Q[0] - HC[0], Q[1] - HC[1], Q[2] - HC[2]], L = Math.hypot(...d); d.forEach((v, i) => { d[i] = v / L })
@@ -202,7 +212,7 @@ function helmetGeo(NT = 10, NL = 5) {
       let lo = 0, hi = L; for (let n = 0; n < 24; n++) { const m = (lo + hi) / 2; if (headSDF(HC[0] + d[0] * m, HC[1] + d[1] * m, HC[2] + d[2] * m) < 0) lo = m; else hi = m }
       const s2 = Math.max(hi + 0.0016, L - (L - hi) * 1) * (1 - tk) + (hi + 0.0016) * tk
       return [HC[0] + d[0] * s2, HC[1] + d[1] * s2, HC[2] + d[2] * s2] }
-    for (let j = 1; j <= NT; j++) { const f = j / NT; col.push(P(thE * f)); cg.push(groove * ss(0.3, 0.95, f) * (t < 1.45 ? 1 : 0)) }
+    for (let j = 1; j <= NT; j++) { const f = j / NT; col.push(P(thE * (0.4 * f + 0.6 * Math.sin(f * Math.PI / 2)))); /* pass 11: rows bunch toward the hem (the curl) */ cg.push(groove * ss(0.3, 0.95, f) * (t < 1.45 ? 1 : 0)) }
     // rounded lip: half a turn from the outer edge to the inside (the tips curl in)
     const E = P(thE), E2 = P(thE - 0.02), n = [E[0] - HC[0], E[1] - HC[1], E[2] - HC[2]], nl = Math.hypot(...n), dn = [E[0] - E2[0], E[1] - E2[1], E[2] - E2[2]], dl = Math.hypot(...dn)
     for (let k = 0; k < 3; k++) { n[k] /= nl; dn[k] /= dl }
@@ -233,13 +243,15 @@ const HAIR_GEO = (() => {
     // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
     // pass 9 (KT): lower (centre near the blush/mouth line) and fuller/rounder, as on the concept. PT scales the change (1 chosen, 1.5 'stronger').
     // pass 10: the puffs become the bob's curled ends: a little further out and back, flatter on top so the bob runs into them
-    ...[-1, 1].map(d => part(ball, [d * (0.0600 + 0.005 * F10), -0.031 - 0.003 * F10, -0.014 - 0.008 * F10], [0.0254 + 0.002 * F10, 0.0259 + 0.002 * F10, 0.0255 + 0.014 * F10]))]
+    // pass 11: ears (skin, aSkin = 1) sitting in the niche in front of the flared bob; a little cup turned forward
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0072, 0.0112, 0.009], [0, d * 0.5, d * 0.12], 1))]
   // life layer: aW = (part, weight) for the secondary springs (0/1 side puffs, 2 top bun, 3 front + side locks); 0 weight = rigid
   const W = (g, f) => { const p = g.attributes.position, a = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { const r = f(p.getX(i), p.getY(i), p.getZ(i)); a[i * 2] = r[0]; a[i * 2 + 1] = r[1] } g.setAttribute('aW', new THREE.BufferAttribute(a, 2)); return g }
   const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
-  W(parts[0], (x, y, z) => [3, sm(0.03, -0.04, y) * sm(-0.01, 0.035, z)]); W(parts[1], () => [3, 0])
+  // the flared lobe rides the side springs (0 = her right / -x, 1 = left); the fringe and side locks keep spring 3
+  W(parts[0], (x, y, z) => { const wf = sm(0.03, -0.04, y) * sm(-0.01, 0.035, z), ws = sm(0.06, 0.088, Math.abs(x)) * sm(-0.012, -0.045, y); return ws > wf ? [x < 0 ? 0 : 1, ws] : [3, wf] }); W(parts[1], () => [3, 0])
   W(parts[2], (x, y) => [2, sm(0.058, 0.085, y)]); W(parts[3], () => [2, 0.35])
-  W(parts[4], (x) => [0, sm(-0.04, -0.085, x)]); W(parts[5], (x) => [1, sm(0.04, 0.085, x)])
+  W(parts[4], () => [3, 0]); W(parts[5], () => [3, 0])
   const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
 const HOFF = `attribute vec2 aW; uniform vec3 uOff[4];
   vec3 hoff(){ vec3 o = aW.x < .5 ? uOff[0] : aW.x < 1.5 ? uOff[1] : aW.x < 2.5 ? uOff[2] : uOff[3]; return o*aW.y; }
@@ -287,8 +299,13 @@ function ChibiSatchel() {
 const SLEEVE_GEO = (() => {
   const prof = [[0.0, -0.051], [0.019, -0.052], [0.026, -0.048], [0.025, -0.041], [0.029, -0.028], [0.03, -0.01], [0.026, 0.006], [0.016, 0.014], [0.0, 0.016]]
   const body = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 28)
-  const roll = new THREE.TorusGeometry(0.0262, 0.0062, 8, 28); roll.rotateX(Math.PI / 2); roll.scale(1, 1.2, 1); roll.translate(0, -0.0455, 0)
+  // pass 11 (KT): a flat folded band (straight face, softly rounded edges), not a round donut
+  const band = [[0.0236, -0.0522], [0.0292, -0.0526], [0.0312, -0.0518], [0.0318, -0.0502], [0.0318, -0.0418], [0.0313, -0.0402], [0.0298, -0.0394], [0.0246, -0.0392]]
+  const roll = new THREE.LatheGeometry(band.map(([r, y]) => new THREE.Vector2(r, y)), 28)
   const g = mergeGeometries([body.toNonIndexed(), roll.toNonIndexed()]); g.computeBoundingSphere(); return g })()
+// rolled jeans cuffs: a tall flat band, a little wider than the leg (the base cuff is a round donut)
+const CUFF_GEO = (() => { const pr = [[0, -0.0125], [0.0255, -0.0127], [0.0281, -0.0121], [0.0292, -0.0104], [0.0295, -0.0075], [0.0295, 0.0072], [0.0291, 0.0098], [0.0279, 0.0113], [0.0252, 0.0118], [0.02, 0.0118], [0, 0.0116]]
+  const g = new THREE.LatheGeometry(pr.map(([r, y]) => new THREE.Vector2(r, y)), 28); g.deleteAttribute('uv'); g.computeBoundingSphere(); return g })()
 // scarf tails: broad flat ribbons with a notched end that hang down the front (the base tails are thin pyramids)
 const TAIL_GEO = (() => { const sh = new THREE.Shape(), w0 = 0.0105, w1 = 0.013, L = 0.058
   sh.moveTo(-w0, 0); sh.lineTo(w0, 0); sh.quadraticCurveTo(w1 * 1.05, -L * 0.5, w1, -L); sh.lineTo(0, -L + 0.008); sh.lineTo(-w1, -L); sh.quadraticCurveTo(-w1 * 1.05, -L * 0.5, -w0, 0)
@@ -300,18 +317,21 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // taller soft barrel torso, thick straight trouser legs, chunky round boots, short arms hanging close to the body
   // pass 4 arms (measured on the concept front): longer soft forearm ~70% of the puff-sleeve width, rounder mitten hands,
   // hanging a little further from the body
-  body: { H: 0.89, head: 1.45, leg: 1.06, torso: 1.13, arm: 0.92, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.26, armA: 0.5,
-    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.22, bootL: 0.98, hand: 1.2, cheek: CHEEK },
+  body: { H: 0.89, head: 1.45, leg: 0.96, torso: 1.13, arm: 0.92, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.26, armA: 0.5,
+    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.45, bootL: 1.04, hand: 1.2, cheek: CHEEK,
+    // pass 11 boots (KT): taller chunky boots that stand on a flat sole. The ankle rises 0.01 and the shin shortens to
+    // match (leg 1.06 -> 0.96 keeps the hip where it was), so the cuffs ride higher and more boot shows below them.
+    anY: 0.044, footY: 0.017, soleY: 0.0012, bootShaft: [0.0228, 0.0165, 0.0238, -0.009] },
   hair: { style: 'chibi', c: '#3b2a22' },
   scarf: '#d9503f', // pass 10: palette from the turnaround sheet (warmer shirt, deeper denim and scarf), stitched seams
-  outfit: { ...TRAVELLER.outfit, top: '#f7ead3', bottom: '#4271b8', shoe: '#7a4a2e', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.036, seams: true },
+  outfit: { ...TRAVELLER.outfit, top: '#f7ead3', bottom: '#4271b8', shoe: '#83492a', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.05, seams: true },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }, // life pass: a bouncier chibi walk
   ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
     if (P) { P.ms += performance.now() - t0; P.n++ } }, // window.__herProf = { ms: 0, n: 0 }: CPU time of the life layer (perf runs)
   post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
-    Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
+    Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, cuffGeo: CUFF_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
 const RIDE_S = 0.8

@@ -112,6 +112,11 @@ const PAINT = `
     c = mix(c, armC, arm);
     c = mix(c, uSkin, max(hand, neck * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
+    if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
+      float boot = aa(uY.z - y) * (1. - arm);
+      c = mix(c, uShoe*.42, boot * aa(.0098 - y));
+      c = mix(c, uShoe*.62, boot * aa(.0008 - abs(y - .0109)));
+    }
     return c;
   }`
 // cel shading, round 8 ("less plastic"): a crisper painted terminator; shadows lean cool on cloth and rosy on skin;
@@ -226,7 +231,7 @@ export function spec(b = {}) {
   const key = JSON.stringify(b); if (specCache.has(key)) return specCache.get(key)
   const hd = b.head ?? 1, gw = b.girth ?? 1, ll = b.leg ?? 1, tl = b.torso ?? 1, al = b.arm ?? 1, hc = b.hunch ?? 0, shw = b.shoulder ?? 1, fs = b.foot ?? 1
   const S = { key, b, H: b.H ?? 1, hc, hn: b.hand ?? 1 }
-  S.anY = 0.034; S.knY = S.anY + 0.048 * ll; S.hipY = S.knY + 0.053 * ll; S.bellyY = S.hipY + 0.035 * tl; S.chestY = S.bellyY + 0.065 * tl; S.shY = S.chestY + 0.02 * tl
+  S.anY = b.anY ?? 0.034; S.knY = S.anY + 0.048 * ll; S.hipY = S.knY + 0.053 * ll; S.bellyY = S.hipY + 0.035 * tl; S.chestY = S.bellyY + 0.065 * tl; S.shY = S.chestY + 0.02 * tl
   S.neckY = S.shY + 0.012 * tl + (b.neckY ?? 0.005)
   S.belly = [V3(0, S.bellyY, 0.006 + 0.01 * (gw - 1)), V3(0.064 * gw, 0.06 * Math.min(tl, 1.25), 0.054 * (0.6 + 0.4 * gw * 1.08) * (b.bellyZ ?? 1))]
   const cg = 0.5 + 0.5 * gw
@@ -244,7 +249,7 @@ export function spec(b = {}) {
     S['wr' + k] = S['el' + k].clone().addScaledVector(dir, 0.04 * al).add(V3(0, 0, 0.004)); S['hd' + k] = S['wr' + k].clone().addScaledVector(dir, 0.013 * fs)
     const hx = 0.034 * (0.8 + 0.2 * gw) * (b.legX ?? 1)
     S['hp' + k] = V3(sd * hx, S.hipY, 0.004); S['kn' + k] = V3(sd * (hx + 0.001), S.knY, 0.007); S['an' + k] = V3(sd * (hx + 0.002), S.anY, 0.004)
-    S['ft' + k] = V3(sd * (hx + 0.002), 0.014, 0.012); S['dir' + k] = dir
+    S['ft' + k] = V3(sd * (hx + 0.002), b.footY ?? 0.014, 0.012); S['dir' + k] = dir
   }
   S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
   S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn, 0.012 * fs * S.hn)
@@ -267,9 +272,15 @@ function armD(S, p, k) {
   const n = S.hn, h = smin(ell(p, S['hd' + k], S.hr), ell(p, S['hd' + k].clone().add(V3(-sd * 0.002 * n, 0.004 * n, 0.011 * n)), V3(0.0055 * n, 0.0075 * n, 0.0055 * n)), 0.004)
   return smin(a, h, 0.007)
 }
+const _bs = new THREE.Vector3(), _br = new THREE.Vector3()
 function legD(S, p, k) {
-  const l = smin(cap(p, S['hp' + k], S['kn' + k], S.lr[0], S.lr[1]), cap(p, S['kn' + k], S['an' + k], S.lr[1], S.lr[2]), 0.01)
-  return smin(l, ell(p, S['ft' + k], S.fr), 0.012)
+  const l = smin(cap(p, S['hp' + k], S['kn' + k], S.lr[0], S.lr[1]), cap(p, S['kn' + k], S['an' + k], S.lr[1], S.lr[2]), 0.01), b = S.b
+  let f = ell(p, S['ft' + k], S.fr)
+  // optional boot knobs (default = the old soft foot): bootShaft [rx, ry, rz, dy] a chunky ankle above the foot;
+  // soleY a flat sole cut (smooth max), so the boot stands flat on the ground
+  if (b.bootShaft) { const [rx, ry, rz, dy] = b.bootShaft, a = S['an' + k]; f = smin(f, ell(p, _bs.set(a.x, a.y + dy, a.z + 0.001), _br.set(rx, ry, rz)), 0.008) }
+  if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
+  return smin(l, f, 0.012)
 }
 function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
@@ -585,7 +596,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       {o.sleeve !== 'none' && createPortal(<group ref={lod(2)} rotation={[0, 0, sd * S.armA]}>
         {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
           : <M geo={G.kimono} mat={cel(o.top)} position={[sd * 0.004, -0.01, 0]} rotation={[0, 0, -sd * S.armA * 0.85]} />}</group>, B['up' + k])}
-      {o.cuffs && createPortal(<group ref={lod(1)}><M geo={G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
+      {o.cuffs && createPortal(<group ref={lod(1)}><M geo={cfg.ext?.cuffGeo ?? G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
       {hold[k] && createPortal(<group ref={lod(2)} position={S['hd' + k].clone().sub(S['el' + k]).toArray()}><Merge><Prop prop={hold[k]} sd={sd} /></Merge></group>, B['fo' + k])}
     </React.Fragment> })}
     {createPortal(<Merge>
