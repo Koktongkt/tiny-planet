@@ -5,9 +5,10 @@ export const DENS = 1.5 // scatter density factor so the bigger surface isn't sp
 export const K = 5 / R // converts old angular sizes (tuned at R=5) to the bigger world
 import { OLD_WORLD } from './world/flag.js'
 import * as LEGACY from './world/legacy.js'
+import { region } from './world/regions.js'
 // The layout (zones, terrain, curves) comes from one source. The reworked layout will replace NEW in later tasks;
 // until then both are today's values, and ?world=old (dev only) keeps selecting the frozen legacy module.
-const NEW = LEGACY
+const NEW = { ...LEGACY, ZONES: { ...Object.fromEntries(['lake', 'cliff', 'terraces', 'harbour', 'ruins', 'forest', 'giant', 'meadow', 'mills', 'peak', 'museum'].map(id => [id, region(id)])) } }
 const W = OLD_WORLD ? LEGACY : NEW
 // biome / zone centres (lat, lon, angular radius)
 export const ZONES = W.ZONES
