@@ -29,9 +29,8 @@ export const HER_MOTION = {
   // reactions: switch any off for a character who would not do it
   can: { skip: true, skid: true, wave: true, dodge: true, sit: true, lie: true, rainHunch: true, glanceAtCamera: true },
   skipEvery: [9, 21], // on a long fine-weather walk
-  skidAfterRun: 1.2, // skid only when stopping hard after sprinting at least this long
-  skidChance: 0.7, // ...and only sometimes (a stop that does not skid waits 10 s before it can roll again)
-  skidEvery: [120, 240], // cooldown after a skid: a few minutes
+  skidAfterRun: 5, // skid only when stopping hard after running at least this long
+  skidChance: 0.3, // ...and then only this often (each such stop rolls once; no cooldown)
   waveEvery: [40, 70], // cooldown between waves at villagers
   sighEvery: [6, 12], // when tired
 

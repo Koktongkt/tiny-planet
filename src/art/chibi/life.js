@@ -15,7 +15,7 @@ export const HAIR_OFF = new Float32Array(12)
 export const EXCITED_ACTS = new Set(['wave', 'play', 'reel', 'pick', 'pet', 'photo_wave', 'photo_peace', 'photo_hold_fish', 'photo_twirl', 'photo_kneel'])
 import { HER_MOTION, between } from './motion.js'
 // per-character behaviour (fidget lists, timings, rarity, switches, thresholds) comes from the motion profile: L.P
-const ENERGY_LOW_DEFAULT = 25, SKID_D = 1.6 // skid length (s)
+const ENERGY_LOW_DEFAULT = 25, SKID_D = 1.3 // skid length (s)
 const energyNow = () => { const w = typeof window !== 'undefined' ? window : null; if (!w) return 100; const v = w.__herEnergy ?? w.__game?.G?.s?.energy; return Number.isFinite(v) ? v : 100 }
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 const bump = (k, n) => Math.max(0, Math.sin(k * Math.PI * n)) // n soft pulses over the fidget
@@ -28,7 +28,7 @@ export function makeLife(rnd = Math.random, P = HER_MOTION) {
   return { P, rnd, m: 0, ph: 0, run: 0, lean: SPR(), turn: 0, idle: 0, fid: null, fu: 0, fidN: P.fidgetAfter + 1.5 + rnd() * 4, fidPrev: '',
     bobY: 0, bobV: 0, headBob: SPR(), lookYaw: SPR(), lookPitch: SPR(), tilt: SPR(), nod: SPR(),
     blink: BLINKER(rnd), open: 1, lid: 0, gaze: GAZE(rnd), gx: 0, gy: 0, scanT: 0, tgt: new THREE.Vector3(), tk: 0, near: 0, camT: 0, camWait: 8 + rnd() * 8,
-    mood: 'happy', scf: SPR(), scfZ: SPR(), bagKick: 0, moodT: 0, rideT: 0, blush: 0, squint: 0, yawn: 0, fsq: 0, talk: 0, sit: 0, tired: 0, hungry: 0, en: -1, yumU: 9, sighN: 6, sighU: 9, lie: 0, lieRoll: -1, walkT: 0, skipN: 10, skip: 0, skipU: 9, skidU: 9, skid: 0, runT: 0, skidCD: 0, skidSd: 1, runMax: 0, waveU: 9, waveCD: 6, bf: null, bfK: 0, dodgeU: 9, dodgeSd: 1, shut: 0,
+    mood: 'happy', scf: SPR(), scfZ: SPR(), bagKick: 0, moodT: 0, rideT: 0, blush: 0, squint: 0, yawn: 0, fsq: 0, talk: 0, sit: 0, tired: 0, hungry: 0, en: -1, yumU: 9, sighN: 6, sighU: 9, lie: 0, lieRoll: -1, walkT: 0, skipN: 10, skip: 0, skipU: 9, skidU: 9, skid: 0, runT: 0, skidSd: 1, runMax: 0, waveU: 9, waveCD: 6, bf: null, bfK: 0, dodgeU: 9, dodgeSd: 1, shut: 0,
     hp: new THREE.Vector3(), hv: new THREE.Vector3(), init: 0, hy: 0, hair: [V3S(), V3S(), V3S(), V3S()] }
 }
 
@@ -132,18 +132,17 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   L.skipU += dt; const ske = envelope(L.skipU, 2.2, 0.35) * MOT; L.skip = ske
   if (ske > 0) { const hop = Math.max(0, Math.sin(st.phase * 2)); B.root.position.y += 0.014 * ske * hop * hop; B.upL.rotation.x *= 1 + 0.7 * ske; B.upR.rotation.x *= 1 + 0.7 * ske
     B.upL.rotation.z -= 0.2 * ske; B.upR.rotation.z += 0.2 * ske; B.head.rotation.z += 0.05 * ske * Math.sin(st.phase); B.ftL.rotation.x += 0.2 * ske * hop; B.ftR.rotation.x += 0.2 * ske * hop }
-  // ---- skid (KT: rare, a few minutes apart, and properly animated). Only after a real sprint; a hard stop rolls once.
+  // ---- skid (KT): only after running at least skidAfterRun s; each hard stop after that rolls skidChance (no cooldown).
   // 1 slide: plants her heels and leans way back, front foot out, back foot dragging, arms flung up, dust at her heels
-  // 2 teeter: tips forward onto her toes, arms windmilling  3 catch: upright with a little bounce  4 phew: wipes her brow
-  L.runT = m > 0.7 && L.run > 0.6 ? (L.runT || 0) + dt : Math.max(0, (L.runT || 0) - dt * 3); L.skidCD = (L.skidCD ?? 0) - dt
-  if (P.can.skid && dm < -2.2 && L.runT > P.skidAfterRun && L.skidCD <= 0 && L.skidU > SKID_D) {
-    if (L.rnd() < P.skidChance) { L.skidU = 0; L.skidSd = L.rnd() < 0.5 ? -1 : 1; L.skidCD = between(L.rnd, P.skidEvery) } else L.skidCD = 10 }
+  // 2 teeter: tips forward onto her toes, arms windmilling  3 catch: upright with a little bounce
+  L.runT = m > 0.7 && L.run > 0.6 ? (L.runT || 0) + dt : Math.max(0, (L.runT || 0) - dt * 3)
+  if (P.can.skid && dm < -2.2 && L.runT > P.skidAfterRun && L.skidU > SKID_D) { L.runT = 0; if (L.rnd() < P.skidChance) { L.skidU = 0; L.skidSd = L.rnd() < 0.5 ? -1 : 1 } }
   if (L.skidU < SKID_D && L.skidU > 0.15 && dm > 1.5) L.skidU = SKID_D // she set off again (speed rising): drop it
   L.skidU += dt; const su = L.skidU, on = su < SKID_D ? sst(0, 0.06, su) * (1 - sst(SKID_D - 0.2, SKID_D, su)) * MOT : 0
   L.skid = on; L.dust = su < 0.42 && on > 0.3 ? 1 : 0
   if (on <= 0 && L.rootZ !== 0) { B.root.position.z = 0; L.rootZ = 0 } else if (on > 0) L.rootZ = 1
   if (on > 0) { const sd = L.skidSd || 1, M = on
-    const slide = sst(0, 0.08, su) * (1 - sst(0.36, 0.52, su)), teeter = sst(0.4, 0.55, su) * (1 - sst(0.85, 1.02, su)), phew = sst(1.12, 1.28, su) * (1 - sst(1.45, SKID_D, su))
+    const slide = sst(0, 0.08, su) * (1 - sst(0.36, 0.52, su)), teeter = sst(0.4, 0.55, su) * (1 - sst(0.85, 1.02, su))
     const bounce = Math.max(0, Math.sin(Math.min(1, Math.max(0, (su - 0.95) / 0.3)) * Math.PI))
     const lean = -0.42 * slide + 0.32 * teeter + 0.04 * Math.sin(su * 22) * teeter // back on the heels, then forward on the toes (with a wobble)
     B.root.rotation.x += lean * M; B.chest.rotation.x += lean * 0.35 * M; B.head.rotation.x -= lean * 0.45 * M
@@ -159,9 +158,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
     B.upL.rotation.z -= (0.95 * slide + (0.9 + 0.35 * Math.cos(wl)) * teeter) * M; B.upR.rotation.z += (0.95 * slide + (0.9 + 0.35 * Math.cos(wl + Math.PI)) * teeter) * M
     B.upL.rotation.x += (0.45 * slide - 0.9 * Math.sin(wl) * teeter) * M; B.upR.rotation.x += (0.45 * slide - 0.9 * Math.sin(wl + Math.PI) * teeter) * M
     B.foL.rotation.x -= 0.3 * armUp * M; B.foR.rotation.x -= 0.3 * armUp * M
-    B.upR.rotation.x -= 1.0 * phew * M; B.upR.rotation.z += 0.65 * phew * M; B.foR.rotation.x -= 1.65 * phew * M; B.foR.rotation.z += 0.35 * Math.sin(su * 9) * phew * M
-    B.head.rotation.z += 0.08 * phew * M; B.chest.scale.y *= 1 + 0.035 * phew
-    L.fsq = Math.max(L.fsq, 0.55 * phew); L.skidFace = su < 1.02 ? 'excited' : 'happy'; if (phew > 0.3) L.blush = Math.max(L.blush, 0.8) }
+    L.skidFace = su < 1.0 ? 'excited' : 'happy' }
   // ---- walk / run: deeper bounce and forward lean when running, bigger arm swing, head overlap on the bob ----
   if (m > 0.01 && !ride && !busy) {
     const run = L.run * m * MOT, s = Math.sin(st.phase)
