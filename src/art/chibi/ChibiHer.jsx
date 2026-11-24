@@ -130,7 +130,7 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 const MIDFACE = [[-0.0285, 0.0425, 0.03, 0.0052, 0.0135, 0.0035, 0.002], [-0.0345, 0.0322, 0.038, 0.0162, 0.0245, 0.0075]]
 // 12m (KT: smoother in 3/4 without touching the side view): every swell recedes as MID_FADE * x^2 away from the centre
 // line. Zero on the centre line, so the profile is exactly the same; in 3/4 the swells ease back into the cheeks.
-const MID_FADE = 16
+const MID_FADE = 28
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 // a short vertical column with an oval cross-section (rx, rz), half height hy, rounded top/bottom edges r: a flat vertical
 // front with a crisp step in profile, but sides that round back into the cheeks in 3/4 (a box's side edge read as a beak)
