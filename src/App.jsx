@@ -298,7 +298,7 @@ function House({ n, i }) {
 }
 // Home: the chibi cottage + yard (lazy art); an invisible drum keeps the follow camera out of the walls, and the
 // night window light still spills on the grass
-const HOME_OCC_GEO = mergeGeometries([new THREE.CylinderGeometry(0.6, 0.62, 1.1, 12).translate(0, 0.55, 0), new THREE.ConeGeometry(0.85, 0.75, 12).translate(0, 1.375, 0)]) // walls + the overhanging roof
+const HOME_OCC_GEO = mergeGeometries([new THREE.CylinderGeometry(0.7, 0.7, 0.8, 16).translate(0, 0.4, 0), new THREE.ConeGeometry(0.84, 0.72, 16).translate(0, 1.11, 0)]) // the cottage as seen (1.26 x 1.16 prop at HOME_S 1.25): bulging walls (her collider is 0.7) + the overhanging roof
 function HomeHouse({ n }) {
   return <Surface n={n} lift={HOUSE_LIFT} spin={0}>
     <mesh geometry={HOME_OCC_GEO} ref={occ} visible={false} />
