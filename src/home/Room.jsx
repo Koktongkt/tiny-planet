@@ -44,7 +44,7 @@ HOME.exit = async () => {
   if (HOME.busy || !HOME.inside || fading()) return; if (HOME.cancelIdle) HOME.cancelIdle(); HOME.needDog && HOME.needDog(); HOME.busy = true; startAct('door'); await new Promise(r => setTimeout(r, 300)); HOME.doorOpen = 1
   await fadeTo(1, 380)
   const P = HOME.P; HOME.inside = false
-  if (P && HOME.outN) { P.n.copy(HOME.outN); const f = HOME.outN.clone().sub(HOME.homeN); P.fwd.copy(f.addScaledVector(P.n, -f.dot(P.n)).normalize()).applyAxisAngle(P.n, 1.25); /* step out along the porch so the follow camera clears the house */ P.target = null; P.h = 0; P.vy = 0; if (HOME.camFront) HOME.camFront() /* the camera lands in front of her, looking at her */ }
+  if (P && HOME.outN) { P.n.copy(HOME.outN); const f = HOME.outN.clone().sub(HOME.homeN); P.fwd.copy(f.addScaledVector(P.n, -f.dot(P.n)).normalize()); /* she faces straight out from the door; camFront puts the camera in front of her looking back at the house: a front view of her and her cottage */ P.target = null; P.h = 0; P.vy = 0; if (HOME.camFront) HOME.camFront() /* the camera lands in front of her, looking at her */ }
   HOME.snapOut = 6; HOME.snap0 = window.__snap
   HOME.onExit && HOME.onExit()
   setTimeout(() => { HOME.doorOpen = 0 }, 300)
