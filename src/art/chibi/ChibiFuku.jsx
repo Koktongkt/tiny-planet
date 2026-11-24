@@ -37,10 +37,12 @@ function fukuHair() {
     part(ball, [0, 0.066, -0.006], [0.0165, 0.0145, 0.0155]),
     part(ring, [0, 0.054, -0.006], [0.012, 0.012, 0.009], [Math.PI / 2 - 0.08, 0, 0]),
     // visible centre parting: two front lobes with a clear gap, not a flat cap
-    ...[-1, 1].map(d => part(ballS, [d * 0.014, 0.030, 0.046], [0.014, 0.010, 0.011], [0.16, d * 0.22, d * 0.04])),
-    ...[-1, 1].map(d => part(ballS, [d * 0.008, 0.040, 0.020], [0.011, 0.008, 0.016], [0.20, d * 0.10, 0])),
-    // soft swept-back strand ridges on the cap
-    ...[-1, 1].map(d => part(ballS, [d * 0.022, 0.036, 0.026], [0.0060, 0.0036, 0.026], [0.42, d * 0.50, d * 0.06])),
+    ...[-1, 1].map(d => part(ballS, [d * 0.015, 0.030, 0.046], [0.013, 0.010, 0.011], [0.16, d * 0.24, d * 0.04])),
+    ...[-1, 1].map(d => part(ballS, [d * 0.009, 0.042, 0.020], [0.011, 0.008, 0.016], [0.22, d * 0.12, 0])),
+    // soft swept-back strand ridges on the cap (a little more detail than pass 5)
+    ...[-1, 1].map(d => part(ballS, [d * 0.016, 0.044, 0.014], [0.0048, 0.0026, 0.022], [0.50, d * 0.32, d * 0.04])),
+    ...[-1, 1].map(d => part(ballS, [d * 0.022, 0.036, 0.026], [0.0060, 0.0034, 0.026], [0.42, d * 0.50, d * 0.06])),
+    ...[-1, 1].map(d => part(ballS, [d * 0.030, 0.028, 0.014], [0.0050, 0.0028, 0.022], [0.36, d * 0.60, d * 0.07])),
     ...[-1, 1].map(d => part(ballS, [d * 0.034, 0.024, 0.008], [0.0055, 0.0032, 0.024], [0.30, d * 0.70, d * 0.08])),
     ...[-1, 1].map(d => part(ballS, [d * 0.038, 0.012, -0.010], [0.0050, 0.0030, 0.020], [0.22, d * 0.80, d * 0.06])),
     // a little side volume over the ears (ears still stick out)
@@ -53,9 +55,9 @@ function fukuHair() {
   tagAW(parts[3], (x, y) => [2, sm(0.05, 0.10, y)])
   tagAW(parts[4], () => [2, 0.4])
   for (const k of [5, 6, 7, 8]) tagAW(parts[k], () => [3, 0.45])
-  for (const k of [9, 10, 11, 12, 13, 14]) tagAW(parts[k], () => [3, 0.3])
-  for (const k of [15, 16]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.5])
-  for (const k of [17, 18]) tagAW(parts[k], () => [3, 0])
+  for (const k of [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]) tagAW(parts[k], () => [3, 0.3])
+  for (const k of [19, 20]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.5])
+  for (const k of [21, 22]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()
@@ -84,18 +86,18 @@ function cupGeo() {
   const rim = new THREE.TorusGeometry(0.0165, 0.00125, 8, 18)
   rim.rotateX(Math.PI / 2)
   rim.translate(0, 0.0200, 0)
-  const tea = new THREE.CircleGeometry(0.0148, 18)
+  const tea = new THREE.CircleGeometry(0.0152, 18)
   tea.rotateX(-Math.PI / 2)
   tea.translate(0, 0.0184, 0)
-  const handle = new THREE.TorusGeometry(0.0068, 0.0015, 8, 14, Math.PI * 1.25)
+  const handle = new THREE.TorusGeometry(0.0096, 0.0023, 8, 16, Math.PI * 1.35)
   handle.rotateY(Math.PI / 2)
-  handle.rotateZ(-0.15)
-  handle.translate(0.0168, 0.0105, 0)
+  handle.rotateZ(-0.05)
+  handle.translate(0.0195, 0.0105, 0.004)
   const parts = [
     paint(body, '#f7f3ec'),
     paint(bottom, '#f7f3ec'),
     paint(rim, '#ffffff'),
-    paint(tea, '#4a2a18'),
+    paint(tea, '#3a1c10'),
     paint(handle, '#f7f3ec'),
   ]
   const g = mergeGeometries(parts); g.computeVertexNormals(); CUP = g; return CUP
@@ -143,14 +145,14 @@ function skirtGeo() {
 
 function apronGeo() {
   // hangs below the hands, wraps the belly, scalloped hem — not a flat chest rectangle
-  const w0 = 0.036, w1 = 0.052, top = 0.012, bot = -0.072, nx = 22, ny = 16, nSc = 5, amp = 0.010
+  const w0 = 0.044, w1 = 0.072, top = 0.012, bot = -0.062, nx = 24, ny = 16, nSc = 5, amp = 0.014
   const pos = [], idx = []
   for (let j = 0; j <= ny; j++) {
     for (let i = 0; i <= nx; i++) {
       const u = i / nx, v = j / ny
       const w = w0 + (w1 - w0) * v
       const x = -w + 2 * w * u
-      const scall = v > 0.82 ? Math.abs(Math.sin(u * nSc * Math.PI)) * amp * ((v - 0.82) / 0.18) : 0
+      const scall = v > 0.80 ? Math.pow(Math.abs(Math.sin(u * nSc * Math.PI)), 0.55) * amp * ((v - 0.80) / 0.20) : 0
       const y = top + (bot - scall - top) * v
       const wrap = 0.018 * (1 - (x * x) / (w * w))
       pos.push(x, y, wrap)
@@ -248,17 +250,17 @@ function attachLook(root) {
   hips.add(pin); out.push(pin)
   const cup = new THREE.Mesh(cupGeo(), cupMat)
   cup.position.set(0, 0.018, chestZ + 0.050)
-  cup.rotation.set(0.16, -0.10, 0)
-  cup.scale.setScalar(1.42)
+  cup.rotation.set(0.32, 0.0, 0)
+  cup.scale.setScalar(1.70)
   cup.traverse(o => { o.layers.mask = root.layers.mask })
   chest.add(cup); out.push(cup)
   if (LIFE_OFF) {
     const chestY = (S.bellyY + S.chestY) / 2
     for (const sd of [-1, 1]) {
       const mit = new THREE.Mesh(mittenGeo(), propMat)
-      mit.position.set(sd * 0.022, 0.008, 0.006)
+      mit.position.set(sd * (sd > 0 ? -0.002 : 0.024), 0.004, 0.013)
       mit.rotation.set(0.20, sd * -0.45, sd * 0.35)
-      mit.scale.set(1.22, 1.05, 1.00)
+      mit.scale.set(1.10, 1.00, 0.96)
       mit.traverse(o => { o.layers.mask = root.layers.mask })
       cup.add(mit)
       const sh = [sd * (Math.abs(S.shL.x) + 0.000), S.shY - chestY - 0.002, S.shL.z + 0.014]

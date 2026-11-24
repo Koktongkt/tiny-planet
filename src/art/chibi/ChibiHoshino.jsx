@@ -7,12 +7,11 @@ import * as THREE from 'three'
 import React, { useEffect, useRef } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { Character, cel, spec } from '../../GhibliPerson.jsx'
-import { kit, combine } from '../train/kit.js'
 import { HOSHINO_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
 import { CHEEK, MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
-import { q, toon } from '../../common.jsx'
+import { q } from '../../common.jsx'
 
 const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').matches
 const LIFE_OFF = q.has('still') && !q.has('life')
@@ -30,37 +29,37 @@ const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, bl
 // skull HR is ~[0.058, 0.050, 0.055]; short cap ~10–15% wider than the face, ears out
 const EAR = { x: 0.061, y: -0.012, z: 0.006 }
 function hoshinoHair() {
-  const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 10, 8)
-  // short dark cap, forehead left open, swept clumps on top and right, ears visible
+  const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 12, 9)
+  // skull-hugging cap; side part on -X; soft swept waves with volume on the top-right; forehead open
   const parts = [
-    part(ball, [0, 0.010, -0.010], [0.061, 0.050, 0.055]),
-    part(ball, [0, -0.006, -0.028], [0.050, 0.032, 0.038]), // tight nape
-    // more top / right volume — swept clumps, hairline lifted off the brow
-    part(ballS, [0.020, 0.056, 0.004], [0.020, 0.016, 0.016], [0.48, 0.55, 0.12]),
-    part(ballS, [0.036, 0.048, 0.000], [0.018, 0.015, 0.015], [0.35, 0.65, 0.12]),
-    part(ballS, [0.010, 0.054, -0.016], [0.016, 0.013, 0.014], [0.38, 0.15, 0]),
-    part(ballS, [-0.012, 0.050, 0.000], [0.014, 0.012, 0.012], [0.30, -0.25, -0.08]),
-    part(ballS, [0.028, 0.040, 0.018], [0.014, 0.012, 0.012], [0.25, 0.45, 0.10]),
-    // high, separated swept fringe clumps — no bar across the forehead
-    part(ballS, [0.016, 0.036, 0.044], [0.013, 0.009, 0.010], [0.20, 0.35, 0.06]),
-    part(ballS, [-0.014, 0.034, 0.042], [0.011, 0.008, 0.009], [0.18, -0.30, -0.04]),
-    // ears stick out past the tight cap
+    part(ball, [0.003, 0.010, -0.006], [0.061, 0.050, 0.056]),
+    part(ball, [0, -0.006, -0.028], [0.048, 0.031, 0.036]), // tight nape
+    // elongated waves, not round clumps. part on the left (-X), flow back and to the right.
+    part(ballS, [0.008, 0.048, 0.006], [0.032, 0.009, 0.022], [0.68, 0.38, 0.06]),
+    part(ballS, [0.026, 0.050, -0.004], [0.026, 0.009, 0.020], [0.62, 0.50, 0.08]),
+    part(ballS, [0.038, 0.040, 0.000], [0.020, 0.009, 0.018], [0.46, 0.72, 0.06]),
+    part(ballS, [0.016, 0.044, -0.022], [0.024, 0.008, 0.018], [0.56, 0.16, -0.05]),
+    part(ballS, [-0.028, 0.042, -0.002], [0.016, 0.007, 0.016], [0.52, -0.50, -0.06]),
+    part(ballS, [-0.014, 0.038, -0.022], [0.018, 0.007, 0.016], [0.48, -0.20, -0.04]),
+    // hairline covers the crown-front; stays above the brows, no hook or fringe bar
+    part(ballS, [0.010, 0.032, 0.044], [0.026, 0.011, 0.012], [0.20, 0.30, 0.04]),
+    part(ballS, [-0.018, 0.030, 0.042], [0.018, 0.010, 0.011], [0.16, -0.32, -0.03]),
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
   ]
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
-  for (const k of [2, 3, 4, 5, 6]) tagAW(parts[k], () => [2, 0.55])
-  for (const k of [7, 8]) tagAW(parts[k], () => [3, 0.35])
-  for (const k of [9, 10]) tagAW(parts[k], () => [3, 0])
+  for (const k of [2, 3, 4, 5, 6, 7]) tagAW(parts[k], () => [2, 0.55])
+  for (const k of [8, 9]) tagAW(parts[k], () => [3, 0.30])
+  for (const k of [10, 11]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 function hoshinoGrey() {
   const ballS = new THREE.SphereGeometry(1, 10, 8)
-  // soft blended grey patch at the side, above the ear (viewer's right / +X)
+  // grey blended into the right temple, above the ear, following the swept waves
   const parts = [
-    part(ballS, [0.050, 0.022, 0.008], [0.011, 0.016, 0.012], [0.12, 0.30, 0.08]),
-    part(ballS, [0.048, 0.034, 0.000], [0.010, 0.014, 0.010], [0.18, 0.35, 0.06]),
-    part(ballS, [0.052, 0.012, 0.004], [0.009, 0.012, 0.009], [0.08, 0.28, 0.06]),
+    part(ballS, [0.050, 0.024, 0.004], [0.014, 0.018, 0.016], [0.16, 0.42, 0.08]),
+    part(ballS, [0.044, 0.038, -0.006], [0.013, 0.016, 0.015], [0.28, 0.52, 0.06]),
+    part(ballS, [0.052, 0.014, 0.002], [0.011, 0.014, 0.013], [0.10, 0.32, 0.06]),
   ]
   tagAW(parts[0], () => [1, 0.45])
   tagAW(parts[1], () => [1, 0.4])
@@ -86,29 +85,42 @@ const paint = (g, hex) => {
   src.setAttribute('color', new THREE.BufferAttribute(a, 3)); return src
 }
 
-// open red field notebook: two covers, cream pages facing the camera. Not a closed white slab.
+// small hardback notebook, about head-width, shallow V, red covers outside, cream pages
 let NB = null
 function notebookGeo() {
   if (NB) return NB
-  const K = kit({ ink: 0.0014 })
-  const open = 0.42
-  // covers (red) open like a V toward +Z
-  K.box(0.028, 0.0036, 0.040, [-0.015, 0, 0], '#8a2e28', { rot: [0, open, 0] })
-  K.box(0.028, 0.0036, 0.040, [0.015, 0, 0], '#8a2e28', { rot: [0, -open, 0] })
-  // cream pages, slightly inset
-  K.box(0.025, 0.0022, 0.036, [-0.014, 0.0030, 0.001], '#f7f1e4', { rot: [0, open, 0], hull: false })
-  K.box(0.025, 0.0022, 0.036, [0.014, 0.0030, 0.001], '#f7f1e4', { rot: [0, -open, 0], hull: false })
-  // spine
-  K.box(0.006, 0.0044, 0.040, [0, 0.000, -0.002], '#6e241e', { hull: false })
-  // a couple of ruled lines on the right page
-  K.box(0.016, 0.0006, 0.0007, [0.014, 0.0044, 0.006], '#c8b09a', { rot: [0, -open, 0], hull: false })
-  K.box(0.016, 0.0006, 0.0007, [0.014, 0.0044, -0.004], '#c8b09a', { rot: [0, -open, 0], hull: false })
-  const P = kit({ ink: 0.0008 })
-  // dark pencil, wood tip
-  P.cyl(0.0022, 0.052, [0, 0, 0], '#2a241c', { seg: 6 })
-  P.cyl(0.0022, 0.008, [0, 0.030, 0], '#d2b48a', { seg: 6, r2: 0.0004, hull: false })
-  const m = toon('#ffffff', { vertexColors: true })
-  NB = { book: combine(K.build()), pencil: combine(P.build()), m }; return NB
+  const open = 0.40
+  const coverW = 0.054, coverH = 0.056, coverT = 0.0032
+  const pageW = 0.047, pageH = 0.049, pageT = 0.0020
+  const parts = []
+  for (const sd of [-1, 1]) {
+    const yaw = sd * -open // outer edges toward +Z (camera)
+    const cover = new THREE.BoxGeometry(coverW, coverH, coverT)
+    cover.translate(sd * coverW * 0.5, 0, -coverT * 0.5)
+    cover.rotateY(yaw)
+    parts.push(paint(cover, '#8a2e28'))
+    const page = new THREE.BoxGeometry(pageW, pageH, pageT)
+    page.translate(sd * (pageW * 0.5 + 0.001), 0, pageT * 0.5 + 0.0005)
+    page.rotateY(yaw)
+    parts.push(paint(page, '#f7f1e4'))
+  }
+  const spine = new THREE.BoxGeometry(0.007, coverH, 0.006)
+  spine.translate(0, 0, -0.001)
+  parts.push(paint(spine, '#6e241e'))
+  // faint ruled lines on the right page
+  for (const y of [0.010, -0.006]) {
+    const line = new THREE.BoxGeometry(0.030, 0.0007, 0.0005)
+    line.translate(pageW * 0.5 + 0.002, y, pageT + 0.0012)
+    line.rotateY(-open)
+    parts.push(paint(line, '#c8b09a'))
+  }
+  const book = mergeGeometries(parts); book.computeVertexNormals()
+  const shaft = new THREE.CylinderGeometry(0.0026, 0.0026, 0.044, 8)
+  const tip = new THREE.CylinderGeometry(0.0004, 0.0026, 0.009, 8)
+  tip.translate(0, 0.0265, 0)
+  const pencil = mergeGeometries([paint(shaft, '#2a241c'), paint(tip, '#d2b48a')])
+  pencil.computeVertexNormals()
+  NB = { book, pencil }; return NB
 }
 
 function vestGeo() {
@@ -131,10 +143,10 @@ function shirtCollarGeo() {
   // small points at the sides of the neck, tucked under the scarf — not a white blob under the chin
   const parts = []
   for (const sd of [-1, 1]) {
-    const g = new THREE.BoxGeometry(0.012, 0.007, 0.004)
-    g.rotateZ(sd * -0.45)
-    g.rotateX(-0.15)
-    g.translate(sd * 0.014, 0.008, 0.000)
+    const g = new THREE.BoxGeometry(0.016, 0.010, 0.005)
+    g.rotateZ(sd * -0.55)
+    g.rotateX(-0.22)
+    g.translate(sd * 0.024, -0.002, 0.008)
     parts.push(paint(g, SHIRT))
   }
   return mergeGeometries(parts)
@@ -164,14 +176,14 @@ function scarfGeo() {
   knot2.scale(1.35, 0.65, 0.95)
   knot2.translate(-0.006, -0.014, 0.032)
   parts.push(paint(knot2, rust))
-  // two longer, fuller hanging ends, set wide of the book so they read over the chest
-  const endL = new THREE.BoxGeometry(0.034, 0.132, 0.012)
-  endL.rotateZ(0.32)
-  endL.translate(-0.058, -0.086, 0.044)
+  // two hanging ends over the upper chest, inside the jacket opening, above the small book
+  const endL = new THREE.BoxGeometry(0.024, 0.078, 0.011)
+  endL.rotateZ(0.18)
+  endL.translate(-0.030, -0.048, 0.040)
   parts.push(paint(endL, rust))
-  const endR = new THREE.BoxGeometry(0.032, 0.118, 0.012)
-  endR.rotateZ(-0.38)
-  endR.translate(0.056, -0.078, 0.046)
+  const endR = new THREE.BoxGeometry(0.022, 0.070, 0.011)
+  endR.rotateZ(-0.22)
+  endR.translate(0.028, -0.044, 0.042)
   parts.push(paint(endR, rustD))
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
@@ -181,13 +193,13 @@ function lapelGeo() {
   const shade = '#a88454'
   for (const sd of [-1, 1]) {
     const shape = new THREE.Shape()
-    shape.moveTo(sd * 0.002, 0.038)
-    shape.lineTo(sd * 0.026, 0.010)
-    shape.lineTo(sd * 0.018, -0.008)
-    shape.lineTo(sd * 0.002, 0.012)
+    shape.moveTo(sd * 0.002, 0.042)
+    shape.lineTo(sd * 0.030, 0.012)
+    shape.lineTo(sd * 0.022, -0.010)
+    shape.lineTo(sd * 0.002, 0.014)
     shape.closePath()
-    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.007, bevelEnabled: false, steps: 1 })
-    g.translate(sd * 0.012, 0.006, 0)
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.008, bevelEnabled: false, steps: 1 })
+    g.translate(sd * 0.014, 0.008, 0)
     parts.push(paint(g, shade))
   }
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
@@ -197,11 +209,11 @@ function pocketGeo() {
   const shade = '#a88454', slit = '#8a6a40'
   const parts = []
   for (const sd of [-1, 1]) {
-    const flap = new THREE.BoxGeometry(0.024, 0.018, 0.006)
-    flap.translate(sd * 0.034, 0, 0)
+    const flap = new THREE.BoxGeometry(0.026, 0.020, 0.007)
+    flap.translate(sd * 0.044, 0, 0)
     parts.push(paint(flap, shade))
-    const line = new THREE.BoxGeometry(0.020, 0.0018, 0.002)
-    line.translate(sd * 0.034, 0.007, 0.003)
+    const line = new THREE.BoxGeometry(0.022, 0.0020, 0.002)
+    line.translate(sd * 0.044, 0.008, 0.004)
     parts.push(paint(line, slit))
   }
   const g = mergeGeometries(parts); g.computeVertexNormals(); return g
@@ -255,24 +267,38 @@ function attachLook(root) {
     add(vestGeo(), [0, -0.012, chestZ + 0.014])
     add(shirtCollarGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.010, chestZ * 0.40])
     add(lapelGeo(), [0, 0.010, chestZ + 0.018])
-    add(pocketGeo(), [0, -0.052, chestZ + 0.022])
+    add(pocketGeo(), [0, -0.058, chestZ + 0.022])
     add(scarfGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.004, chestZ * 0.55])
-    // open book at chest height, pages toward the camera
-    const book = add(g.book, [-0.002, 0.016, chestZ + 0.050], g.m, [Math.PI * 0.50, 0.02, 0.04])
-    book.scale.setScalar(1.95)
+    // small hardback at mid-chest, shallow V tilted toward the camera
+    const bookY = -0.042, bookZ = chestZ + 0.050
+    const bookRX = -0.50
+    const book = add(g.book, [0, bookY, bookZ], vestMat, [bookRX, 0.02, 0])
+    const toChest = (lx, ly, lz) => {
+      const cy = ly * Math.cos(bookRX) - lz * Math.sin(bookRX)
+      const cz = ly * Math.sin(bookRX) + lz * Math.cos(bookRX)
+      return [lx, bookY + cy, bookZ + cz]
+    }
     if (LIFE_OFF) {
       const chestY = (S.bellyY + S.chestY) / 2
-      const mitL = add(mittenGeo(), [-0.038, 0.004, chestZ + 0.052])
-      mitL.rotation.set(0.25, 0.45, 0.35)
-      mitL.scale.setScalar(1.28)
-      const pencil = add(g.pencil, [0.018, 0.034, chestZ + 0.070], g.m, [1.20, 0.40, 0.60])
-      const mitR = add(mittenGeo(), [0.040, 0.018, chestZ + 0.056])
-      mitR.rotation.set(0.20, -0.35, -0.25)
-      mitR.scale.setScalar(1.24)
+      const addOnBook = (geo, pos, rot, scl) => {
+        const m = new THREE.Mesh(geo, vestMat)
+        m.position.set(...pos)
+        if (rot) m.rotation.set(...rot)
+        if (scl) m.scale.setScalar(scl)
+        m.traverse(o => { o.layers.mask = root.layers.mask })
+        book.add(m); out.push(m)
+        return m
+      }
+      // left mitten supports from below; right holds a dark pencil on the page
+      const locL = [-0.018, -0.034, 0.002], locR = [0.028, 0.004, 0.012]
+      addOnBook(mittenGeo(), locL, [0.55, 0.25, 0.30], 1.08)
+      addOnBook(g.pencil, [0.016, 0.000, 0.016], [Math.PI * 0.50 - 0.40, 0.18, 0.10], 1)
+      addOnBook(mittenGeo(), locR, [0.20, -0.25, -0.15], 1.08)
+      const handL = toChest(...locL), handR = toChest(...locR)
       const shL = [-(Math.abs(S.shL.x) + 0.000), S.shY - chestY - 0.002, S.shL.z + 0.014]
       const shR = [ (Math.abs(S.shR.x) + 0.000), S.shY - chestY - 0.002, S.shR.z + 0.014]
-      add(stillArmGeo(-1, shL, [-0.038, 0.004, chestZ + 0.052], JACKET), [0, 0, 0])
-      add(stillArmGeo( 1, shR, [ 0.040, 0.018, chestZ + 0.056], JACKET), [0, 0, 0])
+      add(stillArmGeo(-1, shL, handL, JACKET), [0, 0, 0])
+      add(stillArmGeo( 1, shR, handR, JACKET), [0, 0, 0])
     }
   }
   return () => out.forEach(h => h.removeFromParent())
