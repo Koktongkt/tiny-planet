@@ -41,7 +41,7 @@ export function Quadruped({ cfg, st }) {
   useFrame((S3, dt) => {
     if (st.frozen) return
     lodStep(lodRoot.current, lod, S3.camera, !!st.ride) // off-screen (cat while she's outdoors, dog waiting by the door while she's in). st.ride holds the far LOD so the crate does not turn the tiny face meshes back on.
-    dt = Math.min(dt, 0.05); st.t += dt; const p = st.p, g = st.goal, R_ = r.current, t = st.t
+    dt = Math.min(dt, 0.05) * (st.ts ?? 1); st.t += dt; const p = st.p, g = st.goal, R_ = r.current, t = st.t; st.R = R_ // st.ts: studio slow-motion; st.R: studio reads paw positions
     // st.loco (opt-in; the Motion Studio for now): planted-feet gait, body dynamics, per-pose springs. Without it the
     // rig is exactly as before. The brain then also feeds st.w (yaw rate), st.a (forward accel) and st.look (head lead).
     const LC = st.loco && c.loco ? c.loco : null, ps = st.ps || (st.ps = {})

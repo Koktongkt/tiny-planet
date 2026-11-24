@@ -11,7 +11,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a))
 const yawTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z)
 
-export const followSpeed = (gap, herSpeed) => clamp(herSpeed + (gap - 0.3) * 2.2, 0, 2.8)
+export const followSpeed = (gap, herSpeed) => clamp(herSpeed + (gap - 0.06) * 2.2, 0, 2.8) // matches her pace at his place, faster the further behind
 
 export const newFollow = () => ({ mode: 'follow', settle: null, t: 0, dur: 0, side: 1, sideK: 1, flipT: 20, spot: null, goT: 0, herStill: 0, glance: 0, glanceT: 0, anchorYaw: 0, herAt: null })
 
@@ -39,7 +39,7 @@ export function stepFollow(F, her, pet, dt, rnd = Math.random) {
       F.settle = pickSettle(rnd); F.anchorYaw = pet.yaw; F.herAt = { x: her.x, z: her.z }
       if (F.settle === 'sit') go('sit', 8 + rnd() * 7)
       else go('settle', F.settle === 'look' ? 2 + rnd() * 2 : F.settle === 'circle' ? 2.4 : 1.5 + rnd() * 1.5)
-    } else return { x: F.spot.x, z: F.spot.z, speed: followSpeed(gap, her.speed), face: null, pose, look: null }
+    } else return { x: F.spot.x, z: F.spot.z, speed: followSpeed(gap, her.speed), face: her.yaw, track: true, pose, look: null } // track: his place moves with her
   }
 
   if (F.mode === 'settle') {

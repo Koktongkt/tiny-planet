@@ -59,3 +59,16 @@ test('steerClear', () => {
 test('toLocal: a target at bearing b reads as atan2(x, z) = b', () => {
   for (const yaw of [0, 1, -2.5]) for (const b of [0.4, -1.2, 2.8]) { const l = toLocal(Math.sin(yaw + b), Math.cos(yaw + b), yaw); assert.ok(Math.abs(Math.atan2(l.x, l.z) - b) < 1e-9) }
 })
+
+test('track mode: his place moving along just ahead of him keeps him walking at its pace (no stop-start)', () => {
+  const cfg = MOTOR_DOG, m = newMotor(); let stops = 0
+  for (let i = 0; i < 300; i++) { // the place runs 0.05 ahead (where the follow law holds it at her pace)
+    stepMotor(m, cfg, { x: 0, z: 0.05, speed: Math.min(0.6, i * 0.02), track: true, face: 0 }, DT)
+    if (i > 60 && !m.moving) stops++ }
+  assert.equal(stops, 0); assert.ok(Math.abs(m.v - 0.6) < 0.05, `v ${m.v}`)
+})
+
+test('track mode with a still target near him: he stops', () => {
+  const m = newMotor(); for (let i = 0; i < 120; i++) stepMotor(m, MOTOR_DOG, { x: 0, z: 0.03, speed: 0, track: true }, DT)
+  assert.equal(m.moving, false); assert.equal(m.v, 0)
+})

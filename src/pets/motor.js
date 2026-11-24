@@ -17,12 +17,16 @@ export function toLocal(dx, dz, yaw) { const s = Math.sin(yaw), c = Math.cos(yaw
 export function stepMotor(m, cfg, goal, dt) {
   dt = Math.min(dt, 0.05)
   const d = Math.hypot(goal.x, goal.z), bearing = d > 1e-9 ? Math.atan2(goal.x, goal.z) : 0
-  if (!m.moving && d > cfg.deadOut) m.moving = true
-  else if (m.moving && d < cfg.arrive) m.moving = false
+  // track: the target is a place that moves with her (goal.speed is its pace). While it has pace he keeps walking with it
+  // instead of arriving and restarting; with no pace it behaves like any other target.
+  const pace = goal.track && goal.speed > 0.05
+  if (!m.moving && (d > cfg.deadOut || (pace && d > cfg.arrive * 0.5))) m.moving = true
+  else if (m.moving && d < cfg.arrive && !pace) m.moving = false
   // desired speed: cruise, capped by a braking curve (with margin, so jerk lag never overshoots) and by the heading error
   let vDes = 0
   if (m.moving) {
-    vDes = Math.min(goal.speed, cfg.maxSpeed, Math.sqrt(2 * cfg.decel * 0.45 * Math.max(0, d - cfg.arrive * 0.5))) * Math.max(0, Math.cos(bearing))
+    const brake = pace ? Infinity : Math.sqrt(2 * cfg.decel * 0.45 * Math.max(0, d - cfg.arrive * 0.5))
+    vDes = Math.min(goal.speed, cfg.maxSpeed, brake) * Math.max(0, Math.cos(bearing))
     if (Math.abs(bearing) > 1.1 && m.v < cfg.creep * 1.5) vDes = Math.min(cfg.creep, goal.speed) // step-turn: keep the legs stepping round
   }
   const aWant = clamp((vDes - m.v) * 9, -cfg.decel, cfg.accel)
@@ -32,7 +36,9 @@ export function stepMotor(m, cfg, goal, dt) {
   v = clamp(v, m.v - cfg.decel * dt, m.v + cfg.accel * dt)
   m.v = clamp(v, 0, cfg.maxSpeed)
   // yaw: aim at the target while moving, else at the requested facing; angular accel limited, rate capped by speed
-  const aim = m.moving ? bearing : (goal.face ?? 0), lim = maxTurn(cfg, m.v)
+  // right on top of a tracked place the bearing is noise: blend toward the given heading (her direction of travel)
+  const near = pace && goal.face != null && d < 0.1 ? 1 - d / 0.1 : 0
+  const aim = m.moving ? bearing * (1 - near) + (near ? goal.face * near : 0) : (goal.face ?? 0), lim = maxTurn(cfg, m.v)
   const wWant = clamp(aim * 3, -lim, lim), dw = cfg.turnAcc * dt
   m.w = clamp(m.w + clamp(wWant - m.w, -dw, dw), -lim, lim)
   // head leads the turn
