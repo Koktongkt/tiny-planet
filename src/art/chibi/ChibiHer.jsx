@@ -127,7 +127,7 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // curve into the chin, its front level with the box's at their seam.
 // [y, z, rx, ry, rz, smin k]           ellipsoid (radii)
 // [y, z, hx, hy, hz, smin k, round r]  rounded box (half extents + corner radius)
-const MIDFACE = [[-0.0278, 0.0518, 0.0085, 0.0058, 0.0052, 0.0012, 0.001], [-0.0328, 0.0382, 0.013, 0.0148, 0.0198, 0.005]]
+const MIDFACE = [[-0.0278, 0.0518, 0.0085, 0.0058, 0.0052, 0.0012, 0.001], [-0.0362, 0.0368, 0.0138, 0.0182, 0.021, 0.006]]
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const rbox = (x, y, z, cx, cy, cz, hx, hy, hz, r) => { const qx = Math.abs(x - cx) - hx, qy = Math.abs(y - cy) - hy, qz = Math.abs(z - cz) - hz
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r }
