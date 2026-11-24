@@ -7,7 +7,7 @@ import { Character, spec } from '../../GhibliPerson.jsx'
 import { kit, combine } from '../train/kit.js'
 import { HOSHINO_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { CHEEK, MIDFACE, MID_FADE, makeFace } from './castFace.js'
+import { CHEEK, MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q, toon } from '../../common.jsx'
 
