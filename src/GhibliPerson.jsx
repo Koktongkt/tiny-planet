@@ -94,7 +94,7 @@ const PAINT = `
       float open = front * aa(.012 + (uY.y - y) * .15 - ax);
       torso = mix(uAcc, torso, open * aa(y - uY.x + .03) + waist);
       float btn = front * aa(.0035 - length(vec2(ax - .016, mod(y, .022) - .011)));
-      torso = mix(torso, uAcc2, btn * (1. - waist));
+      torso = mix(torso, uAcc2, btn * (1. - waist) * (1. - uZ.y)); // uZ.y=1 when outfit.buttons === false
     } else if (ty == 6) { // fisherman jacket: placket + pockets, hem below waist
       float pl = front * aa(.0035 - abs(x - .004));
       float pk = front * aa(.016 - abs(ax - .026)) * aa(.011 - abs(y - uY.x - .022));
@@ -102,9 +102,17 @@ const PAINT = `
     } else if (ty == 7) { // shirt: small V neckline
       float v = front * aa((y - uY.y + .022) - ax * 1.3);
       torso = mix(torso, uSkin, v * (1. - neck));
+    } else if (ty == 8) { // open jacket: lapelled open front shows vest/shirt (uTop), hem at uY.x, pockets
+      float open = front * aa(.014 + (uY.y - y) * .18 - ax);
+      torso = mix(uAcc, torso, open * aa(y - uY.x + .02) + waist);
+      float edge = .014 + (uY.y - y) * .18;
+      float lap = front * aa(.007 - abs(ax - edge)) * aa(y - uY.x + .02) * (1. - waist) * aa(uY.y - .008 - y);
+      torso = mix(torso, uAcc * .80, lap);
+      float pk = front * aa(.014 - abs(ax - .026)) * aa(.009 - abs(y - uY.x - .018)) * (1. - open);
+      torso = mix(torso, uAcc * .76, pk * .85);
     }
     // arms
-    vec3 sleeve = ty == 5 ? uAcc : uTop;
+    vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
     // legs
     vec3 legC = mix(uBottom, uSkin, uO.z * aa(uY.w - y));
@@ -188,12 +196,17 @@ const bodyMatCache = new Map()
 function bodyMat(cfg, S) {
   const o = cfg.outfit, key = JSON.stringify(o) + S.key; if (bodyMatCache.has(key)) return bodyMatCache.get(key)
   const u = mkU(); for (const [k, f] of [['uSkin', 'skin'], ['uTop', 'top'], ['uBottom', 'bottom'], ['uShoe', 'shoe'], ['uAcc', 'acc'], ['uAcc2', 'acc2']]) if (o[f]) u[k].value.set(o[f])
-  const TY = { overalls: 0, dress: 1, apron: 2, yukata: 3, sailor: 4, cardigan: 5, jacket: 6, shirt: 7 }
+  const TY = { overalls: 0, dress: 1, apron: 2, yukata: 3, sailor: 4, cardigan: 5, jacket: 6, shirt: 7, openJacket: 8 }
   const dressy = o.skirt
-  const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 + (o.waistUp ?? 0) : S.bellyY + 0.008
+  const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' || o.type === 'openJacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 + (o.waistUp ?? 0) : S.bellyY + 0.008
+  // hemY is opt-in: unset keeps the historical default for every existing type (pixel-identical).
+  const hemY = o.hemY == null ? (o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist)
+    : o.hemY === 'hip' ? S.hipY + 0.008
+    : o.hemY === 'thigh' ? (S.hipY + S.knY) * 0.5
+    : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
-    uY: { value: new THREE.Vector4(o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
+    uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
   bodyMatCache.set(key, m); return m
@@ -595,7 +608,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
   const headLocal = [0, S.headC.y - B.head.userData.rest.y, S.headC.z - B.head.userData.rest.z]
   const chestY = B.chest.userData.rest.y, hipsY = B.hips.userData.rest.y
   const sleeveGeo = o.sleeve === 'kimono' ? null : (cfg.ext?.sleeveGeo ?? (o.sleeve === 'short' ? G.sleeveS : G.sleeve))
-  const sleeveC = o.type === 'cardigan' ? o.acc : o.top
+  const sleeveC = o.type === 'cardigan' || o.type === 'openJacket' ? o.acc : o.top
   const es = f.eye ?? 1, X = cfg.ext || {}
   return <group scale={S.H * scale}>
     <primitive object={R.mesh} /><primitive object={R.line} />
