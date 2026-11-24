@@ -39,7 +39,9 @@ import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { fxPasses, nightFromPhase } from './fx.js'
 import { paceFrame, stampActive } from './framePace.js'
 import { butterflyAngle, butterflyFrame } from './butterflies.js'
-import { VILLAGE, MILLS, HOUSES, LAMPS, SPAWN, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
+import { VILLAGE, MILLS, HOUSES, LAMPS, SPAWN, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs, STAIR } from './world/village.js'
+import { OLD_WORLD } from './world/flag.js'
+import { region } from './world/regions.js'
 import { YARD, CHIMNEY_TOP, yardColliders } from './home/yard.js'
 const HomeExteriorLazy = lazy(() => import('./home/Exterior.jsx')) // her chibi cottage + yard + crop garden (one baked mesh)
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
@@ -508,8 +510,8 @@ function Traveller() {
   })
   return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
 }
-const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
-const ZVIEWS = {
+// ?view=zone&z=<key> camera targets (dev / screenshots: shoot.mjs, the README). ?world=old keeps the frozen layout's set.
+const OLD_VIEWS = (() => { const HB_LOOK = around(Zc.harbour, 0.29, 2.3); return {
   'square': { cam: around(VILLAGE, 1.3 / R, 0.4), ch: 0.6, look: VILLAGE, lh: 0.2 },
   'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 },
   'lake-waterfall': { cam: around(Zc.lake, 0.42, 3.9), ch: 2.4, look: Zc.lake.clone().lerp(Zc.cliff, 0.55), lh: 0.2 },
@@ -517,10 +519,28 @@ const ZVIEWS = {
   'harbour-ruins': { cam: dir(-0.1, 3.7), ch: 3.4, look: Zc.harbour.clone().lerp(Zc.ruins, 0.45), lh: 0.0 },
   'forest-giant': { cam: around(Zc.giant, 0.78, 4.6), ch: 3.6, look: Zc.giant, lh: 2.0 },
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
+} })()
+// the reworked layout: each view frames its region from the registry (bearings: around()'s, 0 east / pi/2 north)
+const NEW_VIEWS = () => { const rg = (id) => zv(region(id)), HB_LOOK = around(rg('harbour'), 0.27, 1.75), ST = STAIR.steps
+  return {
+    'square': { cam: around(VILLAGE, 2.4 / R, 0.1), ch: 1.3, look: VILLAGE, lh: 0.2 }, // from over the river by the bridge, her home beyond
+    'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 }, // the bay's north shore (pier walkers)
+    'lake-waterfall': { cam: around(rg('lake'), 0.36, 4.4), ch: 3.2, look: rg('lake').lerp(rg('cliff'), 0.62), lh: 0.4 }, // up the river from below the lake to the falls
+    'terraces-train': { cam: dir(0.3, 1.05), ch: 2.6, look: rg('terraces'), lh: 0.4 }, // the terraces from down the slope (the railway runs along the coast, far below: Task 8)
+    'harbour-ruins': { cam: dir(-0.3, 1.35), ch: 5.0, look: rg('harbour').lerp(rg('ruins'), 0.5), lh: 0.0 }, // the drowned ruins in the lake and the bay below
+    'forest-giant': { cam: around(rg('giant'), 0.78, 4.6), ch: 3.6, look: rg('giant'), lh: 2.0 },
+    'meadow-mills': { cam: rg('meadow').lerp(rg('mills'), 0.15), ch: 2.4, look: rg('mills'), lh: 0.5 },
+    peak: { cam: around(ST[0].n, 0.9 / R, 4.0), ch: 1.4, look: ST[Math.floor(ST.length * 0.6)].n, lh: 0.4 }, // up the stair to the shrine
+    'lake-museum': { cam: around(rg('lake'), 0.2, 3.6), ch: 2.4, look: rg('museum'), lh: 0.3 }, // across the lake to the museum shore
+  } }
+const ZVIEWS = {
+  ...(OLD_WORLD ? OLD_VIEWS : NEW_VIEWS()),
   home: { cam: onHouse(0, 0.6, 3.1), ch: 1.5, look: onHouse(0, -0.25, 0.2), lh: 0.55 }, // her cottage + yard
   'home-garden': { cam: onHouse(0, 0.3, 3.0), ch: 2.0, look: onHouse(0, -1.25, 0.6), lh: 0.1 },
   'home-yard': { cam: onHouse(0, -0.3, 4.2), ch: 3.4, look: onHouse(0, -0.3, 0.3), lh: 0 }, // the whole fenced yard from above
 }
+// ?view=detail: the first bridge and its set pieces (along / side from the bridge centre, as world/village.js bl())
+const DETAIL = OLD_WORLD ? { look: [-0.3, 0.45], cam: [-2.3, 1.7] } : { look: [-0.6, -0.5], cam: [1.4, -2.4] }
 const CAMD = q.has('camd') ? +q.get('camd') : 1
 function Rig() {
   const camera = useThree(s => s.camera)
@@ -553,7 +573,7 @@ function Rig() {
       const camL = zv_.cam.clone().normalize().multiplyScalar(R + Math.max(height(zv_.cam), -0.1) + zv_.ch), lookL = zv_.look.clone().normalize().multiplyScalar(R + height(zv_.look) + zv_.lh)
       camera.position.copy(camL.applyMatrix4(g.matrixWorld)); camera.up.copy(zv_.cam.clone().normalize().transformDirection(g.matrixWorld)); look.copy(lookL.applyMatrix4(g.matrixWorld)); camera.lookAt(look)
     } else if (VIEW.mode === 'detail') {
-      const c = B0.c.clone(); const lookL = bl(B0, -0.3, 0.45).multiplyScalar(R + 0.15), camL = bl(B0, -2.3, 1.7).multiplyScalar(R + 1.25)
+      const c = B0.c.clone(); const lookL = bl(B0, DETAIL.look[0], DETAIL.look[1]).multiplyScalar(R + 0.15), camL = bl(B0, DETAIL.cam[0], DETAIL.cam[1]).multiplyScalar(R + 1.25)
       goal.copy(camL).applyMatrix4(g.matrixWorld); camera.position.lerp(goal, k); camera.up.lerp(_u.copy(c).transformDirection(g.matrixWorld), k).normalize(); look.lerp(lookL.applyMatrix4(g.matrixWorld), k); camera.lookAt(look)
     } else {
       camera.position.lerp(goal.set(0, 5.8 * WS, 30 * WS).multiplyScalar(CAM.zoom), k); camera.up.lerp(_u.set(0, 1, 0), k).normalize(); look.lerp(_v.set(0, 1, 0), k); camera.lookAt(look)

@@ -2,6 +2,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { height, dir, R, SEA_LAT, SEA_W, LAKE_W, streamNear } from '../../src/world.js'
 import { region, OPEN_PLOTS, HOME_DIR } from '../../src/world/regions.js'
+import { STAIR } from '../../src/world/village.js'
 
 let seed = 12345
 const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
@@ -38,9 +39,9 @@ test('shallows exist', () => {
   assert.ok(ok / all >= 0.6, `shallow along ${(ok / all * 100).toFixed(0)}% of longitudes`)
 })
 test('peak slope walkable', () => {
-  const peak = unit(region('peak')), village = unit(region('village')), cliff = unit(region('cliff')), pr = region('peak').r, cr = region('cliff').r
-  // stair corridor: the Peak's first 0.04 rad toward the village (a stair goes here in Task 7)
-  const stair = (p) => { const a = angle(p, peak); return a >= pr && a <= pr + 0.04 }
+  const peak = unit(region('peak')), village = unit(region('village')), cliff = unit(region('cliff')), cr = region('cliff').r
+  // the stone stair's own line (world/village.js STAIR, beside the cliff): steps may sit on ground steeper than a walk
+  const stair = (p) => STAIR.steps.some(s => angle(p, s.n) * R < 0.35)
   // the direct great circle crosses the Waterfall Cliff mesa (a deliberate wall: the waterfall drops off it); the mesa and
   // its rim are exempt here, and a walk that passes beside the cliff must be climbable everywhere instead
   const mesa = (p) => angle(p, cliff) <= cr + 0.04

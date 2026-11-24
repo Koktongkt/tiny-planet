@@ -6,10 +6,11 @@ import { Outlines } from '@react-three/drei'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { R, K, place, pathDir, streamDir, streamHalf, waterAt, onBridge, JUMPS, JUMP_HALF, BRIDGES, height, wind, toonRamp } from './world.js'
 import { toon, paint, C, CC, T, INK, MAT, Surface } from './common.jsx'
+import { STAIR, SHRINE_SPIN } from './world/village.js'
 // round6: edge stones along the trail, pebbles on the river banks, stepping stones + marker stakes at the jump spots.
 // One instanced mesh for every stone (8-tri octahedra) and one for the stakes: +2 draw calls, ~6k triangles.
 export function RiverStones({ colliders: COLLIDERS, houses: HOUSES, touch: TOUCH }) {
-  const { stones, stakes } = useMemo(() => { let sd_ = 99; const rnd = () => (sd_ = (sd_ * 16807) % 2147483647) / 2147483647 // own RNG: leaves the world scatter sequence untouched
+  const { stones, stakes, slabs } = useMemo(() => { let sd_ = 99; const rnd = () => (sd_ = (sd_ * 16807) % 2147483647) / 2147483647 // own RNG: leaves the world scatter sequence untouched
     const COLLIDERS_NEAR = (m) => COLLIDERS.some(c => m.angleTo(c.n) < c.r + 0.004)
     const st = [], sk = [], o = new THREE.Object3D(), c = new THREE.Color(), tan = new THREE.Vector3(), side = new THREE.Vector3()
     const put = (n, s, h, col, spin) => { if (waterAt(n, -0.02) && col !== 'step') return; const p = place(n, -0.01, spin); st.push({ p, s, h, c: col === 'step' ? C('#d8d0c0').multiplyScalar(0.95 + rnd() * 0.08) : c.set(col).multiplyScalar(0.85 + rnd() * 0.25).clone() }) }
@@ -20,7 +21,12 @@ export function RiverStones({ colliders: COLLIDERS, houses: HOUSES, touch: TOUCH
     along(streamDir, 0.0045, streamHalf, TOUCH ? 0.66 : 0.55, ['#a59a88', '#8f8778', '#c2b7a4'], 0.04)
     for (const j of JUMPS) { const n = j.c; for (const sd of [-1, 1]) { const bank = JUMP_HALF + 0.02; for (const [a, o_, s] of [[0, 0.02, 0.07], [0.09, 0.11, 0.05], [-0.08, 0.1, 0.045]]) put(n.clone().addScaledVector(j.side, sd * (bank + o_) / R).addScaledVector(j.tan, a / R).normalize(), s, 0.32, 'step', rnd() * 6)
       sk.push(place(n.clone().addScaledVector(j.side, sd * (bank + 0.17) / R).addScaledVector(j.tan, (sd * 0.16) / R).normalize(), -0.01, rnd() * 6)) } }
-    return { stones: st, stakes: sk }
+    // the Peak stair (new layout): one level stone slab per step in the stepping stones' colour, a pebble at alternate ends
+    const sl = []
+    if (STAIR) STAIR.steps.forEach(({ n, up }, i) => { const sd = new THREE.Vector3().crossVectors(n, up)
+      sl.push({ pos: n.clone().multiplyScalar(R + height(n)), q: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(sd, n, up)), yaw: (rnd() - 0.5) * 0.1, w: 0.46 + rnd() * 0.08, c: C('#d8d0c0').multiplyScalar(0.9 + rnd() * 0.12) })
+      const e = i % 2 ? 1 : -1; put(n.clone().addScaledVector(sd, e * 0.3 / R).normalize(), 0.045 + rnd() * 0.02, 0.6, 'step', rnd() * 6) })
+    return { stones: st, stakes: sk, slabs: sl }
   }, [])
   // ship trim: stones + stakes baked into ONE static vertex-coloured mesh (was two instanced meshes): -1 draw call
   const merged = useMemo(() => { const o = new THREE.Object3D(), parts = []
@@ -30,6 +36,9 @@ export function RiverStones({ colliders: COLLIDERS, houses: HOUSES, touch: TOUCH
     const col = (g, h) => { g.attributes.uv.array.fill(0); return tint(g, C(h)) }
     const stake = mergeGeometries([col(new THREE.BoxGeometry(0.022, 0.2, 0.022).translate(0, 0.1, 0), '#8a5a3c'), col(new THREE.BoxGeometry(0.004, 0.035, 0.05).translate(0.012, 0.17, 0.025), '#d9534f'), col(new THREE.BoxGeometry(0.026, 0.012, 0.026).translate(0, 0.2, 0), '#6e4a33')].map(g => g.toNonIndexed()))
     stakes.forEach(p => { o.position.copy(p.pos); o.quaternion.copy(p.q); o.scale.setScalar(1); o.updateMatrix(); parts.push(stake.clone().applyMatrix4(o.matrix)) })
+    // stair slabs: top 0.06 above the ground at the step centre, deep enough to cover the downhill edge (slopes up to ~1)
+    const slab = new THREE.BoxGeometry(1, 0.22, 0.24).translate(0, -0.05, 0).toNonIndexed(), _y = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0)
+    slabs.forEach(b => { o.position.copy(b.pos); o.quaternion.copy(b.q).multiply(_y.setFromAxisAngle(_up, b.yaw)); o.scale.set(b.w, 1, 1); o.updateMatrix(); parts.push(tint(slab.clone().applyMatrix4(o.matrix), b.c)) })
     if (PS.g) parts.unshift(PS.g.toNonIndexed())
     const g = mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g)); g.computeBoundingSphere(); return g }, [])
   const mat = useMemo(() => PS.m || paint(toon('#ffffff', { vertexColors: true }), 0.12, true, 14), [])
@@ -124,7 +133,7 @@ export function Cat({ Basis, DM, SPOTS }) {
 
 
 export function Shrine({ Basis, DM, SPOTS }) {
-  return <Surface n={SPOTS.shrine} spin={0.4}>
+  return <Surface n={SPOTS.shrine} spin={SHRINE_SPIN}>
     <mesh position={[0, 0.04, 0]} material={DM.stone}><boxGeometry args={[0.3, 0.08, 0.28]} /><Outlines thickness={0.006} color={INK} /></mesh>
     <mesh position={[0, 0.17, 0]} material={MAT.wood}><boxGeometry args={[0.16, 0.18, 0.14]} /><Outlines thickness={0.006} color={INK} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[s * 0.07, 0.3, 0]} rotation={[0, 0, s * 0.55]} material={DM.red}><boxGeometry args={[0.15, 0.015, 0.22]} /><Outlines thickness={0.006} color={INK} /></mesh>)}
