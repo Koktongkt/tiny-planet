@@ -37,7 +37,10 @@ export function makeLife(rnd = Math.random, P = HER_MOTION) {
 export function lifeStep(L, B, st, dt, t, R_, camera) {
   if (!(dt > 0)) return
   const P = L.P, MOT = MOT0 * (P.lively ?? 1), FID = P.fidgets
-  const m = st.move || 0, act = st.act, aw = act ? st.actW ?? 1 : 0, ride = act === 'ride_bike' && aw > 0.3, busy = (!!act && aw > 0.05 && !ride) || !!st.fishing
+  const m = st.move || 0, act = st.act, aw = act ? st.actW ?? 1 : 0, ride = act === 'ride_bike' && aw > 0.3
+  // restActs: game-driven idle poses (bench sit, ruins look) that should still get fidgets. Her has no restActs, so her busy test is unchanged.
+  const rest = !!(P.restActs && act && P.restActs.includes(act))
+  const busy = (!!act && aw > 0.05 && !ride && !rest) || !!st.fishing
   // ---- speed / run (phase advances ~7.4/s walking, ~10/s running) ----
   const dph = st.phase - L.ph; L.ph = st.phase; const rate = m > 0.05 ? dph / dt / m : 0
   L.run = approach(L.run, m > 0.3 && !ride && !busy ? clamp((rate - 8.3) / 1.6, 0, 1) : 0, 5, dt)
@@ -61,7 +64,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   // ---- energy: tired below ~35 (stronger toward 0), hungry at or below LOW; a jump up means she just ate ----
   const en = energyNow(); if (L.en >= 0 && en - L.en >= 8) L.yumU = 0; L.en = en
   L.tired = approach(L.tired, clamp((P.tiredBelow - en) / (P.tiredBelow - 5), 0, 1), 1.5, dt); L.hungry = en <= (P.hungryAt ?? ENERGY_LOW_DEFAULT) ? 1 : 0
-  if (!L.fid && L.idle > P.fidgetAfter && L.lie < 0.2) { L.fidN -= dt; if (L.fidN <= 0) { const inn = indoors(), set = (WIN_ && WIN_.__herFids) || (L.sit > 0.5 ? P.sets.seated : L.hungry ? P.sets.hungry : rainy && !inn ? P.sets.rain : T.night > 0.6 ? P.sets.night : inn ? (WIN_.__herNearStove ? P.sets.stove : P.sets.indoor) : P.sets.day); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = between(L.rnd, P.fidgetEvery) } }
+  if (!L.fid && L.idle > P.fidgetAfter && L.lie < 0.2) { L.fidN -= dt; if (L.fidN <= 0) { const inn = indoors(), seated = L.sit > 0.5 || rest, set = (WIN_ && WIN_.__herFids) || (seated ? P.sets.seated : L.hungry ? P.sets.hungry : rainy && !inn ? P.sets.rain : T.night > 0.6 ? P.sets.night : inn ? (WIN_.__herNearStove ? P.sets.stove : P.sets.indoor) : P.sets.day); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = between(L.rnd, P.fidgetEvery) } }
   L.yawn = 0; L.bagKick = 0; L.fsq = 0; L.shut = 0; let fidLookY = 0
   if (L.fid) {
     const d = FID[L.fid], u0 = L.fu; L.fu += dt; const u = L.fu, e = envelope(u, d, 0.45) * idleK * MOT, k = u / d
@@ -107,6 +110,20 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
       const a = sst(0, 0.3, k) * (1 - sst(0.7, 1, k)), sg = sst(0.68, 0.9, k) * (1 - sst(0.9, 1, k))
       B.upR.rotation.x -= 0.85 * a; B.foR.rotation.x -= 1.2 * a; B.chest.rotation.y += 0.18 * a; B.head.rotation.x += 0.22 * a; B.head.rotation.y += 0.25 * a; fidLookY = -0.9 * a
       L.bagKick = Math.sin(u * 9) * 0.15 * a; B.chest.scale.y *= 1 + 0.03 * sg; B.head.rotation.x += 0.1 * sg }
+    else if (L.fid === 'tea') { // both hands around a cup, a slow sip in the middle
+      const sip = bump(Math.min(1, Math.max(0, (k - 0.35) / 0.45)), 1) * e
+      B.upL.rotation.x -= 0.7 * e; B.upR.rotation.x -= 0.7 * e; B.foL.rotation.x -= 0.85 * e; B.foR.rotation.x -= 0.85 * e
+      B.upL.rotation.z += 0.38 * e; B.upR.rotation.z -= 0.38 * e; B.head.rotation.x += 0.16 * sip; fidLookY = -0.3 * e; L.shut = Math.max(L.shut, 0.35 * sip) }
+    else if (L.fid === 'glasses') { // one hand up to the temple, a little tilt, a blink as the frames settle
+      const g = bump(k, 1) * e
+      B.upR.rotation.x -= 1.15 * g; B.foR.rotation.x -= 1.25 * g; B.upR.rotation.z -= 0.15 * g; B.foR.rotation.z -= 0.08 * g
+      B.chest.rotation.y -= 0.06 * g; B.head.rotation.x += 0.08 * g; B.head.rotation.z += 0.04 * g
+      if (u0 < d * 0.45 && u >= d * 0.45) triggerBlink(L.blink) }
+    else if (L.fid === 'notebook') { // book up in the left, pencil over the page, head down, a little scribble
+      const scr = Math.sin(k * Math.PI * 6) * e * Math.max(0, 1 - Math.abs(k - 0.55) * 2.2)
+      B.upL.rotation.x -= 0.85 * e; B.foL.rotation.x -= 1.15 * e; B.upL.rotation.z += 0.22 * e
+      B.upR.rotation.x -= 0.95 * e; B.foR.rotation.x -= 1.2 * e; B.upR.rotation.z -= 0.12 * e; B.foR.rotation.y += 0.15 + 0.2 * scr
+      B.head.rotation.x += 0.22 * e; B.chest.rotation.x += 0.05 * e; fidLookY = -0.85 * e }
     if (u >= d) L.fid = null
   }
   // ---- sit down on the grass after a long idle (stands back up quickly once she moves) ----
@@ -257,12 +274,13 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   _v.copy(_p).sub(L.hp).divideScalar(dt); _a.copy(_v).sub(L.hv).divideScalar(dt); L.hp.copy(_p); L.hv.copy(_v)
   head.getWorldQuaternion(_q).invert(); _a.applyQuaternion(_q); head.getWorldScale(_t); _a.divideScalar(Math.max(_t.x, 1e-4))
   const yawV = (head.rotation.y - (L.hry ?? head.rotation.y)) / dt; L.hry = head.rotation.y
+  const OFF = L.hairOff || HAIR_OFF
   for (let i = 0; i < 4; i++) { const [f, z, g, lim] = HP[i], S3 = L.hair[i], sx = i === 0 ? -1 : i === 1 ? 1 : 0
     const k = 0.00022 * g * MOT
     // the side buns sit on the shoulder line: they may swing out and up, never down or in toward the shoulder/arm (no clipping on the down-bounce)
-    HAIR_OFF[i * 3] = clamp(spring(S3[0], 0, f, z, dt, -clamp(_a.x, -40, 40) * k * 40 - yawV * 0.0025 * g * MOT * 40 * (i === 2 ? 0.5 : 1)), i === 0 ? -lim : i === 1 ? -0.0004 : -lim, i === 0 ? 0.0004 : lim)
-    HAIR_OFF[i * 3 + 1] = clamp(spring(S3[1], 0, f, z, dt, -clamp(_a.y, -40, 40) * k * 40), i < 2 ? 0 : -lim, lim)
-    HAIR_OFF[i * 3 + 2] = clamp(spring(S3[2], 0, f, z, dt, -clamp(_a.z, -40, 40) * k * 40 + sx * yawV * 0.001 * MOT * 40), -lim, lim)
+    OFF[i * 3] = clamp(spring(S3[0], 0, f, z, dt, -clamp(_a.x, -40, 40) * k * 40 - yawV * 0.0025 * g * MOT * 40 * (i === 2 ? 0.5 : 1)), i === 0 ? -lim : i === 1 ? -0.0004 : -lim, i === 0 ? 0.0004 : lim)
+    OFF[i * 3 + 1] = clamp(spring(S3[1], 0, f, z, dt, -clamp(_a.y, -40, 40) * k * 40), i < 2 ? 0 : -lim, lim)
+    OFF[i * 3 + 2] = clamp(spring(S3[2], 0, f, z, dt, -clamp(_a.z, -40, 40) * k * 40 + sx * yawV * 0.001 * MOT * 40), -lim, lim)
   }
 }
 
