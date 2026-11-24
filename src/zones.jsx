@@ -5,9 +5,10 @@ import React, { useMemo, useRef } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
-import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
+import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
+import { OLD_WORLD } from './world/flag.js'
 
 const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
 const angTo = (n, k) => zoneAng(n, ZONES[k])
@@ -121,6 +122,19 @@ function Dock({ c, zr, b, level, len = 1.3 }) {
   </Frame>
 }
 
+// the sea: one cap around the south pole at R + SEA_W, up to just past the shoreline band (the terrain shelf makes the
+// visible shore). Its mesh sits at the planet's centre, so the horizon cull (which skips anything near the centre) never
+// drops it; walking, it only draws while the camera is within ~0.9 rad of the south cap.
+function Sea() {
+  const mat = useMemo(() => waterMaterial('#2f86b0', '#7fd0d8'), []), g = useRef(), camera = useThree(s => s.camera)
+  const q = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0)), [])
+  const edge = Math.PI / 2 + SEA_LAT + 0.02 // angle from the south pole to the cap's rim
+  useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk
+    if (!g.current || !planetRef.current) return
+    if (VIEW.mode === 'orbit') { g.current.visible = true; return }
+    _w.copy(camera.position); planetRef.current.worldToLocal(_w); g.current.visible = Math.asin(_w.y / _w.length()) < SEA_LAT + 0.9 })
+  return <mesh ref={g} quaternion={q} material={mat}><sphereGeometry args={[R + SEA_W, 96, 12, 0, Math.PI * 2, 0, edge]} /></mesh>
+}
 function Lake() {
   const z = ZONES.lake, c = Zc.lake
   return <>
@@ -309,6 +323,7 @@ function MeadowFlowers() {
 
 export function Zones() {
   return <>
+    {!OLD_WORLD && <Sea />}
     <Cull n={Zc.lake} d={16}><Lake /></Cull>
     <Cull n={Zc.cliff} d={16}><Waterfall /></Cull>
     <Cull n={Zc.terraces} d={16}><Terraces /></Cull>

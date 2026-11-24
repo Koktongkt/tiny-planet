@@ -6,7 +6,7 @@ import { Canvas, useFrame, useThree, advance, _roots } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise, HueSaturation, BrightnessContrast } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
-import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, RIVER_HALF, JUMP_HALF, streamDist } from './world.js'
+import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, seaDepth, RIVER_HALF, JUMP_HALF, streamDist } from './world.js'
 import { PEOPLE } from './peopleData.js'
 const PersonLazy = lazy(() => import('./people.jsx').then(m => ({ default: m.Person })))
 const Person = (p) => <Suspense fallback={null}><PersonLazy {...p} /></Suspense>
@@ -455,9 +455,9 @@ function stepPlayer(dt) {
   // round6: the river, lake and harbour are impassable on foot. Airborne (a jump) she may cross; landing in water
   // puts her back on the bank she jumped from. On foot, slide along the bank instead of stepping in.
   const air = P.h - floorLift(P.n) > 0.012
-  if (!air && !NOWATER && waterAt(P.n)) { const step = _mv.copy(P.n).sub(_prevN), len = step.length(); P.n.copy(_prevN)
+  if (!air && !NOWATER && waterAt(P.n)) { const deepSea = seaDepth(P.n) > 0.12, step = _mv.copy(P.n).sub(_prevN), len = step.length(); P.n.copy(_prevN)
     if (len > 1e-7) for (const a of [0.6, -0.6, 1.1, -1.1]) { _mv2.copy(step).applyAxisAngle(_prevN, a).multiplyScalar(Math.cos(a)); _mv3.copy(_prevN).add(_mv2).normalize(); if (!waterAt(_mv3)) { P.n.copy(_mv3); break } }
-    if (waterAt(P.n)) { P.n.copy(LAST_DRY.n.lengthSq() ? LAST_DRY.n : _prevN); if (performance.now() - LAST_DRY.toast > 6000 && LAST_DRY.landed) { LAST_DRY.toast = performance.now(); toast('Too wide to jump here. Look for a bridge or the marked stepping stones.', 'leaf', 3000) } }
+    if (waterAt(P.n)) { P.n.copy(LAST_DRY.n.lengthSq() ? LAST_DRY.n : _prevN); if (performance.now() - LAST_DRY.toast > 6000 && LAST_DRY.landed) { LAST_DRY.toast = performance.now(); toast(deepSea ? 'Too deep to wade out further.' : 'Too wide to jump here. Look for a bridge or the marked stepping stones.', 'leaf', 3000) } }
     if (P.target) P.target = null }
   if (!air && !waterAt(P.n)) LAST_DRY.n.copy(P.n)
   LAST_DRY.landed = air

@@ -315,11 +315,16 @@ export function streamAcross(n, side, dist, out = new THREE.Vector3()) {
 // is this point open water she can't stand in? (river away from the bridge decks, deep lake, harbour; new: the deep sea
 // past the wadeable shelf)
 const SEA_DEEP = 0.12
+// how far below the sea surface (SEA_W) the ground is, south of the shoreline; 0 on land, in the lake, and in ?world=old
+export function seaDepth(n) {
+  if (OLD_WORLD || n.y / Math.hypot(n.x, n.y, n.z) >= Math.sin(SEA_LAT + 0.05)) return 0
+  return Math.max(0, SEA_W - height(n))
+}
 export function waterAt(n, margin = 0.02) {
   const s = streamNear(n); if (s.d < s.half - margin && !onBridgeDeck(n)) return true
   if (ang(n, ZONES.lake) < ZONES.lake.r * 1.2 && height(n) < LAKE_W - 0.03) return true
   if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.2 && height(n) < HARB_W - 0.03) return true
-  if (!OLD_WORLD && n.y / Math.hypot(n.x, n.y, n.z) < Math.sin(SEA_LAT + 0.05) && height(n) < SEA_W - SEA_DEEP) return true
+  if (seaDepth(n) > SEA_DEEP) return true
   return false
 }
 // each bridge spans the water it actually crosses (the path meets the river at a slant): centre it on the water and
