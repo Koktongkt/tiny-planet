@@ -12,7 +12,7 @@ import { HOME } from '../home/state.js'
 import { YARD, DOG_BOWL, yardGate } from '../home/yard.js'
 import { onHouse } from '../world/village.js'
 import { GEO, cel, OUT } from '../home/kit.jsx'
-import { R, height, ZONES, LAKE_W, HARB_W, around, dir as dirLL, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, BRIDGES, JUMPS, BL, streamHalf, streamLat } from '../world.js'
+import { R, height, ZONES, LAKE_W, HARB_W, around, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, BRIDGES, JUMPS, BL, streamHalf, streamDir, streamAcross } from '../world.js'
 import { TALK } from '../talk/state.js'
 import { T, q } from '../common.jsx'
 import { G, add, toast } from '../game/store.js'
@@ -57,9 +57,9 @@ if (DOGCAM) HOME.camOverride = (camera, g) => { const D = DOG, a = window.__camA
 const GATES = [...BRIDGES.map(b => ({ kind: 'bridge', t: b.t, c: b.c, b })), ...JUMPS.map(j => ({ kind: 'jump', t: j.t, c: j.c, j }))]
 // a point on the given side of the river at gate g, `off` units out from that side's bank
 function gateSide(g, side, off = 0.18, out = new THREE.Vector3()) {
-  const n = g.c, t = g.t, h = streamHalf(t), lat = streamLat(t) + side * (h + off) / R
+  const t = g.t, h = streamHalf(t)
   if (g.kind === 'bridge') { const b = g.b; const L = b.L || BL; out.copy(b.c).addScaledVector(b.tan, (L / 2 + off * 0.5) / R).normalize(); if (streamNear(out).side !== side) out.copy(b.c).addScaledVector(b.tan, -(L / 2 + off * 0.5) / R).normalize(); return out }
-  return out.copy(dirLL(lat, t))
+  return streamAcross(streamDir(t), side, h + off, out)
 }
 if (typeof window !== 'undefined' && window.__river) Object.assign(window.__river, { GATES, gateSide })
 
@@ -257,8 +257,8 @@ export function Dog() {
       else if (k === 'explore') pickExplore() }
     function pickExplore() { const side = _s.crossVectors(P.n, P.fwd); for (let i = 0; i < 10; i++) { const a = Math.random() * 6.283, r = 1.4 + Math.random() * 1.1; const n = _t.copy(P.n).addScaledVector(P.fwd, Math.cos(a) * r / R).addScaledVector(side, Math.sin(a) * r / R).normalize(); if (!dogBlocked(n, -0.2) && sideOf(n) === sideOf(P.n) && !HOME.colliders.some(c => angTo(n, c.n) < c.r + 0.03)) { D.exT = n.clone(); D.sub = 0; go('explore', 14 + Math.random() * 6); return true } } return false }
     function lakeEdge(lc) { const n = _ga.copy(D.n); for (let i = 0; i < 60; i++) { if (height(n) < LAKE_W - 0.04) break; n.lerp(lc, 0.04).normalize() } D.splashC = lc.clone(); return n.clone() }
-    function riverEdge() { const toward = -streamNear(D.n, _sn).side, n = D.n.clone(); let lat = Math.asin(n.y); const lon = Math.atan2(n.x, n.z)
-      for (let i = 0; i < 60; i++) { const q = streamNear(n, _sn); if (q.d < q.half - 0.05) break; lat += toward * 0.02 / R; n.copy(dirLL(lat, lon)) } D.splashC = dirLL(lat + toward * 0.3 / R, lon); return n }
+    function riverEdge() { const toward = -streamNear(D.n, _sn).side, n = D.n.clone(); let k = 0
+      for (let i = 0; i < 60; i++) { const q = streamNear(n, _sn); if (q.d < q.half - 0.05) break; k += 0.02; streamAcross(D.n, toward, k, n) } D.splashC = streamAcross(D.n, toward, k + 0.3); return n }
     function startChase() { const c = D.critter; c.on = true; c.kind = Math.random() < 0.55 ? 'fly' : 'bird'; c.t = 0; c.up = 0; c.n.copy(D.n).addScaledVector(D.f, 0.5 / R).addScaledVector(_s.crossVectors(D.n, D.f), (Math.random() - 0.5) * 0.6 / R).normalize(); tan(c.n, _a.randomDirection(), c.d); go('chase', 4.5) }
     if (FORCE === 'chase' && D.forced && !D.critter.on) startChase()
     // ---------- critter (butterfly / ground bird) ----------
@@ -298,7 +298,7 @@ export function Dog() {
     if (!crossing && !D.forced && dogBlocked(D.n) && !dogBlocked(_prev)) { // he wades the edge but won't swim: slide along the bank
       D.n.copy(_prev); _f0.copy(D.f); let ok = false; for (const a of [0.7, -0.7, 1.3, -1.3]) { _ga.copy(_f0).applyAxisAngle(_prev, a); _gb.copy(_prev).addScaledVector(_ga, D.speed * Math.cos(a) / R * dt).normalize(); if (!dogBlocked(_gb)) { D.n.copy(_gb); D.f.lerp(_ga, 0.3).normalize(); ok = true; break } } if (!ok) D.speed *= 0.5 }
     // safety: if he ever ends up in deep river water (outside a crossing), paddle him out to his own bank
-    if (!crossing && !D.forced && dogBlocked(D.n, 0.1) && !onBridgeDeck(D.n, 0.02)) { const q2 = streamNear(D.n, _sn2); if (q2.d < q2.half) { const la = Math.asin(D.n.y) + q2.side * 0.7 * dt / R, lo = Math.atan2(D.n.x, D.n.z); D.n.copy(dirLL(la, lo)) } }
+    if (!crossing && !D.forced && dogBlocked(D.n, 0.1) && !onBridgeDeck(D.n, 0.02)) { const q2 = streamNear(D.n, _sn2); if (q2.d < q2.half) streamAcross(D.n, q2.side, 0.7 * dt, D.n) }
     if (jumpX) { const r = D.route, k = Math.min(1, Math.max(0, 1 - angTo(D.n, r.B) * R / Math.max(0.1, r.d0))); g.hop = Math.sin(k * Math.PI) * 0.12 * (r.d0 > 0.3 ? 1 : 0.6); g.stretch = k > 0.2 && k < 0.8 ? 0.8 : 0; D.speed = Math.max(D.speed, 1.6) }
     for (const cl of CL) { const a = angTo(D.n, cl.n); if (a < cl.r) { const dd = tan(cl.n, D.n, _y); D.n.copy(cl.n).multiplyScalar(Math.cos(cl.r)).addScaledVector(dd, Math.sin(cl.r)).normalize() } }
     if (dHer < 0.18 && !HOME.inside && !crossing) D.n.addScaledVector(tan(D.n, _a.copy(D.n).sub(P.n), _a), 0.4 / R * dt).normalize()

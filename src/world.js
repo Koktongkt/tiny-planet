@@ -6,6 +6,7 @@ export const K = 5 / R // converts old angular sizes (tuned at R=5) to the bigge
 import { OLD_WORLD } from './world/flag.js'
 import * as LEGACY from './world/legacy.js'
 import { region, OPEN_PLOTS, HOME_DIR, SEA_LAT, SEA_W } from './world/regions.js'
+import * as RIVER from './world/river.js'
 export { SEA_LAT, SEA_W }
 // The layout (zones, terrain, curves) comes from one source. The reworked layout replaces NEW piece by piece in later
 // tasks (what it doesn't override is still today's), and ?world=old (dev only) keeps selecting the frozen legacy module.
@@ -44,10 +45,29 @@ function land(x, y, z) {
 const flatSpot = (lat, lon, r, ease) => { const c = Math.cos(lat); const x = c * Math.sin(lon), y = Math.sin(lat), z = c * Math.cos(lon); return { x, y, z, r, ease, c: Math.cos(r + ease), h: land(x, y, z) } }
 const FLAT = [flatSpot(ZN.village.lat, ZN.village.lon, ZN.village.r, 0.06), flatSpot(HOME_DIR.lat, HOME_DIR.lon, 2.6 / R, 0.08), ...OPEN_PLOTS.map(p => flatSpot(p.lat, p.lon, p.r, 0.06))]
 const CLIFF_TOP = land(ZN.cliff.x, ZN.cliff.y, ZN.cliff.z) + LEGACY.CLIFF_H // a level mesa top, CLIFF_H above the ground at its centre
+// the spring spur: a ridge from the Peak dome down onto the mesa top, so the river can run downhill from the spring onto
+// the cliff before it falls off the downhill face (without it the mesa stands ~0.85 above the saddle between them).
+// Its crest eases from h0 (s0 rad from the Peak, where it meets the dome) to CLIFF_TOP at the mesa rim, and its flanks
+// fall at a fixed slope (fl per rad, rise/run ~0.7) so it stays walkable. Both ends are rounded (capsule distance); it
+// stops at the mesa's uphill rim, so the downhill face (the waterfall) keeps its full height. Only raises the ground.
+const SPUR = (() => { const p = ZN.peak, c = ZN.cliff, len = Math.acos(p.x * c.x + p.y * c.y + p.z * c.z)
+  let nx = p.y * c.z - p.z * c.y, ny = p.z * c.x - p.x * c.z, nz = p.x * c.y - p.y * c.x; const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl
+  const ex = ny * p.z - nz * p.y, ey = nz * p.x - nx * p.z, ez = nx * p.y - ny * p.x // unit tangent at the Peak, toward the cliff
+  const mid = len / 2, mx = p.x * Math.cos(mid) + ex * Math.sin(mid), my = p.y * Math.cos(mid) + ey * Math.sin(mid), mz = p.z * Math.cos(mid) + ez * Math.sin(mid)
+  return { p, nx, ny, nz, ex, ey, ez, mx, my, mz, c: Math.cos(mid + 0.1), len, s0: 0.12, rim: len - c.r, h0: 2.3, fl: 0.7 * R, e: 0.03 } })()
+function spurLift(x, y, z, h) {
+  const S = SPUR; if (x * S.mx + y * S.my + z * S.mz < S.c) return h
+  const s = Math.atan2(x * S.ex + y * S.ey + z * S.ez, x * S.p.x + y * S.p.y + z * S.p.z)
+  const off = Math.asin(Math.max(-1, Math.min(1, x * S.nx + y * S.ny + z * S.nz))), sc = Math.min(S.rim, Math.max(S.s0, s)), da = Math.hypot(s - sc, off) // capsule distance
+  const crest = CLIFF_TOP + (S.h0 - CLIFF_TOP) * sst(S.rim, S.s0, sc)
+  const t = crest - S.fl * (Math.sqrt(da * da + S.e * S.e) - S.e)
+  return t > h ? t : h
+}
 function slopeHeight(n) {
   const L = Math.hypot(n.x, n.y, n.z), x = n.x / L, y = n.y / L, z = n.z / L
   let h = land(x, y, z), d, a
   for (let i = 0; i < FLAT.length; i++) { const f = FLAT[i]; d = x * f.x + y * f.y + z * f.z; if (d > f.c) h += (f.h - h) * sst(f.r + f.ease, f.r, Math.acos(Math.min(1, d))) }
+  h = spurLift(x, y, z, h)
   const zc = ZN.cliff; d = x * T.cliff.x + y * T.cliff.y + z * T.cliff.z
   if (d > T.cliff.c) { a = Math.acos(Math.min(1, d)); h += (CLIFF_TOP - h) * sst(zc.r + 0.03, zc.r, a) + 0.04 * Math.sin(x * 40) * sst(zc.r, 0, a) }
   const zt = ZN.terraces; d = x * T.terraces.x + y * T.terraces.y + z * T.terraces.z
@@ -61,7 +81,9 @@ function slopeHeight(n) {
   if (lat < SEA_LAT + 0.02) h += (SHELF - (SHELF - SEA_FLOOR) * sst(SEA_LAT - 0.03, SEA_LAT - 0.08, lat) - h) * sst(SEA_LAT + 0.02, SEA_LAT - 0.04, lat)
   return h
 }
-const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), height: slopeHeight }
+// the open river (world/river.js): streamDir(t) = riverDir(t / 2pi), so callers sampling t in [0, 2pi) cover it exactly once
+const TAU = Math.PI * 2
+const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), height: slopeHeight, streamDir: (t) => RIVER.riverDir(t / TAU) }
 const W = OLD_WORLD ? LEGACY : NEW
 // biome / zone centres (lat, lon, angular radius)
 export const ZONES = W.ZONES
@@ -115,37 +137,58 @@ export function windify(mat, amp = 0.15, base = 0) {
 }
 
 // ---------------- round6: a real river (wide, banked, impassable) + crossings ----------------
-// The stream is a closed loop given as latitude = f(longitude): streamDir(t) = dir(lat(t), t), so "which side" and
-// "how far" are cheap. Width varies: ~0.92 wide in general (too far to jump), pinched at the bridges and at a few
-// narrow, marked jump spots (~0.3 wide).
+// Legacy (?world=old): the stream is a closed loop given as latitude = f(longitude): streamDir(t) = dir(lat(t), t), so
+// "which side" and "how far" are cheap. The reworked planet's river is an open curve (world/river.js) from the Peak spring
+// to the sea; the stream* functions below keep their signatures over it, with t = u * 2pi along the river.
+// Width varies: ~0.92 wide in general (too far to jump), pinched at the bridges and at a few narrow, marked jump spots
+// (~0.3 wide).
 const latOfN = (n) => Math.asin(Math.max(-1, Math.min(1, n.y)))
 export const streamLat = (t) => latOfN(streamDir(t))
-// bridges: where the path crosses the stream (same longitude parameter); nearest the village first
+// bridges: where the path crosses the stream; nearest the village first. Legacy: the same longitude parameter on both
+// curves. New: walk the river by its own parameter and test its latitude against the path's at the same longitude
+// (the path is still a latitude = f(longitude) loop); b.t is the river's stream parameter. Task 5 replaces this.
 const VILL = dir(1.05, 0.2)
 export const BRIDGES = []
-{ let prev = null; for (let i = 0; i <= 3000; i++) { const t = (i / 3000) * Math.PI * 2; const d = latOfN(pathDir(t).normalize()) - latOfN(streamDir(t).normalize()); if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(t).normalize(), tan = pathDir(t + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t }) } prev = d } }
+if (OLD_WORLD) { let prev = null; for (let i = 0; i <= 3000; i++) { const t = (i / 3000) * Math.PI * 2; const d = latOfN(pathDir(t).normalize()) - latOfN(streamDir(t).normalize()); if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(t).normalize(), tan = pathDir(t + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t }) } prev = d } }
+else { let prev = null; for (let i = 0; i <= 3000; i++) { const u = i / 3000, p = RIVER.riverDir(u), lon = Math.atan2(p.x, p.z), d = latOfN(pathDir(lon).normalize()) - latOfN(p)
+  if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(lon).normalize(), tan = pathDir(lon + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t: u * TAU }) } prev = d } }
 BRIDGES.sort((a, b) => a.c.distanceTo(VILL) - b.c.distanceTo(VILL))
 export const BL = 1.0 // bridge length (world units), spans the pinched river with its banks
 export function bridgeLift(n) { for (const b of BRIDGES) { const L = b.L || BL, dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; const a = (dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R, s = (dx * b.side.x + dy * b.side.y + dz * b.side.z) * R; if (Math.abs(a) < L / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / L) * Math.PI) } return 0 }
 export const onBridgeDeck = (n, pad = 0) => BRIDGES.some(b => { const dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; return Math.abs((dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R) < (b.L || BL) / 2 + pad && Math.abs((dx * b.side.x + dy * b.side.y + dz * b.side.z) * R) < 0.13 + pad * 0.3 })
 export const onBridge = (n) => BRIDGES.some(b => b.c.angleTo(n) < ((b.L || BL) / 2 + 0.08) / R)
-// narrow jump spots: spread around the loop, away from bridges, lake and harbour
+// narrow jump spots: spread along the river, away from bridges, lake, harbour and forest (new: and off the waterfall,
+// off steep runs and out of the sea)
 const _wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a))
+const RL = RIVER.RIVER_LEN, alongW = (t1, t2) => Math.abs(t1 - t2) / TAU * RL // world units along the open river
 export const JUMPS = []
-{ for (let k = 0; k < 14 && JUMPS.length < 4; k++) { const t = ((k * 0.618034) % 1) * Math.PI * 2; const n = streamDir(t).normalize()
+if (OLD_WORLD) { for (let k = 0; k < 14 && JUMPS.length < 4; k++) { const t = ((k * 0.618034) % 1) * Math.PI * 2; const n = streamDir(t).normalize()
     if (BRIDGES.some(b => Math.abs(_wrap(b.t - t)) < 0.55) || JUMPS.some(j => Math.abs(_wrap(j.t - t)) < 0.9)) continue
     if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.6 || ang(n, ZONES.lake) < ZONES.lake.r * 1.6 || ang(n, ZONES.forest) < ZONES.forest.r * 0.8) continue
     const tan = streamDir(t + 0.004).normalize().sub(n).normalize(); JUMPS.push({ t, c: n, tan, side: new THREE.Vector3().crossVectors(tan, n).normalize() }) } }
-export const RIVER_HALF = 0.46, BRIDGE_HALF = 0.2, JUMP_HALF = 0.14
+else { for (let k = 0; k < 60 && JUMPS.length < 4; k++) { const t = ((k * 0.618034) % 1) * TAU; const n = streamDir(t).normalize()
+    if (BRIDGES.some(b => alongW(b.t, t) < 2.0) || JUMPS.some(j => alongW(j.t, t) < 2.5)) continue
+    if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.6 || ang(n, ZONES.lake) < ZONES.lake.r * 1.6 || ang(n, ZONES.forest) < ZONES.forest.r * 0.8) continue
+    if (ang(n, ZONES.cliff) < ZONES.cliff.r + 0.08 || latOfN(n) < SEA_LAT + 0.05) continue // the waterfall face and plunge pool; the sea
+    const up = streamDir(t - 0.3 / RL * TAU).normalize(), dn = streamDir(t + 0.3 / RL * TAU).normalize(); if (Math.abs(height(up) - height(dn)) > 0.12) continue // a steep run
+    const tan = streamDir(t + 0.004).normalize().sub(n).normalize(); JUMPS.push({ t, c: n, tan, side: new THREE.Vector3().crossVectors(tan, n).normalize() }) } }
+export const RIVER_HALF = RIVER.RIVER_HALF, BRIDGE_HALF = 0.2, JUMP_HALF = 0.14
 const gauss = (d, s) => Math.exp(-(d * d) / (s * s))
-export function streamHalf(t) { let h = RIVER_HALF
+function loopHalf(t) { let h = RIVER_HALF
   for (const b of BRIDGES) h -= (RIVER_HALF - BRIDGE_HALF) * gauss(_wrap(t - b.t), 0.07)
   for (const j of JUMPS) h = Math.min(h, RIVER_HALF - (RIVER_HALF - JUMP_HALF) * gauss(_wrap(t - j.t), 0.03))
   return h * (1 + 0.06 * Math.sin(t * 13)) }
-// nearest point on the river: { d: world-unit distance from the centre line, half: half width there, t, side: +1 north / -1 south }
+// the open river: riverHalf(u) pinched at the bridges and jumps over the same world-unit widths as the loop had
+function openHalf(t) { const base = RIVER.riverHalf(t / TAU); let h = base
+  for (const b of BRIDGES) h -= Math.max(0, base - BRIDGE_HALF) * gauss(alongW(t, b.t), 0.64)
+  for (const j of JUMPS) h = Math.min(h, base - Math.max(0, base - JUMP_HALF) * gauss(alongW(t, j.t), 0.27))
+  return h * (1 + 0.06 * Math.sin(t / TAU * RL * 1.4)) }
+export const streamHalf = OLD_WORLD ? loopHalf : openHalf
+// nearest point on the river: { d: world-unit distance from the centre line, half: half width there, t,
+// side: legacy +1 north / -1 south; new +1 left bank / -1 right bank, looking downstream }
 const SN = 1800; let SP = null
 const _sr = { d: 9, half: 0, t: 0, side: 1 }
-export function streamNear(n, out = _sr) {
+function loopNear(n, out = _sr) {
   if (!SP) { SP = new Float32Array(SN * 3); for (let i = 0; i < SN; i++) { const p = streamDir(i / SN * Math.PI * 2).normalize(); SP[i * 3] = p.x; SP[i * 3 + 1] = p.y; SP[i * 3 + 2] = p.z } }
   const len = Math.hypot(n.x, n.y, n.z), x = n.x / len, y = n.y / len, z = n.z / len, lon = Math.atan2(x, z), lat = Math.asin(Math.max(-1, Math.min(1, y)))
   const dl = lat - streamLat(lon); out.side = dl >= 0 ? 1 : -1
@@ -161,11 +204,24 @@ export function streamNear(n, out = _sr) {
     if (d < best) { best = d; bt = (a + u) / SN * Math.PI * 2 } }
   out.d = best * R; out.t = bt; out.half = streamHalf(bt); return out
 }
-// is this point open water she can't stand in? (river away from the bridge decks, deep lake, harbour)
+const _rv = { d: 9, u: 0, half: 0, side: 1 }
+function openNear(n, out = _sr) { RIVER.riverNear(n, _rv); out.d = _rv.d; out.t = _rv.u * TAU; out.half = streamHalf(out.t); out.side = _rv.side; return out }
+export const streamNear = OLD_WORLD ? loopNear : openNear
+// n moved `dist` world units toward river side `side` (as streamNear reports sides): legacy along the meridian, new
+// across the river's local flow direction (for the dog's bank-finding, which used to step in latitude)
+const _ac = new THREE.Vector3()
+export function streamAcross(n, side, dist, out = new THREE.Vector3()) {
+  if (OLD_WORLD) return out.copy(dir(latOfN(_ac.copy(n).normalize()) + side * dist / R, Math.atan2(n.x, n.z)))
+  RIVER.riverLeft(RIVER.riverNear(n, _rv).u, _ac); return out.copy(n).normalize().addScaledVector(_ac, side * dist / R).normalize()
+}
+// is this point open water she can't stand in? (river away from the bridge decks, deep lake, harbour; new: the deep sea
+// past the wadeable shelf)
+const SEA_DEEP = 0.12
 export function waterAt(n, margin = 0.02) {
   const s = streamNear(n); if (s.d < s.half - margin && !onBridgeDeck(n)) return true
   if (ang(n, ZONES.lake) < ZONES.lake.r * 1.2 && height(n) < LAKE_W - 0.03) return true
   if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.2 && height(n) < HARB_W - 0.03) return true
+  if (!OLD_WORLD && n.y / Math.hypot(n.x, n.y, n.z) < Math.sin(SEA_LAT + 0.05) && height(n) < SEA_W - SEA_DEEP) return true
   return false
 }
 // each bridge spans the water it actually crosses (the path meets the river at a slant): centre it on the water and
@@ -174,7 +230,7 @@ for (const b of BRIDGES) { let lo = 0, hi = 0; const _n = new THREE.Vector3()
   const wet = (a) => { _n.copy(b.c).addScaledVector(b.tan, a / R).normalize(); const sn = streamNear(_n); return sn.d < sn.half }
   while (lo > -2 && wet(lo - 0.02)) lo -= 0.02; while (hi < 2 && wet(hi + 0.02)) hi += 0.02
   const mid = (lo + hi) / 2; b.c = b.c.clone().addScaledVector(b.tan, mid / R).normalize(); b.side.crossVectors(b.c, b.tan).normalize(); b.tan.crossVectors(b.side, b.c).normalize(); b.L = Math.max(0.8, hi - lo + 0.34) }
-if (typeof window !== 'undefined') window.__river = { streamNear, waterAt, BRIDGES, JUMPS, streamHalf }
+if (typeof window !== 'undefined') window.__river = OLD_WORLD ? { streamNear, waterAt, BRIDGES, JUMPS, streamHalf } : { streamNear, waterAt, BRIDGES, JUMPS, streamHalf, riverNear: RIVER.riverNear, riverDir: RIVER.riverDir, riverHalf: RIVER.riverHalf, RIVER_PTS: RIVER.RIVER_PTS }
 // old-style 'centre distance' (radians) measured from the new bank: scatter rules tuned for the thin stream keep their meaning
 export const streamDist = (n) => { const r = streamNear(n); return Math.max(0, r.d - r.half + 0.17) / R }
 if (typeof window !== 'undefined') window.__height = height
