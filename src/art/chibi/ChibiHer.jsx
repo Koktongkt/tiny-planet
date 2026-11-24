@@ -5,11 +5,12 @@
 // (origin = head centre, scale 1.17 * head), where the head ellipsoid has radii HR.
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { Character, TRAVELLER, CEL_U, cel, mkOutline } from '../../GhibliPerson.jsx'
 import { buildSatchel } from './satchel.js'
 import { herAct } from './acts.js'
+import { fishPhase, fishPose, fishPost, makeFishing } from './fishing.js'
 import { makeLife, lifeStep, lifePost, HAIR_OFF, EXCITED_ACTS } from './life.js'
 import { approach } from './lifeCore.js'
 import { T, q } from '../../common.jsx'
@@ -310,12 +311,13 @@ function ChibiHair({ set }) {
 // satchel (turnaround sheet): top handle, stitched flap with two buckled straps, side pockets (daisy, scroll), a plaid
 // blanket rolled underneath and a compass charm. One vertex-coloured cel mesh + one ink hull: still 2 draws.
 let satchel = null, satchelMat = null
+const vcMat = () => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; m.defines = { KIND: 1 }; return m }
 const SATCHEL_INK = mkOutline(false)
 // [x, y, z, yaw]: in the bag group (her left hip); the front turns out and forward as on the sheet
 const BAG_AT = [0.016, -0.05, 0.016, 0.4]
 function ChibiSatchel() {
   if (!satchel) { satchel = buildSatchel()
-    satchelMat = cel('#ffffff').clone(); satchelMat.uniforms = { ...satchelMat.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; satchelMat.vertexColors = true; satchelMat.defines = { KIND: 1 } }
+    satchelMat = vcMat() }
   return <group position={BAG_AT.slice(0, 3)} rotation={[0, BAG_AT[3], 0]}><mesh geometry={satchel.cel} material={satchelMat} /><mesh geometry={satchel.line} material={SATCHEL_INK} /></group>
 }
 // pass 10 body details (turnaround sheet), all her-only via ext hooks:
@@ -335,6 +337,12 @@ const TAIL_GEO = (() => { const sh = new THREE.Shape(), w0 = 0.0105, w1 = 0.013,
   sh.moveTo(-w0, 0); sh.lineTo(w0, 0); sh.quadraticCurveTo(w1 * 1.05, -L * 0.5, w1, -L); sh.lineTo(0, -L + 0.008); sh.lineTo(-w1, -L); sh.quadraticCurveTo(-w1 * 1.05, -L * 0.5, -w0, 0)
   const g = new THREE.ExtrudeGeometry(sh, { depth: 0.0035, bevelEnabled: true, bevelThickness: 0.0016, bevelSize: 0.0016, bevelSegments: 2, curveSegments: 6 })
   g.translate(0, -0.006, -0.0035); g.deleteAttribute('uv'); g.clearGroups(); g.computeVertexNormals(); return g })()
+// fishing (anim pass 5): rod in her right hand, line + bobber in world space (added to the scene while she exists)
+let FISH = null
+const fishKit = () => FISH || (FISH = makeFishing(vcMat(), mkOutline(false)), typeof window !== 'undefined' && (window.__herFishKit = FISH), FISH)
+function HandR() { return <primitive object={fishKit().rod} /> }
+function FishWorld() { const scene = useThree(s => s.scene)
+  React.useEffect(() => { const f = fishKit(); scene.add(f.line, f.bob); return () => { scene.remove(f.line, f.bob) } }, [scene]); return null }
 const LIFE_OFF = q.has('still') && !q.has('life')
 export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
@@ -356,9 +364,10 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
+    L.F = fishPhase(st); fishPose(L.F, B, st, dt, t, L)
     if (P) { P.ms += performance.now() - t0; P.n++ } }, // window.__herProf = { ms: 0, n: 0 }: CPU time of the life layer (perf runs)
-  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
-    act: herAct, Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, cuffGeo: CUFF_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
+  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t); const L = st.life; if (L && L.B) fishPost(fishKit(), L.B, L.F, L, t, dt, L.B.root.parent) }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
+    act: herAct, HandR, Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, cuffGeo: CUFF_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
 const RIDE_S = 0.8
@@ -366,5 +375,5 @@ export function ChibiHer({ st }) {
   const g = useRef()
   useFrame((_, dt) => { const o = g.current; if (!o) return; const k = st.act === 'ride_bike' ? RIDE_S : 1, s = o.scale.x
     if (Math.abs(k - s) > 1e-4) o.scale.setScalar(s + (k - s) * Math.min(1, Math.min(dt, 0.05) * 8)) })
-  return <group ref={g}><Character cfg={CHIBI} st={st} res={80} /></group>
+  return <group ref={g}><Character cfg={CHIBI} st={st} res={80} /><FishWorld /></group>
 }
