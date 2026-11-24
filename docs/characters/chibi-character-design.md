@@ -26,7 +26,7 @@ Use this when designing or implementing a human in the approved "Cozy Chibi" sty
   - Side locks slimmer again (azimuth ±1.04..±1.42, tip -0.041).
   - Ears small and flat against the head, turned forward (`EAR`, radii 0.0042 / 0.0094 / 0.0072), not round balls.
   - Nose (12c, KT: no bump; use the face contour, as in the sheet's side view): `MIDFACE` in `ChibiHer.jsx` is a soft swell of the mid-face around the nose, blended into the head (body knob `midface`, also in the decal's `headSDF`). In profile the line dips under the eye, comes out to a rounded nose point and slopes back to the mouth and chin. The body bake shades it with the normals and AO of the head without the swell (`S.mf` is skipped there), so from the front the face looks exactly as before; only the silhouette and its ink change.
-  - Nose 12d (KT): `MIDFACE` is now a list: the nose swell plus a wider mouth swell just behind its tip. The crease between them is the notch under the nose; the mouth area then drops nearly straight down and curves gradually into the chin, as on the sheet.
+  - Nose 12d/12e (KT): `MIDFACE` is a list: the nose swell plus a wider mouth swell. 12e: both smaller, and the mouth swell overlaps the nose with its front almost level with the tip, so under the nose the line drops straight down to the mouth (no notch back into the face), then curves gradually into the chin.
   - Ears longer vertically (ry 0.0122); brows a touch thicker (line width 0.0040).
   - Skin `#f3bf98` (warmer, deeper peach measured off the sheet; was `#f7d3b8`).
   - Satchel `BAG_S` 0.079.
