@@ -52,7 +52,7 @@ export function Cat() {
     const quiet = petOffer(CREST, { asking: c.state === 'rub', stillMs: STILL.ms, now: performance.now() }) === 'quiet'
     consider({ kind: 'ext', inside: true, id: 'cat' + (quiet ? '~q' : ''), quiet, at: (out) => atRoom(c.x, c.z, (c.y || 0) + 0.3)(out), icon: 'hand', verb: 'Pet', name: c.name, chip: true, act: () => petCat() }, d, 0.38)
   }) }, [])
-  function petCat() { petLeft(CREST, performance.now()); startAct('pet', { dur: 1.2 })
+  function petCat() { petLeft(CREST, performance.now()); startAct('pet', { dur: 1.6, item: 'cat' })
     if (c.state === 'nap') { go('stretch', 2.6, { after: Math.random() < 0.6 ? 'petted' : 'ignore' }); toast(`${c.name} opens one eye… then stretches.`, 'leaf'); return }
     if (c.state === 'ignore' || c.ignoreCD > 0 || Math.random() < 0.22) { go('ignore', 3.5); c.ignoreCD = 4; toast(`${c.name} flicks his tail and looks the other way.`, 'leaf'); return }
     go('petted', 3.8); c.mood = Math.min(1, c.mood + 0.25); burst(hearts.current, 6); toast(`${c.name} purrs happily ♥`, 'hand')

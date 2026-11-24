@@ -115,7 +115,7 @@ export function Dog() {
       for (const it of D.dug) if (!it.taken) consider({ kind: 'ext', id: 'dug' + it.id, at: (out) => atPlanet(surf(it.n, out), 0.1)(out), icon: it.item, verb: 'Pick up', name: ITEMS[it.item].name, act: () => { it.taken = true; add(it.item); notePickup(G.s.hints, it.item, G.s.day) } }, pp.distanceTo(surf(it.n, _a)), 0.45)
     })
   }, [])
-  function petDog() { const P = HOME.P; petLeft(DREST, performance.now()); startAct('pet', { dur: 1.2 }); D.route = null; D.petCD = 6; D.mood = Math.min(1, D.mood + 0.25); go('petted', 2.6); burst(hearts.current, 5); toast(`${D.name} leans into your hand, tail going ♥`, 'hand'); window.__lastAct = { kind: 'dog', t: performance.now() } }
+  function petDog() { const P = HOME.P; petLeft(DREST, performance.now()); startAct('pet', { dur: 1.3, item: 'dog' }); D.route = null; D.petCD = 6; D.mood = Math.min(1, D.mood + 0.25); go('petted', 2.6); burst(hearts.current, 5); toast(`${D.name} leans into your hand, tail going ♥`, 'hand'); window.__lastAct = { kind: 'dog', t: performance.now() } }
   function feedDog() { if (BOWLD.full) { toast(`${D.name}'s bowl is already full.`, 'fish', 1800); return } startAct('feed', { dur: 1.3 }); setTimeout(() => { BOWLD.full = 1; puff.current?.emit(0, 0, 0) }, 650); D.route = null; D.stick.mode = 'none'; D.throws = 0; go('eat', 25); toast(`You fill ${D.name}'s bowl — he comes running, tail a blur!`, 'fish', 2600) }
   function throwStick() { startAct('cast', { dur: 0.7, sound: 'cast' })
     const P = HOME.P, s = D.stick

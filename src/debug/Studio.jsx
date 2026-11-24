@@ -42,7 +42,8 @@ function Studio() {
     for (const st of [stOld, stNew]) { st.t = wind.time.value; st.phase += dt * rate * st.move; st.dist += dt * 0.27 * st.move }
     if (q.has('freeze')) { stOld.phase = stNew.phase = +q.get('freeze') }
     if (q.has('still')) { stOld.t = stNew.t = 0 } // ?still: freeze idle sway/look for matched before/after shots
-    if (q.has('act')) { for (const s of [stOld, stNew]) { s.act = q.get('act'); s.actW = 1; s.move = 0 } }
+    window.__actClock = (window.__actClock || 0) + dt // captures reset it to start an action from the top
+    if (q.has('act')) { const dur = +(q.get('dur') || 1.3); for (const s of [stOld, stNew]) { s.act = q.get('act'); s.actItem = q.get('item'); s.actW = 1; s.move = 0; s.actDur = dur; s.actT = q.has('actt') ? +q.get('actt') : (window.__actClock % (dur + 0.5)) } } // ?act=pick&item=flower: loops the action (or freezes it at &actt=)
     const a = ang - seqT.yaw + (q.has('spin') ? wind.time.value * +(q.get('spin') || 0.6) : 0) // ?spin=0.6: turntable
     const d = (compare ? 1.35 : 0.95) / (+q.get('zoom') || 1), cx = 0, ly = q.has('ly') ? +q.get('ly') : 0.2 // ?zoom=3&ly=0.33: face close-up
     // ?fov=4: near-orthographic lens for measured overlays (distance scaled so the framing matches fov 30); ?level: eye-level camera
