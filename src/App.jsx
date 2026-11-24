@@ -554,7 +554,7 @@ function Rig() {
       if (FZ.k > 0.001) { _s.crossVectors(P.wUp, CAMH.w); goal.addScaledVector(_s, FZ.side * 1.8 * cz * FZ.k).addScaledVector(CAMH.w, 1.6 * cz * FZ.k).addScaledVector(P.wUp, -0.25 * cz * FZ.k) }
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
-      const hit = RC.intersectObjects(OCC, false)[0]; if (hit) goal.copy(_v).addScaledVector(_u, Math.max(0.35, hit.distance - 0.12)).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist))
+      const hit = RC.intersectObjects(OCC, false)[0]; if (hit) { const d = Math.max(Math.min(dist, 0.95 * cz), hit.distance - 0.12); goal.copy(_v).addScaledVector(_u, d).addScaledVector(P.wUp, 0.15 + 0.8 * (dist - d)) } // a house in the way: keep her whole body in view and rise over the roof (the free orbit swings round houses often; the old 0.35 pull-in filled the screen with her head)
       camera.position.lerp(goal, k); camera.up.lerp(P.wUp, k).normalize()
       look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.32 - 0.12 * FZ.k).addScaledVector(CAMH.w, 0.2 + 0.15 * FZ.k), k); camera.lookAt(look) // polish: gentler look-ahead
     } else if (VIEW.mode === 'hero') {
