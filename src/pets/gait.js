@@ -65,7 +65,25 @@ export function stepFeet(f, hips, g, { v, w, dt }) {
 
 // aim a single-column leg (hip at height L above the ground) at its paw. Rig convention: positive rx swings the paw
 // back (-z); rz tilts it out to +x; len scales the column (1 = rest length).
-export function legAngles(foot, hip, L) {
-  const dx = foot.x - hip[0], dz = foot.z - hip[1], h = L - (foot.y || 0), d = Math.hypot(dx, h, dz)
+export function legAngles(foot, hip, L, H = L) { // H: the hip's actual height above the ground
+  const dx = foot.x - hip[0], dz = foot.z - hip[1], h = H - (foot.y || 0), d = Math.hypot(dx, h, dz)
   return { rx: -Math.atan2(dz, h), rz: Math.asin(clamp(dx / d, -1, 1)), len: d / L }
+}
+
+// where the planted feet hold the body up (legs keep their length in stance, so a paw ahead of or behind its hip lowers
+// that hip: the walk's natural rise and fall). Returns the body height, pitch (+ = nose down) and roll (+ = +x side up).
+// A pair with no paw down (a gallop's flight) rides at rest height.
+export function bodyFromFeet(legs, hips, L) {
+  const hip = (k) => { const l = legs[k], dx = l.x - hips[k][0], dz = l.z - hips[k][1]; return Math.sqrt(Math.max(0, L * L - dx * dx - dz * dz)) }
+  const mean = (ks) => { let s = 0, n = 0; for (const k of ks) if (legs[k].stance) { s += hip(k); n++ } return n ? s / n : L }
+  const hF = mean([0, 1]), hH = mean([2, 3]), hL = mean([0, 2]), hR = mean([1, 3])
+  const span = hips[0][1] - hips[2][1], width = hips[0][0] - hips[1][0]
+  return { y: (hF + hH) / 2, pitch: Math.asin(clamp((hH - hF) / span, -1, 1)), roll: Math.asin(clamp((hL - hR) / width, -1, 1)) }
+}
+
+// critically-ish damped spring step (semi-implicit, sub-stepped so a long frame never blows up). s = { x, v }
+export function spring(s, target, k, zeta, dt) {
+  dt = Math.min(dt, 0.05); const w = Math.sqrt(k), n = Math.max(1, Math.ceil(dt * w / 0.5)), h = dt / n
+  for (let i = 0; i < n; i++) { s.v += (k * (target - s.x) - 2 * zeta * w * s.v) * h; s.x += s.v * h }
+  return s.x
 }

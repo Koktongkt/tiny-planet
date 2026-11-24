@@ -17,7 +17,10 @@ import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
 import { Hearts, burst } from './fx.jsx'
 
-export const CAT_CFG = { s: 1.05, /* round9: Cozy Chibi Siamese (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'cat', body: [0.05, 0.046, 0.074], legH: 0.05, legR: 0.0135, stride: 0.045, head: 0.075, headY: 0.04, headUp: 0.45, headFwd: 0.86, eye: 0.22, ear: 1.05, earSplay: 0.18, whiskers: true, stripes: true, tongue: true, pupils: 'round',
+export const CAT_CFG = {
+  gait: { walkTo: 0.5, trotTo: 0.8, runAt: 1.0, strideMin: 0.03, strideMax: 0.08, run: 'bound', reach: 0.05, lift: 0.012 }, // rig units/s; Motion Studio (st.loco) only for now
+  loco: { lean: 0.05, brake: 0.03, nod: 0.06, springs: { sit: [90, 0.75], lie: [40, 0.9], curl: [30, 1], crouch: [140, 0.7], stretch: [60, 0.8] } },
+  s: 1.05, /* round9: Cozy Chibi Siamese (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'cat', body: [0.05, 0.046, 0.074], legH: 0.05, legR: 0.0135, stride: 0.045, head: 0.075, headY: 0.04, headUp: 0.45, headFwd: 0.86, eye: 0.22, ear: 1.05, earSplay: 0.18, whiskers: true, stripes: true, tongue: true, pupils: 'round',
   tail: { n: 6, seg: 0.019, r: 0.017, curl: 0.1, tip: 1, taper: 0.025, rings: true, tube: true, up: 0.3, back: 0.86 }, col: { main: '#f0cc98', belly: '#fff8ec', dark: '#6e4733', sock: '#7a4e36', tip: '#5e3b2a', stripe: '#a87650', inner: '#f39a90', nose: '#3a2218', lip: '#3a2218', tongue: '#ef7f7a', iris: '#4a2a18', pupil: '#140c08', lid: '#2a1a12', shine: '#ffffff', whisker: '#6e4733', blush: '#f5b0a4' } }
 // nap spots (room-local; y = surface height). from: floor point to hop up from. claim: she can be 'beaten' to it
 // (round9: all from the prop layout of her round room, home/interior.jsx)

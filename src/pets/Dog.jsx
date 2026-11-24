@@ -24,7 +24,10 @@ import { newRest, petOffer, petLeft } from './petPrompt.js'
 const DREST = newRest() // Pip's bubble: offered after 3 s standing still beside him, then rests 10 min
 import { Bubble, Puffs, Hearts, burst } from './fx.jsx'
 
-export const DOG_CFG = { s: 1.0, /* round9: Cozy Chibi Shiba (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'dog', floppy: false, body: [0.056, 0.054, 0.078], legH: 0.056, legR: 0.0155, stride: 0.055, head: 0.072, headY: 0.04, headUp: 0.5, headFwd: 0.9, eye: 0.22, ear: 0.92, earSplay: 0.0, spring: 1.6, collar: false, tongue: true, pupils: 'round',
+export const DOG_CFG = {
+  gait: { walkTo: 0.42, trotTo: 1.25, runAt: 1.7, strideMin: 0.035, strideMax: 0.09, run: 'gallop', reach: 0.055, lift: 0.014 }, // rig units/s; Motion Studio (st.loco) only for now
+  loco: { lean: 0.05, brake: 0.03, nod: 0.06, springs: { sit: [90, 0.75], lie: [40, 0.9], curl: [30, 1], crouch: [140, 0.7], stretch: [60, 0.8] } },
+  s: 1.0, /* round9: Cozy Chibi Shiba (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'dog', floppy: false, body: [0.056, 0.054, 0.078], legH: 0.056, legR: 0.0155, stride: 0.055, head: 0.072, headY: 0.04, headUp: 0.5, headFwd: 0.9, eye: 0.22, ear: 0.92, earSplay: 0.0, spring: 1.6, collar: false, tongue: true, pupils: 'round',
   tail: { n: 0, seg: 0.03, r: 0.019, ring: 0.031, taper: 0, up: 0.82, back: 0.62 }, col: { main: '#e07f30', dark: '#c8702e', dark2: '#c8702e', cream: '#f6d6a8', belly: '#f6d6a8', inner: '#ef7f7a', innerEar: '#f0a898', nose: '#24160f', lip: '#3a2018', iris: '#4a2a18', pupil: '#140c08', lid: '#2a1a12', shine: '#ffffff', blush: '#f7b3a6' } }
 const _t = new THREE.Vector3(), _a = new THREE.Vector3(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3()
 const tan = (n, v, out) => out.copy(v).addScaledVector(n, -n.dot(v)).normalize()
