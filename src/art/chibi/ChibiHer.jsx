@@ -163,7 +163,7 @@ function ChibiFace({ st, lod }) {
       mood = st.act === 'nap' || (T.night > 0.7 && o.idle > 4) || o.idle > 25 ? 'sleepy' : st.act && EXCITED_ACTS.has(st.act) && (st.actW ?? 1) > 0.3 ? 'excited' : 'happy'
       open = o.blinkT < 0.12 ? 0 : 1 }
     // sleepy: drowsy half-lids at night, fully shut on a nap or a long idle
-    const shut = st.act === 'nap' || (L && L.idle > 25), moT = mood === 'sleepy' ? (shut ? 0 : 0.42) : 1
+    const shut = st.act === 'nap' || (L && L.idle > 25 && !(L.lie > 0.3)), moT = mood === 'sleepy' ? (shut ? 0 : 0.42) : 1
     o.mo = approach(o.mo, moT, moT < o.mo ? 1.6 : 6, dt)
     let cell = CELL[mood] ?? 0, gx = L ? L.gx : 0, gy = L ? L.gy : 0, squint = L ? L.squint : 0, blush = L ? 1 + 0.32 * L.blush * (0.75 + 0.25 * Math.sin(clock.elapsedTime * 2.6)) : 1
     open = Math.min(open, 1) * o.mo

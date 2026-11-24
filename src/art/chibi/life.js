@@ -17,6 +17,8 @@ const FID = { look: 3.4, stretch: 2.6, rock: 2.8, satchel: 2.0, hum: 3.6, pebble
 // which fidgets she picks from: dry weather, and in the rain (catch the drops, shiver, still the odd look round)
 const FIDS = ['look', 'stretch', 'rock', 'satchel', 'hum', 'pebble', 'hands', 'tiptoe'], FIDS_RAIN = ['catch', 'shiver', 'catch', 'look', 'satchel', 'hands'], FIDS_NIGHT = ['yawn', 'look', 'rock', 'yawn', 'hum']
 const FIDS_SIT = ['look', 'hum', 'look'] // sitting on the grass: only the ones that work seated
+// lying back on the grass to watch the sky: rarer than sitting (one roll per idle spell), dry weather and dry ground only
+const LIE_CHANCE = 0.35, LIE_AFTER = 32, LIE_LIFT = 0.012
 const YAWN_UP = 1.75 // yawn: upper arms out and up (rad from hanging); the forearms add 0.6 more, so the hands sit up and out beside the hair, not in it
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 const bump = (k, n) => Math.max(0, Math.sin(k * Math.PI * n)) // n soft pulses over the fidget
@@ -29,7 +31,7 @@ export function makeLife(rnd = Math.random) {
   return { rnd, m: 0, ph: 0, run: 0, lean: SPR(), turn: 0, idle: 0, fid: null, fu: 0, fidN: 4 + rnd() * 4, fidPrev: '',
     bobY: 0, bobV: 0, headBob: SPR(), lookYaw: SPR(), lookPitch: SPR(), tilt: SPR(), nod: SPR(),
     blink: BLINKER(rnd), open: 1, lid: 0, gaze: GAZE(rnd), gx: 0, gy: 0, scanT: 0, tgt: new THREE.Vector3(), tk: 0, near: 0, camT: 0, camWait: 8 + rnd() * 8,
-    mood: 'happy', scf: SPR(), scfZ: SPR(), bagKick: 0, moodT: 0, rideT: 0, blush: 0, squint: 0, yawn: 0, fsq: 0, talk: 0, sit: 0, walkT: 0, skipN: 10, skip: 0, skipU: 9, skidU: 9, runMax: 0, waveU: 9, waveCD: 6, bf: null, bfK: 0, dodgeU: 9, dodgeSd: 1, shut: 0,
+    mood: 'happy', scf: SPR(), scfZ: SPR(), bagKick: 0, moodT: 0, rideT: 0, blush: 0, squint: 0, yawn: 0, fsq: 0, talk: 0, sit: 0, lie: 0, lieRoll: -1, walkT: 0, skipN: 10, skip: 0, skipU: 9, skidU: 9, runMax: 0, waveU: 9, waveCD: 6, bf: null, bfK: 0, dodgeU: 9, dodgeSd: 1, shut: 0,
     hp: new THREE.Vector3(), hv: new THREE.Vector3(), init: 0, hy: 0, hair: [V3S(), V3S(), V3S(), V3S()] }
 }
 
@@ -56,7 +58,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   let fidLookX = 0
   if (L.fid && (m > 0.2 || busy || ride)) L.fid = null
   const rainy = (T.rain || 0) > 0.3
-  if (!L.fid && L.idle > 2.5) { L.fidN -= dt; if (L.fidN <= 0) { const set = (typeof window !== 'undefined' && window.__herFids) || (L.sit > 0.5 ? FIDS_SIT : rainy ? FIDS_RAIN : T.night > 0.6 ? FIDS_NIGHT : FIDS); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = 5 + L.rnd() * 6 } }
+  if (!L.fid && L.idle > 2.5 && L.lie < 0.2) { L.fidN -= dt; if (L.fidN <= 0) { const set = (typeof window !== 'undefined' && window.__herFids) || (L.sit > 0.5 ? FIDS_SIT : rainy ? FIDS_RAIN : T.night > 0.6 ? FIDS_NIGHT : FIDS); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = 5 + L.rnd() * 6 } }
   L.yawn = 0; L.bagKick = 0; L.fsq = 0; L.shut = 0; let fidLookY = 0
   if (L.fid) {
     const d = FID[L.fid], u0 = L.fu; L.fu += dt; const u = L.fu, e = envelope(u, d, 0.45) * idleK * MOT, k = u / d
@@ -100,6 +102,16 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
     B.root.position.y -= 0.088 * z; B.root.rotation.x -= 0.06 * z; B.chest.rotation.x += 0.1 * z
     for (const [th, sn, ft, sd] of [[B.thL, B.shLn, B.ftL, -1], [B.thR, B.shRn, B.ftR, 1]]) { th.rotation.x += (-1.45 - th.rotation.x) * z; th.rotation.z += (sd * 0.12 - th.rotation.z) * z; sn.rotation.x += (0.25 - sn.rotation.x) * z; ft.rotation.x += (-0.35 - ft.rotation.x) * z }
     B.upL.rotation.x += 0.35 * z; B.upR.rotation.x += 0.35 * z; B.upL.rotation.z -= 0.35 * z; B.upR.rotation.z += 0.35 * z; B.foL.rotation.x -= 0.15 * z; B.foR.rotation.x -= 0.15 * z }
+  // ---- now and then, after sitting a while, she lies back on the grass and watches the sky ----
+  if (L.idle < 1) L.lieRoll = -1
+  if (L.sit > 0.95 && L.lieRoll < 0) L.lieRoll = L.rnd() < LIE_CHANCE ? 1 : 0
+  const dry = (T.rain || 0) < 0.05 && (T.wet || 0) < 0.3
+  const lieWant = sitWant && dry && ((L.lieRoll === 1 && L.idle > LIE_AFTER) || (typeof window !== 'undefined' && window.__herLie))
+  L.lie = approach(L.lie, lieWant ? 1 : 0, lieWant ? 0.7 : 5, dt)
+  if (L.lie > 0.001) { const z = L.lie * L.lie * (3 - 2 * L.lie)
+    B.hips.rotation.x -= 1.32 * z; B.thL.rotation.x += 1.32 * z; B.thR.rotation.x += 1.32 * z; B.root.position.y += LIE_LIFT * z; B.chest.rotation.x -= 0.1 * z
+    B.upL.rotation.z -= 0.55 * z; B.upR.rotation.z += 0.55 * z; B.upL.rotation.x -= 0.2 * z; B.upR.rotation.x -= 0.2 * z
+    B.head.rotation.y += 0.18 * Math.sin(t * 0.23) * z * MOT; B.head.rotation.z += 0.06 * Math.sin(t * 0.31 + 1) * z * MOT; L.fsq = Math.max(L.fsq, 0.18 * z) } // watching the clouds drift
   // ---- a happy skip now and then on a long walk (fine weather, daytime) ----
   const walking = m > 0.5 && L.run < 0.3 && !busy && !ride
   L.walkT = walking ? L.walkT + dt : 0
@@ -174,7 +186,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   if (dge > 0) { B.hips.rotation.z -= 0.1 * L.dodgeSd * dge; B.chest.rotation.z -= 0.12 * L.dodgeSd * dge; B.head.rotation.z -= 0.1 * L.dodgeSd * dge; B.head.rotation.x += 0.08 * dge; B.root.position.y -= 0.005 * dge
     B.upL.rotation.x -= 0.25 * dge; B.upR.rotation.x -= 0.25 * dge; L.fsq = Math.max(L.fsq, 0.4 * dge) }
   // ---- mood: sleepy at night / long idle, excited on pickups and waves, focused on the bike (with smiles), happy near friends ----
-  const sleepy = act === 'nap' || (T.night > 0.7 && L.idle > 4) || L.idle > 25
+  const sleepy = (act === 'nap' || (T.night > 0.7 && L.idle > 4) || L.idle > 25) && L.lie < 0.3 // lying back she watches the sky, eyes open
   if (ride) L.rideT += dt; else L.rideT = 0
   const W_ = typeof window !== 'undefined' ? window : null // debug hooks for the studio captures: __herMood, __herNear
   const mood = W_ && W_.__herMood ? W_.__herMood : L.shut > 0.35 ? 'yawn' : (L.skip > 0.3 || wve > 0.3) ? 'excited' : sleepy ? 'sleepy' : busy && EXCITED_ACTS.has(act) && aw > 0.3 ? 'excited' : ride ? (L.rideT % 7 < 4.6 ? 'focus' : 'happy') : 'happy'
