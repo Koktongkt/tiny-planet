@@ -121,12 +121,17 @@ const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide
 // mid-face around the nose blends into the head: in profile the line dips just under the eye, comes out to a rounded
 // nose point and slopes back to the mouth and chin. Broad enough (about 6 bake cells tall) for the marching-cubes body to
 // keep it. The body bake shades it with the normals of the head without the swell, so from the front it is invisible.
-// [y, z, rx, ry, rz, smin k]
-const MIDFACE = [-0.0258, 0.041, 0.0112, 0.0082, 0.0172, 0.003]
+// 12d (KT): under the nose the line tucks back in, then the mouth area drops nearly straight down and curves gradually
+// into the chin: a second, wider swell for the mouth sits just behind the nose tip, and the crease where the two meet
+// is the notch under the nose.
+// [[y, z, rx, ry, rz, smin k], ...]  (nose, then mouth)
+const MIDFACE = [[-0.0258, 0.041, 0.0112, 0.0082, 0.0172, 0.003], [-0.0435, 0.0378, 0.0165, 0.0125, 0.0168, 0.003]]
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
-const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK, [my, mz, mrx, mry, mrz, mk] = MIDFACE
-  return smin(smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k), ell(x, y, z, 0, my, mz, mrx, mry, mrz), mk) }
+const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
+  let h = smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
+  for (const [my, mz, mrx, mry, mrz, mk] of MIDFACE) h = smin(h, ell(x, y, z, 0, my, mz, mrx, mry, mrz), mk)
+  return h }
 // the decal: a grid over the face region, each vertex shot onto the head surface from the front and lifted a hair
 const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
   for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = (u * 2 - 1) * FX, y = FY0 + v * (FY1 - FY0)

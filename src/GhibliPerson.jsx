@@ -240,7 +240,7 @@ export function spec(b = {}) {
   S.headR = V3(0.068 * hd, 0.0584 * hd, 0.0648 * hd)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
-  if (b.midface) { const [y, z, rx, ry, rz, k] = b.midface, s = 1.17 * hd; S.mf = [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] } // optional mid-face swell (head-frame units): a nose in profile
+  if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s]) } // optional mid-face swells (head-frame units): nose and mouth in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
   const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
@@ -265,7 +265,7 @@ function core(S, p) {
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
   let h = ell(p, S.headC, S.headR); if (S.ck) h = smin(h, Math.min(ell(p, S.ck[0], S.ck[2]), ell(p, S.ck[1], S.ck[2])), S.ck[3])
-  if (S.mf) h = smin(h, ell(p, S.mf[0], S.mf[1]), S.mf[2])
+  if (S.mf) for (const [c, r, k] of S.mf) h = smin(h, ell(p, c, r), k)
   return smin(d, h, 0.012)
 }
 function armD(S, p, k) {
