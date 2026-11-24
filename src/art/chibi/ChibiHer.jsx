@@ -6,8 +6,9 @@
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { Character, TRAVELLER, CEL_U, M, Merge, mkOutline } from '../../GhibliPerson.jsx'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { Character, TRAVELLER, CEL_U, cel, mkOutline } from '../../GhibliPerson.jsx'
+import { buildSatchel } from './satchel.js'
 import { makeLife, lifeStep, lifePost, HAIR_OFF, EXCITED_ACTS } from './life.js'
 import { approach } from './lifeCore.js'
 import { T, q } from '../../common.jsx'
@@ -26,8 +27,11 @@ export const FACES = ['happy', 'blink', 'sleepy', 'excited', 'focus']
 const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3 }
 // pass 6 (KT): features a touch smaller, higher and closer together. FT scales the tweak (1 = chosen, 1.5 = 'stronger').
 const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
-const EYE = { x: 0.0278 - FDX, y: -0.0153 + FDY, rx: 0.0116 * FS, ry: 0.0127 * FS }
-const BLUSH = { x: 0.0383 - FDX, y: -0.0319 + FDY + 0.0004 * FT, r: 0.0105 }
+// pass 10 (KT, turnaround sheet): the eye line sits lower in the face, a touch closer together; nose, mouth and blush
+// follow so the cluster keeps its spacing. F10 scales the tweak.
+const F10 = 1, E10X = -0.0009 * F10, E10Y = -0.0048 * F10
+const EYE = { x: 0.0278 - FDX + E10X, y: -0.0153 + FDY + E10Y, rx: 0.0116 * FS, ry: 0.0127 * FS }
+const BLUSH = { x: 0.0383 - FDX - 0.0012 * F10, y: -0.0319 + FDY + 0.0004 * FT - 0.0022 * F10, r: 0.0105 }
 const IRIS = { top: '#1e1410', mid: '#2a1a12', edge: '#1a110d', glow: '#6b4430' }
 function drawFaces(W) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
@@ -38,12 +42,12 @@ function drawFaces(W) {
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     // brows: short, thick, softly arched, round ends, tucked just under the bangs (focus: a touch lower and flatter)
     const by = (name === 'excited' ? 0.0108 : name === 'sleepy' ? 0.0088 : name === 'focus' ? 0.0093 : 0.0098) + 0.0004 * FT, arc = name === 'focus' ? 0.0022 : 0.0031
-    g.strokeStyle = BROW; g.lineWidth = 0.0034 * s
+    g.strokeStyle = BROW; g.lineWidth = 0.0040 * s // pass 12c: a touch thicker
     for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0015 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0012)); g.stroke() }
     // nose: a tiny warm dot
-    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT), 0.0017 * s, 0.0011 * s); g.fill()
+    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10), 0.0017 * s, 0.0011 * s); g.fill()
     // mouth: small soft u (happy), small flat smile (focus), little frown (sleepy), open D with tongue (excited)
-    const my = -0.0351 + FDY + 0.0008 * FT // mouth rises a bit more than the eyes: tighter cluster
+    const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10 // mouth rises a bit more than the eyes: tighter cluster
     if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
@@ -113,10 +117,31 @@ const faceMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: 
   fragmentShader: FACE_FS })
 // head shape in the head frame (same SDF as the baked body: head ellipsoid smooth-unioned with two mochi cheeks)
 const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016] // pass 5: one wide jaw ellipsoid (two cheek blobs left a dip / double bump at the chin), softer blend
+// pass 12c (KT, side view of the sheet): the profile shows a nose through the face's own contour. A soft swell of the
+// mid-face around the nose blends into the head: in profile the line dips just under the eye, comes out to a rounded
+// nose point and slopes back to the mouth and chin. Broad enough (about 6 bake cells tall) for the marching-cubes body to
+// keep it. The body bake shades it with the normals of the head without the swell, so from the front it is invisible.
+// 12h (KT, a red line drawn over the profile): straight down from under the eye, a sharp step out, a vertical front
+// that stays forward down past the mouth, then a gradual curve back into the chin. The step and the vertical front are
+// an oval column (an ellipsoid cannot make a flat front with a crisp top corner; 12k: a box's side edge looked like a beak in 3/4); a tall ellipsoid under it starts the
+// curve into the chin, its front level with the box's at their seam.
+// [y, z, rx, ry, rz, smin k]           ellipsoid (radii)
+// [y, z, rx, hy, rz, smin k, round r]  oval column (cross-section radii, half height, edge radius)
+const MIDFACE = [[-0.0278, 0.0397, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]] // LOCKED (KT, template): the 12k shapes moved back 0.0033, a soft nose and chin
+// 12m (KT: smoother in 3/4 without touching the side view): every swell recedes as MID_FADE * x^2 away from the centre
+// line. Zero on the centre line, so the profile is exactly the same; in 3/4 the swells ease back into the cheeks.
+const MID_FADE = 0 // locked at 0; raise it to ease the swells into the cheeks in 3/4 (never changes the profile)
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25 }
+// a short vertical column with an oval cross-section (rx, rz), half height hy, rounded top/bottom edges r: a flat vertical
+// front with a crisp step in profile, but sides that round back into the cheeks in 3/4 (a box's side edge read as a beak)
+const ocol = (x, y, z, cx, cy, cz, rx, hy, rz, r) => { const a = (x - cx) / rx, c = (z - cz) / rz, qx = (Math.sqrt(a * a + c * c) - 1) * Math.min(rx, rz), qy = Math.abs(y - cy) - hy
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
-  return smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k) }
+  let h = smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
+  const fade = MID_FADE * x * x
+  for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)
+  return h }
 // the decal: a grid over the face region, each vertex shot onto the head surface from the front and lifted a hair
 const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
   for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = (u * 2 - 1) * FX, y = FY0 + v * (FY1 - FY0)
@@ -155,7 +180,7 @@ function ChibiFace({ st, lod }) {
 // ---------- hair: one sculpted helmet (heavy blunt bangs with a centre split, temple frames, round bob), side puffs,
 // top bun and the ears, all one geometry with its own warm toon hair shader (1 draw) + the shared ink hull (1 draw).
 const ss = (e0, e1, x) => { const u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u) }
-const RH = [0.0662, 0.07, 0.0655], HC = [0, 0.003, -0.0045], TUCK = 0.85 // the hair shell ellipsoid
+const RH = [0.069, 0.0712, 0.0668], HC = [0, 0.003, -0.005], TUCK = 0.85 // the hair shell ellipsoid (pass 10: a wider, rounder dome; the sheet's bob is broad above the ears)
 // Pass 3: the fringe is built from locks. Each lock is an arc of azimuth a (0 = front, -x = her right / viewer's left)
 // whose lower edge is a rounded tip: y = tip + rise * (1 - sqrt(1 - u^2)), u in -1..1 across the lock. The hair edge is
 // the lowest lock at each azimuth, so neighbouring locks meet in small scallop notches; where no lock reaches (the
@@ -165,14 +190,14 @@ const RH = [0.0662, 0.07, 0.0655], HC = [0, 0.003, -0.0045], TUCK = 0.85 // the 
 // widths, and outer locks that curve down over the temples into the side locks, so the forehead reads as a soft arch.
 // [a0, a1, tipY, rise, bulge, slope]  (slope tilts the tip line across the lock: y += slope * u)
 const LOCKS = [
-  [-1.4, -1.08, -0.034, 0.05, 0.012], // side lock framing the face, down to the cheeks (in front of the side puff)
+  [-1.42, -1.04, -0.041, 0.016, 0.012, 0.003], // side lock framing the face, down to the jaw (pass 12: slimmer than pass 10's)
   [-1.12, -0.45, 0.0128, 0.012, 0.02, 0.0075], // outer lock curving down over the temple
   [-0.47, -0.14, 0.0186, 0.009, 0.024, -0.005],
   [-0.17, 0.17, 0.0184, 0.004, 0.028], // the big centre lock
   [0.14, 0.47, 0.0186, 0.009, 0.024, 0.005],
   [0.45, 1.12, 0.0128, 0.012, 0.02, -0.0075],
-  [1.08, 1.4, -0.034, 0.05, 0.012]]
-function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.047 - y) * ss(1.3, 1.62, t); return y } // pass 4: the bob comes down right behind the side locks (no gap above the puffs)
+  [1.04, 1.42, -0.041, 0.016, 0.012, -0.003]]
+function baseY(t) { let y = 0.036 + (-0.004 - 0.036) * ss(0.86, 1.12, t); y += (-0.052 - y) * ss(1.3, 1.62, t); return y } // pass 4: the bob comes down right behind the side locks (no gap above the puffs)
 // -> [edge y, lock bulge (shell units), groove 0..1 (1 = between locks)]
 function edge(a) {
   let y = baseY(Math.abs(a)), bulge = 0, groove = 1
@@ -183,14 +208,26 @@ function edge(a) {
   return [y, bulge, groove]
 }
 // azimuth samples: dense across the face (crisp lock tips and the steep side-lock edges), sparse behind
-const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.17 } return out })()
-function helmetGeo(NT = 10, NL = 5) {
+const AZ = (() => { const out = []; let a = -Math.PI; while (a < Math.PI - 1e-6) { out.push(a); a += Math.abs(a) < 1.45 ? 0.038 : 0.095 } return out })() // pass 11: denser behind (the flared bob's silhouette)
+// pass 11 (KT, kept in pass 12): the bob's lower half flares out into one continuous curled lobe at the sides and back
+// (it replaces the separate side-puff spheres, whose own ink ring read as a second ball in profile). Horizontal only, so
+// the hem does not drop onto the shoulders. FL = flare at the sides; it eases off toward the back and is zero across the
+// face and side locks.
+const FL = 0.34, FL_BACK = 0.25
+function flare(t, th, thE) { // a round bulge (circular profile) over the lower band, so the lobe curls instead of making a wing
+  const w = ss(1.4, 1.75, t) * (FL + (FL_BACK - FL) * ss(1.9, 2.9, t)), a = 1.62, c = a + 0.52 * (thE - a), h = 0.6 * (thE - a), u = (th - c) / h
+  return th <= a ? 0 : w * Math.sqrt(Math.max(0, 1 - u * u))
+}
+// ears (pass 12): small and flat, lying against the side of the head between the side lock and the bob; turned a
+// little forward so they read from the front without poking out like a ball
+const EAR = { x: 0.068, y: -0.0165, z: 0.0025 }
+function helmetGeo(NT = 18, NL = 5) {
   const pos = [], idx = [], gro = [], rho = 0.0033, cols = [], NA = AZ.length
   for (let i = 0; i < NA; i++) { const a = AZ[i], t = Math.abs(a), sa = Math.sin(a), ca = Math.cos(a)
     const [yE, bulge, groove] = edge(a), thE = Math.acos(Math.min(0.97, Math.max(-0.97, (yE - HC[1]) / RH[1]))), col = [], cg = []
     const P = (th) => { let st = Math.sin(th); const ct = Math.cos(th), w = ss(0.55, 1.3, th), front = ss(1.2, 0.2, t) * ss(0.55, 1.3, th) /* pass 4: by polar angle, so neighbouring locks meet without a ridge up to the crown */
       if (th > Math.PI / 2) st = 1 - 0.42 * (1 - st) // below the equator the hair hangs straight down instead of hugging the jaw
-      const r = 1 + 0.026 * front + bulge * w, Q = [HC[0] + RH[0] * st * sa * r, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * r]
+      const r = 1 + 0.026 * front + bulge * w, rh = r + flare(t, th, thE), Q = [HC[0] + RH[0] * st * sa * rh, HC[1] + RH[1] * ct * r, HC[2] + RH[2] * st * ca * rh]
       // pass 4: the fringe tips come down onto the forehead (no see-through gap under the bangs, so no stray ink lines)
       const tk = TUCK * ss(thE - 0.2, thE, th) * ss(1.06, 0.72, t) /* only the tip curls in (a wider band makes flaps where locks hand over) */; if (tk <= 0) return Q
       const d = [Q[0] - HC[0], Q[1] - HC[1], Q[2] - HC[2]], L = Math.hypot(...d); d.forEach((v, i) => { d[i] = v / L })
@@ -198,7 +235,7 @@ function helmetGeo(NT = 10, NL = 5) {
       let lo = 0, hi = L; for (let n = 0; n < 24; n++) { const m = (lo + hi) / 2; if (headSDF(HC[0] + d[0] * m, HC[1] + d[1] * m, HC[2] + d[2] * m) < 0) lo = m; else hi = m }
       const s2 = Math.max(hi + 0.0016, L - (L - hi) * 1) * (1 - tk) + (hi + 0.0016) * tk
       return [HC[0] + d[0] * s2, HC[1] + d[1] * s2, HC[2] + d[2] * s2] }
-    for (let j = 1; j <= NT; j++) { const f = j / NT; col.push(P(thE * f)); cg.push(groove * ss(0.3, 0.95, f) * (t < 1.45 ? 1 : 0)) }
+    for (let j = 1; j <= NT; j++) { const f = j / NT; col.push(P(thE * (0.4 * f + 0.6 * Math.sin(f * Math.PI / 2)))); /* pass 11: rows bunch toward the hem (the curl) */ cg.push(groove * ss(0.3, 0.95, f) * (t < 1.45 ? 1 : 0)) }
     // rounded lip: half a turn from the outer edge to the inside (the tips curl in)
     const E = P(thE), E2 = P(thE - 0.02), n = [E[0] - HC[0], E[1] - HC[1], E[2] - HC[2]], nl = Math.hypot(...n), dn = [E[0] - E2[0], E[1] - E2[1], E[2] - E2[2]], dl = Math.hypot(...dn)
     for (let k = 0; k < 3; k++) { n[k] /= nl; dn[k] /= dl }
@@ -220,22 +257,25 @@ const part = (geo, [x, y, z], [sx, sy, sz], [rx, ry, rz] = [0, 0, 0], skin = 0) 
   g.scale(sx, sy, sz); g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); g.computeVertexNormals()
   g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(skin), 1)); return g }
 const PT = 1
+let HAIR_INK_GEO = null
 const HAIR_GEO = (() => {
   const ball = new THREE.SphereGeometry(1, 18, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.34, 6, 16), hel = helmetGeo()
   const parts = [hel,
-    part(ball, [0, -0.008, -0.019], [0.0635, 0.054, 0.052]), // back volume of the bob
+    part(ball, [0, -0.02, -0.024], [0.071, 0.061, 0.058]), // back volume of the bob (pass 10: fuller)
     part(ball, [0, 0.0715, -0.008], [0.0168, 0.016, 0.017]), // top bun
     part(ring, [0, 0.064, -0.007], [0.0122, 0.0122, 0.0105], [Math.PI / 2 - 0.15, 0, 0]),
-    // side puffs at cheek level (pass 4: the ears are gone; the side locks cover that spot in every view, and they poked through)
-    // pass 9 (KT): lower (centre near the blush/mouth line) and fuller/rounder, as on the concept. PT scales the change (1 chosen, 1.5 'stronger').
-    ...[-1, 1].map(d => part(ball, [d * (0.0615 - 0.0015 * PT), -0.027 - 0.004 * PT, -0.02 + 0.006 * PT], [0.021 * (1 + 0.21 * PT), 0.024 * (1 + 0.08 * PT), 0.022 * (1 + 0.16 * PT)]))]
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0042, 0.0122, 0.0076], [0, d * 0.75, d * 0.1], 1)), // pass 12 ears (skin); 12c: longer vertically
+]
   // life layer: aW = (part, weight) for the secondary springs (0/1 side puffs, 2 top bun, 3 front + side locks); 0 weight = rigid
   const W = (g, f) => { const p = g.attributes.position, a = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { const r = f(p.getX(i), p.getY(i), p.getZ(i)); a[i * 2] = r[0]; a[i * 2 + 1] = r[1] } g.setAttribute('aW', new THREE.BufferAttribute(a, 2)); return g }
   const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
-  W(parts[0], (x, y, z) => [3, sm(0.03, -0.04, y) * sm(-0.01, 0.035, z)]); W(parts[1], () => [3, 0])
+  // the flared lobe rides the side springs (0 = her right / -x, 1 = left); the fringe and side locks keep spring 3
+  // the flared lobe rides the side springs (0 = her right / -x, 1 = left); the fringe and side locks keep spring 3
+  W(parts[0], (x, y, z) => { const wf = sm(0.03, -0.04, y) * sm(-0.01, 0.035, z), ws = sm(0.06, 0.088, Math.abs(x)) * sm(-0.012, -0.045, y); return ws > wf ? [x < 0 ? 0 : 1, ws] : [3, wf] }); W(parts[1], () => [3, 0])
   W(parts[2], (x, y) => [2, sm(0.058, 0.085, y)]); W(parts[3], () => [2, 0.35])
-  W(parts[4], (x) => [0, sm(-0.04, -0.085, x)]); W(parts[5], (x) => [1, sm(0.04, 0.085, x)])
-  const g = mergeGeometries(parts); g.computeBoundingSphere(); return g })()
+  for (const k of [4, 5]) W(parts[k], () => [3, 0]) // ears: rigid
+  const g = mergeGeometries(parts); g.computeBoundingSphere()
+  HAIR_INK_GEO = g; return g })()
 const HOFF = `attribute vec2 aW; uniform vec3 uOff[4];
   vec3 hoff(){ vec3 o = aW.x < .5 ? uOff[0] : aW.x < 1.5 ? uOff[1] : aW.x < 2.5 ? uOff[2] : uOff[3]; return o*aW.y; }
 `
@@ -263,35 +303,59 @@ const chibiHairMat = (skin) => hairShader || (hairShader = new THREE.ShaderMater
       #include <colorspace_fragment>
     }` }))
 function ChibiHair({ set }) {
-  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={chibiHairMat(CHIBI.outfit.skin)} /><mesh geometry={HAIR_GEO} material={hairInk} /></group>
+  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={chibiHairMat(CHIBI.outfit.skin)} /><mesh geometry={HAIR_INK_GEO} material={hairInk} /></group>
 }
 
-// satchel (concept B): a chunky soft leather bag with a rounded flap over the front (one geometry, so still 1 cel + 1 ink)
-const BAG_GEO = (() => {
-  const soft = (g, r) => { const p = g.attributes.position, v = new THREE.Vector3(), h = new THREE.Vector3()
-    g.computeBoundingBox(); const bb = g.boundingBox; h.subVectors(bb.max, bb.min).multiplyScalar(0.5).subScalar(r)
-    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const c = v.clone().clamp(h.clone().negate(), h), d = v.clone().sub(c); if (d.lengthSq() > 0) d.setLength(r); p.setXYZ(i, ...c.add(d).toArray()) }
-    g.deleteAttribute('uv'); g.computeVertexNormals(); return g }
-  const body = soft(new THREE.BoxGeometry(0.046, 0.038, 0.024, 4, 4, 3), 0.008)
-  const flap = soft(new THREE.BoxGeometry(0.048, 0.024, 0.007, 4, 2, 1), 0.0034); flap.translate(0, 0.006, 0.0125); flap.rotateX(-0.06)
-  const g = mergeGeometries([mergeVertices(body), mergeVertices(flap)]); g.computeBoundingSphere(); return g })()
+// satchel (turnaround sheet): top handle, stitched flap with two buckled straps, side pockets (daisy, scroll), a plaid
+// blanket rolled underneath and a compass charm. One vertex-coloured cel mesh + one ink hull: still 2 draws.
+let satchel = null, satchelMat = null
+const SATCHEL_INK = mkOutline(false)
+// [x, y, z, yaw]: in the bag group (her left hip); the front turns out and forward as on the sheet
+const BAG_AT = [0.016, -0.05, 0.016, 0.4]
+function ChibiSatchel() {
+  if (!satchel) { satchel = buildSatchel()
+    satchelMat = cel('#ffffff').clone(); satchelMat.uniforms = { ...satchelMat.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; satchelMat.vertexColors = true; satchelMat.defines = { KIND: 1 } }
+  return <group position={BAG_AT.slice(0, 3)} rotation={[0, BAG_AT[3], 0]}><mesh geometry={satchel.cel} material={satchelMat} /><mesh geometry={satchel.line} material={SATCHEL_INK} /></group>
+}
+// pass 10 body details (turnaround sheet), all her-only via ext hooks:
+// puff sleeve with a rolled cuff band at the hem (one geometry, so the sleeve is still 1 cel + 1 ink)
+const SLEEVE_GEO = (() => {
+  const prof = [[0.0, -0.051], [0.019, -0.052], [0.026, -0.048], [0.025, -0.041], [0.029, -0.028], [0.03, -0.01], [0.026, 0.006], [0.016, 0.014], [0.0, 0.016]]
+  const body = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 28)
+  // pass 11 (KT): a flat folded band (straight face, softly rounded edges), not a round donut
+  const band = [[0.0236, -0.0522], [0.0292, -0.0526], [0.0312, -0.0518], [0.0318, -0.0502], [0.0318, -0.0418], [0.0313, -0.0402], [0.0298, -0.0394], [0.0246, -0.0392]]
+  const roll = new THREE.LatheGeometry(band.map(([r, y]) => new THREE.Vector2(r, y)), 28)
+  const g = mergeGeometries([body.toNonIndexed(), roll.toNonIndexed()]); g.computeBoundingSphere(); return g })()
+// rolled jeans cuffs: a tall flat band, a little wider than the leg (the base cuff is a round donut)
+const CUFF_GEO = (() => { const pr = [[0, -0.0125], [0.0255, -0.0127], [0.0281, -0.0121], [0.0292, -0.0104], [0.0295, -0.0075], [0.0295, 0.0072], [0.0291, 0.0098], [0.0279, 0.0113], [0.0252, 0.0118], [0.02, 0.0118], [0, 0.0116]]
+  const g = new THREE.LatheGeometry(pr.map(([r, y]) => new THREE.Vector2(r, y)), 28); g.deleteAttribute('uv'); g.computeBoundingSphere(); return g })()
+// scarf tails: broad flat ribbons with a notched end that hang down the front (the base tails are thin pyramids)
+const TAIL_GEO = (() => { const sh = new THREE.Shape(), w0 = 0.0105, w1 = 0.013, L = 0.058
+  sh.moveTo(-w0, 0); sh.lineTo(w0, 0); sh.quadraticCurveTo(w1 * 1.05, -L * 0.5, w1, -L); sh.lineTo(0, -L + 0.008); sh.lineTo(-w1, -L); sh.quadraticCurveTo(-w1 * 1.05, -L * 0.5, -w0, 0)
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.0035, bevelEnabled: true, bevelThickness: 0.0016, bevelSize: 0.0016, bevelSegments: 2, curveSegments: 6 })
+  g.translate(0, -0.006, -0.0035); g.deleteAttribute('uv'); g.clearGroups(); g.computeVertexNormals(); return g })()
 const LIFE_OFF = q.has('still') && !q.has('life')
 export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
   // taller soft barrel torso, thick straight trouser legs, chunky round boots, short arms hanging close to the body
   // pass 4 arms (measured on the concept front): longer soft forearm ~70% of the puff-sleeve width, rounder mitten hands,
   // hanging a little further from the body
-  body: { H: 0.89, head: 1.45, leg: 1.06, torso: 1.13, arm: 0.92, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.26, armA: 0.5,
-    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.22, bootL: 0.98, hand: 1.2, cheek: CHEEK },
+  body: { H: 0.89, head: 1.45, leg: 0.96, torso: 1.13, arm: 0.92, girth: 1.25, shoulder: 1.0, chestW: 1.12, bellyZ: 0.86, shX: 1.26, armA: 0.5,
+    armR: [1.12, 1.4, 1.5], legR: 1.28, legX: 1.06, foot: 1.4, bootW: 1.5, bootH: 1.45, bootL: 1.04, hand: 1.2, cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE,
+    // pass 11 boots (KT): taller chunky boots that stand on a flat sole. The ankle rises 0.01 and the shin shortens to
+    // match (leg 1.06 -> 0.96 keeps the hip where it was), so the cuffs ride higher and more boot shows below them.
+    anY: 0.044, footY: 0.017, soleY: 0.0012, bootShaft: [0.0228, 0.0165, 0.0238, -0.009] },
   hair: { style: 'chibi', c: '#3b2a22' },
-  outfit: { ...TRAVELLER.outfit, top: '#fbf6ec', bottom: '#4f7cc4', shoe: '#7a4a2e', cuffs: '#6f98d4', bibW: 0.042, waistUp: 0.04, shoeY: 0.036 },
+  scarf: '#d9503f', // pass 12 skin: warmer, deeper peach measured off the sheet
+  // pass 10: palette from the turnaround sheet (warmer shirt, deeper denim and scarf), stitched seams
+  outfit: { ...TRAVELLER.outfit, skin: '#f3bf98', top: '#f7ead3', bottom: '#4271b8', shoe: '#83492a', cuffs: '#6d95d2', bibW: 0.042, waistUp: 0.04, shoeY: 0.05, seams: true },
   walk: { rate: 11, stride: 0.55, knee: 0.8, bounce: 0.026, arm: 0.7, lean: 0.06, twist: 0.12, sway: 0.075, idle: 'contra' }, // life pass: a bouncier chibi walk
   ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
     if (P) { P.ms += performance.now() - t0; P.n++ } }, // window.__herProf = { ms: 0, n: 0 }: CPU time of the life layer (perf runs)
   post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
-    Face: ChibiFace, Hair: ChibiHair, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012], bagGeo: BAG_GEO, bagC: '#a8703f' } }
+    Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, cuffGeo: CUFF_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
 const RIDE_S = 0.8

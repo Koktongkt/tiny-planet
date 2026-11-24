@@ -68,6 +68,15 @@ const PAINT = `
       torso = mix(torso, uBottom, max(bib, max(strapF, strapB)));
       float pocket = front * aa(.015 - ax) * aa(y - uZ.x + .025) * aa(uZ.x - .002 - y) * aa(z - .02);
       torso = mix(torso, uBottom*.84, pocket);
+      if (uZ.w > .5) { // outfit.seams: darker stitched seams (bib pocket rim, front fly, curved hip pockets, bib top)
+        float ln = .0011, inBib = aa(uZ.x + .018 - y);
+        float rim = front * aa(.0165 - ax) * aa(y - uZ.x + .0265) * aa(uZ.x - .0005 - y) * (1. - aa(.0145 - ax) * aa(y - uZ.x + .0245) * aa(uZ.x - .0025 - y));
+        float fly = front * aa(ln - abs(x)) * aa(uY.x - .004 - y) * aa(y - uZ.z - .004);
+        float hp = ax - .021 - (uY.x - y) * 1.15;
+        float hip = front * aa(ln - abs(hp)) * aa(uY.x - .001 - y) * aa(y - uY.x + .026) * aa(ax - .02);
+        float top = front * inBib * aa(ln - abs(y - uZ.x - .0155)) * aa(uO.w - .003 - ax) * (1. - waist);
+        torso = mix(torso, uBottom*.66, clamp(max(max(rim, fly), max(hip, top)), 0., 1.) * .85);
+      }
     } else if (ty == 2) { // apron
       float ap = front * aa(uO.w - ax) * aa(uZ.x + .01 - y) * aa(z - .006);
       float ties = aa(.004 - abs(y - uY.x - .004)) * (1. - ap);
@@ -103,6 +112,11 @@ const PAINT = `
     c = mix(c, armC, arm);
     c = mix(c, uSkin, max(hand, neck * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
+    if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
+      float boot = aa(uY.z - y) * (1. - arm);
+      c = mix(c, uShoe*.42, boot * aa(.0098 - y));
+      c = mix(c, uShoe*.62, boot * aa(.0008 - abs(y - .0109)));
+    }
     return c;
   }`
 // cel shading, round 8 ("less plastic"): a crisper painted terminator; shadows lean cool on cloth and rosy on skin;
@@ -179,7 +193,7 @@ function bodyMat(cfg, S) {
   const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 + (o.waistUp ?? 0) : S.bellyY + 0.008
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, 0) } }, vertexShader: VS, fragmentShader: FS })
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
   bodyMatCache.set(key, m); return m
@@ -209,6 +223,7 @@ const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; retu
 const _t = new THREE.Vector3(), _u = new THREE.Vector3()
 function cap(p, a, b, ra, rb) { _t.subVectors(p, a); _u.subVectors(b, a); const h = Math.min(1, Math.max(0, _t.dot(_u) / _u.lengthSq())); return _t.addScaledVector(_u, -h).length() - (ra + (rb - ra) * h) }
 function ell(p, c, r) { const x = (p.x - c.x) / r.x, y = (p.y - c.y) / r.y, z = (p.z - c.z) / r.z; return (Math.sqrt(x * x + y * y + z * z) - 1) * Math.min(r.x, r.y, r.z) }
+function ocol(p, c, h, r) { const a = (p.x - c.x) / h.x, b = (p.z - c.z) / h.z, qx = (Math.sqrt(a * a + b * b) - 1) * Math.min(h.x, h.z), qy = Math.abs(p.y - c.y) - h.y; return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r } // vertical oval column (radii h.x, h.z; half height h.y), rounded edges r
 function torus(p, c, R, r) { const dx = p.x - c.x, dz = p.z - c.z, q = Math.sqrt(dx * dx + dz * dz) - R; return Math.sqrt(q * q + (p.y - c.y) ** 2) - r }
 
 // body spec from parameters (unit space; the whole character is then scaled by H)
@@ -217,7 +232,7 @@ export function spec(b = {}) {
   const key = JSON.stringify(b); if (specCache.has(key)) return specCache.get(key)
   const hd = b.head ?? 1, gw = b.girth ?? 1, ll = b.leg ?? 1, tl = b.torso ?? 1, al = b.arm ?? 1, hc = b.hunch ?? 0, shw = b.shoulder ?? 1, fs = b.foot ?? 1
   const S = { key, b, H: b.H ?? 1, hc, hn: b.hand ?? 1 }
-  S.anY = 0.034; S.knY = S.anY + 0.048 * ll; S.hipY = S.knY + 0.053 * ll; S.bellyY = S.hipY + 0.035 * tl; S.chestY = S.bellyY + 0.065 * tl; S.shY = S.chestY + 0.02 * tl
+  S.anY = b.anY ?? 0.034; S.knY = S.anY + 0.048 * ll; S.hipY = S.knY + 0.053 * ll; S.bellyY = S.hipY + 0.035 * tl; S.chestY = S.bellyY + 0.065 * tl; S.shY = S.chestY + 0.02 * tl
   S.neckY = S.shY + 0.012 * tl + (b.neckY ?? 0.005)
   S.belly = [V3(0, S.bellyY, 0.006 + 0.01 * (gw - 1)), V3(0.064 * gw, 0.06 * Math.min(tl, 1.25), 0.054 * (0.6 + 0.4 * gw * 1.08) * (b.bellyZ ?? 1))]
   const cg = 0.5 + 0.5 * gw
@@ -226,6 +241,7 @@ export function spec(b = {}) {
   S.headR = V3(0.068 * hd, 0.0584 * hd, 0.0648 * hd)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
+  if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
   const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
@@ -235,7 +251,7 @@ export function spec(b = {}) {
     S['wr' + k] = S['el' + k].clone().addScaledVector(dir, 0.04 * al).add(V3(0, 0, 0.004)); S['hd' + k] = S['wr' + k].clone().addScaledVector(dir, 0.013 * fs)
     const hx = 0.034 * (0.8 + 0.2 * gw) * (b.legX ?? 1)
     S['hp' + k] = V3(sd * hx, S.hipY, 0.004); S['kn' + k] = V3(sd * (hx + 0.001), S.knY, 0.007); S['an' + k] = V3(sd * (hx + 0.002), S.anY, 0.004)
-    S['ft' + k] = V3(sd * (hx + 0.002), 0.014, 0.012); S['dir' + k] = dir
+    S['ft' + k] = V3(sd * (hx + 0.002), b.footY ?? 0.014, 0.012); S['dir' + k] = dir
   }
   S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
   S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn, 0.012 * fs * S.hn)
@@ -250,6 +266,7 @@ function core(S, p) {
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
   let h = ell(p, S.headC, S.headR); if (S.ck) h = smin(h, Math.min(ell(p, S.ck[0], S.ck[2]), ell(p, S.ck[1], S.ck[2])), S.ck[3])
+  if (S.mf) { const fade = S.mfFade * (p.x - S.headC.x) ** 2; for (const [c, r, k, rr] of S.mf) h = smin(h, (rr == null ? ell(p, c, r) : ocol(p, c, r, rr)) + fade, k) } // midfaceFade: recede away from the centre line (profile unchanged)
   return smin(d, h, 0.012)
 }
 function armD(S, p, k) {
@@ -258,9 +275,15 @@ function armD(S, p, k) {
   const n = S.hn, h = smin(ell(p, S['hd' + k], S.hr), ell(p, S['hd' + k].clone().add(V3(-sd * 0.002 * n, 0.004 * n, 0.011 * n)), V3(0.0055 * n, 0.0075 * n, 0.0055 * n)), 0.004)
   return smin(a, h, 0.007)
 }
+const _bs = new THREE.Vector3(), _br = new THREE.Vector3()
 function legD(S, p, k) {
-  const l = smin(cap(p, S['hp' + k], S['kn' + k], S.lr[0], S.lr[1]), cap(p, S['kn' + k], S['an' + k], S.lr[1], S.lr[2]), 0.01)
-  return smin(l, ell(p, S['ft' + k], S.fr), 0.012)
+  const l = smin(cap(p, S['hp' + k], S['kn' + k], S.lr[0], S.lr[1]), cap(p, S['kn' + k], S['an' + k], S.lr[1], S.lr[2]), 0.01), b = S.b
+  let f = ell(p, S['ft' + k], S.fr)
+  // optional boot knobs (default = the old soft foot): bootShaft [rx, ry, rz, dy] a chunky ankle above the foot;
+  // soleY a flat sole cut (smooth max), so the boot stands flat on the ground
+  if (b.bootShaft) { const [rx, ry, rz, dy] = b.bootShaft, a = S['an' + k]; f = smin(f, ell(p, _bs.set(a.x, a.y + dy, a.z + 0.001), _br.set(rx, ry, rz)), 0.008) }
+  if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
+  return smin(l, f, 0.012)
 }
 function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
@@ -306,9 +329,13 @@ function bake(S, RES = 72) {
   const BONES = bonesOf(S), wb = BONES.map((b, i) => [i, b]).filter(([, b]) => b[3])
   for (let i = 0; i < cnt; i++) {
     p.fromBufferAttribute(P, i)
+    // a mid-face swell (S.mf) shapes the silhouette only: normals and AO come from the head without it, so the face
+    // still shades like a smooth round face from the front (no muzzle shadow) while the profile shows the nose
+    const mf = S.mf; S.mf = null
     nn.set(sdf(S, q.copy(p).setX(p.x + e)) - sdf(S, q.copy(p).setX(p.x - e)), sdf(S, q.copy(p).setY(p.y + e)) - sdf(S, q.copy(p).setY(p.y - e)), sdf(S, q.copy(p).setZ(p.z + e)) - sdf(S, q.copy(p).setZ(p.z - e))).normalize()
     nor.set([nn.x, nn.y, nn.z], i * 3)
-    let o = 0; for (let k = 1; k <= 4; k++) { const h = 0.0055 * k; o += (h - sdfOcc(S, q.copy(p).addScaledVector(nn, h))) / h * (0.5 ** k) }
+    let o = 0; for (let k = 1; k <= 4; k++) { const h = 0.0055 * k; o += (h - sdfOcc(S, q.copy(p).addScaledVector(nn, h))) / h * (0.5 ** k) } // (no crease shadow round the swell either)
+    S.mf = mf
     ao[i] = Math.max(0, Math.min(1, 1 - o * 1.4))
     const hipsF = THREE.MathUtils.smoothstep(p.y, S.hipY - 0.023, S.hipY + 0.025)
     let ws = wb.map(([bi, b]) => [bi, (b[0] === 'hips' ? hipsF : 1) / (Math.pow(segD(p, b[3][0], b[3][1]) / b[4], 6) + 1e-4), b[0]])
@@ -566,7 +593,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
   const B = R.bones, o = cfg.outfit, f = cfg.face || {}, hd = cfg.body.head ?? 1
   const headLocal = [0, S.headC.y - B.head.userData.rest.y, S.headC.z - B.head.userData.rest.z]
   const chestY = B.chest.userData.rest.y, hipsY = B.hips.userData.rest.y
-  const sleeveGeo = o.sleeve === 'kimono' ? null : o.sleeve === 'short' ? G.sleeveS : G.sleeve
+  const sleeveGeo = o.sleeve === 'kimono' ? null : (cfg.ext?.sleeveGeo ?? (o.sleeve === 'short' ? G.sleeveS : G.sleeve))
   const sleeveC = o.type === 'cardigan' ? o.acc : o.top
   const es = f.eye ?? 1, X = cfg.ext || {}
   return <group scale={S.H * scale}>
@@ -576,20 +603,20 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       {o.sleeve !== 'none' && createPortal(<group ref={lod(2)} rotation={[0, 0, sd * S.armA]}>
         {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
           : <M geo={G.kimono} mat={cel(o.top)} position={[sd * 0.004, -0.01, 0]} rotation={[0, 0, -sd * S.armA * 0.85]} />}</group>, B['up' + k])}
-      {o.cuffs && createPortal(<group ref={lod(1)}><M geo={G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
+      {o.cuffs && createPortal(<group ref={lod(1)}><M geo={cfg.ext?.cuffGeo ?? G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
       {hold[k] && createPortal(<group ref={lod(2)} position={S['hd' + k].clone().sub(S['el' + k]).toArray()}><Merge><Prop prop={hold[k]} sd={sd} /></Merge></group>, B['fo' + k])}
     </React.Fragment> })}
     {createPortal(<Merge>
       {cfg.scarf && <><M geo={G.scarfRing} mat={cel(cfg.scarf)} position={[0, S.neckY + 0.01 - chestY, 0.004 + 0.02 * S.hc]} rotation={[0.12, 0, 0]} scale={X.ring ?? 1} />
         <group position={[X.knot?.[0] ?? 0.012, S.neckY + 0.008 - chestY + (X.knot?.[1] ?? 0), 0.036 + 0.02 * S.hc + (X.knot?.[2] ?? 0)]} scale={X.knot?.[3] ?? 1}><M geo={G.scarfKnot} mat={cel(cfg.scarf)} />
-          <group ref={set('scarf')}>{[-0.4, 0.35].map(a => <M key={a} geo={G.scarfTail} mat={cel(cfg.scarf)} rotation={[0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}
+          <group ref={set('scarf')}>{(X.tails ?? [-0.4, 0.35]).map(a => <M key={a} geo={X.tailGeo ?? G.scarfTail} mat={cel(cfg.scarf)} rotation={[X.tailX ?? 0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}
       {o.type === 'sailor' && <group position={[0, S.neckY - 0.03 - chestY, S.chest[1].z * 0.95]}><M geo={G.scarfKnot} mat={cel(o.acc ?? '#d9455b')} scale={0.6} /><group ref={set('scarf')}>{[-0.3, 0.3].map(a => <M key={a} geo={G.scarfTail} mat={cel(o.acc ?? '#d9455b')} rotation={[0.15, 0, a]} scale={0.7} />)}</group></group>}
       {o.type === 'overalls' && [-1, 1].map(x => <M key={x} geo={G.tiny} mat={cel('#f2d27a')} position={[x * (o.bibW ?? 0.031), S.chestY + 0.012 - chestY, S.chest[1].z * 0.93 + S.chest[0].z]} outline={false} />)}
       {cfg.satchel && !X.strap && <mesh position={[0, S.chestY - 0.01 - chestY, -0.002]} rotation={[0.05, 0, -0.72]} material={cel('#8a5a3c')}><torusGeometry args={[S.chest[1].x * 1.26, 0.0035, 6, 40]} /></mesh>}
       {cfg.satchel && X.strap && <group position={[X.strap[5] ?? 0, S.chestY - 0.01 - chestY + X.strap[2], X.strap[4] ?? 0]} rotation={[0, 0, X.strap[0]]}>{/* ext.strap [tilt, radius, y, depth, z, x]: a cross-body loop over the shoulder down to the bag */}
-        <mesh rotation={[0, Math.PI / 2, 0]} scale={[X.strap[3], 1, 1]} material={cel('#8a5a3c')}><torusGeometry args={[X.strap[1], 0.0045, 6, 40]} /></mesh></group>}
+        <mesh rotation={[0, Math.PI / 2, 0]} scale={[X.strap[3], 1, X.strap[6] ?? 1]} material={cel(X.strapC ?? '#8a5a3c')}><torusGeometry args={[X.strap[1], 0.0045, 6, 40]} /></mesh></group>}
     </Merge>, B.chest)}
-    {cfg.satchel && createPortal(<group ref={lod(1)}><group ref={set('bag')} position={[S.belly[1].x + (X.bag?.[0] ?? 0), S.bellyY + 0.03 - hipsY + (X.bag?.[1] ?? 0), -0.006 + (X.bag?.[2] ?? 0)]}><M geo={X.bagGeo ?? G.bag} mat={cel(X.bagC ?? '#c08d58')} position={[0.006, -0.03, 0]} scale={X.bag?.[3] ?? 1} /></group></group>, B.hips)}
+    {cfg.satchel && createPortal(<group ref={lod(1)}><group ref={set('bag')} position={[S.belly[1].x + (X.bag?.[0] ?? 0), S.bellyY + 0.03 - hipsY + (X.bag?.[1] ?? 0), -0.006 + (X.bag?.[2] ?? 0)]}>{X.Bag ? <X.Bag /> : <M geo={X.bagGeo ?? G.bag} mat={cel(X.bagC ?? '#c08d58')} position={[0.006, -0.03, 0]} scale={X.bag?.[3] ?? 1} />}</group></group>, B.hips)}
     {createPortal(<group position={headLocal} scale={1.17 * hd}>{X.Face ? <X.Face st={st} lod={lod} /> : <group ref={lod(2)}><Merge>
       {[-1, 1].map(x => <group key={x} position={[x * 0.021 * (f.wide ?? 1), -0.012 + (f.eyeY ?? 0), 0.047]} rotation={[0, x * 0.33, 0]}>
         {f.closed ? <mesh geometry={G.lid} material={eyeMat} rotation={[0, 0, 0]} position={[0, -0.002, 0.003]} ref={set(x < 0 ? 'eyeL' : 'eyeR')} />
