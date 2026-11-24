@@ -48,7 +48,8 @@ export const DIG_SITES = [
   site(1, 'giant', 0.8, byId.forest.lat, byId.forest.lon), // torii footings at the giant, forest-centre side
   site(2, 'ruins', 0.6, byId.lake.lat, byId.lake.lon), // lake ruins shore (ruins overlap the lake)
   site(3, 'harbour', 0.7, -0.72, 1.45), // lighthouse base, lighthouse side
-  // Footings of BRIDGES[0]: for now a point inside the village toward the lake; Task 5 re-points it at BRIDGES[0].
+  // Footings of BRIDGES[0]: a placeholder inside the village (toward the lake). The real spot depends on the path and
+  // river geometry, so world.js computes it: DIG_SITE_POS(4), on the village bank beside the first bridge's deck.
   site(4, 'village', 0.7, byId.lake.lat, byId.lake.lon),
   { i: 5, region: 'museum', lat: byId.museum.lat, lon: byId.museum.lon }, // museum trench, at the centre
 ]

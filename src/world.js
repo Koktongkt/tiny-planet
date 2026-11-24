@@ -5,7 +5,7 @@ export const DENS = 1.5 // scatter density factor so the bigger surface isn't sp
 export const K = 5 / R // converts old angular sizes (tuned at R=5) to the bigger world
 import { OLD_WORLD } from './world/flag.js'
 import * as LEGACY from './world/legacy.js'
-import { region, OPEN_PLOTS, HOME_DIR, SEA_LAT, SEA_W } from './world/regions.js'
+import { region, OPEN_PLOTS, HOME_DIR, SEA_LAT, SEA_W, DIG_SITES } from './world/regions.js'
 import * as RIVER from './world/river.js'
 export { SEA_LAT, SEA_W }
 // The layout (zones, terrain, curves) comes from one source. The reworked layout replaces NEW piece by piece in later
@@ -104,7 +104,52 @@ function slopeHeight(n) {
 }
 // the open river (world/river.js): streamDir(t) = riverDir(t / 2pi), so callers sampling t in [0, 2pi) cover it exactly once
 const TAU = Math.PI * 2
-const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), height: slopeHeight, streamDir: (t) => RIVER.riverDir(t / TAU) }
+// the sandy path: one closed loop linking the regions, eastward from south of her home. A periodic centripetal
+// Catmull-Rom through PATH_PTS (in 3D, projected onto the sphere), reparametrized by arc length so t in [0, 2pi) walks
+// it at an even pace; any t wraps. It crosses the river three times (an open river from the Peak to the sea has to be
+// crossed an odd number of times by a loop round the planet): east of the village square, then over the lake's outlet
+// and back over the coast run either side of the village train stop. BRIDGES (below) are found where it crosses.
+export const PATH_PTS = [
+  { lat: 0.10, lon: 0.00 }, // south of her home (the yard stays clear)
+  { lat: 0.21, lon: 0.28 },
+  { lat: 0.33, lon: 0.38 }, // through the village square, just south-east of its centre
+  { lat: 0.35, lon: 0.56 }, // east over the river (BRIDGES[0], square-on to the flow)
+  { lat: 0.47, lon: 0.74 }, // the foot of the terraces
+  { lat: 0.42, lon: 0.92 },
+  { lat: 0.26, lon: 1.06 },
+  { lat: 0.06, lon: 1.13 }, // past the museum, on the lake's north-east shore
+  { lat: -0.18, lon: 1.18 }, // down the lake's east shore, over the outlet
+  { lat: -0.46, lon: 1.19 },
+  { lat: -0.515, lon: 1.255 }, // by the village train stop
+  { lat: -0.515, lon: 1.335 },
+  { lat: -0.46, lon: 1.41 }, // back over the coast run, north of the harbour
+  { lat: -0.30, lon: 1.55 },
+  { lat: 0.10, lon: 1.85 },
+  { lat: 0.55, lon: 2.32 }, // the forest's north-west edge, by the giant
+  { lat: 0.42, lon: 3.00 },
+  { lat: 0.175, lon: 3.52 }, // the edge of open plot A
+  { lat: 0.15, lon: 3.95 },
+  { lat: 0.40, lon: 4.45 }, // across the meadow, by the mills
+  { lat: 0.35, lon: 5.00 },
+  { lat: 0.30, lon: 5.60 },
+  { lat: 0.13, lon: 6.00 },
+]
+const loopPath = (() => {
+  const CP = PATH_PTS.map(p => new THREE.Vector3(Math.cos(p.lat) * Math.sin(p.lon), Math.sin(p.lat), Math.cos(p.lat) * Math.cos(p.lon))), N = CP.length, at = (i) => CP[((i % N) + N) % N]
+  const KN = CP.map((p, i) => Math.sqrt(p.distanceTo(at(i + 1)))) // centripetal knot spacing, segment i -> i+1
+  const a1 = new THREE.Vector3(), a2 = new THREE.Vector3(), a3 = new THREE.Vector3(), b1 = new THREE.Vector3(), b2 = new THREE.Vector3()
+  const lerpK = (out, p, q, ta, tb, t) => out.copy(p).multiplyScalar((tb - t) / (tb - ta)).addScaledVector(q, (t - ta) / (tb - ta))
+  const raw = (p, out) => { const i = Math.floor(p) % N, f = p - Math.floor(p), P0 = at(i - 1), P1 = at(i), P2 = at(i + 1), P3 = at(i + 2)
+    const t1 = KN[(i - 1 + N) % N], t2 = t1 + KN[i], t3 = t2 + KN[(i + 1) % N], t = t1 + (t2 - t1) * f
+    lerpK(a1, P0, P1, 0, t1, t); lerpK(a2, P1, P2, t1, t2, t); lerpK(a3, P2, P3, t2, t3, t); lerpK(b1, a1, a2, 0, t2, t); lerpK(b2, a2, a3, t1, t3, t)
+    return lerpK(out, b1, b2, t1, t2, t).normalize() }
+  const M = 4000, ARC = new Float64Array(M + 1), a = raw(0, new THREE.Vector3()), b = new THREE.Vector3()
+  for (let i = 1; i <= M; i++) { raw((i / M) * N, b); ARC[i] = ARC[i - 1] + a.angleTo(b); a.copy(b) }
+  return (t) => { const s = (((t / TAU) % 1) + 1) % 1 * ARC[M]; let lo = 0, hi = M
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ARC[m] <= s) lo = m; else hi = m }
+    return raw(((lo + (s - ARC[lo]) / Math.max(1e-12, ARC[hi] - ARC[lo])) / M) * N, new THREE.Vector3()) }
+})()
+const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), height: slopeHeight, streamDir: (t) => RIVER.riverDir(t / TAU), pathDir: loopPath }
 const W = OLD_WORLD ? LEGACY : NEW
 // biome / zone centres (lat, lon, angular radius)
 export const ZONES = W.ZONES
@@ -166,13 +211,23 @@ export function windify(mat, amp = 0.15, base = 0) {
 const latOfN = (n) => Math.asin(Math.max(-1, Math.min(1, n.y)))
 export const streamLat = (t) => latOfN(streamDir(t))
 // bridges: where the path crosses the stream; nearest the village first. Legacy: the same longitude parameter on both
-// curves. New: walk the river by its own parameter and test its latitude against the path's at the same longitude
-// (the path is still a latitude = f(longitude) loop); b.t is the river's stream parameter. Task 5 replaces this.
-const VILL = dir(1.05, 0.2)
+// curves. New: the path polyline intersected with the river polyline (great-circle segment tests); b.t is the path
+// parameter at the crossing (as legacy, where the two parameters coincide) and b.st the river's stream parameter (u * 2pi).
+const VILL = OLD_WORLD ? dir(1.05, 0.2) : zv(region('village'))
 export const BRIDGES = []
 if (OLD_WORLD) { let prev = null; for (let i = 0; i <= 3000; i++) { const t = (i / 3000) * Math.PI * 2; const d = latOfN(pathDir(t).normalize()) - latOfN(streamDir(t).normalize()); if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(t).normalize(), tan = pathDir(t + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t }) } prev = d } }
-else { let prev = null; for (let i = 0; i <= 3000; i++) { const u = i / 3000, p = RIVER.riverDir(u), lon = Math.atan2(p.x, p.z), d = latOfN(pathDir(lon).normalize()) - latOfN(p)
-  if (prev !== null && Math.sign(d) !== Math.sign(prev)) { const c = pathDir(lon).normalize(), tan = pathDir(lon + 0.01).normalize().sub(c).normalize(); BRIDGES.push({ c, tan, side: new THREE.Vector3().crossVectors(c, tan).normalize(), t: u * TAU }) } prev = d } }
+else { const PN = 1500, RN = 900, P = [], Q = [], _q = { d: 9, u: 0, half: 0, side: 1 }
+  for (let i = 0; i <= PN; i++) P.push(pathDir(i / PN * TAU).normalize())
+  for (let j = 0; j <= RN; j++) Q.push(RIVER.riverDir(j / RN))
+  const n1 = new THREE.Vector3(), n2 = new THREE.Vector3(), x = new THREE.Vector3(), w = new THREE.Vector3()
+  const within = (x, a, b, n) => w.crossVectors(a, x).dot(n) >= 0 && w.crossVectors(x, b).dot(n) >= 0 // x on the short arc a -> b
+  for (let i = 0; i < PN; i++) { const a = P[i], b = P[i + 1]; if (RIVER.riverNear(a, _q).d > 2) continue // only near the river
+    n1.crossVectors(a, b)
+    for (let j = 0; j < RN; j++) { const c = Q[j], d = Q[j + 1]; if (c.dot(a) < Math.cos(0.05)) continue
+      n2.crossVectors(c, d); x.crossVectors(n1, n2); if (x.lengthSq() < 1e-20) continue; x.normalize(); if (x.dot(a) < 0) x.negate()
+      if (!within(x, a, b, n1) || !within(x, c, d, n2) || BRIDGES.some(o => o.c.angleTo(x) * R < 0.5)) continue // (a crossing at a shared vertex counts once)
+      const t = (i + a.angleTo(x) / a.angleTo(b)) / PN * TAU % TAU, cc = x.clone(), tan = pathDir(t + 0.001).sub(pathDir(t - 0.001)).projectOnPlane(cc).normalize()
+      BRIDGES.push({ c: cc, tan, side: new THREE.Vector3().crossVectors(cc, tan).normalize(), t, st: (j + c.angleTo(x) / c.angleTo(d)) / RN * TAU }) } } }
 BRIDGES.sort((a, b) => a.c.distanceTo(VILL) - b.c.distanceTo(VILL))
 export const BL = 1.0 // bridge length (world units), spans the pinched river with its banks
 export function bridgeLift(n) { for (const b of BRIDGES) { const L = b.L || BL, dx = n.x - b.c.x, dy = n.y - b.c.y, dz = n.z - b.c.z; const a = (dx * b.tan.x + dy * b.tan.y + dz * b.tan.z) * R, s = (dx * b.side.x + dy * b.side.y + dz * b.side.z) * R; if (Math.abs(a) < L / 2 && Math.abs(s) < 0.13) return 0.035 + 0.07 * Math.cos((a / L) * Math.PI) } return 0 }
@@ -188,7 +243,7 @@ if (OLD_WORLD) { for (let k = 0; k < 14 && JUMPS.length < 4; k++) { const t = ((
     if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.6 || ang(n, ZONES.lake) < ZONES.lake.r * 1.6 || ang(n, ZONES.forest) < ZONES.forest.r * 0.8) continue
     const tan = streamDir(t + 0.004).normalize().sub(n).normalize(); JUMPS.push({ t, c: n, tan, side: new THREE.Vector3().crossVectors(tan, n).normalize() }) } }
 else { for (let k = 0; k < 60 && JUMPS.length < 4; k++) { const t = ((k * 0.618034) % 1) * TAU; const n = streamDir(t).normalize()
-    if (BRIDGES.some(b => alongW(b.t, t) < 2.0) || JUMPS.some(j => alongW(j.t, t) < 2.5)) continue
+    if (BRIDGES.some(b => alongW(b.st, t) < 2.0) || JUMPS.some(j => alongW(j.t, t) < 2.5)) continue
     if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.6 || ang(n, ZONES.lake) < ZONES.lake.r * 1.6 || ang(n, ZONES.forest) < ZONES.forest.r * 0.8) continue
     if (ang(n, ZONES.cliff) < ZONES.cliff.r + 0.08 || latOfN(n) < SEA_LAT + 0.05) continue // the waterfall face and plunge pool; the sea
     const up = streamDir(t - 0.3 / RL * TAU).normalize(), dn = streamDir(t + 0.3 / RL * TAU).normalize(); if (Math.abs(height(up) - height(dn)) > 0.12) continue // a steep run
@@ -201,7 +256,7 @@ function loopHalf(t) { let h = RIVER_HALF
   return h * (1 + 0.06 * Math.sin(t * 13)) }
 // the open river: riverHalf(u) pinched at the bridges and jumps over the same world-unit widths as the loop had
 function openHalf(t) { const base = RIVER.riverHalf(t / TAU); let h = base
-  for (const b of BRIDGES) h -= Math.max(0, base - BRIDGE_HALF) * gauss(alongW(t, b.t), 0.64)
+  for (const b of BRIDGES) h -= Math.max(0, base - BRIDGE_HALF) * gauss(alongW(t, b.st), 0.64)
   for (const j of JUMPS) h = Math.min(h, base - Math.max(0, base - JUMP_HALF) * gauss(alongW(t, j.t), 0.27))
   return h * (1 + 0.06 * Math.sin(t / TAU * RL * 1.4)) }
 export const streamHalf = OLD_WORLD ? loopHalf : openHalf
@@ -273,6 +328,11 @@ for (const b of BRIDGES) { let lo = 0, hi = 0; const _n = new THREE.Vector3()
   const wet = (a) => { _n.copy(b.c).addScaledVector(b.tan, a / R).normalize(); const sn = streamNear(_n); return sn.d < sn.half }
   while (lo > -2 && wet(lo - 0.02)) lo -= 0.02; while (hi < 2 && wet(hi + 0.02)) hi += 0.02
   const mid = (lo + hi) / 2; b.c = b.c.clone().addScaledVector(b.tan, mid / R).normalize(); b.side.crossVectors(b.c, b.tan).normalize(); b.tan.crossVectors(b.side, b.c).normalize(); b.L = Math.max(0.8, hi - lo + 0.34) }
+// dig sites (world/regions.js DIG_SITES order) as unit vectors. Site 4, the footings of BRIDGES[0], is placed here (the
+// registry is pure data and only holds a placeholder): on the bank at the deck's village end, beside the path.
+const FOOTINGS = (() => { const b = BRIDGES[0], e = b.c.clone().addScaledVector(b.tan, (b.L / 2 + 0.3) / R), w = b.c.clone().addScaledVector(b.tan, -(b.L / 2 + 0.3) / R)
+  return (e.distanceTo(VILL) < w.distanceTo(VILL) ? e : w).addScaledVector(b.side, 0.35 / R).normalize() })()
+export const DIG_SITE_POS = (i) => i === 4 ? FOOTINGS.clone() : dir(DIG_SITES[i].lat, DIG_SITES[i].lon)
 if (typeof window !== 'undefined') window.__river = OLD_WORLD ? { streamNear, waterAt, BRIDGES, JUMPS, streamHalf } : { streamNear, waterAt, BRIDGES, JUMPS, streamHalf, riverNear: RIVER.riverNear, riverDir: RIVER.riverDir, riverHalf: RIVER.riverHalf, RIVER_PTS: RIVER.RIVER_PTS }
 // old-style 'centre distance' (radians) measured from the new bank: scatter rules tuned for the thin stream keep their meaning
 export const streamDist = (n) => { const r = streamNear(n); return Math.max(0, r.d - r.half + 0.17) / R }
