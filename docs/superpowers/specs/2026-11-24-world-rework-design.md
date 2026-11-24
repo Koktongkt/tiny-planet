@@ -144,9 +144,9 @@ terrain works end to end, then it is removed.
   lake basin, the meadow on the windward side, two reserved open plots.
 - A downhill river from the Peak spring to the sea, replacing the closed-loop stream, with bridges, stepping stones,
   `waterAt` and fishing spots reworked for it. The sandy path re-routed to link the regions.
-- A **region registry**: one list of regions, each owning its centre, radius, terrain stamp, props, activities, villager
-  spots, audio zone, minimap label and dig spot. Existing zone code is moved behind it; consumers read regions from the
-  registry instead of the scattered anchors.
+- A **region registry**: one list of regions with each one's centre, radius, dig site and views; `ZONES` and the village
+  anchors derive from it. *(Planning call:)* in phase 1 it is data only; each region's props, activities and villager
+  spots move into a self-contained `src/regions/<id>/` piece during that region's own round, so phase 1 stays shippable.
 - Every existing zone, villager route, train stop, station, the museum door, the dog, audio zones and the minimap moved to
   the new layout, with today's art.
 - Her home and yard moved as one piece; the save migration for home-relative positions.
