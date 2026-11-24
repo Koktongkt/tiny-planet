@@ -16,6 +16,8 @@ export const HER_MOTION = {
     night: ['yawn', 'look', 'rock', 'yawn', 'hum'],
     seated: ['look', 'hum', 'look'],
     hungry: ['tummy', 'growl', 'peek', 'tummy', 'look'],
+    indoor: ['look', 'stretch', 'rock', 'satchel', 'hum', 'hands', 'tiptoe'], // her house: no pebbles to kick, no rain to catch
+    stove: ['hum', 'look', 'hum', 'rock', 'hands'], // by the warm stove she hums more
   },
   fidgetAfter: 2.5, // first fidget after standing still this long
   fidgetEvery: [5, 11],

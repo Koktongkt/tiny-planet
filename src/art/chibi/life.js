@@ -16,6 +16,8 @@ export const EXCITED_ACTS = new Set(['wave', 'play', 'reel', 'pick', 'pet', 'pho
 import { HER_MOTION, between } from './motion.js'
 // per-character behaviour (fidget lists, timings, rarity, switches, thresholds) comes from the motion profile: L.P
 const ENERGY_LOW_DEFAULT = 25, SKID_D = 1.3 // skid length (s)
+// indoors (her house): the fidget lists come from the profile (sets.indoor, sets.stove)
+const WIN_ = typeof window !== 'undefined' ? window : null, indoors = () => !!(WIN_ && WIN_.__home && WIN_.__home.inside)
 const energyNow = () => { const w = typeof window !== 'undefined' ? window : null; if (!w) return 100; const v = w.__herEnergy ?? w.__game?.G?.s?.energy; return Number.isFinite(v) ? v : 100 }
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 const bump = (k, n) => Math.max(0, Math.sin(k * Math.PI * n)) // n soft pulses over the fidget
@@ -59,7 +61,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   // ---- energy: tired below ~35 (stronger toward 0), hungry at or below LOW; a jump up means she just ate ----
   const en = energyNow(); if (L.en >= 0 && en - L.en >= 8) L.yumU = 0; L.en = en
   L.tired = approach(L.tired, clamp((P.tiredBelow - en) / (P.tiredBelow - 5), 0, 1), 1.5, dt); L.hungry = en <= (P.hungryAt ?? ENERGY_LOW_DEFAULT) ? 1 : 0
-  if (!L.fid && L.idle > P.fidgetAfter && L.lie < 0.2) { L.fidN -= dt; if (L.fidN <= 0) { const set = (typeof window !== 'undefined' && window.__herFids) || (L.sit > 0.5 ? P.sets.seated : L.hungry ? P.sets.hungry : rainy ? P.sets.rain : T.night > 0.6 ? P.sets.night : P.sets.day); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = between(L.rnd, P.fidgetEvery) } }
+  if (!L.fid && L.idle > P.fidgetAfter && L.lie < 0.2) { L.fidN -= dt; if (L.fidN <= 0) { const inn = indoors(), set = (WIN_ && WIN_.__herFids) || (L.sit > 0.5 ? P.sets.seated : L.hungry ? P.sets.hungry : rainy && !inn ? P.sets.rain : T.night > 0.6 ? P.sets.night : inn ? (WIN_.__herNearStove ? P.sets.stove : P.sets.indoor) : P.sets.day); let f = set[Math.floor(L.rnd() * set.length)]; if (f === L.fidPrev) f = set[(set.indexOf(f) + 1) % set.length]; L.fid = f; L.fidPrev = f; L.fu = 0; L.fidN = between(L.rnd, P.fidgetEvery) } }
   L.yawn = 0; L.bagKick = 0; L.fsq = 0; L.shut = 0; let fidLookY = 0
   if (L.fid) {
     const d = FID[L.fid], u0 = L.fu; L.fu += dt; const u = L.fu, e = envelope(u, d, 0.45) * idleK * MOT, k = u / d
@@ -108,7 +110,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
     if (u >= d) L.fid = null
   }
   // ---- sit down on the grass after a long idle (stands back up quickly once she moves) ----
-  const sitWant = P.can.sit && L.idle > P.sitAfter && !rainy && !busy && !ride && !(typeof window !== 'undefined' && window.__herNoSit)
+  const inside = indoors(), sitWant = P.can.sit && L.idle > P.sitAfter && (inside ? !!WIN_.__herOnRug : !rainy) && !busy && !ride && !(WIN_ && WIN_.__herNoSit) // indoors: only on the big round rug
   L.sit = approach(L.sit, sitWant ? 1 : 0, sitWant ? 1.3 : 6, dt)
   if (L.sit > 0.001) { const k = L.sit * L.sit * (3 - 2 * L.sit), z = k
     B.root.position.y -= 0.088 * z; B.root.rotation.x -= 0.06 * z; B.chest.rotation.x += 0.1 * z
@@ -118,7 +120,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   if (L.idle < 1) L.lieRoll = -1
   if (L.sit > 0.95 && L.lieRoll < 0) L.lieRoll = P.can.lie && L.rnd() < P.lieChance ? 1 : 0
   const dry = (T.rain || 0) < 0.05 && (T.wet || 0) < 0.3
-  const lieWant = sitWant && dry && ((L.lieRoll === 1 && L.idle > P.lieAfter) || (typeof window !== 'undefined' && window.__herLie))
+  const lieWant = sitWant && dry && !inside && ((L.lieRoll === 1 && L.idle > P.lieAfter) || (typeof window !== 'undefined' && window.__herLie))
   L.lie = approach(L.lie, lieWant ? 1 : 0, lieWant ? 0.7 : 5, dt)
   if (L.lie > 0.001) { const z = L.lie * L.lie * (3 - 2 * L.lie)
     B.hips.rotation.x -= 1.32 * z; B.thL.rotation.x += 1.32 * z; B.thR.rotation.x += 1.32 * z; B.root.position.y += P.lieLift * z; B.chest.rotation.x -= 0.1 * z
@@ -202,6 +204,8 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
     for (let i = 0; i < NPCS.length; i++) { const o = NPCS[i].obj; if (!o) continue; o.getWorldPosition(_t); const d = _t.distanceTo(_p); if (d < far && d < bd) { bd = d; best = 1; L.tgt.copy(_t).add(_v.copy(_p).sub(_r).multiplyScalar(0.8)) } }
     const dog = typeof window !== 'undefined' && window.__dog; if (dog && dog.n && _r.lengthSq() > 0) { _t.copy(dog.n).multiplyScalar(_r.length()); const d = _t.distanceTo(_p); if (d < far * 0.8 && d < bd) { bd = d; best = 2; L.tgt.copy(_t) } }
     L.near = best ? clamp(1 - bd / (hh * 4.5), 0, 1) : 0
+    // indoors: Mochi up to something, the window by day, the fire in the evening (her house supplies the point)
+    if (!best && WIN_ && WIN_.__herInterest) { const p = WIN_.__herInterest(); if (p) { L.tgt.copy(p); best = 5 } }
     if (P.can.glanceAtCamera && !best && L.idle > 6) { L.camWait -= 0.33; if (L.camWait <= 0) { L.camT = 2.2 + L.rnd() * 1.5; L.camWait = 9 + L.rnd() * 10 } }
     // butterflies close by win her attention (look, and a little dodge if one comes right at her face)
     L.bf = null; const bl = typeof window !== 'undefined' && window.__bfly && !window.__bfly.resting && window.__bfly.list

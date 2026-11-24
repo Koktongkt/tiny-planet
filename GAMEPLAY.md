@@ -3,7 +3,8 @@
 ## Controls
 | Action | Keyboard | Touch |
 |---|---|---|
-| Walk | WASD / arrow keys | Tap the ground |
+| Walk | WASD / arrow keys move her up, left, down and right on screen (she turns to face the way she walks); Shift runs; click the ground | Stick (screen-relative), or tap the ground |
+| Camera | Drag with the mouse (either button) to orbit and tilt; the wheel zooms (it starts wide). Leave it alone about 2 s while she walks and it eases round behind her (not when she walks toward you; Settings: Camera follows her). Holding the same keys keeps her path straight while it swings | Drag one finger to orbit and tilt; pinch to zoom |
 | Ride (once you own the bicycle) | R | Menu, then Ride. Menu, then Hop off, to stop |
 | Jump | Space | Jump button |
 | Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
@@ -15,7 +16,7 @@
 | Door (go in / out) | E at the door | ✋ Action, or tap the prompt |
 | Pet Mochi (cat) | E near him, indoors | ✋ Action |
 | Throw a stick for Pip (dog) | E near him, outdoors | ✋ Action |
-| Walk indoors | WASD / arrows (same as outside) | Stick (screen-relative), or tap the floor |
+| Walk indoors | Same as outside. The camera orbits about ±40° round the front of the room; zoom out to see the whole room | Same as outside |
 
 ## Gatherables
 | Zone | Items |
@@ -131,7 +132,20 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 - **The interior** is a real room at the planet's centre (`src/home/Room.jsx`). While she is inside:
   - The camera renders only layer 5, which holds the room, her and the lights. The outside world costs nothing and can't show through.
   - The interior camera stays inside the walls. It eases after her and leans toward Mochi when he's close.
-- **The door:** press E at the blue door (inside) or at the Home house's front door (outside). A warm iris closes, she crosses over, and the follow camera lands behind her.
+- **The door:** press E at the blue door (inside) or at the Home house's front door (outside). A warm iris closes and she crosses over. Stepping out, the camera lands in front of her, looking at her with the door behind her.
+- **She lives there** (`src/home/homeLife.js`, wired in `Activities.jsx`):
+  - Pressing E at an activity makes her walk the last steps to it and turn to face it before she starts. Any key cancels the walk.
+  - She glances at Mochi when he's close and up to something, at the window by day, and at the stove fire in the evening.
+  - Indoor fidgets suit a room: no kicking pebbles and no catching rain. She hums more by the warm stove. She only sits on the floor on the big round rug, and never lies back indoors.
+  - After about 15 s standing still, she walks once to something within about two steps and does a small thing there: sits on a pouf (until you move), smells the door flowers, touches a leaf of the big plant, browses the bookshelf, warms her hands at the stove (evening), or looks out of the window (daytime). Any key or tap ends it at once. Mochi's pet prompt or his ankle rubs hold it off.
+  - Debug: `__homeIdle.start('poufL'|'poufR'|'flowers'|'plant'|'books'|'stove'|'window')`.
+- **Things she can use** (part C, `Activities.jsx`; she walks over first, as for every activity):
+  - **Lamps:** E at the desk lamp or the bedside mushroom lamp switches it on or off. The bulb dims and its warm floor pool fades. Saved in `G.s.home.lamps` (default on). The hanging lantern stays automatic.
+  - **Curtains:** E at the sink opens or closes the kitchen window's curtains. Closed hides its sunlight patch on the floor. Saved in `G.s.home.curtains` (default open).
+  - **Stove:** in the evening or at night, "Add a log to the fire": she takes a log from the woodpile and pushes it into the stove. The fire flares (bigger flame, sparks, brighter floor glow) and settles back over about 3 minutes. Mochi comes to sit at the hearth and watch it, then curls up there. By day the same spot says "Tidy the woodpile".
+  - **Yarn ball:** when it's lying still near her, E: she picks it up and tosses it, and Mochi chases it. If he's napping, half the time he only opens one eye.
+  - **See-through alcove:** the bed alcove's half-wall fades while she's at the wardrobe or the bedside lamp, as the bath walls do in the bath.
+  - Debug: `__homeAct.lamp('desk'|'night')`, `__homeAct.curtains()`, `__homeAct.log()`, `__homeAct.toss()`.
 - **Decor:** placing a decor item from the Bag while indoors puts it on the floor in front of her. The ghost preview is green on free floor. The item is saved in `placed` with an `in: [x, z]` room position. Press E next to it to pick it up again.
 - **Mochi, the cat** (`src/pets/Cat.jsx`):
   - He stays indoors and runs a small state machine: nap (curled in the sunbeam, or on the bed), groom, stretch then yawn, chase the yarn ball (stalk, butt-wiggle, pounce), sit on the windowsill, knead the quilt, and wander.

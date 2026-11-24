@@ -27,6 +27,7 @@ const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
+import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
@@ -297,7 +298,7 @@ function House({ n, i }) {
 }
 // Home: the chibi cottage + yard (lazy art); an invisible drum keeps the follow camera out of the walls, and the
 // night window light still spills on the grass
-const HOME_OCC_GEO = new THREE.CylinderGeometry(0.6, 0.62, 1.3, 12).translate(0, 0.65, 0)
+const HOME_OCC_GEO = mergeGeometries([new THREE.CylinderGeometry(0.7, 0.7, 0.8, 16).translate(0, 0.4, 0), new THREE.ConeGeometry(0.84, 0.72, 16).translate(0, 1.11, 0)]) // the cottage as seen (1.26 x 1.16 prop at HOME_S 1.25): bulging walls (her collider is 0.7) + the overhanging roof
 function HomeHouse({ n }) {
   return <Surface n={n} lift={HOUSE_LIFT} spin={0}>
     <mesh geometry={HOME_OCC_GEO} ref={occ} visible={false} />
@@ -429,20 +430,44 @@ function Keys() {
   return null
 }
 const _prevN = new THREE.Vector3(), _mv = new THREE.Vector3(), _mv2 = new THREE.Vector3(), _mv3 = new THREE.Vector3(), LAST_DRY = { n: new THREE.Vector3(), toast: 0, landed: false }
+const _cv = new THREE.Vector3()
 const NOWATER = q.has('nowater') // debug: walk through water like before
+// the orbit camera's heading: a tangent direction on the sphere that the camera looks along. It is carried along as she
+// walks (re-projected onto her tangent plane), turned only by the player's drag (CAM.yaw), and never swings back behind her.
+export const CAMH = { fwd: new THREE.Vector3(), right: new THREE.Vector3(), w: new THREE.Vector3() }
+const _dir = new THREE.Vector3(), _cx = new THREE.Vector3(), FOL = makeFollow()
+const signedAngle = (a, b, n) => Math.atan2(_cx.crossVectors(a, b).dot(n), a.dot(b)) // from a to b, about n
+const tangent = (v) => { v.addScaledVector(P.n, -v.dot(P.n)); if (v.lengthSq() < 1e-6) v.copy(P.fwd); return v.normalize() }
+function stepCamHeading(dt) {
+  if (CAMH.fwd.lengthSq() < 0.5) CAMH.fwd.copy(P.fwd)
+  tangent(CAMH.fwd)
+  const input = !!CAM.yaw || CAM.drag
+  if (CAM.yaw) { CAMH.fwd.applyAxisAngle(P.n, -CAM.yaw); CAM.yaw = 0 }
+  // lazy follow: she's walking and the camera has been left alone ~2 s: it eases round behind her (not when she walks toward it)
+  const off = window.__game?.G?.s?.settings?.camFollow === false || VIEW.mode !== 'follow'
+  const turn = lazyFollow(FOL, { moving: P.move > 0.3, input, gap: signedAngle(CAMH.fwd, P.fwd, P.n), off }, dt)
+  if (turn) CAMH.fwd.applyAxisAngle(P.n, turn)
+  CAMH.right.crossVectors(CAMH.fwd, P.n).normalize()
+}
+// while the same keys stay held her path is locked to the world, so the following camera can swing round without
+// bending it into a circle; a new direction (or letting go) takes the camera's current frame again
+const MV = { intent: null, fwd: new THREE.Vector3(), right: new THREE.Vector3() }
+// leaving the house: the camera lands in front of her, looking at her face (the door behind her)
+HOME.camFront = () => { CAMH.fwd.copy(P.fwd).negate() }
 function stepPlayer(dt) {
-  let f = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0), turn = (KEYS.a || KEYS.arrowleft ? 1 : 0) - (KEYS.d || KEYS.arrowright ? 1 : 0)
-  if (CAM.yaw) { P.fwd.applyAxisAngle(P.n, -CAM.yaw); CAM.yaw = 0; P.target = null } // touch camera drag turns the traveller; the follow camera swings with them
-  if (PAD.active && PAD.mag > 0.12 && !f && !turn) { // analog stick: steer toward the stick direction (relative to facing), speed from how far it is pushed
-    const a = Math.atan2(-PAD.x, PAD.y); turn = Math.max(-1, Math.min(1, a * 1.6)) * Math.min(1, PAD.mag * 1.4)
-    f = Math.abs(a) < 2.0 ? Math.min(1, (PAD.mag - 0.12) / 0.6) * (Math.abs(a) > 1.2 ? 0.5 : 1) : 0
-  }
+  stepCamHeading(dt)
+  // camera-relative movement: WASD / arrows / the stick are screen directions; she turns toward the way she walks
+  const mi = moveIntent(KEYS, PAD); let f = 0, turn = 0
+  if (mi.mag > 0) { if (sameIntent(MV.intent, mi)) tangent(MV.fwd); else { MV.intent = { ...mi }; MV.fwd.copy(CAMH.fwd) } MV.right.crossVectors(MV.fwd, P.n).normalize()
+    _dir.copy(MV.fwd).multiplyScalar(mi.y).addScaledVector(MV.right, mi.x).normalize()
+    const gap = Math.atan2(_cx.crossVectors(P.fwd, _dir).dot(P.n), P.fwd.dot(_dir)) // signed angle her facing -> the wanted way
+    turn = gap; f = mi.mag * walkFactor(Math.abs(gap)) } else MV.intent = null
   const run = KEYS.shift || (PAD.active && (PAD.run || PAD.runLock))
   let go = f
   if (gameBlocksKeys() && G.ui.panel) go = 0
   if (actLocked()) { go = 0; turn = 0; P.target = null } // polish: she stands still during an action
   if (f || turn) P.target = null
-  if (turn) P.fwd.applyAxisAngle(P.n, turn * 1.9 * dt) // polish: less snap on turn
+  if (turn) P.fwd.applyAxisAngle(P.n, turn * Math.min(1, dt * 10)) // ease toward the wanted way (camera-relative)
   if (P.target) {
     const tg = P.target.clone().addScaledVector(P.n, -P.n.dot(P.target))
     if (P.n.angleTo(P.target) < 0.015 || tg.lengthSq() < 1e-8) P.target = null
@@ -531,19 +556,24 @@ function Rig() {
     if (VIEW.mode === 'orbit') { if (!window.__drag) { spin.v *= 0.95; if (!fixed) spin.a -= dt * 0.04 } spin.a += spin.v * dt } else spin.v = 0
     g.rotation.y = spin.a; g.updateMatrixWorld()
     P.wPos.copy(P.n).multiplyScalar(R + height(P.n) + P.h).applyMatrix4(g.matrixWorld)
-    P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld)
+    P.wUp.copy(P.n).transformDirection(g.matrixWorld); P.wFwd.copy(P.fwd).transformDirection(g.matrixWorld); CAMH.w.copy(CAMH.fwd.lengthSq() > 0.5 ? CAMH.fwd : P.fwd).transformDirection(g.matrixWorld)
     if (HOME.camera(camera, g, dt)) return // interior camera while she's inside
     const k = 1 - Math.exp(-dt * ((window.__snap || VIEW.mode === 'detail') ? 60 : 2.2)) // polish: softer follow lag
     if (VIEW.mode === 'follow') {
-      const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(P.wFwd, -2.1 * cz * (1 - 0.35 * CAM.pitch))
+      const cz = CAMD * CAM.zoom; goal.copy(P.wPos).addScaledVector(P.wUp, 1.05 * cz * (1 + CAM.pitch)).addScaledVector(CAMH.w, -2.1 * cz * (1 - 0.35 * CAM.pitch)) // orbit camera: behind the camera heading, not her facing
       const fzT = window.__game?.G?.ui?.fish ? 1 : FZ_ACTS[window.__act?.kind] || 0 // fishing / watering: swing round to her side (her, the tool and the water in view)
       FZ.k += (fzT - FZ.k) * Math.min(1, dt * (fzT && fzT < 1 ? 3 : 1.6))
-      if (FZ.k > 0.001) { _s.crossVectors(P.wUp, P.wFwd); goal.addScaledVector(_s, FZ.side * 1.8 * cz * FZ.k).addScaledVector(P.wFwd, 1.6 * cz * FZ.k).addScaledVector(P.wUp, -0.25 * cz * FZ.k) }
+      if (FZ.k > 0.001) { _s.crossVectors(P.wUp, CAMH.w); goal.addScaledVector(_s, FZ.side * 1.8 * cz * FZ.k).addScaledVector(CAMH.w, 1.6 * cz * FZ.k).addScaledVector(P.wUp, -0.25 * cz * FZ.k) }
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
-      const hit = RC.intersectObjects(OCC, false)[0]; if (hit) goal.copy(_v).addScaledVector(_u, Math.max(0.35, hit.distance - 0.12)).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist))
+      let hit = RC.intersectObjects(OCC, false)[0]
+      if (hit) for (const t of [0.3, 0.55, 0.8]) { _cv.copy(_u).lerp(P.wUp, t).normalize(); RC.set(_v, _cv); RC.far = dist // a house in the way: first try looking down at her from higher up, over the roof
+        if (!RC.intersectObjects(OCC, false).length) { _cv.copy(_u).lerp(P.wUp, Math.min(0.9, t + 0.18)).normalize(); goal.copy(_v).addScaledVector(_cv, dist); hit = null; break } } // a little higher than just clear: the blocker is a simple shape
+      if (hit) { const d = hit.distance - 0.12, minD = 0.9 * cz // still blocked (the free orbit swings round houses often)
+        if (d >= minD) goal.copy(_v).addScaledVector(_u, d).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist)) // room before the wall: stop in front of it
+        else goal.copy(_v).addScaledVector(P.wUp, minD).addScaledVector(_u, Math.max(0.08, d)) } // she's right by the wall: tip up over her head and look down (never through the wall, never a head-filling close-up)
       camera.position.lerp(goal, k); camera.up.lerp(P.wUp, k).normalize()
-      look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.32 - 0.12 * FZ.k).addScaledVector(P.wFwd, 0.35 + 0.15 * FZ.k), k); camera.lookAt(look) // polish: gentler look-ahead
+      look.lerp(_v.copy(P.wPos).addScaledVector(P.wUp, 0.32 - 0.12 * FZ.k).addScaledVector(CAMH.w, 0.2 + 0.15 * FZ.k), k); camera.lookAt(look) // polish: gentler look-ahead
     } else if (VIEW.mode === 'hero') {
       _s.crossVectors(P.wUp, P.wFwd)
       goal.copy(P.wPos).addScaledVector(P.wFwd, 0.95).addScaledVector(_s, 0.45).addScaledVector(P.wUp, 0.42)

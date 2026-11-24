@@ -5,3 +5,5 @@ dist/
 perf-report.*
 test-results/
 playwright-report/
+dist-studio/
+.superpowers/

@@ -17,7 +17,10 @@ import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
 import { Hearts, burst } from './fx.jsx'
 
-export const CAT_CFG = { s: 1.05, /* round9: Cozy Chibi Siamese (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'cat', body: [0.05, 0.046, 0.074], legH: 0.05, legR: 0.0135, stride: 0.045, head: 0.075, headY: 0.04, headUp: 0.45, headFwd: 0.86, eye: 0.22, ear: 1.05, earSplay: 0.18, whiskers: true, stripes: true, tongue: true, pupils: 'round',
+export const CAT_CFG = {
+  gait: { walkTo: 0.5, trotTo: 0.8, runAt: 1.0, strideMin: 0.03, strideMax: 0.08, run: 'bound', reach: 0.05, lift: 0.012 }, // rig units/s; Motion Studio (st.loco) only for now
+  loco: { lean: 0.05, brake: 0.03, nod: 0.06, springs: { sit: [90, 0.75], lie: [40, 0.9], curl: [30, 1], crouch: [140, 0.7], stretch: [60, 0.8] } },
+  s: 1.05, /* round9: Cozy Chibi Siamese (docs/characters/ref/pets-chibi-concept.jpg) */ species: 'cat', body: [0.05, 0.046, 0.074], legH: 0.05, legR: 0.0135, stride: 0.045, head: 0.075, headY: 0.04, headUp: 0.45, headFwd: 0.86, eye: 0.22, ear: 1.05, earSplay: 0.18, whiskers: true, stripes: true, tongue: true, pupils: 'round',
   tail: { n: 6, seg: 0.019, r: 0.017, curl: 0.1, tip: 1, taper: 0.025, rings: true, tube: true, up: 0.3, back: 0.86 }, col: { main: '#f0cc98', belly: '#fff8ec', dark: '#6e4733', sock: '#7a4e36', tip: '#5e3b2a', stripe: '#a87650', inner: '#f39a90', nose: '#3a2218', lip: '#3a2218', tongue: '#ef7f7a', iris: '#4a2a18', pupil: '#140c08', lid: '#2a1a12', shine: '#ffffff', whisker: '#6e4733', blush: '#f5b0a4' } }
 // nap spots (room-local; y = surface height). from: floor point to hop up from. claim: she can be 'beaten' to it
 // (round9: all from the prop layout of her round room, home/interior.jsx)
@@ -27,6 +30,7 @@ const SPOT = { beam: { x: BEAM_SPOT.x, z: BEAM_SPOT.z, y: 0, face: 2.2 },
   sill: { x: _w.x, z: _w.z, y: _w.y, from: _w.from, face: _w.face }, sillNap: { x: _w.x, z: _w.z, y: _w.y, from: _w.from, face: _w.face + 1.2 },
   rug: { x: 0.05, z: 0.5, y: 0.012, face: 1.4, claim: 'the rug' }, chair: { x: _pl.x, z: _pl.z, y: 0.105, from: { x: _pl.x - 0.2, z: _pl.z + 0.16 }, face: 2.6, claim: 'the pouf' },
   shelf: { x: SPOTS.shelf.x, z: SPOTS.shelf.z, y: SPOTS.shelf.y, from: SPOTS.shelf.from, face: 0.3, claim: null },
+  hearth: { x: SPOTS.hearth.x, z: SPOTS.hearth.z, y: 0, face: SPOTS.hearth.face }, // part C: in front of the stove after she adds a log
   basket: { x: _pb.x, z: _pb.z, y: 0.065, from: { x: _pb.x * (1 - 0.3 / _pbF), z: _pb.z * (1 - 0.3 / _pbF) }, face: 2.0, claim: 'his bed' } }
 export const CAT_SCALE = 0.7 // round6: Mochi ~30% smaller so she reads as a pet next to her
 const pick = (w) => { let s = 0; for (const k in w) s += w[k]; let r = Math.random() * s; for (const k in w) { r -= w[k]; if (r <= 0) return k } return Object.keys(w)[0] }
@@ -121,6 +125,9 @@ export function Cat() {
       c.x += dx * Math.min(1, dt * 5); c.z += dz * Math.min(1, dt * 5); c.yaw += ang(c.ra + Math.PI / 2 - c.yaw) * Math.min(1, dt * 6); move = 0.6; speed = 0.17
       g.tailUp = 1.1; g.tailWag = 0.1; g.headTilt = -0.45; g.headYaw = -0.5; g.eyes = 0.3; g.purr = 1; g.bodyYaw = -0.15
       if (c.t > c.dur && !c.forced) go('sitnear', 4) }
+    else if (S === 'hearth') { // part C: she fed the fire: he trots to the hearth, sits and watches the flames, then curls up in the warmth
+      const s = SPOT.hearth; if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }); else if (walkTo(s.x, s.z, 0.05, c.t < 2)) { face = s.face; if (c.t < 9 + (c.sitT ??= 0)) { g.sit = 1; g.eyes = 0.45; g.headPitch = -0.1; g.tailWag = 0.08 } else { g.curl = 1; g.eyes = 0; g.tailWag = 0.03 } } else c.sitT = c.t
+      if (c.t > c.dur) { c.sitT = null; go('stretch', 2.6) } }
     else if (S === 'sitnear') { g.sit = 1; face = Math.atan2(hp.x - c.x, hp.z - c.z); g.headPitch = -0.3; g.tailWag = 0.25; if (c.t > c.dur) next() }
     else if (S === 'petted') { if (onFloor && dHer > 0.2 && !c.forced) walkTo(hp.x, hp.z, 0.16); g.sit = c.y > 0.1 ? 0 : 1; g.lie = c.y > 0.1 ? 1 : 0; face = Math.atan2(hp.x - c.x, hp.z - c.z); g.eyes = 0.05; g.headPitch = -0.35; g.headTilt = 0.4 * Math.sin(c.t * 1.5); g.tailUp = 1.1; g.tailWag = 0.08; g.purr = 1; g.earBack = -0.1
       if (c.forced && c.t % 1.2 < dt) burst(hearts.current, 3); if (c.t > c.dur) go('sitnear', 3) }
@@ -130,7 +137,7 @@ export function Cat() {
     // she heads for a comfy spot: sometimes he races her to it and curls up there (claims it)
     c.claimCD -= dt; c.scanT -= dt
     if (c.scanT < 0 && !c.forced) { c.scanT = 0.5; const mv = Math.hypot(hp.x - (c.hpx ?? hp.x), hp.z - (c.hpz ?? hp.z)); c.hpx = hp.x; c.hpz = hp.z
-      if (mv > 0.03 && c.claimCD < 0 && S !== 'claim' && S !== 'petted' && S !== 'rub') for (const k of ['rug', 'chair', 'bed']) { const sp = SPOT[k], d1 = Math.hypot(hp.x - sp.x, hp.z - sp.z)
+      if (mv > 0.03 && c.claimCD < 0 && S !== 'claim' && S !== 'petted' && S !== 'rub' && S !== 'hearth') for (const k of ['rug', 'chair', 'bed']) { const sp = SPOT[k], d1 = Math.hypot(hp.x - sp.x, hp.z - sp.z)
         if (d1 < 0.55 && d1 > 0.18 && Math.hypot(c.x - sp.x, c.z - sp.z) < 1.6) { c.claimCD = 40; if (Math.random() < 0.55) { go('claim', 14 + Math.random() * 10, { where: k, claimed: false }); break } } } }
     function next() { const day = T.day > 0.5, cd = c.cd || (c.cd = {}), now = c.clock || 0
       const W = { nap: day ? 1.3 : 0.5, napBasket: 1.3, napBed: 1.1, napRug: 0.9, napChair: 0.8, napShelf: 0.7, napSill: day ? 0.5 : 0.9, groom: 1.4, stretch: 0.7, chase: 1.1, bat: 1.2, sill: day ? 1.5 : 0.7, knead: 0.8, zoom: T.night > 0.5 || T.dusk > 0.4 ? 0.9 : 0.45, wander: 1.4 }
@@ -148,7 +155,9 @@ export function Cat() {
   function apply() {
     root.current.position.set(c.x, c.y, c.z); root.current.rotation.set(0, c.yaw, 0)
     // yarn ball rolls with friction and bounces off walls / furniture
-    const b = c.ball, dt = 1 / 60; const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt
+    const b = c.ball, dt = 1 / 60
+    if (b.held) { ball.current.position.set(b.hx, b.hy, b.hz); return } // part C: in her hand (Activities.jsx keeps hx/hy/hz on her hand)
+    const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt
     if (freeAt(nx, nz, 0.03)) { b.x = nx; b.z = nz } else { if (!freeAt(nx, b.z, 0.03)) b.vx *= -0.6; if (!freeAt(b.x, nz, 0.03)) b.vz *= -0.6 }
     b.vx *= 0.985; b.vz *= 0.985; const sp = Math.hypot(b.vx, b.vz); b.spin += sp * dt / 0.03
     ball.current.position.set(b.x, 0.03, b.z); ball.current.rotation.set(b.spin, Math.atan2(b.vx, b.vz), 0)
