@@ -24,13 +24,14 @@ function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.28, 6, 16)
   // soft rounded helmet, a little shorter at the nape than hers; a high round bun; soft side locks and fringe tips
   const parts = [
-    part(ball, [0, 0.006, -0.006], [0.072, 0.070, 0.068]), // helmet
-    part(ball, [0, -0.012, -0.028], [0.062, 0.048, 0.052]), // nape
-    part(ball, [0, 0.078, -0.004], [0.026, 0.026, 0.025]), // high bun (the silhouette)
-    part(ring, [0, 0.066, -0.004], [0.020, 0.020, 0.016], [Math.PI / 2 - 0.12, 0, 0]), // wrap
-    part(ballS, [0, 0.028, 0.052], [0.036, 0.016, 0.016]), // soft centre fringe
-    ...[-1, 1].map(d => part(ballS, [d * 0.028, 0.016, 0.048], [0.018, 0.016, 0.014], [0, d * 0.2, d * 0.15])), // side fringe
-    ...[-1, 1].map(d => part(ballS, [d * 0.058, -0.022, 0.018], [0.014, 0.028, 0.016], [0.15, d * 0.35, d * 0.2])), // side locks
+    // helmet sits up and back so the face (eyes at y~-0.015, z~0.05) stays clear
+    part(ball, [0, 0.016, -0.014], [0.068, 0.062, 0.060]),
+    part(ball, [0, -0.004, -0.034], [0.058, 0.044, 0.048]), // nape
+    part(ball, [0, 0.090, -0.008], [0.028, 0.028, 0.026]), // high bun
+    part(ring, [0, 0.074, -0.008], [0.020, 0.020, 0.016], [Math.PI / 2 - 0.12, 0, 0]),
+    part(ballS, [0, 0.030, 0.050], [0.030, 0.012, 0.012]), // soft fringe, ends above the eyes
+    ...[-1, 1].map(d => part(ballS, [d * 0.026, 0.022, 0.046], [0.016, 0.012, 0.011], [0, d * 0.2, d * 0.12])),
+    ...[-1, 1].map(d => part(ballS, [d * 0.060, -0.018, 0.010], [0.013, 0.026, 0.014], [0.15, d * 0.4, d * 0.15])), // side locks frame the jaw, not the eyes
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0042, 0.0122, 0.0076], [0, d * 0.75, d * 0.1], 1)),
   ]
   tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.55])
@@ -100,7 +101,7 @@ export const FUKU = {
     anY: 0.036, footY: 0.014, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
   face: { glasses: GLASS },
-  outfit: { type: 'apron', skin: SKIN, top: '#8a6a9c', acc2: '#f4ecd8', shoe: '#4a3a35', long: true, sleeve: 'puff', skirt: true },
+  outfit: { type: 'apron', skin: SKIN, top: '#8a6a9c', acc2: '#f4ecd8', shoe: '#4a3a35', long: true, sleeve: 'puff', skirt: true, apronW: 0.072 },
   hold: {},
   seatDrop: 0.055,
   walk: { rate: 7, stride: 0.42, knee: 0.55, bounce: 0.007, smooth: true, land: 0.25, arm: 0.4, lean: 0.1, twist: 0.08, sway: 0.06, idle: 'sway' },

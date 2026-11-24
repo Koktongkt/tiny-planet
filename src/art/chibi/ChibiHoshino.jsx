@@ -25,14 +25,14 @@ function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 10, 8)
   // short, slightly messy helmet; a few tufts on top (dark with grey); no bun
   const parts = [
-    part(ball, [0, 0.004, -0.008], [0.070, 0.066, 0.066]),
-    part(ball, [0, -0.006, -0.030], [0.058, 0.040, 0.048]),
-    part(ballS, [0.0, 0.062, -0.002], [0.022, 0.016, 0.020]), // top tuft
-    part(ballS, [0.016, 0.056, 0.010], [0.016, 0.012, 0.014], [0.2, 0.4, 0.15]),
-    part(ballS, [-0.014, 0.054, 0.006], [0.014, 0.012, 0.013], [0.15, -0.3, -0.1]),
-    part(ballS, [0, 0.022, 0.054], [0.034, 0.012, 0.012]), // short fringe
-    ...[-1, 1].map(d => part(ballS, [d * 0.032, 0.014, 0.048], [0.014, 0.012, 0.011], [0, d * 0.15, 0])),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0042, 0.0122, 0.0076], [0, d * 0.75, d * 0.1], 1)),
+    part(ball, [0, 0.014, -0.016], [0.066, 0.058, 0.060]), // short helmet, back and up, face clear
+    part(ball, [0, 0.000, -0.036], [0.054, 0.038, 0.044]),
+    part(ballS, [0.0, 0.062, -0.004], [0.020, 0.015, 0.018]), // messy top tufts
+    part(ballS, [0.016, 0.056, 0.006], [0.015, 0.011, 0.013], [0.2, 0.4, 0.15]),
+    part(ballS, [-0.014, 0.054, 0.002], [0.013, 0.011, 0.012], [0.15, -0.3, -0.1]),
+    part(ballS, [0, 0.028, 0.048], [0.028, 0.010, 0.010]), // short fringe above the glasses
+    ...[-1, 1].map(d => part(ballS, [d * 0.030, 0.020, 0.044], [0.013, 0.010, 0.010], [0, d * 0.15, 0])),
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0034, 0.0095, 0.0058], [0, d * 0.75, d * 0.1], 1)),
   ]
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
