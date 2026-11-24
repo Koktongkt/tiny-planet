@@ -43,7 +43,7 @@ Scale every additive angle and offset by `MOT` (`1`, or **0.35** when `prefers-r
 | `catch` | 3.2 s | Rain only. Holds her right hand out, palm up, looking up at the sky. |
 | `shiver` | 1.6 s | Rain only. A quick shiver, shoulders up and arms in, eyes squeezed. |
 
-| `yawn` | 2.6 s | Night only. Hand to her mouth, eyes shut (`L.shut`), the open-mouth cell (mood `yawn`), head back a touch. |
+| `yawn` | 2.6 s | Night only. Both arms up and out (KT; `YAWN_UP` 1.75 plus forearms 0.6, so the hands sit beside the hair, not in it), eyes shut (`L.shut`), the open-mouth cell (mood `yawn`), head back a touch. |
 
 **More behaviours (anim pass 3)**, all in the life layer:
 

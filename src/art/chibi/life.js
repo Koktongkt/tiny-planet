@@ -17,6 +17,8 @@ const FID = { look: 3.4, stretch: 2.6, rock: 2.8, satchel: 2.0, hum: 3.6, pebble
 // which fidgets she picks from: dry weather, and in the rain (catch the drops, shiver, still the odd look round)
 const FIDS = ['look', 'stretch', 'rock', 'satchel', 'hum', 'pebble', 'hands', 'tiptoe'], FIDS_RAIN = ['catch', 'shiver', 'catch', 'look', 'satchel', 'hands'], FIDS_NIGHT = ['yawn', 'look', 'rock', 'yawn', 'hum']
 const FIDS_SIT = ['look', 'hum', 'look'] // sitting on the grass: only the ones that work seated
+const YAWN_UP = 1.75 // yawn: upper arms out and up (rad from hanging); the forearms add 0.6 more, so the hands sit up and out beside the hair, not in it
+const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 const bump = (k, n) => Math.max(0, Math.sin(k * Math.PI * n)) // n soft pulses over the fidget
 const KE = 0.3 // knee smoothing width
 const _p = new THREE.Vector3(), _v = new THREE.Vector3(), _a = new THREE.Vector3(), _q = new THREE.Quaternion(), _t = new THREE.Vector3(), _r = new THREE.Vector3()
@@ -85,9 +87,10 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
     else if (L.fid === 'shiver') { // rain: a quick shiver, shoulders up, arms in
       const sh = Math.sin(u * 46) * e * (1 - k * 0.6); B.chest.rotation.z += 0.03 * sh; B.head.rotation.z -= 0.025 * sh; B.hips.position.x += 0.0012 * sh
       B.upL.rotation.z += 0.25 * e; B.upR.rotation.z -= 0.25 * e; B.foL.rotation.x -= 0.5 * e; B.foR.rotation.x -= 0.5 * e; B.chest.rotation.x += 0.05 * e; L.fsq = 0.45 * e }
-    else if (L.fid === 'yawn') { // night: a big yawn, hand to her mouth, eyes squeezed shut, head back a touch
-      const y = bump(Math.min(1, k * 1.15), 1) * e; B.upR.rotation.x -= 1.2 * e; B.upR.rotation.z -= 0.5 * e; B.foR.rotation.x -= 1.95 * e
-      B.head.rotation.x -= 0.11 * y; B.chest.rotation.x -= 0.05 * y; B.root.position.y += 0.003 * y; L.shut = y; L.yawn = y }
+    else if (L.fid === 'yawn') { // night (KT): a big yawn with both arms stretched up in a V (out and a little forward, clear of the hair), eyes shut, mouth open
+      const y = bump(Math.min(1, k * 1.15), 1) * e, a = sst(0, 0.35, k) * e
+      B.upL.rotation.z -= YAWN_UP * a; B.upR.rotation.z += YAWN_UP * a; B.upL.rotation.x -= 0.5 * a; B.upR.rotation.x -= 0.5 * a; B.foL.rotation.z -= 0.6 * a; B.foR.rotation.z += 0.6 * a
+      B.head.rotation.x -= 0.1 * y; B.chest.rotation.x -= 0.06 * y; B.root.position.y += 0.004 * y; B.ftL.rotation.x += 0.15 * y; B.ftR.rotation.x += 0.15 * y; L.shut = y; L.yawn = y }
     if (u >= d) L.fid = null
   }
   // ---- sit down on the grass after a long idle (stands back up quickly once she moves) ----
