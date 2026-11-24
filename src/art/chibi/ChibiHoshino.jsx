@@ -27,51 +27,44 @@ const SHIRT = '#f4eee6'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
 const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, blush: 0.55 })
 
-const EAR = { x: 0.064, y: -0.018, z: -0.002 }
+// skull HR is ~[0.058, 0.050, 0.055]; short cap ~10–15% wider than the face, ears out
+const EAR = { x: 0.061, y: -0.012, z: 0.006 }
 function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 10, 8)
-  // messy clumps, volume on top, side locks that hide the ears
+  // short dark cap hugging the skull, a few soft swept clumps on top and right, ears visible
   const parts = [
-    part(ball, [0, 0.014, -0.012], [0.068, 0.056, 0.060]),
-    part(ball, [0, -0.002, -0.036], [0.056, 0.044, 0.048]),
-    // top volume — several tufts, not one helmet cap
-    part(ballS, [0.018, 0.060, 0.010], [0.020, 0.016, 0.016], [0.35, 0.5, 0.15]),
-    part(ballS, [-0.016, 0.062, 0.006], [0.018, 0.016, 0.015], [0.3, -0.45, -0.12]),
-    part(ballS, [0.008, 0.058, -0.022], [0.018, 0.016, 0.016], [0.45, 0.15, 0]),
-    part(ballS, [-0.010, 0.056, 0.018], [0.016, 0.016, 0.014], [0.4, -0.2, 0.12]),
-    part(ballS, [0.034, 0.048, -0.010], [0.016, 0.016, 0.016], [0.25, 0.4, 0.1]),
-    part(ballS, [-0.032, 0.046, -0.006], [0.016, 0.016, 0.015], [0.2, -0.35, -0.1]),
-    part(ballS, [0.000, 0.064, -0.008], [0.024, 0.012, 0.018]),
-    // fringe clumps
-    part(ballS, [0, 0.032, 0.048], [0.026, 0.010, 0.012]),
-    ...[-1, 1].map(d => part(ballS, [d * 0.028, 0.024, 0.044], [0.016, 0.012, 0.012], [0.1, d * 0.25, 0])),
-    // side volume covering the ears (rounded, not pointed)
-    ...[-1, 1].map(d => part(ballS, [d * 0.060, 0.000, 0.006], [0.018, 0.028, 0.020], [0.1, d * 0.35, d * 0.08])),
-    ...[-1, 1].map(d => part(ballS, [d * 0.056, -0.016, 0.004], [0.016, 0.022, 0.016], [0.2, d * 0.3, d * 0.08])),
+    part(ball, [0, 0.008, -0.008], [0.062, 0.050, 0.056]),
+    part(ball, [0, -0.006, -0.028], [0.050, 0.032, 0.038]), // tight nape
+    // a few soft swept clumps on top and the right (viewer's right / +X)
+    part(ballS, [0.018, 0.052, 0.008], [0.017, 0.013, 0.014], [0.42, 0.50, 0.12]),
+    part(ballS, [-0.010, 0.048, 0.002], [0.013, 0.010, 0.011], [0.28, -0.22, -0.08]),
+    part(ballS, [0.032, 0.044, -0.002], [0.015, 0.012, 0.013], [0.30, 0.60, 0.10]),
+    part(ballS, [0.008, 0.046, -0.018], [0.013, 0.010, 0.012], [0.32, 0.10, 0]),
+    // short fringe, not a heavy brow cloud
+    part(ballS, [0, 0.026, 0.046], [0.020, 0.008, 0.009]),
+    ...[-1, 1].map(d => part(ballS, [d * 0.022, 0.022, 0.042], [0.012, 0.008, 0.008], [0.12, d * 0.22, 0])),
+    // ears stick out past the tight cap
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
   ]
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
-  for (const k of [2, 3, 4, 5, 6, 7, 8]) tagAW(parts[k], () => [2, 0.7])
-  tagAW(parts[9], () => [3, 0.5])
-  for (const k of [10, 11]) tagAW(parts[k], () => [3, 0.45])
-  for (const k of [12, 13, 14, 15]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.55])
+  for (const k of [2, 3, 4, 5]) tagAW(parts[k], () => [2, 0.55])
+  tagAW(parts[6], () => [3, 0.4])
+  for (const k of [7, 8]) tagAW(parts[k], () => [3, 0.35])
+  for (const k of [9, 10]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 function hoshinoGrey() {
   const ballS = new THREE.SphereGeometry(1, 10, 8)
-  // soft blended streak on +X (viewer's right): thin overlapping locks, not a flat patch
+  // soft blended grey patch at the temple on +X (viewer's right), hugging the cap
   const parts = [
-    part(ballS, [0.048, 0.028, 0.016], [0.010, 0.022, 0.012], [0.15, 0.3, 0.08]),
-    part(ballS, [0.052, 0.008, 0.010], [0.009, 0.020, 0.012], [0.1, 0.35, 0.1]),
-    part(ballS, [0.044, 0.046, 0.000], [0.010, 0.016, 0.010], [0.2, 0.4, 0.08]),
-    part(ballS, [0.036, 0.016, 0.034], [0.008, 0.012, 0.008], [0.1, 0.2, 0]),
-    part(ballS, [-0.050, 0.012, 0.006], [0.008, 0.014, 0.010], [0.1, -0.25, -0.08]),
+    part(ballS, [0.046, 0.018, 0.018], [0.010, 0.016, 0.010], [0.12, 0.28, 0.06]),
+    part(ballS, [0.048, 0.006, 0.008], [0.009, 0.014, 0.009], [0.08, 0.30, 0.08]),
+    part(ballS, [0.040, 0.032, 0.004], [0.009, 0.012, 0.008], [0.15, 0.35, 0.06]),
   ]
-  tagAW(parts[0], () => [1, 0.5])
-  tagAW(parts[1], () => [1, 0.5])
-  tagAW(parts[2], () => [2, 0.45])
-  tagAW(parts[3], () => [3, 0.4])
-  tagAW(parts[4], () => [0, 0.4])
+  tagAW(parts[0], () => [1, 0.45])
+  tagAW(parts[1], () => [1, 0.4])
+  tagAW(parts[2], () => [2, 0.4])
   return mergeHair(parts)
 }
 const HAIR_GEO = hoshinoHair()
@@ -135,15 +128,51 @@ function vestGeo() {
 }
 
 function shirtCollarGeo() {
+  // small points at the sides of the neck, tucked under the scarf — not a white blob under the chin
   const parts = []
   for (const sd of [-1, 1]) {
-    const g = new THREE.BoxGeometry(0.016, 0.012, 0.006)
-    g.rotateZ(sd * -0.35)
-    g.rotateX(-0.25)
-    g.translate(sd * 0.012, 0.006, 0.002)
+    const g = new THREE.BoxGeometry(0.012, 0.007, 0.004)
+    g.rotateZ(sd * -0.45)
+    g.rotateX(-0.15)
+    g.translate(sd * 0.014, 0.008, 0.000)
     parts.push(paint(g, SHIRT))
   }
   return mergeGeometries(parts)
+}
+
+function mittenGeo() {
+  const g = new THREE.SphereGeometry(0.0180, 12, 10)
+  g.scale(1.15, 0.95, 0.90)
+  return paint(g, SKIN)
+}
+
+function scarfGeo() {
+  // knotted rust scarf with two hanging ends over the chest (custom mesh in the lazy chunk)
+  const rust = '#c05438', rustD = '#9a3c28'
+  const parts = []
+  const ring = new THREE.TorusGeometry(0.032, 0.0065, 10, 24)
+  ring.rotateX(Math.PI / 2)
+  ring.scale(1.16, 0.68, 1.06)
+  ring.translate(0, 0.002, 0.006)
+  parts.push(paint(ring, rust))
+  const knot1 = new THREE.SphereGeometry(0.010, 10, 8)
+  knot1.scale(1.45, 0.72, 1.05)
+  knot1.translate(0.000, -0.008, 0.030)
+  parts.push(paint(knot1, rustD))
+  const knot2 = new THREE.SphereGeometry(0.008, 8, 7)
+  knot2.scale(1.35, 0.65, 0.95)
+  knot2.translate(-0.006, -0.014, 0.032)
+  parts.push(paint(knot2, rust))
+  // two flat hanging ends, clearly separated over the chest
+  const endL = new THREE.BoxGeometry(0.024, 0.058, 0.007)
+  endL.rotateZ(0.42)
+  endL.translate(-0.022, -0.048, 0.030)
+  parts.push(paint(endL, rust))
+  const endR = new THREE.BoxGeometry(0.022, 0.046, 0.007)
+  endR.rotateZ(-0.52)
+  endR.translate(0.024, -0.040, 0.030)
+  parts.push(paint(endR, rustD))
+  const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
 function lapelGeo() {
@@ -166,55 +195,51 @@ const vestMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true
 
 function attachLook(root) {
   const S = spec(HOSHINO.body), g = notebookGeo(), out = []
-  const chest = root.getObjectByName('chest'), foL = root.getObjectByName('foL'), foR = root.getObjectByName('foR')
+  const chest = root.getObjectByName('chest')
   if (chest) {
     const chestZ = (S.chest?.[1]?.z ?? 0.05)
-    const add = (geo, pos, mat = vestMat) => {
+    const add = (geo, pos, mat = vestMat, rot) => {
       const m = new THREE.Mesh(geo, mat)
       m.position.set(...pos)
+      if (rot) m.rotation.set(...rot)
       m.traverse(o => { o.layers.mask = root.layers.mask })
       chest.add(m); out.push(m)
+      return m
     }
-    add(vestGeo(), [0, -0.010, chestZ + 0.016])
-    add(shirtCollarGeo(), [0, 0.030, chestZ * 0.55 + 0.008])
-    add(lapelGeo(), [0, 0.012, chestZ + 0.020])
-  }
-  // open book on the chest (pages toward the camera) so forearm skinning cannot edge-on it
-  if (chest) {
-    const chestZ = (S.chest?.[1]?.z ?? 0.05)
-    const book = new THREE.Mesh(g.book, g.m)
-    book.rotation.set(Math.PI * 0.48, 0.04, 0.08)
-    book.position.set(-0.002, -0.002, chestZ + 0.050)
-    book.scale.setScalar(1.28)
-    book.traverse(o => { o.layers.mask = root.layers.mask })
-    chest.add(book); out.push(book)
-  }
-  if (foR) {
-    const hand = new THREE.Group(); hand.position.copy(S.hdR.clone().sub(S.elR)); foR.add(hand); out.push(hand)
-    const m = new THREE.Mesh(g.pencil, g.m)
-    m.rotation.set(1.05, 0.2, 0.15)
-    m.position.set(0.002, 0.010, 0.016)
-    m.traverse(o => { o.layers.mask = root.layers.mask }); hand.add(m)
+    add(vestGeo(), [0, -0.012, chestZ + 0.014])
+    add(shirtCollarGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.010, chestZ * 0.40])
+    add(lapelGeo(), [0, 0.010, chestZ + 0.018])
+    add(scarfGeo(), [0, S.neckY - ((S.bellyY + S.chestY) / 2) - 0.004, chestZ * 0.55])
+    // open book at chest height, pages toward the camera
+    const book = add(g.book, [-0.002, 0.016, chestZ + 0.050], g.m, [Math.PI * 0.50, 0.02, 0.04])
+    book.scale.setScalar(1.55)
+    if (LIFE_OFF) {
+      // left mitten under the book, right mitten and pencil on the page (parented so they stay put)
+      const mitL = add(mittenGeo(), [-0.032, 0.006, chestZ + 0.046])
+      mitL.rotation.set(0.25, 0.45, 0.35)
+      mitL.scale.setScalar(1.12)
+      const pencil = add(g.pencil, [0.016, 0.028, chestZ + 0.062], g.m, [1.20, 0.40, 0.60])
+      const mitR = add(mittenGeo(), [0.034, 0.016, chestZ + 0.050])
+      mitR.rotation.set(0.20, -0.35, -0.25)
+      mitR.scale.setScalar(1.08)
+    }
   }
   return () => out.forEach(h => h.removeFromParent())
 }
 
 function readHold(B, st) {
-  // left hand supports the open book at the chest; right hand writes with the pencil
-  B.upL.rotation.set(-0.92, 0.12, 0.38)
-  B.foL.rotation.set(-1.15, 0.20, 0.12)
-  B.upR.rotation.set(-1.00, -0.10, -0.32)
-  B.foR.rotation.set(-1.20, -0.15, -0.08)
-  B.head.rotation.x = 0.08
+  // still pose: long sleeves reach the book; mittens parented to the book cover the skinned hands.
+  // window.__poseH = [upLX, upLY, upLZ, foLX, foLY, foLZ, upRX, upRY, upRZ, foRX, foRY, foRZ]
+  const d = (typeof window !== 'undefined' && window.__poseH) || [-0.65, 0.45, 0.12, -1.75, 0.22, 0.12, -0.85, -0.38, -0.12, -1.70, -0.20, -0.10]
+  B.upL.rotation.set(d[0], d[1], d[2])
+  B.foL.rotation.set(d[3], d[4], d[5])
+  B.upR.rotation.set(d[6], d[7], d[8])
+  B.foR.rotation.set(d[9], d[10], d[11])
+  B.foL.scale.setScalar(1)
+  B.foR.scale.setScalar(1)
+  B.head.rotation.x = 0.10
 }
 
-// slightly longer hanging scarf ends
-const tailGeo = (() => {
-  const g = new THREE.ConeGeometry(0.018, 0.082, 6)
-  g.translate(0, -0.040, 0)
-  g.scale(1.15, 1, 0.42)
-  return g
-})()
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
@@ -223,12 +248,10 @@ export const HOSHINO = {
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16,
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
-  scarf: '#b84830',
   face: { glasses: GLASS },
-  // cardigan painter: acc = khaki jacket, top = white shirt shown in the open front,
-  // bottom = olive trousers. Vest, collar and lapels are chest meshes. acc2 matches
-  // the jacket so the painter's own buttons stay hidden.
-  outfit: { type: 'cardigan', skin: SKIN, top: SHIRT, acc: JACKET, acc2: JACKET, bottom: '#4e4f38', shoe: '#4e321c', shoeY: 0.044, long: true, sleeve: 'puff', seams: true },
+  // openJacket painter: acc = khaki jacket to mid-thigh, top = vest shown in the opening,
+  // bottom = olive trousers. Custom knotted scarf, small shirt collar, and lapels are chest meshes.
+  outfit: { type: 'openJacket', hemY: 'thigh', skin: SKIN, top: VEST, acc: JACKET, acc2: JACKET, bottom: '#4e4f38', shoe: '#4e321c', shoeY: 0.044, long: true, sleeve: 'puff', seams: true },
   hold: {},
   walk: { rate: 8, stride: 0.48, knee: 0.6, bounce: 0.008, smooth: true, land: 0.28, arm: 0.45, lean: 0.12, twist: 0.1, sway: 0.07, idle: 'look' },
   ext: {
@@ -236,8 +259,6 @@ export const HOSHINO = {
       if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera); else readHold(B, st) },
     post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) },
     Face, Hair: HoshinoHair,
-    tails: [-0.22, 0.20], tailX: 1.05, knot: [0, -0.014, 0.012, 1.2], ring: [1.20, 1.14, 1.14],
-    tailGeo,
   },
 }
 
@@ -245,7 +266,7 @@ export function ChibiHoshino({ st, scale = 0.8, res }) {
   const g = useRef()
   const r = res ?? (TOUCH ? 40 : 52)
   useEffect(() => { let off = null, n = 0
-    const iv = setInterval(() => { const root = g.current; if (root && root.getObjectByName('foL') && root.getObjectByName('chest')) { off = attachLook(root); clearInterval(iv) } else if (++n > 50) clearInterval(iv) }, 80)
+    const iv = setInterval(() => { const root = g.current; if (root && root.getObjectByName('chest')) { off = attachLook(root); clearInterval(iv) } else if (++n > 50) clearInterval(iv) }, 80)
     return () => { clearInterval(iv); off && off() } }, [])
   return <group ref={g}><Character cfg={HOSHINO} st={st} res={r} scale={scale} /></group>
 }

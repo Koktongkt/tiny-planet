@@ -15,7 +15,7 @@ import { q } from '../../common.jsx'
 const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').matches
 const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f6cdb0'
-const HAIR_C = '#e6d6c6'
+const HAIR_C = '#d2ccc4'
 const HAIR_BAND = '#efe6dc'
 const GLASS = '#a88858'
 const CARDIGAN = '#9a7290'
@@ -25,31 +25,34 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72 })
 
-const EAR = { x: 0.066, y: -0.0165, z: 0.0020 }
+// skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
+const EAR = { x: 0.061, y: -0.012, z: 0.006 }
 function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.26, 6, 16)
-  // softer, fuller hair with a centre parting, side clumps, and a round bun clearly above the crown
+  // smooth grey cap hugging the skull, swept back, a subtle centre part, bun on top, ears visible
   const parts = [
-    part(ball, [0, 0.014, -0.012], [0.070, 0.058, 0.062]),
-    part(ball, [0, -0.002, -0.036], [0.060, 0.044, 0.050]), // nape
-    // bun sits on the crown and reads clearly above the head
-    part(ball, [0, 0.078, -0.006], [0.024, 0.022, 0.023]),
-    part(ring, [0, 0.062, -0.006], [0.016, 0.016, 0.012], [Math.PI / 2 - 0.08, 0, 0]),
-    // centre parting: two fringe lobes with a gap on the brow
-    ...[-1, 1].map(d => part(ballS, [d * 0.018, 0.032, 0.050], [0.022, 0.016, 0.016], [0.15, d * 0.35, d * 0.08])),
-    ...[-1, 1].map(d => part(ballS, [d * 0.038, 0.018, 0.044], [0.016, 0.018, 0.014], [0.2, d * 0.45, d * 0.12])),
-    // side clumps (softer than a helmet)
-    ...[-1, 1].map(d => part(ballS, [d * 0.062, 0.008, 0.008], [0.018, 0.028, 0.022], [0.1, d * 0.35, d * 0.08])),
-    ...[-1, 1].map(d => part(ballS, [d * 0.054, -0.018, 0.010], [0.016, 0.026, 0.018], [0.2, d * 0.4, d * 0.1])),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0034, 0.0100, 0.0062], [0, d * 0.75, d * 0.1], 1)),
+    part(ball, [0, 0.010, -0.010], [0.063, 0.052, 0.057]),
+    part(ball, [0, 0.016, 0.030], [0.048, 0.036, 0.028]), // smooth front cap, no split lobes
+    part(ball, [0, -0.004, -0.030], [0.052, 0.036, 0.040]), // nape, tight
+    // bun sits on the crown
+    part(ball, [0, 0.066, -0.006], [0.0165, 0.0145, 0.0155]),
+    part(ring, [0, 0.054, -0.006], [0.012, 0.012, 0.009], [Math.PI / 2 - 0.08, 0, 0]),
+    // a shallow centre part (thin gap, not two bulky lobes)
+    ...[-1, 1].map(d => part(ballS, [d * 0.010, 0.028, 0.046], [0.010, 0.007, 0.008], [0.12, d * 0.15, 0])),
+    // a few soft swept-back strand lines on the cap (thin, not volume)
+    ...[-1, 1].map(d => part(ballS, [d * 0.024, 0.032, 0.024], [0.0040, 0.0026, 0.024], [0.40, d * 0.55, d * 0.06])),
+    ...[-1, 1].map(d => part(ballS, [d * 0.036, 0.020, 0.004], [0.0036, 0.0024, 0.022], [0.28, d * 0.75, d * 0.08])),
+    // ears stick out past the tight cap
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
   ]
-  tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.55])
-  tagAW(parts[1], () => [3, 0])
-  tagAW(parts[2], (x, y) => [2, sm(0.06, 0.12, y)])
-  tagAW(parts[3], () => [2, 0.4])
-  for (const k of [4, 5, 6, 7]) tagAW(parts[k], () => [3, 0.65])
-  for (const k of [8, 9, 10, 11]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.7])
-  for (const k of [12, 13]) tagAW(parts[k], () => [3, 0])
+  tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.45])
+  tagAW(parts[1], () => [3, 0.2])
+  tagAW(parts[2], () => [3, 0])
+  tagAW(parts[3], (x, y) => [2, sm(0.05, 0.10, y)])
+  tagAW(parts[4], () => [2, 0.4])
+  for (const k of [5, 6]) tagAW(parts[k], () => [3, 0.4])
+  for (const k of [7, 8, 9, 10]) tagAW(parts[k], () => [3, 0.3])
+  for (const k of [11, 12]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()
@@ -97,47 +100,38 @@ function cupGeo() {
 const cupMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
 
 function collarGeo() {
-  // soft cream wrap-collar bands along the V, slightly thicker at the neck
+  // cream wrap collar: short panels at the neck V, not hanging down the apron
   const parts = []
   for (const sd of [-1, 1]) {
-    const g = new THREE.CylinderGeometry(0.0042, 0.0030, 0.048, 8)
-    g.rotateZ(sd * -0.62)
-    g.translate(sd * 0.015, 0.006, 0.002)
+    const shape = new THREE.Shape()
+    shape.moveTo(sd * 0.002, 0.016)
+    shape.lineTo(sd * 0.018, 0.014)
+    shape.lineTo(sd * 0.016, -0.002)
+    shape.lineTo(sd * 0.004, 0.000)
+    shape.closePath()
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false, steps: 1 })
+    g.translate(0, 0, -0.001)
     parts.push(paint(g, COLLAR))
   }
-  return mergeGeometries(parts)
+  const g = mergeGeometries(parts); g.computeVertexNormals(); return g
 }
 
-function wrapFlapGeo(S) {
-  // sit outside the belly ellipsoid (x radius ~0.08 at Fuku's girth) so the hem is visible
-  const rx = (S.belly?.[1]?.x ?? 0.064) + 0.010
-  const pts = [
-    new THREE.Vector2(rx * 0.96, 0.054),
-    new THREE.Vector2(rx * 1.00, 0.024),
-    new THREE.Vector2(rx * 1.04, -0.004),
-    new THREE.Vector2(rx * 1.06, -0.030),
-  ]
-  // open at the front so the cream V and apron stay visible
-  const g = new THREE.LatheGeometry(pts, 28, Math.PI * 0.22, Math.PI * 1.56)
-  g.rotateY(-Math.PI * 0.22)
-  const p = g.attributes.position
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i)
-    if (x < 0 && z > 0) p.setZ(i, z + 0.008)
-  }
-  g.computeVertexNormals()
-  return paint(g, CARDIGAN)
+function mittenGeo() {
+  const g = new THREE.SphereGeometry(0.0185, 12, 10)
+  g.scale(1.15, 0.95, 0.90)
+  return paint(g, SKIN)
 }
+
 
 function skirtGeo() {
   // separate lilac skirt, hip to ankle, slight flare — not a painted sack dress
   const pts = [
-    new THREE.Vector2(0.000, 0.042),
-    new THREE.Vector2(0.054, 0.042),
-    new THREE.Vector2(0.058, 0.018),
-    new THREE.Vector2(0.064, -0.016),
-    new THREE.Vector2(0.072, -0.055),
-    new THREE.Vector2(0.078, -0.092),
+    new THREE.Vector2(0.000, 0.006),
+    new THREE.Vector2(0.054, 0.006),
+    new THREE.Vector2(0.058, -0.012),
+    new THREE.Vector2(0.064, -0.032),
+    new THREE.Vector2(0.072, -0.062),
+    new THREE.Vector2(0.078, -0.094),
     new THREE.Vector2(0.079, -0.102),
     new THREE.Vector2(0.000, -0.102),
   ]
@@ -211,27 +205,40 @@ function attachLook(root) {
   }
   const chestZ = (S.chest?.[1]?.z ?? 0.05)
   const bellyZ = (S.belly?.[1]?.z ?? 0.055)
-  add(chest, collarGeo(), [0, S.neckY - chestY - 0.028, chestZ * 0.62 + 0.006])
-  // skirt + lower wrap flaps + apron on the hips so they sit with her
+  add(chest, collarGeo(), [0, S.neckY - chestY - 0.026, chestZ * 0.58 + 0.004])
+  // skirt + apron on the hips; the painted cardigan hem (hemY: 'hip') is the wrap hem — no 3D peplum
   add(hips, skirtGeo(), [0, 0.000, 0], skirtMat)
-  add(hips, wrapFlapGeo(S), [0, 0.012, 0])
   add(hips, apronGeo(), [0, 0.008, bellyZ + 0.002])
   add(hips, pincushionGeo(), [0.038, -0.048, bellyZ + 0.020])
   const cup = new THREE.Mesh(cupGeo(), cupMat)
-  cup.position.set(0, 0.016, chestZ + 0.058)
-  cup.rotation.set(0.32, -0.18, 0)
+  cup.position.set(0, 0.018, chestZ + 0.050)
+  cup.rotation.set(0.16, -0.10, 0)
   cup.scale.setScalar(1.12)
   cup.traverse(o => { o.layers.mask = root.layers.mask })
   chest.add(cup); out.push(cup)
+  if (LIFE_OFF) {
+    for (const sd of [-1, 1]) {
+      const mit = new THREE.Mesh(mittenGeo(), propMat)
+      mit.position.set(sd * 0.020, 0.008, 0.006)
+      mit.rotation.set(0.20, sd * -0.45, sd * 0.35)
+      mit.scale.set(1.15, 1.0, 0.95)
+      mit.traverse(o => { o.layers.mask = root.layers.mask })
+      cup.add(mit)
+    }
+  }
   return () => { out.forEach(m => m.removeFromParent()) }
 }
 
 function chestHold(B, st) {
-  // still pose: elbows out, forearms in, mittens meeting around the cup
-  B.upL.rotation.set(-0.68, 0.20, 0.40)
-  B.upR.rotation.set(-0.68, -0.20, -0.40)
-  B.foL.rotation.set(-1.58, 0.58, 0.38)
-  B.foR.rotation.set(-1.58, -0.58, -0.38)
+  // still pose: long sleeves reach the cup; mittens parented to the cup cover the skinned hands.
+  // window.__pose = [upX, upY, upZ, foX, foY, foZ] lets a capture script try values without a rebuild.
+  const p = (typeof window !== 'undefined' && window.__pose) || [-0.75, 0.42, 0.10, -1.62, 0.22, 0.12]
+  B.upL.rotation.set(p[0], p[1], p[2])
+  B.upR.rotation.set(p[0], -p[1], -p[2])
+  B.foL.rotation.set(p[3], p[4], p[5])
+  B.foR.rotation.set(p[3], -p[4], -p[5])
+  B.foL.scale.setScalar(1)
+  B.foR.scale.setScalar(1)
 }
 
 function seatedHold(B, st, e) {
@@ -254,7 +261,7 @@ export const FUKU = {
   face: { glasses: GLASS },
   // cardigan painter: acc = wrap, top = cream shown in the V, legs = lilac skirt colour.
   // acc2 matches the wrap so the painter's cardigan buttons stay hidden (the sheet has none).
-  outfit: { type: 'cardigan', skin: SKIN, top: COLLAR, acc: CARDIGAN, acc2: CARDIGAN, bottom: SKIRT, legs: SKIRT, shoe: '#3a241e', long: true, sleeve: 'puff', skirt: true },
+  outfit: { type: 'cardigan', hemY: 'hip', buttons: false, skin: SKIN, top: COLLAR, acc: CARDIGAN, acc2: CARDIGAN, bottom: SKIRT, legs: SKIRT, shoe: '#3a241e', long: true, sleeve: 'puff', skirt: true },
   hold: {},
   seatDrop: 0.055,
   walk: { rate: 7, stride: 0.42, knee: 0.55, bounce: 0.007, smooth: true, land: 0.25, arm: 0.4, lean: 0.1, twist: 0.08, sway: 0.06, idle: 'sway' },
