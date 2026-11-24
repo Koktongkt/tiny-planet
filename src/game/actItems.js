@@ -13,4 +13,4 @@ export const ITEM_GESTURE = {
 }
 // seconds she is busy (movement locked); the item still lands in the bag at ~1 s
 export const GESTURE_DUR = { pluck: 0.95, sniff: 1.3, bush: 1.0, pull: 1.15, heavy: 1.3, scoop: 1.15, chip: 1.3, catch: 1.2, wool: 1.15 }
-export const gestureOf = (item) => ITEM_GESTURE[item] || 'pluck'
+export const gestureOf = (item, over) => (over && over[item]) || ITEM_GESTURE[item] || 'pluck' // over: a character's motion.gestures
