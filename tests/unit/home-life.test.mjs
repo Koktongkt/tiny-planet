@@ -59,3 +59,20 @@ test('pickGlance: Mochi when close and up to something, the window by day, the s
   assert.equal(pickGlance({ ...base, day: 0.2, windowD: 1 }, r), null)
   assert.equal(pickGlance({ ...base, night: 0.8, stoveD: 0.8 }, r), 'stove')
 })
+
+// ---------- part C ----------
+import { homeState, fireFlare, tossVel } from '../../src/home/homeLife.js'
+test('homeState fills curtains open and lamps on, keeping what is saved and other fields', () => {
+  const s = { day: 3 }; const h = homeState(s)
+  assert.deepEqual(h, { curtains: true, lamps: { desk: true, night: true } }); assert.equal(s.home, h); assert.equal(s.day, 3)
+  const s2 = { home: { curtains: false, lamps: { desk: false } } }; assert.deepEqual(homeState(s2), { curtains: false, lamps: { desk: false, night: true } })
+  const s3 = { home: { curtains: 'x', lamps: 5 } }; assert.deepEqual(homeState(s3), { curtains: true, lamps: { desk: true, night: true } })
+})
+test('fireFlare decays to nothing over a few minutes', () => {
+  let f = 1; for (let i = 0; i < 60 * 30; i++) f = fireFlare(f, 1 / 60); assert.ok(f > 0.5 && f < 0.95, `after 30 s ${f}`)
+  for (let i = 0; i < 60 * 200; i++) f = fireFlare(f, 1 / 60); assert.equal(f, 0)
+})
+test('tossVel throws along her facing', () => {
+  const [vx, vz] = tossVel(0); assert.ok(Math.abs(vx) < 1e-9 && vz > 0.8)
+  const [ax, az] = tossVel(Math.PI / 2, 2); assert.ok(Math.abs(ax - 2) < 1e-9 && Math.abs(az) < 1e-9)
+})

@@ -92,6 +92,7 @@ export const SPOTS = {
   petBed: { x: P.petBed.x, z: P.petBed.z, r: 0.15 },
   window: (() => { const [x, z] = polar(LW, R - 0.07), [fx, fz] = polar(LW, R - 0.36); return { x, z, y: 0.395, from: { x: fx, z: fz }, face: -LW * D2R + Math.PI } })(),
   shelf: (() => { const [x, z] = local(P.bookShelf, 0.14, 0.06), [fx, fz] = local(P.bookShelf, 0.14, 0.42); return { x, z, y: 0.6, from: { x: fx, z: fz } } })(),
+  hearth: (() => { const [x, z] = local(P.stove, -0.2, 0.33); return { x, z, face: P.stove.yaw + Math.PI + 0.35 } })(), // part C: where Mochi sits to watch the fire
   plants: { big: P.bigPlant, counter: (() => { const [x, z] = local(P.counter, -0.37, -0.02); return { x, z, y: 0.227, yaw: P.counter.yaw } })(), door: P.flowerPot },
 }
 
@@ -225,7 +226,7 @@ export function Sunbeam() {
     const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); return [g, f, mg] }, [])
   const mm = useMemo(() => new THREE.PointsMaterial({ color: '#fff6d0', size: 0.012, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }), [])
   const mref = useRef()
-  useFrame(() => { const d = Math.max(0, T.day - T.night); m.opacity = 0.035 * d + 0.02 * T.dusk; fl.opacity = 0.2 * d; mm.opacity = 0.6 * d; /* a faint shaft only: a strong one hazed the left of the room */ if (mref.current) mref.current.position.y = Math.sin(performance.now() / 3000) * 0.01 })
+  useFrame(() => { const d = Math.max(0, T.day - T.night) * (HOME.curtK ?? 1) /* part C: the curtains hide the beam */; m.opacity = 0.035 * d + 0.02 * T.dusk; fl.opacity = 0.2 * d; mm.opacity = 0.6 * d; /* a faint shaft only: a strong one hazed the left of the room */ if (mref.current) mref.current.position.y = Math.sin(performance.now() / 3000) * 0.01 })
   return <group><mesh geometry={geo} material={m} renderOrder={3} /><mesh geometry={floor} material={fl} renderOrder={2} /><points ref={mref} geometry={motes} material={mm} /></group>
 }
 export const BEAM_SPOT = (() => { const L = OPEN[0], [cx, cz] = polar(L.phi, R - 0.02), t = ((L.y0 + L.ys) / 2) / -SUN_DIR.y; return { x: cx + SUN_DIR.x * t, z: cz + SUN_DIR.z * t } })()
@@ -261,9 +262,13 @@ export function Smoke() {
 }
 
 // the bed alcove half-wall, with a little shelf, a picture and a plant on the bed side
+// part C: the half-wall stands between the camera and the wardrobe, so it fades while she's at the wardrobe
+export const WARDROBE_FRONT = local(P.wardrobe, 0, 0.36)
+export const atWardrobe = (hp) => Math.hypot(hp.x - WARDROBE_FRONT[0], hp.z - WARDROBE_FRONT[1]) < 0.42
 function Alcove() {
   const [x, z] = polar(ALCOVE.phi, R + 0.02), dx = -Math.sin(ALCOVE.phi * D2R), dz = Math.cos(ALCOVE.phi * D2R), rot = Math.atan2(-dz, dx) // local +x runs in toward the middle
-  return <group position={[x, 0, z]} rotation-y={rot}>
+  const ref = useRef(); useSeeThrough(ref, atWardrobe)
+  return <group ref={ref} position={[x, 0, z]} rotation-y={rot}>
     <Prop id="alcoveWall" opts={{ len: ALCOVE.len + 0.02, h: 0.85, low: 0.3, d: 0.07, shadow: false }} />
     <group position={[0.2, 0.3, -0.04]} rotation-y={Math.PI}><Prop id="bookShelf" opts={{}} scale={[0.55, 1, 0.7]} /></group>
     <group position={[0.17, 0.52, -0.045]} rotation-y={Math.PI}><Prop id="picture" /></group>
@@ -284,14 +289,20 @@ export function WindowLight() {
 // set because it changes: when she walks into the bath the walls fade to see-through (their outlines hide) so you can
 // see her in there; they turn solid again when she walks out. They get their own material copies so nothing else fades.
 export const inBath = (hp) => hp.x > NOOK.x0 - 0.03 && hp.z < NOOK.z1 + 0.06
-export function BathWalls() {
-  const ref = useRef(), st = useRef(0), mats = useRef(null), nookFront = 1.6 - NOOK.x0
+// see-through when want() holds: a group's solid parts fade (own material copies), its outlines hide. Bath walls, alcove.
+function useSeeThrough(ref, want) {
+  const st = useRef(0), mats = useRef(null)
   useFrame((_, dt) => { const g = ref.current; if (!g) return
     if (!mats.current) { const fill = [], outl = []; g.traverse(m => { if (!m.isMesh) return; if (m.userData.outline || m.material.isShaderMaterial) { outl.push(m); return } if (m.material.transparent) return
       m.material = m.material.clone(); m.material.transparent = true; fill.push(m) }); mats.current = { fill, outl } }
-    const want = HOME.inside && inBath(HOME.hp) ? 1 : 0; st.current += (want - st.current) * Math.min(1, dt * 6); const k = st.current
+    const w = HOME.inside && want(HOME.hp) ? 1 : 0; if (!w && st.current === 0) return // settled solid: nothing to do
+    st.current += (w - st.current) * Math.min(1, dt * 6); if (st.current < 1e-3) st.current = 0; const k = st.current
     for (const m of mats.current.fill) { m.material.opacity = 1 - 0.72 * k; m.material.depthWrite = k < 0.02; m.renderOrder = k > 0.02 ? 6 : 0 }
     for (const m of mats.current.outl) m.visible = k < 0.15 })
+}
+export function BathWalls() {
+  const ref = useRef(), nookFront = 1.6 - NOOK.x0
+  useSeeThrough(ref, inBath)
   return <group ref={ref}>
     <Prop id="wallPanel" opts={{ w: 0.97, h: 0.8, d: 0.06 }} position={[NOOK.x0, 0, NOOK.z1 - 0.485]} rotation-y={Math.PI / 2} />
     <Prop id="archWall" opts={{ w: nookFront, h: 0.8, d: 0.06, openW: 0.36, openH: 0.42 }} pal={{ wall: '#f8dcc4' }} position={[NOOK.x0 + nookFront / 2 - 0.03, 0, NOOK.z1]} />
