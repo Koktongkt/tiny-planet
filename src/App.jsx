@@ -298,7 +298,7 @@ function House({ n, i }) {
 }
 // Home: the chibi cottage + yard (lazy art); an invisible drum keeps the follow camera out of the walls, and the
 // night window light still spills on the grass
-const HOME_OCC_GEO = new THREE.CylinderGeometry(0.6, 0.62, 1.3, 12).translate(0, 0.65, 0)
+const HOME_OCC_GEO = mergeGeometries([new THREE.CylinderGeometry(0.6, 0.62, 1.1, 12).translate(0, 0.55, 0), new THREE.ConeGeometry(0.85, 0.75, 12).translate(0, 1.375, 0)]) // walls + the overhanging roof
 function HomeHouse({ n }) {
   return <Surface n={n} lift={HOUSE_LIFT} spin={0}>
     <mesh geometry={HOME_OCC_GEO} ref={occ} visible={false} />
@@ -430,6 +430,7 @@ function Keys() {
   return null
 }
 const _prevN = new THREE.Vector3(), _mv = new THREE.Vector3(), _mv2 = new THREE.Vector3(), _mv3 = new THREE.Vector3(), LAST_DRY = { n: new THREE.Vector3(), toast: 0, landed: false }
+const _cv = new THREE.Vector3()
 const NOWATER = q.has('nowater') // debug: walk through water like before
 // the orbit camera's heading: a tangent direction on the sphere that the camera looks along. It is carried along as she
 // walks (re-projected onto her tangent plane), turned only by the player's drag (CAM.yaw), and never swings back behind her.
@@ -554,7 +555,10 @@ function Rig() {
       if (FZ.k > 0.001) { _s.crossVectors(P.wUp, CAMH.w); goal.addScaledVector(_s, FZ.side * 1.8 * cz * FZ.k).addScaledVector(CAMH.w, 1.6 * cz * FZ.k).addScaledVector(P.wUp, -0.25 * cz * FZ.k) }
       if (goal.length() < R + 0.6) goal.setLength(R + 0.6)
       _v.copy(P.wPos).addScaledVector(P.wUp, 0.3); _u.copy(goal).sub(_v); const dist = _u.length(); RC.set(_v, _u.normalize()); RC.far = dist
-      const hit = RC.intersectObjects(OCC, false)[0]; if (hit) { const d = hit.distance - 0.12, minD = 0.9 * cz // a house in the way (the free orbit swings round houses often)
+      let hit = RC.intersectObjects(OCC, false)[0]
+      if (hit) for (const t of [0.3, 0.55, 0.8]) { _cv.copy(_u).lerp(P.wUp, t).normalize(); RC.set(_v, _cv); RC.far = dist // a house in the way: first try looking down at her from higher up, over the roof
+        if (!RC.intersectObjects(OCC, false).length) { goal.copy(_v).addScaledVector(_cv, dist); hit = null; break } }
+      if (hit) { const d = hit.distance - 0.12, minD = 0.9 * cz // still blocked (the free orbit swings round houses often)
         if (d >= minD) goal.copy(_v).addScaledVector(_u, d).addScaledVector(P.wUp, 0.15 * (1 - hit.distance / dist)) // room before the wall: stop in front of it
         else goal.copy(_v).addScaledVector(P.wUp, minD).addScaledVector(_u, Math.max(0.08, d)) } // she's right by the wall: tip up over her head and look down (never through the wall, never a head-filling close-up)
       camera.position.lerp(goal, k); camera.up.lerp(P.wUp, k).normalize()
