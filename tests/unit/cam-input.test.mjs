@@ -36,3 +36,26 @@ test('zoom: wider default, clamped wheel steps', () => {
   assert.equal(zoomStep(ZMAX, 100), ZMAX); assert.equal(zoomStep(ZMIN, -100), ZMIN)
 })
 test('indoor orbit is limited to the front of the cut-away room', () => { assert.equal(clampInYaw(2), 0.7); assert.equal(clampInYaw(-2), -0.7); assert.equal(clampInYaw(0.3), 0.3) })
+
+// ---------- lazy follow ----------
+import { makeFollow, lazyFollow, sameIntent, FOLLOW } from '../../src/camInput.js'
+const runF = (st, ctx, secs, fps = 60) => { let tot = 0; for (let i = 0; i < secs * fps; i++) tot += lazyFollow(st, ctx, 1 / fps); return tot }
+test('lazy follow waits ~2 s after the last camera input, then swings toward her heading', () => {
+  const st = makeFollow()
+  assert.equal(runF(st, { moving: true, input: false, gap: 1.0 }, FOLLOW.after - 0.2), 0)
+  const r = runF(st, { moving: true, input: false, gap: 1.0 }, 1); assert.ok(r > 0.05 && r < 1, `turned ${r}`)
+  assert.ok(runF(makeFollow(), { moving: true, input: false, gap: -1.0 }, 4) < 0, 'the other way for a negative gap')
+})
+test('lazy follow leaves the camera alone when she stands still, walks toward the camera, or the player drags', () => {
+  const st = makeFollow(); runF(st, { moving: true, input: false, gap: 0.5 }, 3)
+  assert.equal(runF(st, { moving: false, input: false, gap: 1 }, 1), 0)
+  assert.equal(runF(st, { moving: true, input: false, gap: 2.8 }, 2), 0)
+  lazyFollow(st, { moving: true, input: true, gap: 1 }, 1 / 60); assert.equal(runF(st, { moving: true, input: false, gap: 1 }, 1), 0, 'backs off after a drag')
+  assert.equal(runF(makeFollow(), { moving: true, input: false, gap: 1, off: true }, 5), 0, 'setting off')
+})
+test('sameIntent: the same keys held keep her path locked', () => {
+  assert.ok(sameIntent({ x: 1, y: 0, mag: 1 }, { x: 1, y: 0, mag: 1 }))
+  assert.ok(!sameIntent({ x: 1, y: 0, mag: 1 }, { x: 0.7, y: 0.7, mag: 1 }))
+  assert.ok(sameIntent({ x: 0.99, y: 0.1, mag: 0.8 }, { x: 0.98, y: 0.12, mag: 0.9 }), 'a stick that barely moved')
+  assert.ok(!sameIntent(null, { x: 1, y: 0, mag: 1 }))
+})

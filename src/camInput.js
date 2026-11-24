@@ -21,3 +21,17 @@ export const walkFactor = (gap) => gap < 0.6 ? 1 : gap > 1.6 ? 0.25 : 1 - 0.75 *
 /** a wheel step (deltaY > 0 zooms out) */
 export const zoomStep = (z, deltaY) => Math.min(ZMAX, Math.max(ZMIN, z * (deltaY > 0 ? 1.1 : 1 / 1.1)))
 export const clampInYaw = (y) => Math.max(-IN_YAW, Math.min(IN_YAW, y))
+
+// ---------- lazy follow: when she walks and the player leaves the camera alone, it slowly swings round behind her ----------
+export const FOLLOW = { after: 2, ramp: 1, rate: 0.9, maxGap: 2.2 } // s quiet before it starts, s to ease in, 1/s, no follow when she walks toward the camera
+export const makeFollow = () => ({ quiet: 0 })
+/** the yaw (rad, signed like gap) to turn the camera by this frame. ctx { moving, input, gap: camera heading -> her heading, off } */
+export function lazyFollow(st, ctx, dt) {
+  if (ctx.input) { st.quiet = 0; return 0 }
+  st.quiet += dt
+  if (ctx.off || !ctx.moving || st.quiet < FOLLOW.after || Math.abs(ctx.gap) > FOLLOW.maxGap) return 0
+  const ease = Math.min(1, (st.quiet - FOLLOW.after) / FOLLOW.ramp)
+  return ctx.gap * Math.min(1, dt * FOLLOW.rate) * ease
+}
+/** the same movement asked for (same keys, or a stick that barely moved): her path stays locked while the camera swings */
+export const sameIntent = (a, b) => !!a && !!b && a.mag > 0 && b.mag > 0 && a.x * b.x + a.y * b.y > 0.97

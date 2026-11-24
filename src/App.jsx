@@ -27,7 +27,7 @@ const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
-import { moveIntent, walkFactor } from './camInput.js'
+import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
@@ -435,22 +435,33 @@ const NOWATER = q.has('nowater') // debug: walk through water like before
 // the orbit camera's heading: a tangent direction on the sphere that the camera looks along. It is carried along as she
 // walks (re-projected onto her tangent plane), turned only by the player's drag (CAM.yaw), and never swings back behind her.
 export const CAMH = { fwd: new THREE.Vector3(), right: new THREE.Vector3(), w: new THREE.Vector3() }
-const _dir = new THREE.Vector3(), _cx = new THREE.Vector3()
-function stepCamHeading() {
+const _dir = new THREE.Vector3(), _cx = new THREE.Vector3(), FOL = makeFollow()
+const signedAngle = (a, b, n) => Math.atan2(_cx.crossVectors(a, b).dot(n), a.dot(b)) // from a to b, about n
+const tangent = (v) => { v.addScaledVector(P.n, -v.dot(P.n)); if (v.lengthSq() < 1e-6) v.copy(P.fwd); return v.normalize() }
+function stepCamHeading(dt) {
   if (CAMH.fwd.lengthSq() < 0.5) CAMH.fwd.copy(P.fwd)
-  CAMH.fwd.addScaledVector(P.n, -CAMH.fwd.dot(P.n)); if (CAMH.fwd.lengthSq() < 1e-6) CAMH.fwd.copy(P.fwd); CAMH.fwd.normalize()
+  tangent(CAMH.fwd)
+  const input = !!CAM.yaw || CAM.drag
   if (CAM.yaw) { CAMH.fwd.applyAxisAngle(P.n, -CAM.yaw); CAM.yaw = 0 }
+  // lazy follow: she's walking and the camera has been left alone ~2 s: it eases round behind her (not when she walks toward it)
+  const off = window.__game?.G?.s?.settings?.camFollow === false || VIEW.mode !== 'follow'
+  const turn = lazyFollow(FOL, { moving: P.move > 0.3, input, gap: signedAngle(CAMH.fwd, P.fwd, P.n), off }, dt)
+  if (turn) CAMH.fwd.applyAxisAngle(P.n, turn)
   CAMH.right.crossVectors(CAMH.fwd, P.n).normalize()
 }
+// while the same keys stay held her path is locked to the world, so the following camera can swing round without
+// bending it into a circle; a new direction (or letting go) takes the camera's current frame again
+const MV = { intent: null, fwd: new THREE.Vector3(), right: new THREE.Vector3() }
 // leaving the house: the camera lands in front of her, looking at her face (the door behind her)
 HOME.camFront = () => { CAMH.fwd.copy(P.fwd).negate() }
 function stepPlayer(dt) {
-  stepCamHeading()
+  stepCamHeading(dt)
   // camera-relative movement: WASD / arrows / the stick are screen directions; she turns toward the way she walks
   const mi = moveIntent(KEYS, PAD); let f = 0, turn = 0
-  if (mi.mag > 0) { _dir.copy(CAMH.fwd).multiplyScalar(mi.y).addScaledVector(CAMH.right, mi.x).normalize()
+  if (mi.mag > 0) { if (sameIntent(MV.intent, mi)) tangent(MV.fwd); else { MV.intent = { ...mi }; MV.fwd.copy(CAMH.fwd) } MV.right.crossVectors(MV.fwd, P.n).normalize()
+    _dir.copy(MV.fwd).multiplyScalar(mi.y).addScaledVector(MV.right, mi.x).normalize()
     const gap = Math.atan2(_cx.crossVectors(P.fwd, _dir).dot(P.n), P.fwd.dot(_dir)) // signed angle her facing -> the wanted way
-    turn = gap; f = mi.mag * walkFactor(Math.abs(gap)) }
+    turn = gap; f = mi.mag * walkFactor(Math.abs(gap)) } else MV.intent = null
   const run = KEYS.shift || (PAD.active && (PAD.run || PAD.runLock))
   let go = f
   if (gameBlocksKeys() && G.ui.panel) go = 0
