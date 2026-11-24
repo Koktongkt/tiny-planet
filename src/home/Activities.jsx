@@ -371,7 +371,7 @@ function stepThings(dt, now) {
   const h = H(), hp = HOME.hp
   HOME.curtK = approach(HOME.curtK, h.curtains ? 1 : 0, 3, dt); HOME.fire = fireFlare(HOME.fire, dt)
   for (const k of ['desk', 'night']) { HOME.lampK[k] = approach(HOME.lampK[k], h.lamps[k] ? 1 : 0, 7, dt); const p = LIT.lamps[k]; if (!p) continue
-    for (const m of p.glow) m.material.color.setScalar(0.42 + 0.58 * HOME.lampK[k]); for (const s2 of p.halo) s2.m.material.opacity = s2.o * HOME.lampK[k] }
+    for (const m of p.glow) m.material.color.setScalar(0.28 + 0.72 * HOME.lampK[k]); for (const s2 of p.halo) s2.m.material.opacity = s2.o * HOME.lampK[k] }
   const f = HOME.fire; for (const e of LIT.fire) { e.m.scale.x = e.sx * (1 + 0.35 * f); e.m.scale.y = e.sy * (1 + 0.8 * f + 0.08 * f * Math.sin(now * 9)) }
   if (f > 0.25 && FX && Math.random() < dt * 3 * f) FX.spark.emit(STOVE_FIRE[0], 0.15, STOVE_FIRE[1], 1, { spread: 0.05, up: 0.3, size: 0.025, life: 0.9 })
   if (A.turnTo != null) hp.yaw += Math.atan2(Math.sin(A.turnTo - hp.yaw), Math.cos(A.turnTo - hp.yaw)) * Math.min(1, dt * 8)
