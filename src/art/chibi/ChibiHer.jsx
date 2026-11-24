@@ -10,6 +10,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, TRAVELLER, CEL_U, cel, mkOutline } from '../../GhibliPerson.jsx'
 import { buildSatchel } from './satchel.js'
 import { herAct } from './acts.js'
+import { HER_MOTION } from './motion.js'
 import { fishPhase, fishPose, fishPost, makeFishing } from './fishing.js'
 import { waterPhase, waterPose, waterPost, makeWatering } from './watering.js'
 import { makeLife, lifeStep, lifePost, HAIR_OFF, EXCITED_ACTS } from './life.js'
@@ -347,7 +348,7 @@ function HandR() { return <><primitive object={fishKit().rod} /><primitive objec
 function FishWorld() { const scene = useThree(s => s.scene)
   React.useEffect(() => { const f = fishKit(), w = waterKit(); scene.add(f.line, f.bob, w.drops); return () => { scene.remove(f.line, f.bob, w.drops) } }, [scene]); return null }
 const LIFE_OFF = q.has('still') && !q.has('life')
-export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
+export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler', motion: HER_MOTION, // how she behaves: src/art/chibi/motion.js
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
   // taller soft barrel torso, thick straight trouser legs, chunky round boots, short arms hanging close to the body
   // pass 4 arms (measured on the concept front): longer soft forearm ~70% of the puff-sleeve width, rounder mitten hands,
@@ -364,7 +365,7 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // anim pass 2 (KT: too bouncy): a low rounded bob instead of a hop, weight carried in the hips and shoulders (more sway
   // and twist), a softer footfall squash, a slightly longer stride
   walk: { rate: 11, stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' },
-  ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
+  ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, CHIBI.motion)); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
     L.F = fishPhase(st); fishPose(L.F, B, st, dt, t, L); waterPose(waterPhase(st), B, st, dt, t, L)

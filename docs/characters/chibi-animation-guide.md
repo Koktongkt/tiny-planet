@@ -6,6 +6,37 @@ Companion design guide (proportions, face, hair, colours, mesh perf): [`chibi-ch
 
 Procedural "life" for Cozy Chibi humans: breathing, fidgets, a bouncier walk, head-led turns, look-at, blinks, saccades, expression crossfades, and secondary motion on hair, scarf and satchel. The approved baseline is her (`src/art/chibi/`). Reuse this layer for any new chibi human; do not invent a second animation system.
 
+## Quick start: a new character's motion (read this, not the code)
+
+Everything a character's personality needs is data. Most characters need only steps 1-3 (about 20 lines):
+
+1. **How they behave**: in `src/art/chibi/motion.js`, make a profile from hers and change only what differs:
+   ```js
+   export const FUKU_MOTION = motionProfile(HER_MOTION, {
+     name: 'fuku', lively: 0.6,                    // calmer: smaller fidgets and reactions
+     sets: { day: ['look', 'hum', 'rock'], night: ['yawn', 'look'] },  // what she does when idle
+     sitAfter: 8, lieChance: 0,                    // sits early, never lies on the grass
+     can: { skip: false, skid: false },            // no skipping or skidding
+     waveEvery: [20, 30],                          // waves at neighbours more often
+     gestures: { wood: 'pluck' },                  // per item: pluck, sniff, bush, pull, heavy, scoop, chip, catch, wool
+   })
+   ```
+   Fields: `lively`, `fidgets` (name -> seconds), `sets` (day, rain, night, seated, hungry), `fidgetAfter`,
+   `fidgetEvery`, `sitAfter`, `lieChance`, `lieAfter`, `sleepyAfter`, `can` (skip, skid, wave, dodge, sit, lie,
+   rainHunch, glanceAtCamera), `skipEvery`, `waveEvery`, `sighEvery`, `tiredBelow`, `hungryAt`, `yawnUp`, `lieLift`,
+   `gestures`. All commented in the file.
+2. **How they walk**: `cfg.walk` in their character config (`rate`, `stride`, `bounce`, `smooth`, `land`, `arm`,
+   `lean`, `twist`, `sway`). Her values are the starting point; an elder walks slower and lower, a kid bouncier.
+3. **Their size and shape**: `cfg.body` / `cfg.outfit` / `cfg.hair` (see `chibi-character-design.md`). Motion scales
+   with the body; check `yawnUp` and `lieLift` if their head or belly is much bigger.
+4. **Only if they need something new**:
+   - a new idle fidget: add its pose in `life.js` (fidget block) and its name to the profile;
+   - a new item gesture: `acts.js`;
+   - a new tool: copy the pattern of `fishing.js` / `watering.js`.
+
+   Pass the profile with `makeLife(Math.random, profile)` (her: `CHIBI.motion`). Film the result with
+   `tools/chibi-clip.mjs`. Tests: `tests/unit/chibi-motion.test.mjs`.
+
 ## Animation template (approved with KT on her): start every character here
 
 Her motion is the **template for every chibi character's animation**, the same way her look is the template for their

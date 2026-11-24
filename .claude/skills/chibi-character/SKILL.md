@@ -33,6 +33,11 @@ character's concept sheet asks for.
 
 ## Animation rules
 
+- **Low-token path for a new character's motion:** read only the "Quick start" at the top of
+  `docs/characters/chibi-animation-guide.md` and `src/art/chibi/motion.js`. Make a profile with
+  `motionProfile(HER_MOTION, { ...only what differs })`, set `cfg.walk`, and film it. Open `life.js` / `acts.js` only
+  to add a brand-new pose, gesture or tool.
+
 - Weight over bounce; rare moments stay rare (cooldowns, one roll per idle spell); every action specific to what is
   touched; the face carries the feeling (strain, calm, wow); tools are real objects in the hand; make the action
   readable from the follow camera (swing it partway round if the body hides it).
