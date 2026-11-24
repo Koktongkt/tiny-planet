@@ -13,6 +13,7 @@ import { herAct } from './acts.js'
 import { HER_MOTION } from './motion.js'
 import { fishPhase, fishPose, fishPost, makeFishing } from './fishing.js'
 import { waterPhase, waterPose, waterPost, makeWatering } from './watering.js'
+import { makePuffs } from './puffs.js'
 import { makeLife, lifeStep, lifePost, HAIR_OFF, EXCITED_ACTS } from './life.js'
 import { approach } from './lifeCore.js'
 import { T, q } from '../../common.jsx'
@@ -342,11 +343,17 @@ const TAIL_GEO = (() => { const sh = new THREE.Shape(), w0 = 0.0105, w1 = 0.013,
 // fishing (anim pass 5): rod in her right hand, line + bobber in world space (added to the scene while she exists)
 let FISH = null
 const fishKit = () => FISH || (FISH = makeFishing(vcMat(), mkOutline(false)), typeof window !== 'undefined' && (window.__herFishKit = FISH), FISH)
-let WATER = null
+let WATER = null, PUFFS = null
+const puffs = () => PUFFS || (PUFFS = makePuffs())
+const _fw = new THREE.Vector3(), _fq = new THREE.Quaternion(), _fs = new THREE.Vector3()
+// skid dust at the front heel while she slides (world units scale with her)
+function dustPost(L, dt) { const D = puffs(), B = L.B
+  if (L.dust) { L.dustT = (L.dustT || 0) - dt; if (L.dustT <= 0) { L.dustT = 0.045; B.ftL.getWorldPosition(_fw); B.root.getWorldScale(_fs); D.emit(_fw, 2, 0.012 * _fs.y) } }
+  B.root.parent.getWorldQuaternion(_fq); D.step(dt, _fq) }
 const waterKit = () => WATER || (WATER = makeWatering(vcMat(), mkOutline(false)))
 function HandR() { return <><primitive object={fishKit().rod} /><primitive object={waterKit().can} /></> }
 function FishWorld() { const scene = useThree(s => s.scene)
-  React.useEffect(() => { const f = fishKit(), w = waterKit(); scene.add(f.line, f.bob, w.drops); return () => { scene.remove(f.line, f.bob, w.drops) } }, [scene]); return null }
+  React.useEffect(() => { const f = fishKit(), w = waterKit(); scene.add(f.line, f.bob, w.drops, puffs().mesh); return () => { scene.remove(f.line, f.bob, w.drops, puffs().mesh) } }, [scene]); return null }
 const LIFE_OFF = q.has('still') && !q.has('life')
 export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler', motion: HER_MOTION, // how she behaves: src/art/chibi/motion.js
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
@@ -370,7 +377,7 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler', motion: 
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
     L.F = fishPhase(st); fishPose(L.F, B, st, dt, t, L); waterPose(waterPhase(st), B, st, dt, t, L)
     if (P) { P.ms += performance.now() - t0; P.n++ } }, // window.__herProf = { ms: 0, n: 0 }: CPU time of the life layer (perf runs)
-  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t); const L = st.life; if (L && L.B) { fishPost(fishKit(), L.B, L.F, L, t, dt, L.B.root.parent); waterPost(waterKit(), L.B, L, dt, L.B.root.parent) } }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
+  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t); const L = st.life; if (L && L.B) { fishPost(fishKit(), L.B, L.F, L, t, dt, L.B.root.parent); waterPost(waterKit(), L.B, L, dt, L.B.root.parent); dustPost(L, dt) } }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
     act: herAct, HandR, Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, cuffGeo: CUFF_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)

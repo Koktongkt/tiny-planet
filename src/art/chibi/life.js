@@ -15,7 +15,7 @@ export const HAIR_OFF = new Float32Array(12)
 export const EXCITED_ACTS = new Set(['wave', 'play', 'reel', 'pick', 'pet', 'photo_wave', 'photo_peace', 'photo_hold_fish', 'photo_twirl', 'photo_kneel'])
 import { HER_MOTION, between } from './motion.js'
 // per-character behaviour (fidget lists, timings, rarity, switches, thresholds) comes from the motion profile: L.P
-const ENERGY_LOW_DEFAULT = 25, SKID_D = 1.05 // skid length (s)
+const ENERGY_LOW_DEFAULT = 25, SKID_D = 1.6 // skid length (s)
 const energyNow = () => { const w = typeof window !== 'undefined' ? window : null; if (!w) return 100; const v = w.__herEnergy ?? w.__game?.G?.s?.energy; return Number.isFinite(v) ? v : 100 }
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 const bump = (k, n) => Math.max(0, Math.sin(k * Math.PI * n)) // n soft pulses over the fidget
@@ -132,27 +132,36 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   L.skipU += dt; const ske = envelope(L.skipU, 2.2, 0.35) * MOT; L.skip = ske
   if (ske > 0) { const hop = Math.max(0, Math.sin(st.phase * 2)); B.root.position.y += 0.014 * ske * hop * hop; B.upL.rotation.x *= 1 + 0.7 * ske; B.upR.rotation.x *= 1 + 0.7 * ske
     B.upL.rotation.z -= 0.2 * ske; B.upR.rotation.z += 0.2 * ske; B.head.rotation.z += 0.05 * ske * Math.sin(st.phase); B.ftL.rotation.x += 0.2 * ske * hop; B.ftR.rotation.x += 0.2 * ske * hop }
-  // ---- skid (KT: not every stop, and alive, not a frozen lean): only after a real sprint, sometimes, with a cooldown.
-  // Her body carries forward, she rocks back onto her heels (front foot sliding out, back foot dragging), arms flailing
-  // for balance; a damped wobble swings her past upright and back; then a relieved little breath. Moving again cancels it.
+  // ---- skid (KT: rare, a few minutes apart, and properly animated). Only after a real sprint; a hard stop rolls once.
+  // 1 slide: plants her heels and leans way back, front foot out, back foot dragging, arms flung up, dust at her heels
+  // 2 teeter: tips forward onto her toes, arms windmilling  3 catch: upright with a little bounce  4 phew: wipes her brow
   L.runT = m > 0.7 && L.run > 0.6 ? (L.runT || 0) + dt : Math.max(0, (L.runT || 0) - dt * 3); L.skidCD = (L.skidCD ?? 0) - dt
-  if (P.can.skid && dm < -2.2 && L.runT > P.skidAfterRun && L.skidCD <= 0 && L.skidU > SKID_D) { L.skidCD = between(L.rnd, P.skidEvery); if (L.rnd() < P.skidChance) { L.skidU = 0; L.skidSd = L.rnd() < 0.5 ? -1 : 1 } }
+  if (P.can.skid && dm < -2.2 && L.runT > P.skidAfterRun && L.skidCD <= 0 && L.skidU > SKID_D) {
+    if (L.rnd() < P.skidChance) { L.skidU = 0; L.skidSd = L.rnd() < 0.5 ? -1 : 1; L.skidCD = between(L.rnd, P.skidEvery) } else L.skidCD = 10 }
   if (L.skidU < SKID_D && L.skidU > 0.15 && dm > 1.5) L.skidU = SKID_D // she set off again (speed rising): drop it
-  L.skidU += dt; const su = L.skidU, sde = su < SKID_D ? sst(0, 0.07, su) * (1 - sst(SKID_D - 0.25, SKID_D, su)) * MOT : 0
-  L.skid = sde
-  if (sde > 0) {
-    const wob = -Math.exp(-su * 3.3) * Math.cos(su * 7.6) // -1 at the plant, swings past 0 to ~+0.27 (forward), settles
-    const legs = sst(0, 0.07, su) * (1 - sst(0.5, 0.8, su)), flail = Math.sin(su * 15) * Math.exp(-su * 3.5), sd = L.skidSd || 1
-    B.root.rotation.x += 0.24 * wob * MOT; B.chest.rotation.x += 0.08 * wob * MOT; B.head.rotation.x -= 0.1 * wob * MOT // head lags the body
-    B.root.position.z += 0.014 * Math.exp(-su * 5) * sst(0, 0.05, su) * MOT // momentum carries her a touch forward
-    B.root.position.y -= 0.008 * legs * MOT; B.hips.rotation.z += 0.05 * sd * flail * MOT
-    B.thL.rotation.x -= 0.6 * legs * MOT; B.shLn.rotation.x -= 0.1 * legs * MOT; B.ftL.rotation.x -= 0.45 * legs * MOT // front heel sliding, toes up
-    B.thR.rotation.x += 0.2 * legs * MOT; B.shRn.rotation.x += 0.6 * legs * MOT; B.ftR.rotation.x += 0.2 * legs * MOT // back foot dragging
-    const arms = sst(0, 0.08, su) * (1 - sst(0.55, 0.9, su))
-    B.upL.rotation.z -= (0.85 + 0.25 * flail * sd) * arms * MOT; B.upR.rotation.z += (0.85 - 0.25 * flail * sd) * arms * MOT
-    B.upL.rotation.x -= (0.35 + 0.45 * flail) * arms * MOT; B.upR.rotation.x -= (0.35 - 0.45 * flail) * arms * MOT
-    const relief = sst(0.55, 0.75, su) * (1 - sst(0.85, SKID_D, su)); B.chest.scale.y *= 1 + 0.03 * relief; B.head.rotation.x += 0.06 * relief
-    L.fsq = Math.max(L.fsq, su < 0.5 ? 0 : 0.45 * relief) }
+  L.skidU += dt; const su = L.skidU, on = su < SKID_D ? sst(0, 0.06, su) * (1 - sst(SKID_D - 0.2, SKID_D, su)) * MOT : 0
+  L.skid = on; L.dust = su < 0.42 && on > 0.3 ? 1 : 0
+  if (on <= 0 && L.rootZ !== 0) { B.root.position.z = 0; L.rootZ = 0 } else if (on > 0) L.rootZ = 1
+  if (on > 0) { const sd = L.skidSd || 1, M = on
+    const slide = sst(0, 0.08, su) * (1 - sst(0.36, 0.52, su)), teeter = sst(0.4, 0.55, su) * (1 - sst(0.85, 1.02, su)), phew = sst(1.12, 1.28, su) * (1 - sst(1.45, SKID_D, su))
+    const bounce = Math.max(0, Math.sin(Math.min(1, Math.max(0, (su - 0.95) / 0.3)) * Math.PI))
+    const lean = -0.42 * slide + 0.32 * teeter + 0.04 * Math.sin(su * 22) * teeter // back on the heels, then forward on the toes (with a wobble)
+    B.root.rotation.x += lean * M; B.chest.rotation.x += lean * 0.35 * M; B.head.rotation.x -= lean * 0.45 * M
+    B.root.position.z = 0.03 * Math.exp(-su * 4) * sst(0, 0.05, su) * M // momentum carries her forward (set, not added: the base rig never resets root z)
+    B.root.position.y += (-0.012 * slide + 0.007 * bounce) * M
+    B.hips.rotation.z += 0.07 * sd * Math.sin(su * 13) * teeter * M; B.chest.rotation.z -= 0.08 * sd * Math.sin(su * 13) * teeter * M
+    // legs: slide = front heel out, toes up, back leg dragging; teeter = up on her toes
+    B.thL.rotation.x -= 0.85 * slide * M; B.shLn.rotation.x -= 0.15 * slide * M; B.ftL.rotation.x -= 0.6 * slide * M
+    B.thR.rotation.x += 0.35 * slide * M; B.shRn.rotation.x += 0.9 * slide * M; B.ftR.rotation.x += 0.35 * slide * M
+    B.ftL.rotation.x += 0.55 * teeter * M; B.ftR.rotation.x += 0.55 * teeter * M; B.shLn.rotation.x -= 0.12 * teeter * M; B.shRn.rotation.x -= 0.12 * teeter * M
+    // arms: flung up and back in the slide, windmilling in the teeter, down for the catch; right hand wipes her brow
+    const wl = su * 17, armUp = slide + teeter
+    B.upL.rotation.z -= (0.95 * slide + (0.9 + 0.35 * Math.cos(wl)) * teeter) * M; B.upR.rotation.z += (0.95 * slide + (0.9 + 0.35 * Math.cos(wl + Math.PI)) * teeter) * M
+    B.upL.rotation.x += (0.45 * slide - 0.9 * Math.sin(wl) * teeter) * M; B.upR.rotation.x += (0.45 * slide - 0.9 * Math.sin(wl + Math.PI) * teeter) * M
+    B.foL.rotation.x -= 0.3 * armUp * M; B.foR.rotation.x -= 0.3 * armUp * M
+    B.upR.rotation.x -= 1.0 * phew * M; B.upR.rotation.z += 0.65 * phew * M; B.foR.rotation.x -= 1.65 * phew * M; B.foR.rotation.z += 0.35 * Math.sin(su * 9) * phew * M
+    B.head.rotation.z += 0.08 * phew * M; B.chest.scale.y *= 1 + 0.035 * phew
+    L.fsq = Math.max(L.fsq, 0.55 * phew); L.skidFace = su < 1.02 ? 'excited' : 'happy'; if (phew > 0.3) L.blush = Math.max(L.blush, 0.8) }
   // ---- walk / run: deeper bounce and forward lean when running, bigger arm swing, head overlap on the bob ----
   if (m > 0.01 && !ride && !busy) {
     const run = L.run * m * MOT, s = Math.sin(st.phase)
@@ -230,7 +239,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   // her action poses (acts.js) say how an action feels: strain = effort, calm = eyes softly closed, wow = delighted
   const am = (busy && aw > 0.3) || st.fishing ? st.actMood : null; if (am === 'calm') L.fsq = Math.max(L.fsq, 0.75 * aw)
   const hungryFace = L.fid === 'tummy' || L.fid === 'growl' || (L.fid === 'peek' && L.fu > FID.peek * 0.55)
-  const mood = W_ && W_.__herMood ? W_.__herMood : L.skid > 0.3 && L.skidU < 0.5 ? 'excited' : am === 'strain' ? 'focus' : am === 'calm' ? 'happy' : am === 'wow' ? 'excited' : L.shut > 0.35 ? 'yawn' : (L.skip > 0.3 || wve > 0.3 || yme > 0.3) ? 'excited' : sleepy ? 'sleepy' : hungryFace ? 'hungry' : L.tired > 0.5 && !busy ? 'tired' : sleepy ? 'sleepy' : busy && EXCITED_ACTS.has(act) && aw > 0.3 ? 'excited' : ride ? (L.rideT % 7 < 4.6 ? 'focus' : 'happy') : 'happy'
+  const mood = W_ && W_.__herMood ? W_.__herMood : L.skid > 0.3 ? L.skidFace : am === 'strain' ? 'focus' : am === 'calm' ? 'happy' : am === 'wow' ? 'excited' : L.shut > 0.35 ? 'yawn' : (L.skip > 0.3 || wve > 0.3 || yme > 0.3) ? 'excited' : sleepy ? 'sleepy' : hungryFace ? 'hungry' : L.tired > 0.5 && !busy ? 'tired' : sleepy ? 'sleepy' : busy && EXCITED_ACTS.has(act) && aw > 0.3 ? 'excited' : ride ? (L.rideT % 7 < 4.6 ? 'focus' : 'happy') : 'happy'
   if (mood !== L.mood) { L.mood = mood; L.moodT = 0 } else L.moodT += dt
   L.talk = approach(L.talk, TALK.open ? 1 : 0, 4, dt)
   const friendly = W_ && W_.__herNear != null ? W_.__herNear : Math.max(L.near * (L.tk === 1 || L.tk === 2 ? 1 : 0), L.talk)
