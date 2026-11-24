@@ -39,7 +39,7 @@ import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { fxPasses, nightFromPhase } from './fx.js'
 import { paceFrame, stampActive } from './framePace.js'
 import { butterflyAngle, butterflyFrame } from './butterflies.js'
-import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
+import { VILLAGE, MILLS, HOUSES, LAMPS, SPAWN, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
 import { YARD, CHIMNEY_TOP, yardColliders } from './home/yard.js'
 const HomeExteriorLazy = lazy(() => import('./home/Exterior.jsx')) // her chibi cottage + yard + crop garden (one baked mesh)
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
@@ -412,7 +412,7 @@ const BENCH_Y = 0.104
 const LineupLazy = lazy(() => import('./debug/Lineup.jsx'))
 
 // ---------- traveller ----------
-const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
+const P = { n: SPAWN.clone(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
 { const t = new THREE.Vector3(0, 1, 0); P.fwd.copy(t.sub(P.n.clone().multiplyScalar(P.n.dot(t)))).normalize().negate() }
 const KEYS = {}
 window.__keys = KEYS
@@ -599,7 +599,7 @@ function Planet() {
     <Ground /><Suspense fallback={null}><PathLazy /><StreamLazy /></Suspense>{k >= 2 && <Vegetation />}
     {k >= 2 && HOUSES.map((n, i) => i === 0 ? <HomeHouse key={i} n={n} /> : <House key={i} n={n} i={i} />)}
     {k >= 2 && MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
-    {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
+    {k >= 2 && LAMPS.map((n, i) => <Lamp key={i} n={n} i={i} />)}
     {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {k >= 3 && NEWCHAR && <Bench />}
     {VIEW.mode === 'lineup' && <Suspense fallback={null}><LineupLazy /></Suspense>}
