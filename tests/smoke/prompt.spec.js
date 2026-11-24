@@ -79,11 +79,53 @@ test('villagers: Talk to bubble with Give a gift stacked above, one bubble at a 
 })
 
 test('Pip stays quiet beside her until she stands still 3 s, then offers Pet', async ({ page }) => {
-  const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=village')
-  await page.waitForFunction(() => { const D = window.__dog; return !!(D && D.n && D.init && !D.onBike && !(D.hop > 0) && D.state === 'follow') }, null, { timeout: 30_000 })
-  await go(page, () => { const P = window.__player; P.n.copy(window.__dog.n); P.target = null; window.__snap = 1 })
-  await nearIs(page, () => /^dog/.test(window.__game.G.near?.id || ''))
-  expect(await page.evaluate(() => window.__game.G.near.quiet)).toBe(true) // just arrived: no bubble
+  // petOffer shows the bubble once she has been still for 3 s, and placePrompt's timer uses the
+  // raw frame delta. Standing through boot (often a minute of stalled frames) already passes 3 s,
+  // so the bubble is latched before this test can "just arrive". Rock her a real step each frame
+  // so that timer stays at 0 and the offer never latches. Gameplay is unchanged.
+  await page.addInitScript(() => {
+    let flip = 1
+    const loop = () => {
+      requestAnimationFrame(loop)
+      if (window.__pipHoldStill) return
+      const n = window.__player && window.__player.n
+      if (!n || typeof n.normalize !== 'function') return
+      flip = -flip
+      n.x += flip * 0.02
+      n.normalize()
+    }
+    requestAnimationFrame(loop)
+  })
+  const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=village&dog=sit')
+  await page.waitForFunction(() => { const D = window.__dog; return !!(D && D.n && D.init && !D.onBike && !(D.hop > 0)) }, null, { timeout: 30_000 })
+  const arrived = await page.evaluate(() => new Promise((resolve) => {
+    const P = window.__player, D = window.__dog
+    const axis = P.n.clone().cross(P.fwd).normalize()
+    const clear = (n) => {
+      const spots = (window.__game.L && window.__game.L.spots) || []
+      for (const s of spots) { const sn = s.stand || s.n; if (sn && n.angleTo(sn) < 0.25) return false }
+      const b = window.__game.L && window.__game.L.bench; if (b && b.n && n.angleTo(b.n) < 0.25) return false
+      return true
+    }
+    let spot = null
+    for (let a = 0.5; a < 3.2 && !spot; a += 0.15) { const c = P.n.clone().applyAxisAngle(axis, a); if (clear(c)) spot = c }
+    window.__pipHoldStill = true
+    // A forced sit stays put (no side-quest). A quiet pet loses E to anything else in range,
+    // so they have to be alone for G.near to be Pip while the bubble is still down.
+    D.forced = true; D.state = 'sit'; D.speed = 0; D.route = null
+    if (spot) { P.n.copy(spot); D.n.copy(spot) }
+    P.target = null; window.__snap = 1
+    let frames = 0
+    const tick = () => {
+      frames++
+      const n = window.__game && window.__game.G && window.__game.G.near
+      if ((n && /^dog/.test(n.id || '')) || frames > 40) resolve({ quiet: !!(n && n.quiet), id: n && n.id, frames, state: D.state, found: !!spot })
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }))
+  expect(arrived.found, 'no empty ground for Pip').toBe(true)
+  expect(arrived.quiet, `first frames beside Pip ${JSON.stringify(arrived)}`).toBe(true) // just stopped: no bubble
   await expect(page.locator('.tp-bubble-wrap .tp-prompt')).toHaveCount(0)
   await nearIs(page, () => /^dog/.test(window.__game.G.near?.id || '') && window.__game.G.near.quiet === false)
   await expect(page.locator('.tp-bubble-wrap .tp-prompt')).toContainText('Pip', { timeout: 20_000 })
