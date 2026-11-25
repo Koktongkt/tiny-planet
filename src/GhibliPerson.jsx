@@ -128,11 +128,11 @@ const PAINT = `
       for (int i = 0; i < 2; i++) { float by = vb + .030 - float(i)*.024, bx = -(.010 + .018 + max(0., vb - by)*.85 + .0075);
         float r = length(vec2(x - bx, y - by)); torso = mix(torso, uAcc*.42, front*J*aa(.0036 - r)); torso = mix(torso, uAcc*.66, front*J*aa(.0023 - r)); }
       // flap pockets on the hips
-      vec2 pq = vec2(ax - .057, y - (uY.x + .032)); float pr = max(abs(pq.x) - .0160, abs(pq.y) - .017);
-      float pocket = front * J * (1. - open) * aa(-pr);
+      vec2 pq = vec2((atan(ax, max(z - .008, 1e-4)) - .90)*.075, y - (uY.x + .032)); float pr = max(abs(pq.x) - .0205, abs(pq.y) - .017); // wraps the hip: seen from the side too
+      float pocket = J * (1. - open) * aa(-pr);
       float flap = pocket * aa(pq.y - .007);
       torso = mix(torso, uAcc*.92, flap);
-      torso = mix(torso, uAcc*.55, front * J * (1. - open) * max(aa(.0012 - abs(pr)), aa(.0011 - abs(pq.y - .007)) * aa(.0160 - abs(pq.x))));
+      torso = mix(torso, uAcc*.55, J * (1. - open) * aa(z - .008) * max(aa(.0012 - abs(pr)), aa(.0011 - abs(pq.y - .007)) * aa(.0205 - abs(pq.x))));
       // hem edge, back vent, back waist seam and collar
       torso = mix(torso, uAcc*.62, J * aa(.0011 - abs(y - uY.x - .0012)) * (1. - open));
       torso = mix(torso, uAcc*.66, back * J * aa(.0009 - ax) * aa(uY.x + .034 - y));
@@ -140,8 +140,9 @@ const PAINT = `
       torso = mix(torso, uAcc*.88, back * aa(y - (uY.y - .010)) * (1. - neck));
     }
     // arms
-    vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop;
+    vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
+    if (ty == 8) { float sw = fwidth(vReg.x)*1.4 + 1e-4; armSeam = aa(sw - abs(vReg.x - .5)); } // inked sleeve/body seam
     if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
       float cb = aa(.0055 - abs(y - uO.w - .0040)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - uO.w - .0098))); }
     // legs
@@ -151,6 +152,7 @@ const PAINT = `
     c = mix(c, armC, arm);
     c = mix(c, uSkin, max(hand, neck * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
+    c = mix(c, uAcc*.55, armSeam * (1. - hand));
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
       c = mix(c, uShoe*.42, boot * aa(.0098 - y));
@@ -291,14 +293,14 @@ export function spec(b = {}) {
   const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
   for (const sd of [-1, 1]) {
     const k = sd < 0 ? 'L' : 'R', dir = V3(sd * Math.sin(S.armA), -Math.cos(S.armA), 0)
-    S['sh' + k] = V3(sd * 0.05 * shw * (0.85 + 0.15 * gw) * (b.shX ?? 1), S.shY, -0.002 + 0.025 * hc); S['el' + k] = S['sh' + k].clone().addScaledVector(dir, 0.046 * al)
-    S['wr' + k] = S['el' + k].clone().addScaledVector(dir, 0.04 * al).add(V3(0, 0, 0.004)); S['hd' + k] = S['wr' + k].clone().addScaledVector(dir, 0.013 * fs)
+    S['sh' + k] = V3(sd * 0.05 * shw * (0.85 + 0.15 * gw) * (b.shX ?? 1), S.shY - (b.shDrop ?? 0), -0.002 + 0.025 * hc); /* shDrop: optional sloped shoulders */ S['el' + k] = S['sh' + k].clone().addScaledVector(dir, 0.046 * al)
+    S['wr' + k] = S['el' + k].clone().addScaledVector(dir, 0.04 * al).add(V3(0, 0, 0.004)); S['hd' + k] = S['wr' + k].clone().addScaledVector(dir, 0.013 * fs * (b.handL ?? 1))
     const hx = 0.034 * (0.8 + 0.2 * gw) * (b.legX ?? 1)
     S['hp' + k] = V3(sd * hx, S.hipY, 0.004); S['kn' + k] = V3(sd * (hx + 0.001), S.knY, 0.007); S['an' + k] = V3(sd * (hx + 0.002), S.anY, 0.004)
     S['ft' + k] = V3(sd * (hx + 0.002), b.footY ?? 0.014, 0.012); S['dir' + k] = dir
   }
   S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
-  S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn, 0.012 * fs * S.hn)
+  S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn * (b.handL ?? 1), 0.012 * fs * S.hn) // handL: optional longer hand
   if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirt === 'long' ? 1.12 : 1.3)] }
   S.hemY = S.skirt ? S.skirt[2] : S.knY
   S.top = S.headC.y + S.headR.y

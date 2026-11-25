@@ -220,7 +220,19 @@ Golden sheet, before and after: [`ref/hoshino-outfit-compare.jpg`](ref/hoshino-o
   - The arm and leg sections add a white shirt cuff at the wrist (`uO.w` carries the wrist height for this type) and painted trouser turn-ups.
 - **Palette:** trousers `#66653f` (warmer than the vest; the cool cel shadow turned a darker olive muddy and camo-like), shoes `#7a4a26`.
 - **Rejected:** mesh turn-ups (`outfit.cuffs`) read as fat leg-warmers, so they are painted instead.
-- **Not yet matched:** the sheet's sleeves are a little wider with more cuff showing, and the side view has no pocket or lapel detail.
+
+### Professor Hoshino (draft): arms and ears pass
+
+Golden sheet, before and after: [`ref/hoshino-arms-compare.jpg`](ref/hoshino-arms-compare.jpg).
+
+- **New optional body knobs** in `GhibliPerson` (both default to the old look, so no other character changes):
+  - `shDrop` lowers the shoulder joint, for sloped shoulders.
+  - `handL` lengthens the hand ellipsoid and its offset from the wrist.
+- **Arms:** they hang more steeply from rounder, sloped shoulders: `shX 1.32`, `armA 0.22`, `shDrop 0.018`. The sleeves are puffier (`armR [1.36, 1.42, 1.34]`), so the white cuff reads as a band. Hands are slightly longer (`handL 1.18`).
+- **Sleeve seam:** steeper arms fused into the jacket sides. The `openJacket` painter now inks the sleeve/body seam where the arm weight crosses 0.5.
+- **Pockets:** placed by angle round the hip instead of by `|x|`, so they wrap toward the side. They show in 3/4; in the pure side view his hand still covers them.
+- **Ears:** they stand a little proud of the head (`EAR.x 0.059`), so the ink hull draws a full rim. The old half-hidden hull read as a closed eyelash on the cheek in side view. An inked C curl on the outer face uses hair-mesh `aSkin 0.47`, which draws as ink.
+- **Not yet matched:** no lapel or vest edge in the pure side view.
 
 ## 5. Pitfalls
 

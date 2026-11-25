@@ -25,12 +25,12 @@ const SHIRT = '#f4eee6'
 const TROUSER = '#66653f'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
 // thin gold wire specs, larger than the eyes (golden sheet); arms meet the low ears
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ear: [0.0555, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55 })
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
 // the fringe rolls from his right to left. Ears sit low (eye-to-mouth line), tucked under the cloud.
-const EAR = { x: 0.0565, y: -0.021, z: 0.002 }
+const EAR = { x: 0.0590, y: -0.021, z: 0.002 }
 const DOME = { c: [0, 0.009, -0.011], r: [0.0605, 0.0505, 0.0605] }
 const _m = new THREE.Matrix4(), _n = new THREE.Vector3(), _t = new THREE.Vector3(), _b = new THREE.Vector3()
 // one wave lock on the dome: az 0 = front (+z), +pi/2 = +x; el up from the equator. len along the
@@ -51,6 +51,7 @@ function lock(geo, az, el, push, [len, wid, thk], roll = 0, skin = 0) {
 function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 18, 14), ballS = new THREE.SphereGeometry(1, 12, 9)
   const L = (az, el, push, sz, roll) => lock(ballS, az, el, push, sz, roll)
+  const curl = new THREE.TorusGeometry(0.0062, 0.00075, 5, 16, Math.PI * 1.15); curl.rotateZ(Math.PI * 0.45); curl.scale(0.85, 1.25, 1)
   const parts = [
     // the cloud body: crown, sides and the whole back of the head
     part(ball, DOME.c, DOME.r),
@@ -74,13 +75,15 @@ function hoshinoHair() {
     L(0.62, 0.50, 1.0, [0.019, 0.014, 0.009], 0.40),
     L(-0.80, 0.18, 0.99, [0.017, 0.015, 0.009], 0.9),
     L(0.86, 0.16, 0.99, [0.017, 0.015, 0.009], 1.0),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0068, 0.0125, 0.0074], [0, d * 0.7, d * 0.08], 1)),
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0060, 0.0128, 0.0080], [0, d * 0.55, d * 0.08], 1)),
+    // inner ear curl: a C of ink on the outer face (aSkin 0.47 draws as ink in the hair shader)
+    ...[-1, 1].map(d => part(curl, [d * (EAR.x + 0.0042), EAR.y + 0.0004, EAR.z + 0.0006], [1, 1, 1], [0, d * (Math.PI / 2 + 0.55), 0], 0.47)),
   ]
   const n = parts.length
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
-  for (let k = 2; k < n - 2; k++) tagAW(parts[k], (x, y) => [2, 0.35 + 0.35 * sm(-0.01, 0.06, y)])
-  for (const k of [n - 2, n - 1]) tagAW(parts[k], () => [3, 0])
+  for (let k = 2; k < n - 4; k++) tagAW(parts[k], (x, y) => [2, 0.35 + 0.35 * sm(-0.01, 0.06, y)])
+  for (const k of [n - 4, n - 3, n - 2, n - 1]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 function hoshinoGrey() {
@@ -108,8 +111,8 @@ function HoshinoHair({ set }) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 1.12, girth: 1.20, shoulder: 1.08, chestW: 1.12, bellyZ: 0.96, shX: 1.18, armA: 0.30,
-    armR: [1.10, 1.05, 1.00], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.86,
+  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 1.12, girth: 1.20, shoulder: 1.08, chestW: 1.12, bellyZ: 0.96, shX: 1.32, armA: 0.22, shDrop: 0.018, handL: 1.18,
+    armR: [1.36, 1.42, 1.34], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.86,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16,
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
