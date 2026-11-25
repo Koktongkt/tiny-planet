@@ -5,7 +5,8 @@
 // Local frame: x = along the track (east), y = up, z = away from the rails (rails at z ≈ -0.30, the platformN offset).
 import * as THREE from 'three'
 import { kit, tris, combine } from './kit.js'
-import { R, TRAIN_LAT, dir, height } from '../../world.js'
+import { R, height } from '../../world.js'
+import { railDir } from '../../world/railway.js'
 
 export const STATION_NAMES = { village: 'Lakeside', forest: 'Forest Edge' }
 const C = { plank: '#c0915f', plank2: '#a8784c', stone: '#b9b2a2', edge: '#f2e4bc', post: '#6e4a33', roof: '#3f6f6a', roofEdge: '#efe2c4', panel: '#efe2c4', bench: '#8a5a3c', iron: '#3b3633', lamp: '#4a3f37', green: '#6f9e4f', bloom: '#e8737a' }
@@ -77,10 +78,10 @@ export function boardsTexture() {
   })
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; ATLAS = t; return t
 }
-// placement: platform frame at platformN(id) (Codor, systems/liveC.js); -z points at the rails
+// placement: platform frame at platformN(id) (Codor, systems/liveC.js); -z points at the rails (world/railway.js ring)
 const _x = new THREE.Vector3(), _z = new THREE.Vector3(), _m = new THREE.Matrix4()
 export function platformFrame(n, lon) {
-  n = n.clone().normalize(); const rail = dir(TRAIN_LAT, lon), toRail = rail.clone().sub(n); toRail.addScaledVector(n, -toRail.dot(n)).normalize()
+  n = n.clone().normalize(); const rail = railDir(lon), toRail = rail.clone().sub(n); toRail.addScaledVector(n, -toRail.dot(n)).normalize()
   _z.copy(toRail).negate(); _x.crossVectors(n, _z).normalize()
   const pos = n.clone().multiplyScalar(R + height(n)), q = new THREE.Quaternion().setFromRotationMatrix(_m.makeBasis(_x, n, _z))
   return { pos, q }

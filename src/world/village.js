@@ -17,7 +17,7 @@ const NEW = {
     at(HOME_DIR.lat, HOME_DIR.lon), // [0] her home: the west edge of the village, up from the river
     near('village', 0.11, 90), near('village', 0.2, 97), near('village', 0.11, 225), near('village', 0.15, 281), // [1..4] round the square (north and south: the river runs down its east side, her yard is west)
     near('terraces', 0.22, 22.5), near('terraces', 0.22, 67.5), // [5..6] the farmers, on the terraces' dry east side
-    near('harbour', 0.24, 0), near('harbour', 0.25, 56), // [7..8] the fishers, on the bay's east shore (clear of the coast railway's TRAIN_LAT)
+    near('harbour', 0.24, 0), at(-0.76, 1.965), // [7..8] the fishers, on the bay's east shore (south of the coast railway, which eases round the bay head)
     near('forest', 0.25, 22.5), near('forest', 0.24, 56), // [9..10] the forest's north-east edge, by the path
   ],
   MILLS: [near('mills', 0.05, 35), near('mills', 0.06, 205)],

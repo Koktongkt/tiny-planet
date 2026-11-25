@@ -1,14 +1,18 @@
 // Biomes / zones for the bigger planet: lake + dock, cliff + waterfall, rice terraces, train loop,
 // harbour, mossy ruins, camphor forest, giant tree hill, meadow flowers.
+// The reworked planet places its props from world/zoneLayout.js and runs the train on world/railway.js's coast ring
+// (with its river trestle); ?world=old keeps the placement below verbatim.
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
-import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve } from './world.js'
+import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve, underWater } from './world.js'
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
+import { railDir, railPoint, railTangent, railHeight, railBehind, railOff, onTrestle, deckHeight, lonAtArc, RAIL_LEN, TRESTLE } from './world/railway.js'
+import * as ZL from './world/zoneLayout.js'
 
 const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
 const angTo = (n, k) => zoneAng(n, ZONES[k])
@@ -16,19 +20,22 @@ const latOf = (n) => Math.asin(Math.max(-1, Math.min(1, n.y / n.length())))
 export { Zc }
 
 // ---------- placement helpers ----------
-export const LAKE_DOCK_B = 3.6, HARB_PIER_B = 1.2
-export const HARBOUR_HOUSES = [0, 1, 2, 3, 4].map(k => around(Zc.harbour, ZONES.harbour.r * 1.3, 2.0 + k * 0.62)).filter(n => streamDist(n) > 0.05)
+export const LAKE_DOCK_B = OLD_WORLD ? 3.6 : ZL.LAKE_DOCK_B, HARB_PIER_B = 1.2
+export const HARBOUR_HOUSES = OLD_WORLD ? [0, 1, 2, 3, 4].map(k => around(Zc.harbour, ZONES.harbour.r * 1.3, 2.0 + k * 0.62)).filter(n => streamDist(n) > 0.05) : ZL.HARBOUR_HOUSES.map(h => h.n)
+// each harbour house's spin (App.jsx House): today's i * 1.3 pattern, or (new) its door turned to the bay
+export const HARBOUR_SPINS = OLD_WORLD ? HARBOUR_HOUSES.map((_, i) => (i + 3) * 1.3) : ZL.HARBOUR_HOUSES.map(h => h.spin)
 export const MILL_FIELD = []
 for (let i = 0; i < 9 && MILL_FIELD.length < 6; i++) { const n = around(Zc.mills, ZONES.mills.r * (0.25 + 0.7 * ((i * 0.37) % 1)), i * 2.2); if (distToCurve(n, pathDir, 200) > 0.05 && !MILL_FIELD.some(m => m.angleTo(n) < 0.07)) MILL_FIELD.push(n) }
-const RUIN_COLS = [0, 1, 2, 3, 4, 5, 6].map(k => ({ n: around(Zc.ruins, 0.55 / R, k * 0.9 + 0.3), h: [0.75, 0.35, 0.6, 0.2, 0.8, 0.45, 0.3][k], tilt: [0, 0.1, 0, 0.25, 0, 0.05, 0.15][k] }))
+const RUIN_COLS = OLD_WORLD ? [0, 1, 2, 3, 4, 5, 6].map(k => ({ n: around(Zc.ruins, 0.55 / R, k * 0.9 + 0.3), h: [0.75, 0.35, 0.6, 0.2, 0.8, 0.45, 0.3][k], tilt: [0, 0.1, 0, 0.25, 0, 0.05, 0.15][k] })) : ZL.RUIN_COLS // (new: from the lakebed)
 const CAMPHORS = []
 for (let i = 0; i < 160 && CAMPHORS.length < 34; i++) { const n = around(Zc.forest, Math.sqrt(rnd()) * ZONES.forest.r, rnd() * 6.283); if (streamDist(n) < 0.06 * K || distToCurve(n, pathDir, 120) < 0.06 * K || angTo(n, 'giant') < 0.12 || CAMPHORS.some(c => c.n.angleTo(n) < 0.085)) continue; CAMPHORS.push({ n, s: 0.85 + rnd() * 0.5, spin: rnd() * 6 }) }
 
 export function zoneBusy(n) {
   return angTo(n, 'lake') < ZONES.lake.r * 1.2 || angTo(n, 'harbour') < ZONES.harbour.r * 1.15 || angTo(n, 'cliff') < ZONES.cliff.r + 0.035 || angTo(n, 'terraces') < ZONES.terraces.r + 0.02 ||
-    angTo(n, 'ruins') < ZONES.ruins.r || angTo(n, 'mills') < ZONES.mills.r + 0.03 || angTo(n, 'meadow') < ZONES.meadow.r * 0.75 || angTo(n, 'giant') < 1.6 / R || Math.abs(latOf(n) - TRAIN_LAT) < 0.3 / R || MILL_FIELD.some(m => m.angleTo(n) < 0.45 / R) || HARBOUR_HOUSES.some(h => h.angleTo(n) < 0.6 / R) || CAMPHORS.some(c => c.n.angleTo(n) < 0.35 / R)
+    angTo(n, 'ruins') < ZONES.ruins.r || angTo(n, 'mills') < ZONES.mills.r + 0.03 || angTo(n, 'meadow') < ZONES.meadow.r * 0.75 || angTo(n, 'giant') < 1.6 / R || Math.abs(railOff(n)) < 0.3 / R || MILL_FIELD.some(m => m.angleTo(n) < 0.45 / R) || HARBOUR_HOUSES.some(h => h.angleTo(n) < 0.6 / R) || CAMPHORS.some(c => c.n.angleTo(n) < 0.35 / R) || underWater(n)
 }
-export function zoneWet(n) { return angTo(n, 'lake') < ZONES.lake.r * 1.1 || angTo(n, 'harbour') < ZONES.harbour.r * 1.08 || angTo(n, 'terraces') < ZONES.terraces.r || Math.abs(latOf(n) - TRAIN_LAT) < 0.18 / R || angTo(n, 'ruins') < 0.7 / R }
+// (zoneBusy / zoneWet also keep scatter out of the sea and the other water on the reworked planet: world.js underWater)
+export function zoneWet(n) { return angTo(n, 'lake') < ZONES.lake.r * 1.1 || angTo(n, 'harbour') < ZONES.harbour.r * 1.08 || angTo(n, 'terraces') < ZONES.terraces.r || Math.abs(railOff(n)) < 0.18 / R || angTo(n, 'ruins') < 0.7 / R || underWater(n) }
 export const ZONE_COLLIDERS = [
   { n: Zc.lake, r: ZONES.lake.r * 0.98 }, { n: Zc.harbour, r: ZONES.harbour.r * 0.98 }, { n: Zc.cliff, r: ZONES.cliff.r + 0.012 }, { n: Zc.giant, r: 0.62 / R },
   ...RUIN_COLS.map(c => ({ n: c.n, r: 0.13 / R })), ...CAMPHORS.map(c => ({ n: c.n, r: 0.16 * c.s / R })), ...HARBOUR_HOUSES.map(n => ({ n, r: 0.42 / R })), ...MILL_FIELD.map(n => ({ n, r: 0.3 / R })),
@@ -41,7 +48,7 @@ export function zoneColour(n, col) {
   for (const k of ['lake', 'harbour']) { a = angTo(n, k); const r = ZONES[k].r; if (a < r * 1.3) col.lerp(a < r * 1.02 ? cBed : cSand, a < r * 1.02 ? 0.8 : Math.min(1, (r * 1.3 - a) / (r * 0.2)) * 0.85) }
   a = angTo(n, 'terraces'); if (a < ZONES.terraces.r) { const f = (1.05 * Math.max(0, 1 - a / ZONES.terraces.r)) / 0.15; col.copy((f - Math.floor(f)) > 0.8 ? cRiser : cPaddy).lerp(CC('#c8e8a0'), 0.25 * Math.sin(n.x * 90) ** 2) }
   a = angTo(n, 'ruins'); if (a < ZONES.ruins.r) col.lerp(cRuin, 0.4)
-  if (Math.abs(latOf(n) - TRAIN_LAT) < 0.16 / R) col.lerp(CC('#b9a58a'), 0.8)
+  if (Math.abs(railOff(n)) < 0.16 / R && !onTrestle(Math.atan2(n.x, n.z))) col.lerp(CC('#b9a58a'), 0.8) // the ballast (none under the trestle)
 }
 export const rockify = (n, nrm, col) => { if (angTo(n, 'cliff') < ZONES.cliff.r + 0.05) { const d = nrm.dot(n); if (d < 0.86) col.copy(cRock).multiplyScalar(0.85 + 0.25 * Math.sin(n.y * 300)) } }
 
@@ -147,28 +154,39 @@ function Lake() {
   </>
 }
 
-function Waterfall() {
+// the falling sheet, its foam and the plunge pool: hung from `edge` (facing `d`, from radius topR) down to footN
+function Falls({ edge, d, topR, footN, w = 0.42, w2 = 0.3, spread = 0.18, poolR = 0.32 / R, children }) {
+  const H = topR - (R + height(footN)) + 0.08, m1 = useMemo(fallMat, []), foam = useRef()
+  useFrame(() => { m1.uniforms.uN.value = T.night; const t = wind.time.value; foam.current.children.forEach((f, k) => { const u = (t * 0.8 + k / 7) % 1; f.position.set(Math.sin(k * 2.3) * spread, u * 0.25, 0.05 + Math.cos(k * 1.7) * 0.08); f.scale.setScalar(0.06 + u * 0.08) }) })
+  return <>
+    <Frame n={edge} fwd={d} rad={topR}>
+      <mesh position={[0, -H / 2, 0.06]} material={m1}><planeGeometry args={[w, H, 1, 1]} /></mesh>
+      <mesh position={[0, -H / 2 + 0.02, 0.03]} rotation={[0.04, 0, 0]} material={m1}><planeGeometry args={[w2, H, 1, 1]} /></mesh>
+    </Frame>
+    <Frame n={footN} fwd={d}><group ref={foam}>{Array.from({ length: 7 }, (_, k) => <mesh key={k} material={ZM.foam}><icosahedronGeometry args={[1, 1]} /></mesh>)}</group></Frame>
+    {children}
+    <WaterCap c={footN} r={poolR} level={height(footN) + 0.012} />
+  </>
+}
+// today's falls: off the cliff toward the lake, with a creek strip across the mesa top and one on to the lake
+function OldWaterfall() {
   const c = Zc.cliff, z = ZONES.cliff, lake = Zc.lake
   const d = toward(c, lake), edge = around(c, 0, 0).multiplyScalar(Math.cos(z.r + 0.02)).addScaledVector(d, Math.sin(z.r + 0.02)).normalize()
-  const topR = R + height(around(c, z.r * 0.4, 0)) + 0.02, footN = c.clone().multiplyScalar(Math.cos(z.r + 0.075)).addScaledVector(d, Math.sin(z.r + 0.075)).normalize(), footR = R + height(footN)
-  const H = topR - footR + 0.08
-  const m1 = useMemo(fallMat, []), m2 = useMemo(stripMat, []), m3 = useMemo(stripMat, [])
+  const topR = R + height(around(c, z.r * 0.4, 0)) + 0.02, footN = c.clone().multiplyScalar(Math.cos(z.r + 0.075)).addScaledVector(d, Math.sin(z.r + 0.075)).normalize()
+  const m2 = useMemo(stripMat, []), m3 = useMemo(stripMat, [])
   const lakeEdge = lake.clone().multiplyScalar(Math.cos(ZONES.lake.r * 0.92)).addScaledVector(toward(lake, c), Math.sin(ZONES.lake.r * 0.92)).normalize()
   const creek = useMemo(() => rib(footN, lakeEdge, 0.16, 0.02), [])
   const top = useMemo(() => rib(around(c, 0.02, 1), edge, 0.14, 0.012), [])
-  const foam = useRef()
-  useFrame(() => { m1.uniforms.uN.value = T.night; m2.uniforms.uN.value = T.night; m3.uniforms.uN.value = T.night; const t = wind.time.value; foam.current.children.forEach((f, k) => { const u = (t * 0.8 + k / 7) % 1; f.position.set(Math.sin(k * 2.3) * 0.18, u * 0.25, 0.05 + Math.cos(k * 1.7) * 0.08); f.scale.setScalar(0.06 + u * 0.08) }) })
-  return <>
-    <Frame n={edge} fwd={d} rad={topR}>
-      <mesh position={[0, -H / 2, 0.06]} material={m1}><planeGeometry args={[0.42, H, 1, 1]} /></mesh>
-      <mesh position={[0, -H / 2 + 0.02, 0.03]} rotation={[0.04, 0, 0]} material={m1}><planeGeometry args={[0.3, H, 1, 1]} /></mesh>
-    </Frame>
-    <Frame n={footN} fwd={d}><group ref={foam}>{Array.from({ length: 7 }, (_, k) => <mesh key={k} material={ZM.foam}><icosahedronGeometry args={[1, 1]} /></mesh>)}</group></Frame>
+  useFrame(() => { m2.uniforms.uN.value = T.night; m3.uniforms.uN.value = T.night })
+  return <Falls edge={edge} d={d} topR={topR} footN={footN}>
     <mesh geometry={creek} material={m2} />
     <mesh geometry={top} material={m3} />
-    <WaterCap c={footN} r={0.32 / R} level={height(footN) + 0.012} />
-  </>
+  </Falls>
 }
+// the reworked planet: the river itself runs across the mesa and on from the pool (riverProps Stream), so only the falls
+// are drawn here, where the river drops off the cliff's downhill face (world/zoneLayout.js WATERFALL)
+function RiverFalls() { const W = ZL.WATERFALL; return <Falls edge={W.lip} d={W.fwd} topR={W.topR} footN={W.foot} w={W.width} w2={W.width * 0.72} spread={W.width * 0.43} poolR={W.poolR} /> }
+const Waterfall = OLD_WORLD ? OldWaterfall : RiverFalls
 
 function Terraces() {
   const c = Zc.terraces, z = ZONES.terraces
@@ -195,15 +213,20 @@ function Terraces() {
 const TRAIN_SPEED = 0.05, TRAIN_LIFT = 0.055
 const trainAt = new URLSearchParams(location.search).get('trainAt')
 const _tn = new THREE.Vector3(), _ts = new THREE.Vector3(), _tu = new THREE.Vector3(), _tm = new THREE.Matrix4()
-const ringPos = (lon, lift = TRAIN_LIFT) => { const n = dir(TRAIN_LAT, lon); return n.multiplyScalar(R + height(n) + lift) }
+// the ring (world/railway.js): today's constant latitude under ?world=old; the coast ring round the Harbour bay and over
+// the river trestle otherwise. Rails, sleepers and carriages sit on railHeight (the ground, or the trestle deck).
+const ringPos = (lon, lift = TRAIN_LIFT) => railDir(lon).multiplyScalar(R + railHeight(lon) + lift)
+const _rt = (lon) => { const t = railTangent(lon); return new THREE.Vector3(t.x, t.y, t.z) }
 function Train() {
-  const rails = useMemo(() => { const mk = (off) => { const pos = [], idx = []; const N = 900; for (let i = 0; i <= N; i++) { const lon = (i / N) * Math.PI * 2; for (const s of [-1, 1]) { const n = dir(TRAIN_LAT + (off + s * 0.008) / R, lon); pos.push(...n.multiplyScalar(R + height(dir(TRAIN_LAT, lon)) + 0.05).toArray()) } if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2) } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g }; return [mk(-0.07), mk(0.07)] }, [])
-  const sleepers = useMemo(() => { const a = [], L = 2 * Math.PI * R * Math.cos(TRAIN_LAT), N = Math.floor(L / 0.13); for (let i = 0; i < N; i++) { const lon = (i / N) * Math.PI * 2, n = dir(TRAIN_LAT, lon); const p = place(n, 0.025, 0); const east = new THREE.Vector3(Math.cos(lon), 0, -Math.sin(lon)); const f = toward(n, east); a.push({ pos: p.pos, q: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(n, f), n, f)), s: 1 }) } return a }, [])
+  const rails = useMemo(() => { const mk = (off) => { const pos = [], idx = []; const N = 900; for (let i = 0; i <= N; i++) { const lon = (i / N) * Math.PI * 2; for (const s of [-1, 1]) { const n = railPoint(lon, off + s * 0.008); pos.push(...n.multiplyScalar(R + railHeight(lon) + 0.05).toArray()) } if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2) } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g }; return [mk(-0.07), mk(0.07)] }, [])
+  const sleepers = useMemo(() => { const a = [], L = OLD_WORLD ? 2 * Math.PI * R * Math.cos(TRAIN_LAT) : RAIL_LEN, N = Math.floor(L / 0.13); for (let i = 0; i < N; i++) {
+    const lon = OLD_WORLD ? (i / N) * Math.PI * 2 : lonAtArc(i / N * L), n = railDir(lon), pos = OLD_WORLD ? place(n, 0.025, 0).pos : n.clone().multiplyScalar(R + railHeight(lon) + 0.025)
+    const f = OLD_WORLD ? toward(n, new THREE.Vector3(Math.cos(lon), 0, -Math.sin(lon))) : _rt(lon); a.push({ pos, q: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(n, f), n, f)), s: 1 }) } return a }, [])
   const cars = useRef([]), puffs = useRef()
   const o = useMemo(() => new THREE.Object3D(), [])
   useFrame(() => {
     const t = wind.time.value, lon0 = trainAt != null ? +trainAt : TRAIN.fn ? TRAIN.fn(t) : t * TRAIN_SPEED; TRAIN.cars = cars.current
-    cars.current.forEach((g, k) => { if (!g) return; const lon = lon0 - k * 0.44 / (R * Math.cos(TRAIN_LAT)); const p = ringPos(lon), p2 = ringPos(lon + 0.01); const n = _tn.copy(p).normalize(), f = p2.sub(p).normalize(); g.position.copy(p); g.quaternion.setFromRotationMatrix(_tm.makeBasis(_ts.crossVectors(n, f), n, f)); g.position.addScaledVector(n, Math.abs(Math.sin(t * 12 + k)) * 0.004) })
+    cars.current.forEach((g, k) => { if (!g) return; const lon = railBehind(lon0, k * 0.44); const p = ringPos(lon), p2 = ringPos(lon + 0.01); const n = _tn.copy(p).normalize(), f = p2.sub(p).normalize(); g.position.copy(p); g.quaternion.setFromRotationMatrix(_tm.makeBasis(_ts.crossVectors(n, f), n, f)); g.position.addScaledVector(n, Math.abs(Math.sin(t * 12 + k)) * 0.004) })
     const eng = cars.current[0]; if (eng) { const up = _tu.copy(eng.position).normalize(); for (let k = 0; k < 8; k++) { const u = (t * 0.6 + k / 8) % 1; o.position.set(0, 0.26 + u * 0.5, 0.12 - u * 0.5).applyQuaternion(eng.quaternion).add(eng.position); o.scale.setScalar((0.03 + u * 0.09) * Math.min(1, u * 6) * (1 - u) ** 0.5); o.updateMatrix(); puffs.current.setMatrixAt(k, o.matrix) } puffs.current.instanceMatrix.needsUpdate = true }
   })
   return <>
@@ -230,7 +253,46 @@ function Train() {
   </>
 }
 
-function Harbour() {
+// the plank trestle where the coast railway crosses the river (new layout): a plank deck under the sleepers, timber bents
+// (three posts, a cap beam, an X brace) down to the valley floor every ~0.34, and a hand rail each side. Two merged
+// meshes (planks, timber), each with an ink hull.
+function Trestle() {
+  const geos = useMemo(() => {
+    const T = TRESTLE, planks = [], timber = [], m = new THREE.Matrix4(), _x = new THREE.Vector3(), _z = new THREE.Vector3(), _p = new THREE.Vector3()
+    // a box w x h x d placed in the track frame at lon: x across (off), y up (y above R), z along the track
+    const put = (out, w, h, d, lon, off, y, rotZ = 0, len) => { const n = railPoint(lon, off), f = _rt(lon); _x.crossVectors(n, f).normalize(); _z.crossVectors(_x, n)
+      const g = new THREE.BoxGeometry(w, h, len ?? d); m.makeBasis(_x, n, _z).setPosition(_p.copy(n).multiplyScalar(R + y)); if (rotZ) g.applyMatrix4(new THREE.Matrix4().makeRotationZ(rotZ)); g.applyMatrix4(m); out.push(g) }
+    const span = (T.lon1 - T.lon0), cosL = Math.cos(TRAIN_LAT), L = span * R * cosL
+    for (let i = 0, N = Math.ceil(L / 0.11); i <= N; i++) { const lon = T.lon0 + span * i / N; put(planks, 0.5, 0.022, 0.095, lon, 0, deckHeight(lon) + 0.005) } // deck planks across
+    const B = Math.max(2, Math.round(L / 0.34))
+    for (let i = 0; i <= B; i++) { const lon = T.lon0 + span * i / B, dh = deckHeight(lon)
+      const foot = (off) => Math.min(dh - 0.1, height(railPoint(lon, off))) - 0.08 // posts reach into the valley floor
+      for (const off of [-0.22, 0, 0.22]) { const g = foot(off), h = dh - 0.03 - g; if (h > 0.03) put(timber, 0.045, h, 0.045, lon, off, g + h / 2) }
+      put(timber, 0.56, 0.04, 0.07, lon, 0, dh - 0.03) // cap beam under the deck
+      const lo = Math.max(foot(-0.22), foot(0.22)) + 0.04, hb = dh - 0.07 - lo // X brace between the outer posts
+      if (hb > 0.12) for (const sg of [-1, 1]) put(timber, Math.hypot(0.44, hb), 0.025, 0.025, lon, 0, lo + hb / 2, sg * Math.atan2(hb, 0.44))
+      for (const off of [-0.27, 0.27]) put(timber, 0.03, 0.15, 0.03, lon, off, dh + 0.085) } // hand-rail posts
+    for (let i = 0; i < B; i++) { const a = T.lon0 + span * i / B, b = T.lon0 + span * (i + 1) / B, c = (a + b) / 2 // hand rails, post to post
+      for (const off of [-0.27, 0.27]) put(planks, 0.035, 0.025, 0, c, off, deckHeight(c) + 0.16, 0, railPoint(a, off).angleTo(railPoint(b, off)) * R + 0.03) }
+    const mg = (list) => { const g = mergeGeometries(list); list.forEach(x => x.dispose()); g.computeBoundingSphere(); return g }
+    return { planks: mg(planks), timber: mg(timber) }
+  }, [])
+  return <>
+    <mesh geometry={geos.planks} material={ZM.plank}><Outlines thickness={0.005} color={INK} /></mesh>
+    <mesh geometry={geos.timber} material={ZM.post}><Outlines thickness={0.005} color={INK} /></mesh>
+  </>
+}
+
+function Lighthouse({ n }) {
+  return <Surface n={n}>
+    <mesh position={[0, 0.5, 0]} material={ZM.white}><cylinderGeometry args={[0.11, 0.16, 1.0, 14]} /><Outlines thickness={0.01} color={INK} /></mesh>
+    {[0.25, 0.65].map(y => <mesh key={y} position={[0, y, 0]} material={ZM.red}><cylinderGeometry args={[0.14 - y * 0.04, 0.15 - y * 0.04, 0.14, 14]} /></mesh>)}
+    <mesh position={[0, 1.08, 0]} material={ZM.lantern}><cylinderGeometry args={[0.08, 0.08, 0.14, 10]} /></mesh>
+    <mesh position={[0, 1.2, 0]} material={ZM.red}><coneGeometry args={[0.12, 0.14, 12]} /><Outlines thickness={0.008} color={INK} /></mesh>
+  </Surface>
+}
+const Cargo = ({ n, k }) => <Surface n={n} spin={k}>{k % 2 ? <mesh position={[0, 0.06, 0]} material={ZM.barrel}><cylinderGeometry args={[0.055, 0.05, 0.12, 10]} /><Outlines thickness={0.005} color={INK} /></mesh> : <mesh position={[0, 0.06, 0]} material={ZM.crate}><boxGeometry args={[0.12, 0.12, 0.12]} /><Outlines thickness={0.005} color={INK} /></mesh>}</Surface>
+function OldHarbour() {
   const z = ZONES.harbour, c = Zc.harbour
   const lh = around(c, z.r * 1.08, 0.9)
   return <>
@@ -238,17 +300,25 @@ function Harbour() {
     <Dock c={c} zr={z.r} b={HARB_PIER_B} level={HARB_W} len={1.7} />
     <Dock c={c} zr={z.r} b={HARB_PIER_B + 0.9} level={HARB_W} len={1.1} />
     {[0, 1, 2].map(k => { const n = around(c, z.r * (0.7 - k * 0.12), HARB_PIER_B + 0.3 + k * 0.4); return <Boat key={k} i={k} n={n} fwd={toward(n, c).negate()} level={HARB_W} /> })}
-    <Surface n={lh}>
-      <mesh position={[0, 0.5, 0]} material={ZM.white}><cylinderGeometry args={[0.11, 0.16, 1.0, 14]} /><Outlines thickness={0.01} color={INK} /></mesh>
-      {[0.25, 0.65].map(y => <mesh key={y} position={[0, y, 0]} material={ZM.red}><cylinderGeometry args={[0.14 - y * 0.04, 0.15 - y * 0.04, 0.14, 14]} /></mesh>)}
-      <mesh position={[0, 1.08, 0]} material={ZM.lantern}><cylinderGeometry args={[0.08, 0.08, 0.14, 10]} /></mesh>
-      <mesh position={[0, 1.2, 0]} material={ZM.red}><coneGeometry args={[0.12, 0.14, 12]} /><Outlines thickness={0.008} color={INK} /></mesh>
-    </Surface>
-    {[0, 1, 2, 3, 4].map(k => { const n = around(c, z.r * 1.14, HARB_PIER_B - 0.25 + k * 0.12); return <Surface key={k} n={n} spin={k}>{k % 2 ? <mesh position={[0, 0.06, 0]} material={ZM.barrel}><cylinderGeometry args={[0.055, 0.05, 0.12, 10]} /><Outlines thickness={0.005} color={INK} /></mesh> : <mesh position={[0, 0.06, 0]} material={ZM.crate}><boxGeometry args={[0.12, 0.12, 0.12]} /><Outlines thickness={0.005} color={INK} /></mesh>}</Surface> })}
+    <Lighthouse n={lh} />
+    {[0, 1, 2, 3, 4].map(k => <Cargo key={k} k={k} n={around(c, z.r * 1.14, HARB_PIER_B - 0.25 + k * 0.12)} />)}
   </>
 }
+// the reworked bay (world/zoneLayout.js): piers from the east (by the fishers) and west shores out into the bay, boats
+// moored off the long pier, cargo on its quay, the lighthouse on the west headland at the mouth, open to the sea
+function BayHarbour() {
+  const z = ZONES.harbour, c = Zc.harbour
+  return <>
+    <WaterCap c={c} r={z.r * 1.1} level={HARB_W} deep="#2f86b0" shallow="#7fd0d8" />
+    {ZL.PIERS.map((p, k) => <Dock key={k} c={c} zr={z.r} b={p.b} level={HARB_W} len={p.len} />)}
+    {ZL.BOATS.map((b, k) => <Boat key={k} i={k} n={b.n} fwd={b.fwd} level={HARB_W} />)}
+    <Lighthouse n={ZL.LIGHTHOUSE} />
+    {ZL.CRATES.map((n, k) => <Cargo key={k} k={k} n={n} />)}
+  </>
+}
+const Harbour = OLD_WORLD ? OldHarbour : BayHarbour
 
-function Ruins() {
+function OldRuins() {
   const c = Zc.ruins
   const slabs = useMemo(() => { const a = []; for (let i = 0; i < 40; i++) { const n = around(c, Math.sqrt(rnd()) * 0.75 / R, rnd() * 6.283); a.push({ ...place(n, 0.005, rnd() * 6), s: 0.7 + rnd() * 0.6 }) } return a }, [])
   const ivy = useMemo(() => { const a = []; RUIN_COLS.forEach(col => { for (let k = 0; k < 6; k++) { const p = place(col.n, 0, 0); const local = new THREE.Vector3(Math.cos(k * 2.1) * 0.095, rnd() * col.h, Math.sin(k * 2.1) * 0.095); a.push({ pos: p.pos.clone().add(local.applyQuaternion(p.q)), q: p.q, s: 0.6 + rnd() * 0.7, c: C('#5f9a52').lerp(CC('#8fbf5a'), rnd()) }) } }); return a }, [])
@@ -270,6 +340,30 @@ function Ruins() {
     <Instanced items={ivy} geo={useMemo(() => { const g = new THREE.IcosahedronGeometry(0.035, 0); g.scale(1, 1.3, 0.6); return g }, [])} mat={useMemo(() => toon('#ffffff'), [])} />
   </>
 }
+
+// the drowned ruins (world/zoneLayout.js): columns and the arch stand on the lakebed in the Lake's west half and rise
+// through the surface; slabs lie awash; ivy grows on the parts above the water
+function DrownedRuins() {
+  const slabs = useMemo(() => ZL.RUIN_SLABS.map(s => { const p = place(s.n, 0, s.spin); return { pos: s.n.clone().multiplyScalar(R + s.top - 0.015), q: p.q, s: s.s } }), [])
+  const ivy = useMemo(() => { const a = []; RUIN_COLS.forEach(col => { const p = place(col.n, 0, 0), wet = LAKE_W - col.base; for (let k = 0; k < 6; k++) { const local = new THREE.Vector3(Math.cos(k * 2.1) * 0.095, wet + rnd() * col.above, Math.sin(k * 2.1) * 0.095); a.push({ pos: p.pos.clone().add(local.applyQuaternion(p.q)), q: p.q, s: 0.6 + rnd() * 0.7, c: C('#5f9a52').lerp(CC('#8fbf5a'), rnd()) }) } }); return a }, [])
+  const A = ZL.RUIN_ARCH, d = A.depth
+  return <>
+    <Instanced items={slabs} geo={useMemo(() => new THREE.BoxGeometry(0.16, 0.03, 0.12), [])} mat={ZM.mossy} />
+    {RUIN_COLS.map((col, k) => <Surface key={k} n={col.n} spin={k}><group rotation={[col.tilt, 0, col.tilt * 0.5]}>
+      <mesh position={[0, col.h / 2, 0]} material={ZM.mossy}><cylinderGeometry args={[0.085, 0.095, col.h, 10]} /><Outlines thickness={0.006} color={INK} /></mesh>
+      <mesh position={[0, col.h + 0.012, 0]} scale={[1, 0.3, 1]} material={ZM.moss}><sphereGeometry args={[0.09, 10, 6]} /></mesh>
+      {col.above > 0.5 && <mesh position={[0, col.h + 0.03, 0]} material={ZM.mossy}><boxGeometry args={[0.22, 0.05, 0.22]} /></mesh>}
+    </group></Surface>)}
+    <Frame n={A.n} fwd={A.fwd}>
+      {[-1, 1].map(s => <mesh key={s} position={[s * 0.32, (0.8 + d) / 2, 0]} material={ZM.mossy}><boxGeometry args={[0.14, 0.8 + d, 0.14]} /><Outlines thickness={0.006} color={INK} /></mesh>)}
+      <mesh position={[0, d + 0.84, 0]} rotation={[0, 0, 0.04]} material={ZM.mossy}><boxGeometry args={[0.86, 0.1, 0.16]} /><Outlines thickness={0.006} color={INK} /></mesh>
+      <mesh position={[0.1, d + 0.9, 0]} scale={[2.5, 0.35, 1]} material={ZM.moss}><sphereGeometry args={[0.09, 10, 6]} /></mesh>
+      <mesh position={[0.55, d + 0.02, 0.3]} rotation={[0, 0.5, Math.PI / 2]} material={ZM.mossy}><cylinderGeometry args={[0.08, 0.085, 0.55, 10]} /><Outlines thickness={0.006} color={INK} /></mesh>
+    </Frame>
+    <Instanced items={ivy} geo={useMemo(() => { const g = new THREE.IcosahedronGeometry(0.035, 0); g.scale(1, 1.3, 0.6); return g }, [])} mat={useMemo(() => toon('#ffffff'), [])} />
+  </>
+}
+const Ruins = OLD_WORLD ? OldRuins : DrownedRuins
 
 function Camphors() {
   const { trunks, crowns } = useMemo(() => {
@@ -328,6 +422,7 @@ export function Zones() {
     <Cull n={Zc.cliff} d={16}><Waterfall /></Cull>
     <Cull n={Zc.terraces} d={16}><Terraces /></Cull>
     <Train />
+    {TRESTLE && <Cull n={railDir(TRESTLE.lonC)} d={16}><Trestle /></Cull>}
     <Cull n={Zc.harbour} d={16}><Harbour /></Cull>
     <Cull n={Zc.ruins} d={14}><Ruins /></Cull>
     <Cull n={Zc.forest} d={18}><Camphors /></Cull>

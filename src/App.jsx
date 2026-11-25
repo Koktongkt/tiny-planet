@@ -6,7 +6,7 @@ import { Canvas, useFrame, useThree, advance, _roots } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise, HueSaturation, BrightnessContrast } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
-import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, seaDepth, RIVER_HALF, JUMP_HALF, streamDist } from './world.js'
+import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, seaDepth, RIVER_HALF, JUMP_HALF, streamDist, underWater } from './world.js'
 import { PEOPLE } from './peopleData.js'
 const PersonLazy = lazy(() => import('./people.jsx').then(m => ({ default: m.Person })))
 const Person = (p) => <Suspense fallback={null}><PersonLazy {...p} /></Suspense>
@@ -32,7 +32,8 @@ import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
-import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
+import { railDir, TRESTLE } from './world/railway.js'
+import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, HARBOUR_SPINS, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, setViewMode, subscribeView, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
@@ -240,7 +241,7 @@ function Vegetation() {
       const c = randDir(); if (busy(c)) continue
       const k = 6 + Math.floor(rnd() * 14), sp = (0.03 + rnd() * 0.05) * K, col = g1.clone().lerp(g2, rnd())
       for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (streamDist(n) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
-      if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
+      if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); if (underWater(n)) continue; flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
     }
     // stage-b: no lawn tufts / flowers under the garden beds (hidden there anyway; filtered after generation so the seeded layout elsewhere is unchanged)
     const beds = gardenBedNs(HOUSES[0], height), clear = (it) => { _t.copy(it.pos).normalize(); return !beds.some(b => b.angleTo(_t) < 0.2 / R) }
@@ -288,9 +289,9 @@ const SPILL = (() => { const c = document.createElement('canvas'); c.width = c.h
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
   return new THREE.MeshBasicMaterial({ map: t, color: '#ffb35c', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 }) })()
 const SPILL_GEO = new THREE.PlaneGeometry(1.5, 1.5).rotateX(-Math.PI / 2)
-function House({ n, i }) {
+function House({ n, i, spin = i * 1.3 }) {
   const hg = houseVariant(i)
-  return <Surface n={n} lift={HOUSE_LIFT} spin={i * 1.3}>
+  return <Surface n={n} lift={HOUSE_LIFT} spin={spin}>
     <mesh geometry={hg.shell} material={HM.shell} ref={occ}><Outlines thickness={0.02} color={INK} /></mesh>
     <mesh geometry={hg.detail} material={HM.detail} />
     <mesh geometry={hg.glass} material={MAT.win} />
@@ -521,13 +522,13 @@ const OLD_VIEWS = (() => { const HB_LOOK = around(Zc.harbour, 0.29, 2.3); return
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
 } })()
 // the reworked layout: each view frames its region from the registry (bearings: around()'s, 0 east / pi/2 north)
-const NEW_VIEWS = () => { const rg = (id) => zv(region(id)), HB_LOOK = around(rg('harbour'), 0.27, 1.75), ST = STAIR.steps
+const NEW_VIEWS = () => { const rg = (id) => zv(region(id)), HB_LOOK = around(rg('harbour'), 0.27, 1.75), ST = STAIR.steps, TR_C = railDir(TRESTLE.lonC)
   return {
     'square': { cam: around(VILLAGE, 2.4 / R, 0.1), ch: 1.3, look: VILLAGE, lh: 0.2 }, // from over the river by the bridge, her home beyond
     'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 }, // the bay's north shore (pier walkers)
     'lake-waterfall': { cam: around(rg('lake'), 0.36, 4.4), ch: 3.2, look: rg('lake').lerp(rg('cliff'), 0.62), lh: 0.4 }, // up the river from below the lake to the falls
-    'terraces-train': { cam: dir(0.3, 1.05), ch: 2.6, look: rg('terraces'), lh: 0.4 }, // the terraces from down the slope (the railway runs along the coast, far below: Task 8)
-    'harbour-ruins': { cam: dir(-0.3, 1.35), ch: 5.0, look: rg('harbour').lerp(rg('ruins'), 0.5), lh: 0.0 }, // the drowned ruins in the lake and the bay below
+    'terraces-train': { cam: around(TR_C, 2.6 / R, -1.2), ch: 1.4, look: TR_C, lh: 0.2 }, // the train on the river trestle (&trainAt=1.5), the valley up toward the lake behind (the terraces are far up the slope)
+    'harbour-ruins': { cam: dir(-1.0, 1.55), ch: 8.5, look: dir(-0.4, 1.15), lh: 0.0 }, // from high over the sea: the bay, the trestle at its head, the river up to the lake (its drowned ruins sit past its far rim)
     'forest-giant': { cam: around(rg('giant'), 0.78, 4.6), ch: 3.6, look: rg('giant'), lh: 2.0 },
     'meadow-mills': { cam: rg('meadow').lerp(rg('mills'), 0.15), ch: 2.4, look: rg('mills'), lh: 0.5 },
     peak: { cam: around(ST[0].n, 0.9 / R, 4.0), ch: 1.4, look: ST[Math.floor(ST.length * 0.6)].n, lh: 0.4 }, // up the stair to the shrine
@@ -624,7 +625,7 @@ function Planet() {
     {k >= 3 && NEWCHAR && <Bench />}
     {VIEW.mode === 'lineup' && <Suspense fallback={null}><LineupLazy /></Suspense>}
     <DeferredZones />
-    {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
+    {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} spin={HARBOUR_SPINS[i]} /></Cull>)}
     {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
     <Traveller /><HomeLayer />{k >= 4 && <Details />}
     {k >= 4 && <Fireflies />}{k >= 4 && <Suspense fallback={null}><RiverStonesLazy colliders={COLLIDERS} houses={HOUSES} touch={TOUCH} /></Suspense>}

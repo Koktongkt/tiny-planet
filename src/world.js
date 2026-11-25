@@ -5,7 +5,7 @@ export const DENS = 1.5 // scatter density factor so the bigger surface isn't sp
 export const K = 5 / R // converts old angular sizes (tuned at R=5) to the bigger world
 import { OLD_WORLD } from './world/flag.js'
 import * as LEGACY from './world/legacy.js'
-import { region, OPEN_PLOTS, HOME_DIR, SEA_LAT, SEA_W, DIG_SITES } from './world/regions.js'
+import { region, OPEN_PLOTS, HOME_DIR, SEA_LAT, SEA_W, DIG_SITES, TRAIN_LAT as COAST_TRAIN_LAT } from './world/regions.js'
 import * as RIVER from './world/river.js'
 export { SEA_LAT, SEA_W }
 // The layout (zones, terrain, curves) comes from one source. The reworked layout replaces NEW piece by piece in later
@@ -149,11 +149,11 @@ const loopPath = (() => {
     while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ARC[m] <= s) lo = m; else hi = m }
     return raw(((lo + (s - ARC[lo]) / Math.max(1e-12, ARC[hi] - ARC[lo])) / M) * N, new THREE.Vector3()) }
 })()
-const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), height: slopeHeight, streamDir: (t) => RIVER.riverDir(t / TAU), pathDir: loopPath }
+const NEW = { ...LEGACY, ZONES: Object.fromEntries(Object.entries(ZN).filter(([id]) => id !== 'village')), TRAIN_LAT: COAST_TRAIN_LAT, height: slopeHeight, streamDir: (t) => RIVER.riverDir(t / TAU), pathDir: loopPath }
 const W = OLD_WORLD ? LEGACY : NEW
 // biome / zone centres (lat, lon, angular radius)
 export const ZONES = W.ZONES
-export const TRAIN_LAT = W.TRAIN_LAT
+export const TRAIN_LAT = W.TRAIN_LAT // the coast railway's latitude (world/railway.js eases it round the Harbour bay)
 export const LAKE_W = W.LAKE_W, HARB_W = W.HARB_W, CLIFF_H = W.CLIFF_H
 const ang = (n, z) => Math.acos(Math.min(1, Math.max(-1, (n.x * z.x + n.y * z.y + n.z * z.z) / Math.hypot(n.x, n.y, n.z))))
 export const zoneAng = ang
@@ -326,6 +326,16 @@ export function waterAt(n, margin = 0.02) {
   if (ang(n, ZONES.harbour) < ZONES.harbour.r * 1.2 && height(n) < HARB_W - 0.03) return true
   if (seaDepth(n) > SEA_DEEP) return true
   return false
+}
+// would a prop standing here stand in water (the sea, a little shallows included, the lake, the harbour, the river and
+// its banks)? Scatter (trees, flowers, rocks) skips these points; the water surfaces are opaque, so anything below
+// them only shows as a stub through the surface. Always false under ?world=old (its scatter rules stay as they were).
+export function underWater(n) {
+  if (OLD_WORLD) return false
+  if (seaDepth(n) > 0) return true
+  const near = (z) => ang(n, z) < z.r * 1.25
+  if ((near(ZONES.lake) && height(n) < LAKE_W + 0.02) || (near(ZONES.harbour) && height(n) < HARB_W + 0.02)) return true
+  const s = streamNear(n); return s.d < s.half + 0.05
 }
 // each bridge spans the water it actually crosses (the path meets the river at a slant): centre it on the water and
 // size it to the span + a little bank either side

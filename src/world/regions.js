@@ -38,7 +38,7 @@ export const HOME_DIR = { lat: 0.42, lon: 0.05 }
 
 export const SEA_LAT = -0.78 // shoreline latitude
 export const SEA_W = -0.2 // sea surface (same level as HARB_W)
-export const TRAIN_LAT = -0.62 // coast railway, just above the shore (world.js keeps the legacy value until Task 8)
+export const TRAIN_LAT = -0.62 // coast railway, just above the shore (world/railway.js eases it north round the Harbour bay)
 export const TRAIN_STOP_LONS = { village: 1.25, forest: 2.60 }
 
 // Dig sites in index order (today's dig.taken[0..4] keys stay valid; 5 is new). Each lies inside its region.

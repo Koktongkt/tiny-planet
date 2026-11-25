@@ -3,6 +3,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { R, K, dir, around, zv, waterAt, seaDepth, onBridge, distToCurve, pathDir, DIG_SITE_POS, height } from '../../src/world.js'
 import { region, TRAIN_LAT, TRAIN_STOP_LONS } from '../../src/world/regions.js'
 import { riverNear } from '../../src/world/river.js'
+import { railOff, railLat } from '../../src/world/railway.js'
 import { YARD } from '../../src/home/yard.js'
 import { HOUSES, VILLAGE, MILLS, SPOTS, SPAWN, LAMPS, TRAIN_STOPS, STAIR, onHouse, gardenBedNs } from '../../src/world/village.js'
 
@@ -24,7 +25,7 @@ test('houses on dry land and apart', () => {
   for (const i of [1, 2, 3, 4]) assert.ok(HOUSES[i].angleTo(VILLAGE) < region('village').r * 2.2, `house ${i} not round the square`)
   for (const i of [5, 6]) assert.ok(HOUSES[i].angleTo(zv(region('terraces'))) < region('terraces').r + 0.08, `farmhouse ${i} not by the terraces`)
   for (const i of [7, 8]) assert.ok(HOUSES[i].angleTo(zv(region('harbour'))) < region('harbour').r * 1.12 + 0.06, `fisher's house ${i} not by the bay`)
-  for (const i of [7, 8]) assert.ok(Math.abs(Math.asin(HOUSES[i].y) - TRAIN_LAT) > 0.05, `fisher's house ${i} on the coast railway`)
+  for (const i of [7, 8]) assert.ok(Math.abs(railOff(HOUSES[i])) > 0.05, `fisher's house ${i} on the coast railway`)
   for (const i of [9, 10]) assert.ok(HOUSES[i].angleTo(zv(region('forest'))) < region('forest').r + 0.05, `house ${i} not by the forest`)
   for (const m of MILLS) assert.ok(m.angleTo(zv(region('mills'))) < region('mills').r && dry(m), 'mill inside the mills')
 })
@@ -42,8 +43,8 @@ test('arrivals are dry', () => {
   pts.village = around(VILLAGE, 0.62 / R, 2.75)
   const forest = zv(region('forest')), fc = toward(forest, SPAWN, region('forest').r * 1.2)
   pts.forest = toward(fc, forest, -0.05).applyAxisAngle(fc, 0.35).normalize()
-  // train stop platforms (systems/liveC.js platformN) on the registry's coast railway, which the train moves to in Task 8
-  for (const s of TRAIN_STOPS) { assert.equal(s.lon, TRAIN_STOP_LONS[s.id]); pts['platform ' + s.id] = dir(TRAIN_LAT + 0.3 / R, s.lon) }
+  // train stop platforms (systems/liveC.js platformN) beside the coast railway (world/railway.js; TRAIN_LAT at the stops)
+  for (const s of TRAIN_STOPS) { assert.equal(s.lon, TRAIN_STOP_LONS[s.id]); assert.equal(railLat(s.lon), TRAIN_LAT); pts['platform ' + s.id] = dir(railLat(s.lon) + 0.3 / R, s.lon) }
   pts.museum = zv(region('museum')) // the museum door point (the museum moves onto its region in Task 8)
   for (const [k, n] of Object.entries(pts)) assert.ok(dry(n), `${k} arrives in water`)
   assert.ok(SPAWN.angleTo(HOUSES[0]) * R < 2, 'spawn by her home')

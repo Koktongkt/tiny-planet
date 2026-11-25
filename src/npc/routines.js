@@ -7,6 +7,10 @@ import { PEOPLE } from '../peopleData.js'
 import { VILLAGERS } from '../villagers.js'
 import { Zc, LAKE_DOCK_B } from '../zones.jsx'
 import { VILLAGE } from '../world/village.js'
+import { OLD_WORLD } from '../world/flag.js'
+import { HARBOUR_FOLK } from '../world/zoneLayout.js'
+// the reworked harbour's folk spots (world/zoneLayout.js): the bay moved, so its pier and quays did too
+const HF = OLD_WORLD ? null : HARBOUR_FOLK
 export const SHIRTS = ['#e86f5a', '#5f8fc4', '#f2b84b', '#8cc084', '#c97b9a', '#f6ead2']
 // townsfolk: path walkers, pacers and idlers built from the procedural Person
 export const tangentAt = (n, b = 0) => { const e1 = new THREE.Vector3(0, 1, 0).cross(n).normalize(); const e2 = new THREE.Vector3().crossVectors(n, e1); return e1.multiplyScalar(Math.cos(b)).addScaledVector(e2, Math.sin(b)) }
@@ -17,8 +21,8 @@ export function buildWalkers() {
   const sq = around(VILLAGE, 0.0, 0)
   ;[2, 7, 5].forEach((k, j) => { const n = around(sq, 0.22 / R, j * 2.1); W.push({ cfg: P_[k], mode: 'idle', n, fwd: sq.clone().sub(n), wave: j === 1 }) })
   const pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
-  W.push({ cfg: P_[8], mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.25 })
-  W.push({ cfg: P_[10], mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2 })
+  W.push(HF ? { cfg: P_[8], mode: 'pace', n: HF.quay.n, tan: HF.quay.tan, range: HF.quay.range, w: 0.25 } : { cfg: P_[8], mode: 'pace', n: pier, tan: tangentAt(pier, 0.4), range: 0.9, w: 0.25 })
+  W.push(HF ? { cfg: P_[10], mode: 'pace', n: HF.west.n, tan: HF.west.tan, range: HF.west.range, w: 0.2 } : { cfg: P_[10], mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2 })
   W.push({ cfg: { ...P_[8], top: '#d9655b', hat: 'straw', hatC: '#e2c27a', name: 'angler' }, mode: 'idle', n: (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })(), fwd: Zc.lake.clone(), lift: () => 0, dock: true })
   W.push({ cfg: P_[3], mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18 })
   W.push({ cfg: { ...P_[4], name: 'planter' }, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12 })
@@ -56,11 +60,11 @@ export function buildNewWalkers() {
   const OVEN = sqSpot(0.5, 3.3), STALL = sqSpot(0.3, 2.9)
   W.push({ cfg: bak, key: bak.name, mode: 'anchor', plan: { morning: [A(OVEN, SQ, 'knead', { dur: 26, stage: 'knead' }), A(STALL, SQ, 'sell', { dur: 18, stage: 'sell' })], day: [A(STALL, SQ, 'sell', { dur: 24, stage: 'sell' }), A(CHAT_A, CHAT_B, 'chat', { seed: 0, dur: 12, stage: 'chat' })], evening: [A(STALL, SQ, 'sell', { dur: 12, stage: 'sell' }), A(benchSeat(0.0).clone().addScaledVector(tangentAt(SQ, 1.2), 0.2 / R).normalize(), SQ, 'eat', { dur: 18, stage: 'eat' })], night: A(sqSpot(0.25, 3.3), SQ, 'look', { stage: 'rest' }) } })
   const [fm, fw, sg, db] = by('harbour'), pier = around(Zc.harbour, 0.22 * 1.35, 1.6)
-  const pierEnd = pier.clone().addScaledVector(tangentAt(pier, 0.4), 0.7 / R).normalize(), pierSeat = pier.clone().addScaledVector(tangentAt(pier, 0.4), -0.5 / R).normalize(), sea = pier.clone().addScaledVector(tangentAt(pier, 0.4 + 1.57), 1 / R).normalize()
+  const pierEnd = HF ? HF.pierEnd : pier.clone().addScaledVector(tangentAt(pier, 0.4), 0.7 / R).normalize(), pierSeat = HF ? HF.pierSeat : pier.clone().addScaledVector(tangentAt(pier, 0.4), -0.5 / R).normalize(), sea = HF ? HF.sea : pier.clone().addScaledVector(tangentAt(pier, 0.4 + 1.57), 1 / R).normalize()
   W.push({ cfg: { ...fm, hold: { R: 'rod' } }, key: fm.name, mode: 'anchor', plan: { morning: A(pierEnd, sea, 'fish', { stage: 'fish' }), day: [A(pierEnd, sea, 'fish', { dur: 26, stage: 'fish' }), A(pierSeat, sea, 'eat', { dur: 14, stage: 'eat' })], evening: [A(pierSeat, sea, 'look', { dur: 18, stage: 'mend' }), A(pierEnd, sea, 'fish', { dur: 14, stage: 'fish' })], night: A(pierSeat, sea, 'sit', { stage: 'rest' }) } })
-  W.push({ cfg: fw, key: fw.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.2, 2.3), tan: tangentAt(Zc.harbour, 2.3), range: 0.5, w: 0.16, carry: true, work: { act: 'chat', on: 6, off: 9, periods: ['day', 'evening'] } })
-  W.push({ cfg: sg, key: sg.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2, work: { act: 'look', on: 6, off: 10, periods: ['evening', 'night'] } })
-  W.push({ cfg: db, key: db.name, mode: 'pace', n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6, w: 0.45, speeds: { morning: 1.3, day: 1.15, evening: 0.9, night: 0.5 }, carry: true, work: { act: 'play', on: 5, off: 11, periods: ['morning', 'day', 'evening'] } })
+  W.push({ cfg: fw, key: fw.name, mode: 'pace', ...(HF ? { n: HF.quay.n, tan: HF.quay.tan, range: HF.quay.range } : { n: around(Zc.harbour, 0.22 * 1.2, 2.3), tan: tangentAt(Zc.harbour, 2.3), range: 0.5 }), w: 0.16, carry: true, work: { act: 'chat', on: 6, off: 9, periods: ['day', 'evening'] } })
+  W.push({ cfg: sg, key: sg.name, mode: 'pace', ...(HF ? { n: HF.west.n, tan: HF.west.tan, range: HF.west.range } : { n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2 }), w: 0.2, work: { act: 'look', on: 6, off: 10, periods: ['evening', 'night'] } })
+  W.push({ cfg: db, key: db.name, mode: 'pace', ...(HF ? { n: HF.east.n, tan: HF.east.tan, range: HF.east.range } : { n: around(Zc.harbour, 0.22 * 1.3, 2.7), tan: tangentAt(Zc.harbour, 2.0), range: 0.6 }), w: 0.45, speeds: { morning: 1.3, day: 1.15, evening: 0.9, night: 0.5 }, carry: true, work: { act: 'play', on: 5, off: 11, periods: ['morning', 'day', 'evening'] } })
   const ang = by('lake')[0], dockN = (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })()
   W.push({ cfg: ang, key: ang.name, mode: 'anchor', dock: true, plan: { morning: A(dockN, Zc.lake, 'fish'), day: A(dockN, Zc.lake, 'fish'), evening: A(dockN, Zc.lake, 'fish'), night: A(dockN, Zc.lake, 'look') } })
   const [fa, fwf] = by('terraces')
