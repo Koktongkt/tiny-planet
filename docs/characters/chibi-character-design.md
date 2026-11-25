@@ -79,6 +79,14 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Cost: one merged cel mesh + one ink hull per bone (hips, chest) replaces nine prop meshes; studio draw calls 20 -> 15.
   - Open for KT: shoulder roundness, cardigan hem height, hair wave lines (the sheet's swirl lines are not modelled), glasses rim weight (shared with Hoshino).
 
+**Grandma Fuku, pass 9** (KT feedback on pass 8): sheet / pass 8 / pass 9, body and face: [`ref/fuku-pass9-compare.jpg`](ref/fuku-pass9-compare.jpg).
+  - Face: her own jaw `FUKU_CHEEK = [0, -0.029, 0.010, 0.057, 0.027, 0.037, 0.018]` (shared `CHEEK` is `[0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]`): wider and fuller lower, so the bottom half is broad and round and the cheeks sit down toward the chin; the chin bottom is unchanged. Blush moved down and out (`blushAt { dx 0.0016, dy -0.003, dr 1.12 }`).
+  - `castFace.jsx`: `makeFace` takes optional `cheek`, `blushAt` and `glassesGeo`; the face decal is built per cheek shape (`faceGeoFor`, cached) so it stays on the skin. Defaults unchanged: Hoshino renders pixel-identical.
+  - Glasses: her own frames (`fukuGlasses`): round rims R 0.014, tube 0.0017 (shared 0.0128 / 0.0011), a low curved bridge, arms back to the ears, `#5a3a24`.
+  - Hair: the front shape stands a little proud of the forehead (`H_FRONT`), so the hairline is a clean edge above the brows instead of a jagged cut through the skin; bigger bun (0.0285) and wrap ring. Tried and dropped: a rolled tube along the computed hairline (covered the brows, scribbly ink), and swirl locks on the back (stuck out like horns).
+  - Arms: no shoulder puff; a tapering tube from the neck base to the shoulder gives a smooth slope. Sleeves thicker (upper 0.021, forearm 0.020-0.0212, cuff 0.0225), hands a touch further forward.
+  - Apron shorter (hem at `anY + 0.045`, was `+ 0.030`); pincushion moved up with it.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

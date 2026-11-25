@@ -9,7 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, cel, spec, mkOutline, coreSDF } from '../../GhibliPerson.jsx'
 import { FUKU_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { CHEEK, MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
+import { CHEEK, MIDFACE, MID_FADE, EYE, headSDF, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
 
@@ -18,31 +18,55 @@ const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f6cdb0'
 const HAIR_C = '#d2ccc4'
 const HAIR_BAND = '#efe6dc'
-const GLASS = '#6e4a2e'
+const GLASS = '#5a3a24'
 const CARDIGAN = '#9a73a0'
 const CARDIGAN_HEM = '#8c6592'
 const SKIRT = '#88618f'
 const CREAM = '#f4ead6'
 const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
-const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72 })
+// her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
+// cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
+const FUKU_CHEEK = [0, -0.0290, 0.0100, 0.0570, 0.0270, 0.0370, 0.0180]
+
+
+// her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
+function fukuGlasses() {
+  const R = 0.0140, T = 0.0017, Z = 0.0552, parts = []
+  for (const sd of [-1, 1]) { const g = new THREE.TorusGeometry(R, T, 8, 28); g.rotateY(sd * 0.2); g.translate(sd * EYE.x, EYE.y + 0.0006, Z); parts.push(g) }
+  const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
+  br.scale(1, 0.42, 1); br.translate(0, EYE.y + 0.0012, Z + 0.0024); parts.push(br)
+  for (const sd of [-1, 1]) {
+    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EYE.y + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0575, EYE.y + 0.0030, 0.010)
+    const len = a.distanceTo(b), t = new THREE.CylinderGeometry(0.0010, 0.0010, len, 6)
+    t.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
+    t.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); parts.push(t)
+  }
+  const g = mergeGeometries(parts.map(p => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('uv'); return p })); g.computeVertexNormals(); return g
+}
+const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, blushAt: { dx: 0.0016, dy: -0.0030, dr: 1.12 }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
 const EAR = { x: 0.061, y: -0.012, z: 0.006 }
+// main hair shapes: [centre, radii, rotation]
+const H_CAP = [[0, 0.012, -0.008], [0.066, 0.057, 0.062]]
+const H_FRONT = [[0, 0.028, 0.027], [0.049, 0.027, 0.029]]
+const H_LOBE = (d) => [[d * 0.019, 0.036, 0.038], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
+const H_TEMPLE = (d) => [[d * 0.050, 0.010, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10]]
 function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 20, 14), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 20)
-  // sheet: a big soft grey dome (wider than the face), a centre parting with two broad waves swept back, sides down to
-  // the top of the ears, full cover behind down to the nape, and a round top bun wrapped at its base
+  // sheet: a big soft grey dome (wider than the face), a centre parting with two broad waves swept back, sides down
+  // to the top of the ears, full cover behind down to the nape, and a big round top bun wrapped at its base.
+  // H_FRONT stands a little proud of the forehead so the hairline is a clean edge, not a grazing cut through the skin
+  const P = (geo, [c, r, rot]) => part(geo, c, r, rot)
   const parts = [
-    part(ball, [0, 0.012, -0.008], [0.066, 0.057, 0.062]),
-    part(ball, [0, 0.016, 0.026], [0.047, 0.035, 0.028]),
+    P(ball, H_CAP),
+    P(ball, H_FRONT),
     part(ball, [0, -0.014, -0.024], [0.058, 0.042, 0.044]),
-    part(ball, [0, 0.070, -0.012], [0.0250, 0.0215, 0.0240]),
-    part(ring, [0, 0.055, -0.010], [0.0175, 0.0175, 0.0140], [Math.PI / 2 - 0.10, 0, 0]),
-    // two broad waves either side of the parting
-    ...[-1, 1].map(d => part(ballS, [d * 0.019, 0.032, 0.040], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18])),
-    // temple volume: the sides sit out past the cheeks and stop above the ears
-    ...[-1, 1].map(d => part(ballS, [d * 0.050, 0.010, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10])),
+    part(ball, [0, 0.071, -0.013], [0.0285, 0.0240, 0.0275]),
+    part(ring, [0, 0.055, -0.010], [0.0195, 0.0195, 0.0150], [Math.PI / 2 - 0.10, 0, 0]),
+    ...[-1, 1].map(d => P(ballS, H_LOBE(d))),
+    ...[-1, 1].map(d => P(ballS, H_TEMPLE(d))),
     // soft swept-back ridges: low and long, read as the sheet's wave lines rather than curls
     ...[-1, 1].map(d => part(ballS, [d * 0.030, 0.040, 0.008], [0.0065, 0.0040, 0.034], [0.55, d * 0.42, d * 0.10])),
     ...[-1, 1].map(d => part(ballS, [d * 0.047, 0.024, -0.004], [0.0060, 0.0040, 0.034], [0.35, d * 0.62, d * 0.10])),
@@ -101,7 +125,7 @@ function collarGeo(S, chestY) {
 
 // apron: waist to just above the skirt hem, wraps the skirt cone, five scallops, no bib
 function apronParts(S, hy) {
-  const top = S.bellyY + 0.004, bot = S.anY + 0.030, nx = 30, ny = 22, nSc = 5, amp = 0.010
+  const top = S.bellyY + 0.004, bot = S.anY + 0.045, nx = 30, ny = 22, nSc = 5, amp = 0.010
   const pos = [], idx = []
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
     const u = i / nx, v = j / ny, y0 = top + (bot - top) * v
@@ -173,18 +197,19 @@ const ball = (c, r, sc, hex) => { const g = new THREE.SphereGeometry(r, 12, 10);
 function armsParts(S, cy) {
   const front = S.belly[0].z + S.belly[1].z, hy = S.bellyY + 0.012 - cy, parts = []
   for (const sd of [-1, 1]) {
-    const sh = [sd * Math.abs(S.shL.x) * 0.92, S.shY - cy - 0.004, S.shL.z]
-    const el = [sd * (Math.abs(S.shL.x) + 0.012), hy + 0.000, front * 0.32]
-    const wr = [sd * 0.028, hy + 0.001, front + 0.006]
-    // sloped round shoulder: a flattened ball that also hides the tiny skinned arm stub
-    parts.push(ball([sh[0], sh[1] - 0.002, sh[2]], 0.0205, [1.08, 0.95, 1.0], CARDIGAN))
-    parts.push(tubeBetween(sh, el, 0.0185, 0.0175, CARDIGAN), ball(el, 0.0175, [1, 1, 1], CARDIGAN))
-    parts.push(tubeBetween(el, wr, 0.0170, 0.0185, CARDIGAN))
+    const sh = [sd * Math.abs(S.shL.x) * 0.92, S.shY - cy - 0.008, S.shL.z]
+    const el = [sd * (Math.abs(S.shL.x) + 0.014), hy + 0.000, front * 0.30]
+    const wr = [sd * 0.030, hy + 0.001, front + 0.008]
+    // smooth sloped shoulder: a tapering tube from the neck base out to the shoulder joint, no puff on top
+    const nb = [sd * 0.024, S.neckY - cy - 0.010, S.shL.z - 0.002]
+    parts.push(tubeBetween(nb, sh, 0.0120, 0.0205, CARDIGAN), ball(sh, 0.0205, [1, 0.94, 1], CARDIGAN))
+    parts.push(tubeBetween(sh, el, 0.0210, 0.0200, CARDIGAN), ball(el, 0.0200, [1, 1, 1], CARDIGAN))
+    parts.push(tubeBetween(el, wr, 0.0200, 0.0212, CARDIGAN))
     // cuff: a short wider band at the wrist
     const dir = new THREE.Vector3(...wr).sub(new THREE.Vector3(...el)).normalize()
     const cuffA = new THREE.Vector3(...wr).addScaledVector(dir, -0.007).toArray()
-    parts.push(tubeBetween(cuffA, wr, 0.0192, 0.0196, CARDIGAN_HEM))
-    const hand = [sd * 0.012, hy + (sd > 0 ? 0.004 : -0.003), front + 0.013 + (sd > 0 ? 0.005 : 0)]
+    parts.push(tubeBetween(cuffA, wr, 0.0222, 0.0226, CARDIGAN_HEM))
+    const hand = [sd * 0.013, hy + (sd > 0 ? 0.004 : -0.003), front + 0.016 + (sd > 0 ? 0.005 : 0)]
     parts.push(ball(hand, 0.0150, [1.22, 0.92, 0.92], SKIN))
   }
   return parts
@@ -205,7 +230,7 @@ function attachLook(root) {
   // one merged mesh per bone: hips (apron, cardigan hem, pincushion), chest (collar, sleeves, hands)
   // one cel mesh + one ink hull per bone: hips (apron, cardigan hem, pincushion), chest (collar, sleeves, hands).
   // only the closed volumes get ink (a hull on an open sheet would paint its whole back).
-  const pin = pincushionParts([0.044, S.bellyY - 0.042 - hy, front + 0.008], 1.42), arms = armsParts(S, cy)
+  const pin = pincushionParts([0.044, S.bellyY - 0.034 - hy, front + 0.008], 1.42), arms = armsParts(S, cy)
   add(hips, merged([...apronParts(S, hy), ...hemParts(S, hy, HEM_Y(S)), ...pin]))
   add(hips, merged(pin.slice(0, 2).map(g => g.clone())), inkMat)
   add(chest, merged([...collarGeo(S, cy), ...arms]))
@@ -242,7 +267,7 @@ export const FUKU = {
   // sleeves with clasped hands (attachLook); body.arm / hand stay tiny so the skinned rig stays hidden.
   body: { skirt: 'long', skirtFlare: 1.34, skirtTop: 0.86, H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.02, girth: 1.26, shoulder: 1.08, chestW: 1.14, bellyZ: 0.96, shX: 1.22, armA: 0.52,
     armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.18, bootW: 1.20, bootH: 1.05, bootL: 0.92, hand: 0.01,
-    cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.20,
+    cheek: FUKU_CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.20,
     anY: 0.036, footY: 0.014, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
   face: { glasses: GLASS },
