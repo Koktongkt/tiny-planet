@@ -109,7 +109,7 @@ function ShapedGround() {
   // (~0.75 s of work in node) and swapped in, ideally while the title card is still up
   const coarse = useMemo(() => buildGround({ fine: false, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }), [])
   const idle = useIdleSlot(-2), fine = useMemo(() => SHORE_FINE && idle ? buildGround({ fine: true, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }) : null, [idle])
-  useEffect(() => { if (fine) coarse.dispose() }, [fine])
+  useEffect(() => { if (fine) coarse.dispose(); if (fine || !SHORE_FINE) window.__groundReady = true }, [fine])
   const mat = useMemo(() => inkRim(paint(new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: WARM_RAMP }), 0.06, true, 1.6)), [])
   return <mesh geometry={fine || coarse} material={mat} />
 }
