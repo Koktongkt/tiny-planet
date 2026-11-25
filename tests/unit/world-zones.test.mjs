@@ -6,7 +6,7 @@ import { R, around, zv, dir, height, waterAt, seaDepth, underWater, streamNear, 
 import { region } from '../../src/world/regions.js'
 import { riverNear } from '../../src/world/river.js'
 import { railOff, railLat } from '../../src/world/railway.js'
-import { RUIN_COLS, RUIN_ARCH, RUIN_SLABS, HARBOUR_HOUSES, LIGHTHOUSE, PIERS, BOATS, CRATES, LAKE_DOCK_B, WATERFALL, HARBOUR_FOLK, spinToward } from '../../src/world/zoneLayout.js'
+import { RUIN_COLS, RUIN_ARCH, RUIN_SLABS, HARBOUR_HOUSES, LIGHTHOUSE, PIERS, BOATS, CRATES, LAKE_DOCK_B, WATERFALL, HARBOUR_FOLK, TERRACE_FOLK, spinToward } from '../../src/world/zoneLayout.js'
 globalThis.window ??= {}
 const { HOUSES, TRAIN_STOPS } = await import('../../src/world/village.js')
 
@@ -62,6 +62,12 @@ test('harbour folk (npc/routines.js) stand and pace on the dry quays, off the ra
     for (const p of plats) assert.ok(p.angleTo(n) * R > 1.5, 'on a station platform'); for (const h of houses) assert.ok(h.angleTo(n) * R > 0.4, 'inside a house')
   }
   assert.ok(waterAt(F.sea, 0) && F.sea.angleTo(harb) < hr, 'the angler looks out over the bay')
+})
+test('terraces folk pace on dry ground, clear of the river', () => {
+  for (const [k, f] of Object.entries(TERRACE_FOLK)) for (let s = -1; s <= 1.0001; s += 0.125) {
+    const n = f.n.clone().addScaledVector(f.tan, s * f.range / R).normalize()
+    for (const p of [n, ...Array.from({ length: 8 }, (_, i) => around(n, 0.1 / R, i * Math.PI / 4))]) assert.ok(!waterAt(p) && seaDepth(p) === 0, `${k} paces into water (s ${s.toFixed(2)})`)
+  }
 })
 test('the waterfall falls where the river drops off the cliff', () => {
   const W = WATERFALL, cliff = zv(region('cliff')), cr = region('cliff').r

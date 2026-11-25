@@ -6,6 +6,7 @@ import { HOUSES, SPOTS, LAMPS, STAIR, VILLAGE } from '../../src/world/village.js
 import { HARBOUR_HOUSES, LIGHTHOUSE, RUIN_COLS, RUIN_WATCH, HARBOUR_FOLK } from '../../src/world/zoneLayout.js'
 import { DIG_SPOTS, canDig, dig } from '../../src/systems/collection.js'
 import { placeSpots } from '../../src/game/spotLayout.js'
+import { SPAWNS } from '../../src/game/recipes.js'
 
 const dry = (n) => !waterAt(n) && seaDepth(n) === 0
 const ring = (c, d, k = 8) => Array.from({ length: k }, (_, i) => around(c, d, i / k * Math.PI * 2))
@@ -72,6 +73,14 @@ test('gather spots dry, fishing spots at shore', () => {
   for (const z of ['lake', 'harbour']) assert.equal(spots.filter(s => s.water && s.zone === z).length, 3, `${z} fishing spots`)
   for (const z of ['ruins']) assert.ok(spots.filter(s => s.zone === z).length >= 8, 'ruins finds on the shore')
   for (let i = 0; i < DIG_SPOTS; i++) assert.ok(spots.every(s => s.n.angleTo(DIG_SITE_POS(i)) * R > 0.45), `a gatherable on dig site ${i}`)
+})
+
+test('every gatherable row is laid out in full (spring water included)', () => {
+  const blocked = (n) => streamDist(n) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K)
+  const spots = placeSpots(Zc, VILLAGE, blocked, Zc.meadow)
+  for (const [zone, item, n] of SPAWNS) assert.equal(spots.filter(s => s.zone === zone && s.item === item && s.forage === undefined && !s.id.includes('-show-')).length, n, `${item} in ${zone}`)
+  const spring = spots.find(s => s.item === 'water' && s.zone === 'cliff')
+  assert.ok(streamDist(spring.n) < 0.6 * K, 'the spring sits beside the falls')
 })
 
 test('the ruins visitor watches the drowned ruins from the shore', () => {

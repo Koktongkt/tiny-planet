@@ -41,6 +41,10 @@ export function placeSpots(Zc, village, blocked, showcaseFrom) {
       else if (mode === 'water') { const b = rr() * 6.283; pn = around(c, r * 0.86, b); stand = around(c, r * 1.04, b) }
       else if (mode === 'edge') pn = around(c, r * (0.88 + rr() * 0.12), rr() * 6.283)
       else if (mode === 'base') pn = toward(c, Zc.lake, r + 0.03 + rr() * 0.05).applyAxisAngle(c, (rr() - 0.5) * 2.2)
+      else if (mode === 'spring' && !OLD_WORLD) { // the old fixed point is in the plunge pool now: search outward, fanning
+        // either side of the lake bearing, for the first dry bank beside the falls (no rr(), so later rows keep their seed)
+        const j = Math.floor(tries / 8), a = (j % 2 ? -1 : 1) * Math.ceil(j / 2) * 0.25
+        pn = toward(c, Zc.lake, r + 0.05 + (tries % 8) * 0.015).applyAxisAngle(c, a) }
       else if (mode === 'spring') pn = toward(c, Zc.lake, r + 0.05)
       else pn = around(c, Math.sqrt(rr()) * r * (zone === 'forest' ? 0.8 : 0.85), rr() * 6.283)
       if (mode !== 'water' && blocked(pn) && tries < 300) continue

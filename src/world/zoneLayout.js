@@ -50,6 +50,11 @@ export const HARBOUR_FOLK = (() => { const P = PIERS[0], step = (n, d, dist) => 
   return { pierEnd: step(P.root, P.fwd, -0.1), pierSeat: dir(-0.74, 1.885), sea: step(P.root, P.fwd, 1.2),
     quay: pace(-0.745, 1.86, Math.PI / 2, 0.3), west: pace(-0.77, 1.15, Math.PI / 2, 0.3), east: pace(-0.715, 2.015, 0, 0.35) } })()
 
+// ---- terraces folk (npc/routines.js): the row worker and the planter pace along the paddies, on dry ground clear of
+// the river that now runs through the terraces ----
+export const TERRACE_FOLK = (() => { const T = zv(ZONES.terraces), pace = (d, b, tb, range) => ({ n: around(T, d, b), tan: tanAt(T, tb), range })
+  return { row: pace(0.07, 0.5, 0.5, 0.8), planter: pace(0.11, 2.3, 2.0, 0.6) } })() // planter: bearing 2.5 → 2.3 keeps her stroke out of the river
+
 // ---- the waterfall: where the river drops off the cliff's downhill face (its lip just past the mesa rim) into the
 // plunge pool at the cliff foot ----
 export const WATERFALL = OLD_WORLD ? null : (() => {

@@ -8,7 +8,7 @@ import { VILLAGERS } from '../villagers.js'
 import { Zc, LAKE_DOCK_B } from '../zones.jsx'
 import { VILLAGE } from '../world/village.js'
 import { OLD_WORLD } from '../world/flag.js'
-import { HARBOUR_FOLK, RUIN_WATCH } from '../world/zoneLayout.js'
+import { HARBOUR_FOLK, RUIN_WATCH, TERRACE_FOLK } from '../world/zoneLayout.js'
 // the reworked harbour's folk spots (world/zoneLayout.js): the bay moved, so its pier and quays did too
 const HF = OLD_WORLD ? null : HARBOUR_FOLK
 const RW = OLD_WORLD ? { stand: around(Zc.ruins, 0.25 / R, 4.0), day: around(Zc.ruins, 0.32 / R, 3.2) } : RUIN_WATCH // the ruins visitor's spots
@@ -26,7 +26,7 @@ export function buildWalkers() {
   W.push(HF ? { cfg: P_[10], mode: 'pace', n: HF.west.n, tan: HF.west.tan, range: HF.west.range, w: 0.2 } : { cfg: P_[10], mode: 'pace', n: around(Zc.harbour, 0.22 * 1.45, 3.0), tan: tangentAt(Zc.harbour, 1.2), range: 1.2, w: 0.2 })
   W.push({ cfg: { ...P_[8], top: '#d9655b', hat: 'straw', hatC: '#e2c27a', name: 'angler' }, mode: 'idle', n: (() => { const sh = around(Zc.lake, 0.2 * 1.06, LAKE_DOCK_B); const f = Zc.lake.clone().addScaledVector(sh, -sh.dot(Zc.lake)).normalize(); return sh.clone().addScaledVector(f, 1.15 / R).normalize() })(), fwd: Zc.lake.clone(), lift: () => 0, dock: true })
   W.push({ cfg: P_[3], mode: 'pace', n: around(Zc.terraces, 0.07, 0.5), tan: tangentAt(Zc.terraces, 0.5), range: 0.8, w: 0.18 })
-  W.push({ cfg: { ...P_[4], name: 'planter' }, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12 })
+  W.push({ cfg: { ...P_[4], name: 'planter' }, mode: 'pace', ...(OLD_WORLD ? { n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6 } : TERRACE_FOLK.planter), w: 0.12 })
   W.push({ cfg: P_[9], mode: 'idle', n: RW.stand, fwd: Zc.ruins.clone(), look: -0.35 })
   W.push({ cfg: P_[6], mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35 })
   W.push({ cfg: P_[1], mode: 'pace', n: around(Zc.giant, 1.6 / R, 0.5), tan: tangentAt(Zc.giant, 2.0), range: 0.7, w: 0.3 })
@@ -71,7 +71,7 @@ export function buildNewWalkers() {
   const [fa, fwf] = by('terraces')
   const rowA = around(Zc.terraces, 0.07, 0.5), rowB = around(Zc.terraces, 0.1, 1.4), hut = around(Zc.terraces, 0.13, 3.3)
   W.push({ cfg: { ...fa, hold: { R: 'hoe' } }, key: fa.name, mode: 'anchor', plan: { morning: [A(rowA, Zc.terraces, 'hoe', { dur: 22, stage: 'tend' }), A(rowB, Zc.terraces, 'hoe', { dur: 22, stage: 'tend' })], day: [A(rowB, Zc.terraces, 'hoe', { dur: 20, stage: 'tend' }), A(hut, Zc.terraces, 'eat', { dur: 16, stage: 'eat' })], evening: [A(rowA, Zc.terraces, 'look', { dur: 18, stage: 'survey' }), A(hut, Zc.terraces, 'sit', { dur: 14, stage: 'rest' })], night: A(hut, Zc.terraces, 'sit', { stage: 'rest' }) } })
-  W.push({ cfg: fwf, key: fwf.name, mode: 'pace', n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6, w: 0.12, work: { act: 'hoe', on: 7, off: 5, periods: ['morning', 'day'] } })
+  W.push({ cfg: fwf, key: fwf.name, mode: 'pace', ...(OLD_WORLD ? { n: around(Zc.terraces, 0.11, 2.5), tan: tangentAt(Zc.terraces, 2.0), range: 0.6 } : TERRACE_FOLK.planter), w: 0.12, work: { act: 'hoe', on: 7, off: 5, periods: ['morning', 'day'] } })
   const sch = by('ruins')[0], rs = RW.stand; W.push({ cfg: sch, key: sch.name, mode: 'anchor', plan: { morning: A(rs, Zc.ruins, 'stretch'), day: A(RW.day, Zc.ruins, 'look'), evening: A(rs, Zc.ruins, 'look'), night: A(rs, Zc.ruins, 'look') } })
   const mg = by('mills')[0]; W.push({ cfg: mg, key: mg.name, mode: 'pace', n: around(Zc.mills, 0.06, 1.0), tan: tangentAt(Zc.mills, 1.0), range: 1.4, w: 0.35, speeds: { morning: 1.2, day: 1, evening: 0.8, night: 0.4 }, carry: true, work: { act: 'stretch', on: 4, off: 12, periods: ['evening'] } })
   const [bs, td] = by('giant')
