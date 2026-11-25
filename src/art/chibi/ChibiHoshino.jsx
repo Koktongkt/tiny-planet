@@ -1,4 +1,5 @@
-// Professor Hoshino: a lazy chibi on the shared pipeline. Dark messy hair with a
+// DRAFT Professor Hoshino — not used in the game. Preview: ?view=charstudio&dev=chibi-drafts&char=hoshino
+// A lazy chibi on the shared pipeline. Dark messy hair with a
 // soft grey-streaked side, no beard, thick dark brows, round dark glasses, a
 // khaki lapelled jacket open over a dark green waistcoat and white shirt collar,
 // a knotted rust scarf, olive trousers, brown boots, and an open red notebook

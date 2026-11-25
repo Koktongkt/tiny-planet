@@ -1,4 +1,5 @@
-// Lazy entry for the two new chibi villagers. Walker / Studio / Lineup import only this module.
+// DRAFT — Grandma Fuku and Professor Hoshino chibi looks. The game does not render this chunk.
+// Dev preview only, and only with ?dev=chibi-drafts (see src/art/chibi/drafts.js).
 import React from 'react'
 import { ChibiFuku } from './ChibiFuku.jsx'
 import { ChibiHoshino } from './ChibiHoshino.jsx'

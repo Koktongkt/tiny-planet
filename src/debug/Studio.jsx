@@ -1,37 +1,28 @@
 // Character studio (?view=charstudio): a turntable for the traveller / villager models, old vs new and sprite compare.
 // Lazy chunk: none of this ships in the startup bundle. Boot (shader precompile + start the loop) is passed in by App
 // and mounted together with the scene, so it still compiles what the studio shows.
+// DRAFT Grandma Fuku and Professor Hoshino are not the default. They appear only with ?dev=chibi-drafts
+// (?char=fuku|hoshino, or &cast for her beside both drafts).
 import * as THREE from 'three'
 import React, { useMemo, lazy, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { wind } from '../world.js'
 import { T, toon, q, INK_K } from '../common.jsx'
 import { PEOPLE } from '../peopleData.js'
-import { VILLAGERS } from '../villagers.js'
-import { GhibliPerson, Character } from '../GhibliPerson.jsx'
+import { GhibliPerson } from '../GhibliPerson.jsx'
+import { chibiDraftName, draftsEnabled } from '../art/chibi/drafts.js'
 const PersonLazy = lazy(() => import('../people.jsx').then(m => ({ default: m.Person })))
 const Person = (p) => <Suspense fallback={null}><PersonLazy {...p} /></Suspense>
 const GhibliPersonV1 = lazy(() => import('../GhibliPersonV1.jsx').then(m => ({ default: m.GhibliPersonV1 })))
 const SpritePerson = lazy(() => import('../SpritePerson.jsx').then(m => ({ default: m.SpritePerson })))
 const SPRITE = q.get('char') === 'sprite'
 const ChibiHer = lazy(() => import('../art/chibi/ChibiHer.jsx').then(m => ({ default: m.ChibiHer })))
-const ChibiVillager = lazy(() => import('../art/chibi/ChibiVillagers.jsx').then(m => ({ default: m.ChibiVillager })))
+const ChibiVillagerDraft = lazy(() => import('../art/chibi/ChibiVillagers.jsx').then(m => ({ default: m.ChibiVillager })))
 const CHIBI = q.get('chibi') !== '0' && !SPRITE
 const NEWCHAR = !q.has('oldchar')
-const CHAR = q.get('char') // her (default) | fuku | grandma | hoshino | scholar
-const CAST = q.has('cast') // her + Fuku + Hoshino lineup
-const VCFG = { fuku: 'grandma', grandma: 'grandma', hoshino: 'scholar', scholar: 'scholar' }
-const villagerCfg = (name) => VILLAGERS.find(v => v.name === name)
-function NewChar({ st }) {
-  if (CHAR === 'fuku' || CHAR === 'grandma') return <Suspense fallback={null}><ChibiVillager name="grandma" st={st} scale={1} res={72} /></Suspense>
-  if (CHAR === 'hoshino' || CHAR === 'scholar') return <Suspense fallback={null}><ChibiVillager name="scholar" st={st} scale={1} res={72} /></Suspense>
-  return <Suspense fallback={null}><ChibiHer st={st} /></Suspense>
-}
-function OldChar({ st }) {
-  const key = VCFG[CHAR]
-  if (key) return <Character cfg={villagerCfg(key)} st={st} res={72} scale={1} />
-  return <GhibliPerson st={st} />
-}
+const DRAFTS = draftsEnabled(location.search)
+const draftId = chibiDraftName(q.get('char'), location.search)
+const CAST = DRAFTS && q.has('cast') // her + draft Fuku + draft Hoshino
 const SEQ = q.get('seq'), seqT = { t: 0, yaw: 0 }
 if (typeof window !== 'undefined') window.__seqT = seqT
 const ANGLES = { front: 0, three: 0.75, side: Math.PI / 2, back: Math.PI }
@@ -74,12 +65,12 @@ function Studio() {
     <mesh rotation={[-Math.PI / 2, 0, 0]} material={useMemo(() => toon('#efe6d2'), [])}><circleGeometry args={[1.6, 48]} /></mesh>
     {!CAST && (compare ? (SPRITE ? [[-0.25, 'new'], [0.25, 'sprite']] : [[-0.25, 'old'], [0.25, 'new']]) : [[0, q.has('old') ? 'old' : SPRITE ? 'sprite' : 'new']]).map(([x, k]) => <group key={k} position={[x, 0.001, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
-      {CAST ? null : k === 'old' && CHIBI ? <OldChar st={stOld} /> : k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : CHIBI ? <NewChar st={stNew} /> : <GhibliPerson st={stNew} />}
+      {k === 'old' && CHIBI ? <GhibliPerson st={stOld} /> : k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : CHIBI && draftId ? <Suspense fallback={null}><ChibiVillagerDraft name={draftId} st={stNew} scale={1} res={72} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={stNew} /></Suspense> : <GhibliPerson st={stNew} />}
     </group>)}
     {CAST && <group>
       {[['her', -0.38], ['fuku', 0], ['hoshino', 0.38]].map(([name, x]) => <group key={name} position={[x, 0.001, 0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
-        {name === 'her' ? <Suspense fallback={null}><ChibiHer st={stNew} /></Suspense> : <Suspense fallback={null}><ChibiVillager name={name} st={stNew} scale={1} res={72} /></Suspense>}
+        {name === 'her' ? <Suspense fallback={null}><ChibiHer st={stNew} /></Suspense> : <Suspense fallback={null}><ChibiVillagerDraft name={name} st={stNew} scale={1} res={72} /></Suspense>}
       </group>)}
     </group>}
   </>

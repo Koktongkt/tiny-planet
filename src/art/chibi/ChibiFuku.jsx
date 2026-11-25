@@ -1,4 +1,5 @@
-// Grandma Fuku: a lazy chibi on the shared pipeline (~2.5 heads). Open round eyes
+// DRAFT Grandma Fuku — not used in the game. Preview: ?view=charstudio&dev=chibi-drafts&char=fuku
+// A lazy chibi on the shared pipeline (~2.5 heads). Open round eyes
 // behind wire glasses, grey brows and smile lines, grey top bun, a darker purple
 // wrap cardigan with a cream inner collar over a separate lilac skirt, a cream
 // scalloped apron, a pincushion, and a teacup held in both hands at the chest.

@@ -25,8 +25,6 @@ const NEWCHAR = !q.has('oldchar')
 const CHIBI = NEWCHAR && !SPRITE && q.get('chibi') !== '0'
 const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
-const chibiVillagersMod = CHIBI ? import('./art/chibi/ChibiVillagers.jsx') : null
-const ChibiVillager = lazy(() => chibiVillagersMod.then(m => ({ default: m.ChibiVillager })))
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
@@ -399,8 +397,7 @@ function Walker({ w, i }) {
     }
     L.placed = true
   })
-  const chibiNpc = CHIBI && (w.cfg.name === 'grandma' || w.cfg.name === 'scholar')
-  return <group ref={ref}>{!ready ? null : NEWCHAR ? (chibiNpc ? <Suspense fallback={null}><ChibiVillager name={w.cfg.name} st={st} scale={0.8} /></Suspense> : <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} />) : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 // the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
 function Bench() {
