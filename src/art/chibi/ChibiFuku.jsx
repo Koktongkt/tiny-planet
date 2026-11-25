@@ -50,14 +50,14 @@ function fukuGlasses() {
   }
   const g = mergeGeometries(parts.map(p => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('uv'); return p })); g.computeVertexNormals(); return g
 }
-const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020 }, glassesGeo: fukuGlasses })
+const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020, brow: { color: '#c9c2ba', edge: '#9d948c', width: 0.0056 } }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
 const EAR = { x: 0.0560, y: -0.0215, z: 0.003 }
 const BUN_C = [0, 0.071, -0.013], BUN_R = 0.0285
 // main hair shapes: [centre, radii, rotation]
 const H_CAP = [[0, 0.012, -0.014], [0.0575, 0.057, 0.062]]
-const H_FRONT = [[0, 0.040, 0.020], [0.046, 0.024, 0.030]]
+const H_FRONT = [[0, 0.038, 0.015], [0.047, 0.026, 0.034]]
 const H_LOBE = (d) => [[d * 0.019, 0.044, 0.032], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
 const H_TEMPLE = (d) => [[d * 0.0555, 0.010, -0.004], [0.011, 0.020, 0.022], [0.05, d * 0.30, d * 0.10]]
 function fukuHair() {
@@ -92,7 +92,9 @@ function fukuHair() {
 const HAIR_GEO = fukuHair()
 // the sheet's swirl: painted locks flowing up from the hairline and round the head into the bun, a spiral on the bun
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b] }
-const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF, { lines: { c: [0, 0.004, -0.004], bun: BUN_C, br: BUN_R, n: 9, twist: 0.45, wave: 0.07, bunN: 2, bunTwist: 0.9, width: 0.025, lock: 0.84, alpha: 0.42, ink: lin('#867870') } })
+const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF, { lines: { c: [0, 0.004, -0.004], bun: BUN_C, br: BUN_R, n: 8, twist: 1.35, wave: 0.04, mirror: true, round: 0.12, bunN: 2, bunTwist: 0.9, width: 0.03, lock: 0.82, alpha: 0.6, ink: lin('#7a6c63') } })
+// a small depth bias so the hair's own smooth edge wins where it meets the faceted skin at the hairline (no ragged cut)
+hairMat.polygonOffset = true; hairMat.polygonOffsetFactor = -1; hairMat.polygonOffsetUnits = -2
 const hairInk = makeHairInk(FUKU_HAIR_OFF)
 function FukuHair({ set }) {
   return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={hairMat} /><mesh geometry={HAIR_GEO} material={hairInk} /></group>

@@ -125,6 +125,11 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Pear-shaped face: narrower skull (`headW` 0.82 -> 0.76) over a wider, fuller jaw set low with only a short straight section and a softer blend, so the face widens toward the bottom and the jaw's lower corners round upward: `FUKU_CHEEK = [0, -0.0405, 0.012, 0.0505, 0.015, 0.039, 0.018, 0.012]`.
   - Glasses are half-rim: each rim is the bottom half of the torus (`TorusGeometry(..., Math.PI)` turned down); the bridge and the arms meet the rims at the lens centre line.
 
+**Grandma Fuku, pass 17** (KT: brows the colour of her hair and thicker; fix the hair details): [`ref/fuku-pass17-compare.jpg`](ref/fuku-pass17-compare.jpg).
+  - Brows: thick soft hair-grey (`#c9c2ba`, width 0.0056, was a thin `#6a6660` 0.0032 line) with a thin darker rim (`#9d948c`), as on the sheet. New optional `featOff.brow { color, edge, width }` in `castFace.jsx`.
+  - Hair locks mirror left / right (new `lines.mirror`, `round`): a parting in front and rounded U-scallops curving up into the bun behind, instead of one-way barber-pole twists. 8 locks, `twist 1.35` so the lines arc like the sheet's sweeping curves; darker, crisper lines (`#7a6c63`, alpha 0.6). Tried: plain `abs` mirror (sharp V chevrons behind, `round 0.12` softens them); `twist 0.55` (straight melon stripes).
+  - Cleaner hairline: a small depth bias on the hair material (`polygonOffset -1/-2`) lets the hair's smooth edge win over the faceted skin; the front shape sits further back so the dome no longer shows a ledge.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

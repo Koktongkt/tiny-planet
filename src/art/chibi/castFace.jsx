@@ -26,19 +26,20 @@ const lin = (hex) => { const c = new THREE.Color(hex); return `vec3(${c.r.toFixe
 const f5 = (x) => x.toFixed(6)
 
 function drawFaces(W, kind, off = {}) {
-  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0
+  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0, bw = off.brow // brow { color, edge, width }: a character's own brows
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
   const fuku = kind === 'fuku'
-  const BROW = fuku ? '#6a6660' : '#1a1614'
+  const BROW = bw?.color ?? (fuku ? '#6a6660' : '#1a1614')
   ;['happy', 'focus', 'sleepy', 'excited'].forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     const by = (name === 'excited' ? 0.0076 : name === 'sleepy' ? 0.0058 : name === 'focus' ? 0.0063 : 0.0066) + 0.0004 * FT + (fuku ? 0.0002 : 0)
     const arc = fuku ? (name === 'focus' ? 0.0024 : 0.0032) : (name === 'focus' ? 0.0020 : 0.0030)
-    g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0056) * s
-    for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0010)); g.stroke() }
+    const brow = () => { for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0010)); g.stroke() } }
+    if (bw?.edge) { g.strokeStyle = bw.edge; g.lineWidth = (bw.width + 0.0012) * s; brow() } // thin darker rim round a soft brow
+    g.strokeStyle = BROW; g.lineWidth = (bw?.width ?? (fuku ? 0.0032 : 0.0056)) * s; brow()
     if (fuku) { // soft grey-brown smile lines at the eye corners
       g.strokeStyle = 'rgba(120,100,90,0.62)'; g.lineWidth = 0.0011 * s
       for (const sd of [-1, 1]) {
@@ -158,7 +159,7 @@ const faceMat = (kind, bl, dy, off) => new THREE.ShaderMaterial({ transparent: t
 
 /** Face component factory. kind: 'fuku' | 'hoshino'. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Optional: cheek (head-frame jaw shape, must match body.cheek), hr (skull radii, must match body.headW), blushAt { dx, dy, dr } (moves / grows the blush),
- *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose } (extra drop), glassesGeo (a character's own frames,
+ *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose, brow: { color, edge, width } } (extra drop; own brows), glassesGeo (a character's own frames,
  *  replaces the shared ones; it must apply the same featDy). */
 export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, hr = HR, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) {
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH

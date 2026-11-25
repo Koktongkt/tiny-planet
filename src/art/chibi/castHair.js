@@ -33,12 +33,13 @@ export function makeHairInk(uOff) {
 
 // optional painted strand lines (opts.lines): locks flowing up to a bun, as drawn on a turnaround sheet.
 //   c: head centre, bun: bun centre, br: bun radius (spiral inside), n: locks round the head, twist: swirl per radian
-//   of distance from the bun, ink: line colour. Absent = the old shader, unchanged.
+//   of distance from the bun, ink: line colour, mirror: locks mirror left / right (a parting in front, a V up
+//   into the bun behind) instead of all twisting one way; round: softens that join behind into a U. Absent = the old shader, unchanged.
 function linesGLSL(L) {
   const v = (a) => `vec3(${a.map(x => x.toFixed(5)).join(',')})`, f4 = (x) => x.toFixed(4)
   return `{ vec3 B = ${v(L.bun)}, C = ${v(L.c)}, ax = normalize(B - C), t1 = normalize(cross(ax, vec3(1.,0.,0.))), t2 = cross(ax, t1);
       vec3 q = normalize(vO - C);
-      float d = acos(clamp(dot(q, ax), -1., 1.)), ph = atan(dot(q, t2), dot(q, t1));
+      float d = acos(clamp(dot(q, ax), -1., 1.)), ph = atan(dot(q, t2), dot(q, t1));${L.mirror ? ` ph = sqrt(ph * ph + ${(L.round ?? 0).toFixed(4)});` : ''}
       float f = ph * ${f4(L.n / (2 * Math.PI))} + d * ${f4(L.twist)} + ${f4(L.wave ?? 0)} * sin(d * 4. + ph * 2.);
       vec3 pb = vO - B; float ab = dot(pb, ax); vec3 rp = pb - ab * ax;
       float rb = length(rp) / ${f4(L.br)}, onBun = (1. - smoothstep(.95, 1.12, length(pb) / ${f4(L.br)})) * smoothstep(-.2, .25, ab / ${f4(L.br)});
