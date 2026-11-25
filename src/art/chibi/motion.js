@@ -55,3 +55,52 @@ export function motionProfile(base, over = {}) {
   return out
 }
 export const between = (rnd, [a, b]) => a + rnd() * (b - a)
+
+// Grandma Fuku: calmer, slower fidgets, no skip/skid/lie. restActs lets the bench sit/chat
+// poses still run the seated fidgets (the game marks those as st.act, which would otherwise count as "busy").
+export const FUKU_MOTION = motionProfile(HER_MOTION, {
+  name: 'fuku',
+  lively: 0.6,
+  fidgets: { tea: 4.2, glasses: 2.2 },
+  sets: {
+    day: ['look', 'hum', 'rock', 'tea', 'look'],
+    rain: ['look', 'hum', 'rock'],
+    night: ['yawn', 'look', 'rock'],
+    seated: ['look', 'hum', 'tea', 'look', 'glasses'],
+    hungry: ['look', 'hum', 'tea'],
+    indoor: ['look', 'hum', 'rock', 'tea'],
+    stove: ['hum', 'look', 'hum', 'tea'],
+  },
+  fidgetAfter: 3.5,
+  fidgetEvery: [8, 16],
+  sitAfter: 8,
+  lieChance: 0,
+  can: { skip: false, skid: false, wave: true, dodge: false, sit: false, lie: false, rainHunch: true, glanceAtCamera: true },
+  waveEvery: [20, 30],
+  yawnUp: 1.2,
+  restActs: ['sit', 'chat'],
+})
+
+// Professor Hoshino: checks his notebook, pushes up his glasses. A little livelier than Fuku, still an elder.
+export const HOSHINO_MOTION = motionProfile(HER_MOTION, {
+  name: 'hoshino',
+  lively: 0.75,
+  fidgets: { notebook: 3.8, glasses: 2.0 },
+  sets: {
+    day: ['look', 'notebook', 'glasses', 'look', 'hands'],
+    rain: ['look', 'glasses', 'shiver'],
+    night: ['yawn', 'look', 'notebook'],
+    seated: ['look', 'notebook', 'glasses'],
+    hungry: ['look', 'notebook'],
+    indoor: ['look', 'notebook', 'glasses', 'hands'],
+    stove: ['look', 'notebook', 'hum'],
+  },
+  fidgetAfter: 3.0,
+  fidgetEvery: [6, 14],
+  sitAfter: 22,
+  lieChance: 0,
+  can: { skip: false, skid: false, wave: true, dodge: false, sit: true, lie: false, rainHunch: true, glanceAtCamera: true },
+  waveEvery: [30, 50],
+  yawnUp: 1.35,
+  restActs: ['look', 'sit'],
+})
