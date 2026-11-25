@@ -522,13 +522,14 @@ const OLD_VIEWS = (() => { const HB_LOOK = around(Zc.harbour, 0.29, 2.3); return
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
 } })()
 // the reworked layout: each view frames its region from the registry (bearings: around()'s, 0 east / pi/2 north)
-const NEW_VIEWS = () => { const rg = (id) => zv(region(id)), HB_LOOK = around(rg('harbour'), 0.27, 1.75), ST = STAIR.steps, TR_C = railDir(TRESTLE.lonC)
+const NEW_VIEWS = () => { const rg = (id) => zv(region(id)), HB_LOOK = around(rg('harbour'), 0.27, 1.75), ST = STAIR.steps, TR_C = TRESTLE && railDir(TRESTLE.lonC), POOL = zv(region('cliff')).lerp(rg('terraces'), 0.45), HR_CAM = dir(-0.62, 1.45)
   return {
     'square': { cam: around(VILLAGE, 2.4 / R, 0.1), ch: 1.3, look: VILLAGE, lh: 0.2 }, // from over the river by the bridge, her home beyond
     'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 }, // the bay's north shore (pier walkers)
     'lake-waterfall': { cam: around(rg('lake'), 0.36, 4.4), ch: 3.2, look: rg('lake').lerp(rg('cliff'), 0.62), lh: 0.4 }, // up the river from below the lake to the falls
-    'terraces-train': { cam: around(TR_C, 2.6 / R, -1.2), ch: 1.4, look: TR_C, lh: 0.2 }, // the train on the river trestle (&trainAt=1.5), the valley up toward the lake behind (the terraces are far up the slope)
-    'harbour-ruins': { cam: dir(-1.0, 1.55), ch: 8.5, look: dir(-0.4, 1.15), lh: 0.0 }, // from high over the sea: the bay, the trestle at its head, the river up to the lake (its drowned ruins sit past its far rim)
+    'terraces-train': { cam: around(rg('terraces'), 0.36, -1.0), ch: 2.8, look: rg('terraces').lerp(POOL, 0.5), lh: 0.5 }, // (key kept for shoot.mjs / the README) the terraces stepping down under the waterfall, where the water mill will go
+    ...(TR_C ? { 'train-trestle': { cam: around(TR_C, 2.6 / R, -1.2), ch: 1.4, look: TR_C, lh: 0.2 } } : {}), // the train on the river trestle (park it there with &trainAt=1.5)
+    'harbour-ruins': { cam: HR_CAM, ch: 11, look: rg('harbour').lerp(rg('ruins'), 0.42), lh: 0.0 }, // from high over the bay's north shore: the harbour and trestle below, the river up to the lake and its drowned ruins
     'forest-giant': { cam: around(rg('giant'), 0.78, 4.6), ch: 3.6, look: rg('giant'), lh: 2.0 },
     'meadow-mills': { cam: rg('meadow').lerp(rg('mills'), 0.15), ch: 2.4, look: rg('mills'), lh: 0.5 },
     peak: { cam: around(ST[0].n, 0.9 / R, 4.0), ch: 1.4, look: ST[Math.floor(ST.length * 0.6)].n, lh: 0.4 }, // up the stair to the shrine

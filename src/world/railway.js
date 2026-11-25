@@ -41,7 +41,8 @@ export function railOff(n) {
 
 // the trestle: centred on the one stretch of rail over the river (riverNear d < half), spanning the water and its
 // low banks out to where the ground rises back to the rails' level. Its deck runs straight between the ground heights
-// at its two ends. null under ?world=old.
+// at its two ends. null under ?world=old, and null if the rails don't cross the river exactly once (the unit test
+// reports that; zones.jsx and the views then draw / aim at no trestle).
 const BANK = 0.6 // world units of trestle beyond the water on each side
 export const TRESTLE = OLD_WORLD ? null : (() => {
   // runs of rail over the river: a coarse walk (0.004 rad, ~0.03 world units: far narrower than the river), each edge
@@ -50,7 +51,7 @@ export const TRESTLE = OLD_WORLD ? null : (() => {
   const edge = (lo, hi) => { const w0 = wetAt(lo); for (let k = 0; k < 9; k++) { const m = (lo + hi) / 2; if (wetAt(m) === w0) lo = m; else hi = m } return (lo + hi) / 2 }
   for (let lon = step; lon <= TAU; lon += step) { const wet = wetAt(lon); if (wet && a === null) a = edge(lon - step, lon); if (!wet && a !== null) { runs.push([a, edge(lon - step, lon)]); a = null } }
   if (a !== null) runs.push([a, TAU])
-  if (runs.length !== 1) return { runs, lon0: 0, lon1: 0, lonC: 0, h0: 0, h1: 0 } // (the unit test reports this)
+  if (runs.length !== 1) return null
   const [ra, rb] = runs[0], lonC = (ra + rb) / 2, w = (rb - ra) / 2 + BANK / (R * Math.cos(railLat(lonC)))
   const lon0 = lonC - w, lon1 = lonC + w
   return { runs, lon0, lon1, lonC, h0: height(railDir(lon0)), h1: height(railDir(lon1)) }
@@ -68,6 +69,8 @@ if (!OLD_WORLD) { let p = railDir(0); for (let i = 1; i <= AN; i++) { const q = 
 /** the ring's length in world units */
 export const RAIL_LEN = OLD_WORLD ? TAU * R * Math.cos(TRAIN_LAT) : ARC[AN]
 const arcAt = (w) => { const f = w / TAU * AN, i = Math.min(AN - 1, Math.floor(f)); return ARC[i] + (ARC[i + 1] - ARC[i]) * (f - i) }
+/** world units along the ring from lon a to lon b (a <= b, within one turn, no wrap past lon 0) */
+export const railSpan = (a, b) => OLD_WORLD ? (b - a) * R * Math.cos(TRAIN_LAT) : arcAt(wrap(b)) - arcAt(wrap(a))
 /** lon (in [0, 2pi)) of the point `s` world units along the ring from lon 0 */
 export function lonAtArc(s) {
   if (OLD_WORLD) return wrap(s / (R * Math.cos(TRAIN_LAT)))

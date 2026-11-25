@@ -11,7 +11,7 @@ import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W,
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
-import { railDir, railPoint, railTangent, railHeight, railBehind, railOff, onTrestle, deckHeight, lonAtArc, RAIL_LEN, TRESTLE } from './world/railway.js'
+import { railDir, railPoint, railTangent, railHeight, railBehind, railOff, onTrestle, deckHeight, lonAtArc, RAIL_LEN, TRESTLE, railSpan } from './world/railway.js'
 import * as ZL from './world/zoneLayout.js'
 
 const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
@@ -262,7 +262,7 @@ function Trestle() {
     // a box w x h x d placed in the track frame at lon: x across (off), y up (y above R), z along the track
     const put = (out, w, h, d, lon, off, y, rotZ = 0, len) => { const n = railPoint(lon, off), f = _rt(lon); _x.crossVectors(n, f).normalize(); _z.crossVectors(_x, n)
       const g = new THREE.BoxGeometry(w, h, len ?? d); m.makeBasis(_x, n, _z).setPosition(_p.copy(n).multiplyScalar(R + y)); if (rotZ) g.applyMatrix4(new THREE.Matrix4().makeRotationZ(rotZ)); g.applyMatrix4(m); out.push(g) }
-    const span = (T.lon1 - T.lon0), cosL = Math.cos(TRAIN_LAT), L = span * R * cosL
+    const span = (T.lon1 - T.lon0), L = railSpan(T.lon0, T.lon1) // along the ring (it climbs the bay ramp)
     for (let i = 0, N = Math.ceil(L / 0.11); i <= N; i++) { const lon = T.lon0 + span * i / N; put(planks, 0.5, 0.022, 0.095, lon, 0, deckHeight(lon) + 0.005) } // deck planks across
     const B = Math.max(2, Math.round(L / 0.34))
     for (let i = 0; i <= B; i++) { const lon = T.lon0 + span * i / B, dh = deckHeight(lon)
@@ -424,7 +424,7 @@ export function Zones() {
     <Train />
     {TRESTLE && <Cull n={railDir(TRESTLE.lonC)} d={16}><Trestle /></Cull>}
     <Cull n={Zc.harbour} d={16}><Harbour /></Cull>
-    <Cull n={Zc.ruins} d={14}><Ruins /></Cull>
+    <Cull n={Zc.ruins} d={OLD_WORLD ? 14 : 18}><Ruins /></Cull>{/* (new: the drowned ruins read from across the lake) */}
     <Cull n={Zc.forest} d={18}><Camphors /></Cull>
     <GiantTree />
     <Cull n={Zc.meadow} d={16}><MeadowFlowers /></Cull>

@@ -11,7 +11,7 @@ import { fareText, stopName, rideStatus } from '../../src/ui/ride/fareText.js'
 import { R, TRAIN_LAT, dir, height, waterAt, seaDepth, onBridge, distToCurve, pathDir } from '../../src/world.js'
 import { TRAIN_LAT as COAST_LAT } from '../../src/world/regions.js'
 import { riverNear } from '../../src/world/river.js'
-import { railLat, railDir, railPoint, railTangent, railHeight, railBehind, railOff, TRESTLE, onTrestle, deckHeight, RAIL_LEN } from '../../src/world/railway.js'
+import { railLat, railDir, railPoint, railTangent, railHeight, railBehind, railOff, TRESTLE, onTrestle, deckHeight, RAIL_LEN, railSpan } from '../../src/world/railway.js'
 import { fare } from '../../src/systems/train.js'
 globalThis.window ??= {} // world/village.js publishes debug handles on window
 const { TRAIN_STOPS } = await import('../../src/world/village.js')
@@ -62,7 +62,7 @@ test('rails cross the river once on a trestle', () => {
   assert.equal(runs.length, 1, `rails cross the river ${runs.length} times`)
   const [ra, rb] = runs[0]
   assert.ok(TRESTLE && Math.abs(TRESTLE.lonC - (ra + rb) / 2) < 0.002, 'trestle centred on the crossing')
-  assert.ok(TRESTLE.lon0 < ra && TRESTLE.lon1 > rb, 'trestle spans the river'); assert.ok((TRESTLE.lon1 - TRESTLE.lon0) * R * Math.cos(TRAIN_LAT) < 3.5, 'a short trestle')
+  assert.ok(TRESTLE.lon0 < ra && TRESTLE.lon1 > rb, 'trestle spans the river'); assert.ok(railSpan(TRESTLE.lon0, TRESTLE.lon1) < 3.5, 'a short trestle')
   // off the trestle the rails, sleepers and ballast stand on dry land (no rails on open harbour water or in the sea)
   for (let i = 0; i < 6000; i++) { const lon = i / 6000 * TAU; if (onTrestle(lon)) continue; for (const off of [-0.2, 0, 0.2]) assert.ok(dry(railPoint(lon, off)), `rails in water at lon ${lon.toFixed(3)} (${off})`) }
   // the deck meets the ground at both ends and clears the water beneath
