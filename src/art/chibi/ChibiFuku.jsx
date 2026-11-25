@@ -9,7 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, cel, spec, mkOutline, coreSDF } from '../../GhibliPerson.jsx'
 import { FUKU_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { CHEEK, MIDFACE, MID_FADE, EYE, headSDF, makeFace } from './castFace.jsx'
+import { HR, MIDFACE, MID_FADE, EYE, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
 
@@ -27,7 +27,10 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0290, 0.0100, 0.0570, 0.0270, 0.0370, 0.0180]
+const FUKU_CHEEK = [0, -0.0300, 0.0110, 0.0500, 0.0260, 0.0400, 0.0220]
+// pass 10: a narrower head (body.headW) with that jaw nearly as wide as the skull and blended broadly (k 0.022), so
+// the sides run straight down into a full, flat-bottomed jaw: a rounded block, as on the sheet
+const HEAD_W = 0.92, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
@@ -37,22 +40,23 @@ function fukuGlasses() {
   const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
   br.scale(1, 0.42, 1); br.translate(0, EYE.y + 0.0012, Z + 0.0024); parts.push(br)
   for (const sd of [-1, 1]) {
-    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EYE.y + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0575, EYE.y + 0.0030, 0.010)
+    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EYE.y + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0540, EYE.y + 0.0030, 0.010)
     const len = a.distanceTo(b), t = new THREE.CylinderGeometry(0.0010, 0.0010, len, 6)
     t.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
     t.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); parts.push(t)
   }
   const g = mergeGeometries(parts.map(p => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('uv'); return p })); g.computeVertexNormals(); return g
 }
-const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, blushAt: { dx: 0.0016, dy: -0.0030, dr: 1.12 }, glassesGeo: fukuGlasses })
+const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0016, dy: -0.0030, dr: 1.12 }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
-const EAR = { x: 0.061, y: -0.012, z: 0.006 }
+const EAR = { x: 0.057, y: -0.012, z: 0.006 }
+const BUN_C = [0, 0.071, -0.013], BUN_R = 0.0285
 // main hair shapes: [centre, radii, rotation]
-const H_CAP = [[0, 0.012, -0.008], [0.066, 0.057, 0.062]]
+const H_CAP = [[0, 0.012, -0.008], [0.063, 0.057, 0.062]]
 const H_FRONT = [[0, 0.028, 0.027], [0.049, 0.027, 0.029]]
 const H_LOBE = (d) => [[d * 0.019, 0.036, 0.038], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
-const H_TEMPLE = (d) => [[d * 0.050, 0.010, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10]]
+const H_TEMPLE = (d) => [[d * 0.047, 0.010, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10]]
 function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 20, 14), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 20)
   // sheet: a big soft grey dome (wider than the face), a centre parting with two broad waves swept back, sides down
@@ -63,14 +67,10 @@ function fukuHair() {
     P(ball, H_CAP),
     P(ball, H_FRONT),
     part(ball, [0, -0.014, -0.024], [0.058, 0.042, 0.044]),
-    part(ball, [0, 0.071, -0.013], [0.0285, 0.0240, 0.0275]),
+    part(ball, BUN_C, [BUN_R, 0.0240, 0.0275]),
     part(ring, [0, 0.055, -0.010], [0.0195, 0.0195, 0.0150], [Math.PI / 2 - 0.10, 0, 0]),
     ...[-1, 1].map(d => P(ballS, H_LOBE(d))),
     ...[-1, 1].map(d => P(ballS, H_TEMPLE(d))),
-    // soft swept-back ridges: low and long, read as the sheet's wave lines rather than curls
-    ...[-1, 1].map(d => part(ballS, [d * 0.030, 0.040, 0.008], [0.0065, 0.0040, 0.034], [0.55, d * 0.42, d * 0.10])),
-    ...[-1, 1].map(d => part(ballS, [d * 0.047, 0.024, -0.004], [0.0060, 0.0040, 0.034], [0.35, d * 0.62, d * 0.10])),
-    ...[-1, 1].map(d => part(ballS, [d * 0.040, -0.008, -0.040], [0.0060, 0.0040, 0.026], [-0.20, d * 0.95, d * 0.10])),
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
   ]
   tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.45])
@@ -80,12 +80,13 @@ function fukuHair() {
   tagAW(parts[4], () => [2, 0.4])
   for (const k of [5, 6]) tagAW(parts[k], () => [3, 0.45])
   for (const k of [7, 8]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.5])
-  for (const k of [9, 10, 11, 12, 13, 14]) tagAW(parts[k], () => [3, 0.3])
-  for (const k of [15, 16]) tagAW(parts[k], () => [3, 0])
+  for (const k of [9, 10]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()
-const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF)
+// the sheet's swirl: painted locks flowing up from the hairline and round the head into the bun, a spiral on the bun
+const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b] }
+const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF, { lines: { c: [0, 0.004, -0.004], bun: BUN_C, br: BUN_R, n: 9, twist: 0.45, wave: 0.07, bunN: 2, bunTwist: 0.9, width: 0.025, lock: 0.84, alpha: 0.42, ink: lin('#867870') } })
 const hairInk = makeHairInk(FUKU_HAIR_OFF)
 function FukuHair({ set }) {
   return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={hairMat} /><mesh geometry={HAIR_GEO} material={hairInk} /></group>
@@ -190,6 +191,14 @@ function tubeBetween(a, b, r0, r1, hex) {
   g.translate(mid.x, mid.y, mid.z)
   return paint(g, hex)
 }
+// tube with an oval cross-section: k times wider along `wide` (made perpendicular to the axis)
+function ovalTube(a, b, r0, r1, wide, k, hex) {
+  const A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b), Y = Bv.clone().sub(A), len = Math.max(Y.length(), 0.001); Y.normalize()
+  const Z = new THREE.Vector3(...wide); Z.addScaledVector(Y, -Z.dot(Y)).normalize(); const X = new THREE.Vector3().crossVectors(Y, Z)
+  const g = new THREE.CylinderGeometry(r1, r0, len, 16); g.scale(1, 1, k)
+  g.applyMatrix4(new THREE.Matrix4().makeBasis(X, Y, Z)); g.translate((A.x + Bv.x) / 2, (A.y + Bv.y) / 2, (A.z + Bv.z) / 2)
+  return paint(g, hex)
+}
 const ball = (c, r, sc, hex) => { const g = new THREE.SphereGeometry(r, 12, 10); g.scale(...sc); g.translate(...c); return paint(g, hex) }
 
 // clasped hands at the waist: round shoulder, sleeve down the side, elbow at the waist, forearm forward to the middle,
@@ -197,18 +206,19 @@ const ball = (c, r, sc, hex) => { const g = new THREE.SphereGeometry(r, 12, 10);
 function armsParts(S, cy) {
   const front = S.belly[0].z + S.belly[1].z, hy = S.bellyY + 0.012 - cy, parts = []
   for (const sd of [-1, 1]) {
-    const sh = [sd * Math.abs(S.shL.x) * 0.92, S.shY - cy - 0.008, S.shL.z]
-    const el = [sd * (Math.abs(S.shL.x) + 0.014), hy + 0.000, front * 0.30]
-    const wr = [sd * 0.030, hy + 0.001, front + 0.008]
-    // smooth sloped shoulder: a tapering tube from the neck base out to the shoulder joint, no puff on top
-    const nb = [sd * 0.024, S.neckY - cy - 0.010, S.shL.z - 0.002]
-    parts.push(tubeBetween(nb, sh, 0.0120, 0.0205, CARDIGAN), ball(sh, 0.0205, [1, 0.94, 1], CARDIGAN))
-    parts.push(tubeBetween(sh, el, 0.0210, 0.0200, CARDIGAN), ball(el, 0.0200, [1, 1, 1], CARDIGAN))
-    parts.push(tubeBetween(el, wr, 0.0200, 0.0212, CARDIGAN))
+    const sh = [sd * Math.abs(S.shL.x) * 0.97, S.shY - cy - 0.014, S.shL.z]
+    const el = [sd * (Math.abs(S.shL.x) + 0.012), hy + 0.000, front * 0.26]
+    const wr = [sd * 0.030, hy + 0.001, front + 0.010]
+    // sloped shoulder: a long tapering tube from high at the neck base down and out to the shoulder joint
+    const nb = [sd * 0.020, S.neckY - cy - 0.004, S.shL.z - 0.004]
+    parts.push(ovalTube(nb, sh, 0.0135, 0.0215, [0, 0, 1], 1.15, CARDIGAN), ball(sh, 0.0215, [1, 1.08, 1.22], CARDIGAN)) // tall enough to cover the collapsed rig stub at the joint
+    // oval sleeves: deep front-to-back above the elbow, tall below it, so the arms read thick from the side too
+    parts.push(ovalTube(sh, el, 0.0215, 0.0205, [0, 0, 1], 1.22, CARDIGAN), ball(el, 0.0205, [1, 1.12, 1.18], CARDIGAN))
+    parts.push(ovalTube(el, wr, 0.0205, 0.0215, [0, 1, 0], 1.18, CARDIGAN))
     // cuff: a short wider band at the wrist
     const dir = new THREE.Vector3(...wr).sub(new THREE.Vector3(...el)).normalize()
     const cuffA = new THREE.Vector3(...wr).addScaledVector(dir, -0.007).toArray()
-    parts.push(tubeBetween(cuffA, wr, 0.0222, 0.0226, CARDIGAN_HEM))
+    parts.push(ovalTube(cuffA, wr, 0.0228, 0.0232, [0, 1, 0], 1.14, CARDIGAN_HEM))
     const hand = [sd * 0.013, hy + (sd > 0 ? 0.004 : -0.003), front + 0.016 + (sd > 0 ? 0.005 : 0)]
     parts.push(ball(hand, 0.0150, [1.22, 0.92, 0.92], SKIN))
   }
@@ -265,7 +275,7 @@ export const FUKU = {
   name: 'grandma', age: 'elder', motion: FUKU_MOTION,
   // SDF long A-line skirt (the sheet's one solid purple skirt to the ankle). The arms are custom chest-parented
   // sleeves with clasped hands (attachLook); body.arm / hand stay tiny so the skinned rig stays hidden.
-  body: { skirt: 'long', skirtFlare: 1.34, skirtTop: 0.86, H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.02, girth: 1.26, shoulder: 1.08, chestW: 1.14, bellyZ: 0.96, shX: 1.22, armA: 0.52,
+  body: { skirt: 'long', skirtFlare: 1.34, skirtTop: 0.86, headW: HEAD_W, H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.02, girth: 1.26, shoulder: 0.96, chestW: 1.04, bellyZ: 0.96, shX: 1.22, armA: 0.52,
     armR: [0.35, 0.30, 0.25], legR: 1.24, legX: 1.06, foot: 1.18, bootW: 1.20, bootH: 1.05, bootL: 0.92, hand: 0.01,
     cheek: FUKU_CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.20,
     anY: 0.036, footY: 0.014, soleY: 0.0012 },

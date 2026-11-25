@@ -251,7 +251,7 @@ export function spec(b = {}) {
   const cg = 0.5 + 0.5 * gw
   S.chest = [V3(0, S.chestY, -0.004 + 0.022 * hc), V3(0.054 * shw * cg * (b.chestW ?? 1), 0.05 * Math.min(tl, 1.25), 0.046 * cg)]
   S.neck = [V3(0, S.shY + 0.005, -0.002 + 0.03 * hc), V3(0, S.shY + 0.055, 0.004 + 0.045 * hc), 0.021 * (0.9 + 0.1 * gw), 0.019]
-  S.headR = V3(0.068 * hd, 0.0584 * hd, 0.0648 * hd)
+  S.headR = V3(0.068 * hd * (b.headW ?? 1), 0.0584 * hd, 0.0648 * hd) // headW: optional head width (x only)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
   if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile

@@ -87,6 +87,13 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Arms: no shoulder puff; a tapering tube from the neck base to the shoulder gives a smooth slope. Sleeves thicker (upper 0.021, forearm 0.020-0.0212, cuff 0.0225), hands a touch further forward.
   - Apron shorter (hem at `anY + 0.045`, was `+ 0.030`); pincushion moved up with it.
 
+**Grandma Fuku, pass 10** (KT feedback on pass 9): sheet / pass 9 / pass 10, body and face: [`ref/fuku-pass10-compare.jpg`](ref/fuku-pass10-compare.jpg).
+  - Face, a rounded block: narrower head (new optional body knob `headW`, x radius only; Fuku 0.92) and a fuller jaw nearly as wide as the skull, blended broadly so the sides run straight down: `FUKU_CHEEK = [0, -0.030, 0.011, 0.050, 0.026, 0.040, 0.022]`. `makeFace` / `faceGeoFor` / `headSDF` take optional skull radii `hr` to match. Ears and glasses arms moved in with the head.
+  - Hair: the sheet's swirl is painted in the hair shader (optional `makeHairMat(..., { lines })` in `castHair.js`): 9 broad locks flowing up and round the head into the bun (`twist 0.45`, a slight wave), each shaded darker on one side, thin grey-brown line between locks, and a 2-arm spiral on the bun. Fades out at the hairline and on the ears. The geometric ridges are gone. First try (15 locks, twist 0.85, darker lines) read as barber-pole stripes. Cap and temples slightly narrower to follow the head.
+  - Shoulders slope down more: body top narrower (`shoulder 0.96`, `chestW 1.04`), sleeve joint 0.014 lower, a long tapering tube from the neck base down to it. Tried and dropped: moving the hidden rig's shoulder bones into the torso (stretched the body into spikes); the shoulder ball is instead tall enough to cover the collapsed rig stub.
+  - Arms thicker from the side: oval sleeves (`ovalTube`): upper arm 1.22x deeper front-to-back, forearm and cuff 1.18x / 1.14x taller.
+  - Hoshino and Her are unchanged (all new options default off; Hoshino's render matched to within run-to-run noise).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

@@ -117,8 +117,8 @@ const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; retu
 const ocol = (x, y, z, cx, cy, cz, rx, hy, rz, r) => { const a = (x - cx) / rx, c = (z - cz) / rz, qx = (Math.sqrt(a * a + c * c) - 1) * Math.min(rx, rz), qy = Math.abs(y - cy) - hy
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
-export const headSDF = (x, y, z, cheek = CHEEK) => { const [cx, cy, cz, rx, ry, rz, k] = cheek
-  let h = smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
+export const headSDF = (x, y, z, cheek = CHEEK, hr = HR) => { const [cx, cy, cz, rx, ry, rz, k] = cheek
+  let h = smin(ell(x, y, z, 0, 0, 0, ...hr), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
   const fade = MID_FADE * x * x
   for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)
   return h }
@@ -126,11 +126,11 @@ export const headSDF = (x, y, z, cheek = CHEEK) => { const [cx, cy, cz, rx, ry, 
 // the face decal follows the head surface, so it is built per cheek shape (cached); a character with its own jaw
 // passes the same cheek to body.cheek and makeFace({ cheek })
 const faceGeos = new Map()
-export const faceGeoFor = (cheek = CHEEK) => { const key = cheek.join(); if (faceGeos.has(key)) return faceGeos.get(key)
+export const faceGeoFor = (cheek = CHEEK, hr = HR) => { const key = cheek.join() + '|' + hr.join(); if (faceGeos.has(key)) return faceGeos.get(key)
   const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
   for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = (u * 2 - 1) * FX, y = FY0 + v * (FY1 - FY0)
-    let z = 0.09, hit = false; for (; z > -0.01; z -= 0.0008) if (headSDF(x, y, z, cheek) < 0) { hit = true; break }
-    if (hit) { let a = z, b = z + 0.0008; for (let n = 0; n < 16; n++) { const m = (a + b) / 2; if (headSDF(x, y, m, cheek) < 0) a = m; else b = m } z = b + 0.0009 }
+    let z = 0.09, hit = false; for (; z > -0.01; z -= 0.0008) if (headSDF(x, y, z, cheek, hr) < 0) { hit = true; break }
+    if (hit) { let a = z, b = z + 0.0008; for (let n = 0; n < 16; n++) { const m = (a + b) / 2; if (headSDF(x, y, m, cheek, hr) < 0) a = m; else b = m } z = b + 0.0009 }
     pos.push(x, y, z); uv.push(u, v); ok.push(hit && z > 0.004) }
   for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1
     if (ok[a] && ok[b] && ok[c] && ok[d]) idx.push(a, b, d, a, d, c) }
@@ -155,12 +155,12 @@ const faceMat = (kind, bl) => new THREE.ShaderMaterial({ transparent: true, dept
   fragmentShader: FACE_FS(bl) })
 
 /** Face component factory. kind: 'fuku' | 'hoshino'. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
-/** Optional: cheek (head-frame jaw shape, must match body.cheek), blushAt { dx, dy, dr } (moves / grows the blush),
+/** Optional: cheek (head-frame jaw shape, must match body.cheek), hr (skull radii, must match body.headW), blushAt { dx, dy, dr } (moves / grows the blush),
  *  glassesGeo (a character's own frames, replaces the shared ones). */
-export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, blushAt, glassesGeo: ownGlasses } = {}) {
+export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, hr = HR, blushAt, glassesGeo: ownGlasses } = {}) {
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
   let gGeo = null
-  const geo = () => faceGeoFor(cheek)
+  const geo = () => faceGeoFor(cheek, hr)
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind, bl), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
