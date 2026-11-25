@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tiny-planet",
+  // Set this to today's date
+  "compatibility_date": "2026-11-25",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  // Required by `wrangler preview`. Assets stay at the top level; no separate Preview settings.
+  "previews": {}
+}
