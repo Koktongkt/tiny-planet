@@ -118,7 +118,8 @@ const PAINT = `
     vec3 legC = mix(uBottom, uSkin, uO.z * aa(uY.w - y));
     vec3 c = mix(torso, legC, leg);
     c = mix(c, armC, arm);
-    c = mix(c, uSkin, max(hand, neck * (1. - arm)));
+    vec3 hq = (vO - uJC.xyz)/max(uJR.xyz, vec3(1e-4)); float headSk = uJR.w > .5 ? aa(1. - length(hq)) : 0.; // outfit.skinEll: the jaw stays skin where it dips below the neck line
+    c = mix(c, uSkin, max(hand, max(neck, headSk) * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
@@ -131,7 +132,7 @@ const PAINT = `
 // a warm band where light turns to shadow on skin; sky fill from above and grass bounce from below (local up, so it
 // works anywhere on the planet); fine cloth / fur grain; and a strand texture + sheen ring on hair (aKind = 1).
 const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
-  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ;
+  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uJC, uJR;
   varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   ${PAINT}
   float h3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
@@ -206,7 +207,8 @@ function bodyMat(cfg, S) {
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) },
+    uJC: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(0, 3) : [0, 0, 0]), 0) }, uJR: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(3, 6) : [1, 1, 1]), o.skinEll ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS }) // skinEll [cx, cy, cz, rx, ry, rz] (opt-in)
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
   bodyMatCache.set(key, m); return m
@@ -252,7 +254,7 @@ export function spec(b = {}) {
   S.chest = [V3(0, S.chestY, -0.004 + 0.022 * hc), V3(0.054 * shw * cg * (b.chestW ?? 1), 0.05 * Math.min(tl, 1.25), 0.046 * cg)]
   S.neck = [V3(0, S.shY + 0.005, -0.002 + 0.03 * hc), V3(0, S.shY + 0.055, 0.004 + 0.045 * hc), 0.021 * (0.9 + 0.1 * gw), 0.019]
   const hS = b.headS ?? [1, 1, 1]; S.headR = V3(0.068 * hd * hS[0], 0.0584 * hd * hS[1], 0.0648 * hd * hS[2]) // headS: optional skull radii scale (default = old)
-  S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
+  S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc + (b.headUp ?? 0), 0.008 + 0.055 * hc) // headUp: optional lift of the head off the shoulders (default 0)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
   S.cr = [b.cranium, b.chin].filter(Boolean).map(([y, z, rx, ry, rz, k]) => { const s = 1.17 * hd; return [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] }) // optional head lumps blended into the skull (head-frame units, shaded with it): cranium (a broader, taller crown), chin (a fuller lower face)
   if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile

@@ -37,11 +37,10 @@ function drawFaces(W, kind, FY1 = FY1_DEF) {
     const by = (name === 'excited' ? 0.0076 : name === 'sleepy' ? 0.0058 : name === 'focus' ? 0.0063 : 0.0066) + 0.0004 * FT + (fuku ? 0.0002 : 0)
     const arc = fuku ? (name === 'focus' ? 0.0024 : 0.0032) : (name === 'focus' ? 0.0020 : 0.0030)
     if (ishi) { // soft forehead lines above the brows and crinkles at the outer eye corners
-      // two faint lines high on the forehead (sheet: ~0.2 H from the top), arched upward, a soft wave at the middle
+      // two faint lines high on the forehead (sheet: ~0.2 H from the top), bending gently upward at the ends
       g.strokeStyle = 'rgba(184,124,98,0.30)'; g.lineWidth = 0.0009 * s
-      for (const [y, w, b] of [[0.0292, 0.0175, 0.0040], [0.0254, 0.0150, 0.0034]]) {
-        g.beginPath(); g.moveTo(X(-w), Y(y - b)); g.bezierCurveTo(X(-w * 0.62), Y(y + b * 0.05), X(-w * 0.3), Y(y + b * 0.02), X(0), Y(y - b * 0.06))
-        g.bezierCurveTo(X(w * 0.3), Y(y + b * 0.02), X(w * 0.62), Y(y + b * 0.05), X(w), Y(y - b)); g.stroke() }
+      for (const [y, w, b] of [[0.0280, 0.0175, 0.0016], [0.0244, 0.0150, 0.0013]]) { // a gentle upward bend: the ends lift a little
+        g.beginPath(); g.moveTo(X(-w), Y(y + b)); g.quadraticCurveTo(X(0), Y(y - b), X(w), Y(y + b)); g.stroke() }
       g.strokeStyle = 'rgba(150,96,78,0.6)'
       for (const sd of [-1, 1]) { const ex = sd * (EYE.x + EYE.rx * 1.08), ey = EYE.y + 0.0004
         g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0006)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0030)); g.stroke()
@@ -170,7 +169,7 @@ const faceMat = (kind, fy1) => new THREE.ShaderMaterial({ transparent: true, dep
   fragmentShader: faceFS(fy1) })
 
 /** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
-export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, shape, fy1 } = {}) {
+export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, shape, fy1, eyeS = 1 } = {}) { // eyeS: eye size (1 = the template)
   const geo = shape || fy1 ? makeFaceGeo(makeHeadSDF(shape), fy1) : faceGeo
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind, fy1), [])
@@ -193,7 +192,7 @@ export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, 
         o.A = o.B = cell; o.mix = 1; o.lash = lashT; o.big = bigT }
       if (cell !== o.B) { if (o.mix >= 0.5) o.A = o.B; o.B = cell; o.mix = 0 }
       o.mix = approach(o.mix, 1, 9, dt); o.lash = approach(o.lash, lashT, 6, dt); o.big = approach(o.big, bigT, 8, dt)
-      U.uCellA.value = o.A; U.uCellB.value = o.B; U.uMix.value = o.mix; U.uOpen.value = open; U.uLash.value = o.lash; U.uBig.value = o.big
+      U.uCellA.value = o.A; U.uCellB.value = o.B; U.uMix.value = o.mix; U.uOpen.value = open; U.uLash.value = o.lash; U.uBig.value = o.big * eyeS
       U.uGaze.value.set(gx, gy); U.uSquint.value = squint; U.uBlush.value = blushU })
     return <group ref={lod(2)}><mesh geometry={geo} material={mat} renderOrder={2} />
       {glassC && <mesh geometry={glasses()} material={cel(glassC)} />}</group>

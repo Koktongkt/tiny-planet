@@ -276,3 +276,15 @@ Compare: [`ref/ishi-pass5-compare.jpg`](ref/ishi-pass5-compare.jpg).
 
 - **Cheeks**: jaw wider and rounder (`JAW [0, -0.030, 0.017, 0.053, 0.033, 0.041, 0.026]`, was rx 0.046, k 0.022), so the lower sides of the face bulge gently (about 0.9 W across at the mustache, as on the sheet).
 - **Forehead lines**: the face decal can now reach higher per character (`makeFace({ fy1 })`, default 0.019 unchanged; Ishi 0.034, the grid rows scale with it). Two lines at y 0.029 / 0.025 (sheet: ~0.2 H below the top), arched upward with a soft wave in the middle, `rgba(184,124,98,0.30)` at width 0.0009 (was 0.55 alpha, 0.0011, just above the brows).
+
+### Ishi pass 6 (KT: bigger eyes; forehead lines bend gently upward; clothes detail; colour bleeding from chin to clothes)
+
+Compare: [`ref/ishi-pass6-compare.jpg`](ref/ishi-pass6-compare.jpg).
+
+- **Eyes**: `makeFace({ eyeS })` scales the eye (default 1, the template); Ishi 1.12.
+- **Forehead lines**: two faint lines (alpha 0.30) at y 0.028 / 0.0244 whose ends lift gently (a shallow U), not an arch.
+- **Chin to clothes**: the outfit painter switches to clothing below one fixed neck height, and Ishi's lowered chin dipped below it, so its underside was painted haori navy and robe cream. Two opt-in knobs fix it: `outfit.skinEll [cx, cy, cz, rx, ry, rz]` (always skin inside this ellipsoid; Ishi: his jaw, inflated) and `body.headUp` (lift the head off the shoulders; Ishi 0.012) so the chin sits just above the collar, as on the sheet. Both default to the old look.
+- **Collars**: 3D bands laid on the baked body surface (found with the exported `sdf`): the haori's darker collar band (eri) runs up one front edge, stands round the back of the neck (taller at the back) and down the other edge; the cream robe collar crosses left over right into a V under the chin. One mesh + one ink hull.
+- **Loose clothes** (one mesh + one ink hull on the hips): the haori's lower body is a thick, flared, open-fronted shell from under the arms to mid-thigh (measured against the body, flare 0.006 -> 0.021, darker lining, the eri running down its edges); a tall sash (0.040) wrapped right round the waist on top of the trousers, two dark stripes, a soft knot with a loop each side and a short end; wide trouser legs to mid-calf with a darker hem and a seat piece joining them; wider, boxier sleeves.
+- Cost: turnaround 22 draw calls / ~65k tris.
+- Still open: the sheet's haori is boxier at the shoulders, with sleeves hanging straight from wide shoulders; the back collar band reads thin behind the head.

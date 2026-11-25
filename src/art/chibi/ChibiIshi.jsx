@@ -7,7 +7,7 @@
 import * as THREE from 'three'
 import React, { useEffect, useRef } from 'react'
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { Character, cel, spec, sdf } from '../../GhibliPerson.jsx'
+import { Character, cel, spec, sdf, mkOutline } from '../../GhibliPerson.jsx'
 import { ISHI_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
 import { MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
@@ -46,9 +46,9 @@ const HEAD = { headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW }
 const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.02, girth: 1.26, shoulder: 1.10, chestW: 1.14, bellyZ: 1.0, shX: 1.20, armA: 0.50,
   armR: [0.35, 0.30, 0.25], legR: 1.30, legX: 1.08, foot: 1.20, bootW: 1.20, bootH: 1.00, bootL: 1.02, hand: 0.01,
   headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
-  anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true }
+  anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true, headUp: 0.012 }
 const TOP = Math.max(0.0499 * HEAD_S[1], CRANIUM[0] + CRANIUM[3]) // skull top in the head frame
-const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD, fy1: 0.034 }) // the decal reaches up the forehead for the wrinkles
+const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD, fy1: 0.034, eyeS: 1.12 }) // the decal reaches up the forehead for the wrinkles
 
 // the baked surface in the head frame (origin S.headC, scale 1.17 * head): the whole body SDF, so the chin's blend
 // into the neck counts (the head-only SDF sits behind the real lower face, and pieces placed on it were buried)
@@ -195,7 +195,7 @@ const ballAt = (p, r, hex, s = [1, 1, 1]) => { const g = new THREE.SphereGeometr
 
 // an arc strip round the front of the body (y up, centre cz, ellipse radii a x b), from angle -t..t (0 = straight ahead)
 function frontBand(a, b, cz, t, h, th, hex) {
-  const sh = new THREE.Shape(), n = 18
+  const sh = new THREE.Shape(), n = Math.max(18, Math.round(t * 12))
   for (let i = 0; i <= n; i++) { const u = -t + 2 * t * i / n; sh[i ? 'lineTo' : 'moveTo']((a + th) * Math.sin(u), cz + (b + th) * Math.cos(u)) }
   for (let i = n; i >= 0; i--) { const u = -t + 2 * t * i / n; sh.lineTo(a * Math.sin(u), cz + b * Math.cos(u)) }
   const g = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false, curveSegments: 1 })
@@ -222,20 +222,20 @@ function haoriArmGeo(sd, sh, elbow, wrist) {
   const cap = ballAt([sh[0], sh[1] - 0.004, sh[2]], 0.0175, HAORI, [1.1, 0.95, 0.9])
   const yoke = ballAt([sh[0] - sd * 0.004, sh[1] - 0.014, sh[2] - 0.020], 0.022, HAORI, [0.9, 1.15, 1.25])
   const parts = [yoke, cap,
-    tubeBetween(sh, elbow, 0.0150, 0.0140, HAORI),
-    ballAt(elbow, 0.0142, HAORI),
-    tubeBetween(elbow, wrist, 0.0150, 0.0215, HAORI, 10),
+    tubeBetween(sh, elbow, 0.0175, 0.0175, HAORI),
+    ballAt(elbow, 0.0176, HAORI),
+    tubeBetween(elbow, wrist, 0.0180, 0.0255, HAORI, 10),
   ]
   // sleeve mouth: a dark rim so the opening reads, and the hanging bag of the sleeve under the forearm
   const W = new THREE.Vector3(...wrist), E = new THREE.Vector3(...elbow), d = W.clone().sub(E).normalize()
-  const rim = new THREE.TorusGeometry(0.0202, 0.0022, 6, 16)
+  const rim = new THREE.TorusGeometry(0.0242, 0.0024, 6, 16)
   rim.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)); rim.translate(...wrist)
   parts.push(paint(rim, HAORI_D))
-  const inner = new THREE.CircleGeometry(0.0198, 14)
+  const inner = new THREE.CircleGeometry(0.0238, 14)
   inner.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)); inner.translate(W.x - d.x * 0.001, W.y - d.y * 0.001, W.z - d.z * 0.001)
   parts.push(paint(inner, '#171c28'))
   const bag = E.clone().lerp(W, 0.62); bag.y -= 0.012
-  parts.push(ballAt(bag.toArray(), 0.016, HAORI, [0.9, 1.25, 1.05]))
+  parts.push(ballAt(bag.toArray(), 0.019, HAORI, [0.9, 1.3, 1.05]))
   return merged(parts)
 }
 
@@ -300,6 +300,119 @@ function sandalGeo(S, k) {
   return merged(parts)
 }
 
+
+// ---- collars (sheet): the haori's wide collar band (eri) runs up one front edge, stands round the back of the neck
+// and runs down the other edge; inside it the cream robe's collar crosses left over right into a V under the chin.
+// Swept bands laid on the baked body surface (unit space, found with the body SDF), merged into one mesh + one ink hull.
+const _q = new THREE.Vector3(), _g = new THREE.Vector3()
+function rayToBody(S, from, dir) { // march from outside along dir to the surface; returns [point, outward normal]
+  const p = from.clone(); for (let i = 0; i < 400 && sdf(S, p) > 0; i++) p.addScaledVector(dir, 0.0006)
+  const e = 0.0006, n = new THREE.Vector3(sdf(S, _q.copy(p).setX(p.x + e)) - sdf(S, _q.copy(p).setX(p.x - e)), sdf(S, _q.copy(p).setY(p.y + e)) - sdf(S, _q.copy(p).setY(p.y - e)), sdf(S, _q.copy(p).setZ(p.z + e)) - sdf(S, _q.copy(p).setZ(p.z - e))).normalize()
+  return [p, n]
+}
+// a band of width w (across the path, in the surface) and thickness th (off the surface), lifted `lift` off it
+function sweepBand(path, w, th, lift, hex, stand = null) { // w: a width, or one per point
+  const pos = [], idx = [], n = path.length
+  for (let i = 0; i < n; i++) {
+    const [p, N] = path[i], T = path[Math.min(n - 1, i + 1)][0].clone().sub(path[Math.max(0, i - 1)][0]).normalize()
+    let W = new THREE.Vector3().crossVectors(T, N).normalize(); if (stand && stand[i]) W.lerp(new THREE.Vector3(0, 1, 0), stand[i]).normalize()
+    const N2 = new THREE.Vector3().crossVectors(W, T).normalize(), c = p.clone().addScaledVector(N2, lift + th / 2)
+    const wi = Array.isArray(w) ? w[i] : w
+    for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) pos.push(...c.clone().addScaledVector(W, a * wi / 2).addScaledVector(N2, b * th / 2).toArray())
+  }
+  for (let i = 0; i < n - 1; i++) for (let k = 0; k < 4; k++) { const a = i * 4 + k, b = i * 4 + (k + 1) % 4, c = a + 4, d = b + 4; idx.push(a, c, b, b, c, d) }
+  for (const [o, f] of [[0, false], [(n - 1) * 4, true]]) f ? idx.push(o, o + 1, o + 2, o, o + 2, o + 3) : idx.push(o, o + 2, o + 1, o, o + 3, o + 2)
+  let g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals()
+  return paint(g, hex)
+}
+function collarsGeo(S, chestY) {
+  const nY = S.neckY, nc = S.neck[0], rn = S.neck[2], hemY = (S.hipY + S.knY) * 0.5, parts = []
+  const front = (x, y) => rayToBody(S, new THREE.Vector3(x, y, 0.2), new THREE.Vector3(0, 0, -1))
+  const round = (a, y, r) => { const d = new THREE.Vector3(Math.sin(a), 0, Math.cos(a)); return rayToBody(S, new THREE.Vector3(nc.x, y, nc.z).addScaledVector(d, 0.12), d.clone().negate()) }
+  const edge = (y) => 0.014 + (nY - y) * 0.18 // the painter's haori opening edge
+  // haori eri: right front edge (hem -> neck), round the back of the neck, left front edge (neck -> hem)
+  const eri = [], stand = [], ew = []
+  const sh = haoriShell(S)
+  const edgeAt = (sd, y) => { if (y > sh.y0 + 0.004) return front(sd * (edge(y) + 0.0045), y) // on the chest: the painted haori
+    const r = sh.at(y), a = sd * (OPEN + 0.07); return [new THREE.Vector3(Math.sin(a) * r.rx, y, r.zc + Math.cos(a) * r.rz), new THREE.Vector3(Math.sin(a) / r.rx, 0, Math.cos(a) / r.rz).normalize()] } // on the flared shell, along its edge
+  for (let i = 0; i <= 16; i++) { const y = hemY + (nY - 0.010 - hemY) * i / 16; eri.push(edgeAt(1, y)); stand.push(0); ew.push(0.0105) }
+  const A0 = 0.62
+  for (let i = 0; i <= 18; i++) { const a = A0 + (2 * Math.PI - 2 * A0) * i / 18, up = 0.5 - 0.5 * Math.cos(a); eri.push(round(a, nY - 0.002 + 0.012 * up, rn)); stand.push(0.85); ew.push(0.0105 + 0.0075 * up) } // stands taller round the back
+  for (let i = 16; i >= 0; i--) { const y = hemY + (nY - 0.010 - hemY) * i / 16; eri.push(edgeAt(-1, y)); stand.push(0); ew.push(0.0105) }
+  parts.push(sweepBand(eri, ew, 0.0030, 0.0004, HAORI_D, stand))
+  // robe collar: from the side of the neck round to the front, then down to cross into a V (left over right)
+  for (const sd of [1, -1]) {
+    const path = [], st = []
+    for (let i = 0; i <= 8; i++) { const a = sd * (1.7 - 1.25 * i / 8); path.push(round(a, nY + 0.002 - 0.004 * i / 8, rn)); st.push(0.7 * (1 - i / 8)) }
+    const [p0] = path[path.length - 1]
+    for (let i = 1; i <= 8; i++) { const t = i / 8, x = p0.x + (-sd * 0.008 - p0.x) * t, y = p0.y + (nY - 0.036 - p0.y) * t; path.push(front(x, y)); st.push(0) }
+    parts.push(sweepBand(path, 0.0085, 0.0022, sd > 0 ? 0.0012 : 0.0026, sd > 0 ? ROBE_D : ROBE))
+  }
+  const g = mergeGeometries(parts); g.translate(0, -chestY, 0); g.computeVertexNormals(); return g
+}
+
+
+// ---- the loose clothes (sheet): a boxy haori that flares from under the arms to mid-thigh, open at the front; a tall
+// wrapped sash with a knot; wide trousers to mid-calf. Built in unit space against the measured body, one mesh + ink.
+const OPEN = 0.52 // the haori's front opening, as an angle each side of straight ahead
+function bodyRing(S, y) { // the body's cross-section at height y: half-width rx, front/back -> centre zc and half-depth rz
+  const [px] = rayToBody(S, new THREE.Vector3(0.25, y, S.belly[0].z), new THREE.Vector3(-1, 0, 0))
+  const [pf] = rayToBody(S, new THREE.Vector3(0, y, 0.25), new THREE.Vector3(0, 0, -1)), [pb] = rayToBody(S, new THREE.Vector3(0, y, -0.25), new THREE.Vector3(0, 0, 1))
+  return { rx: px.x, zc: (pf.z + pb.z) / 2, rz: (pf.z - pb.z) / 2 }
+}
+let SHELL = null
+function haoriShell(S) { // { y0, y1, at(y) -> { rx, rz, zc } } for the outer surface; the body below the hips keeps the hip width
+  if (SHELL) return SHELL
+  const y0 = S.chestY - 0.004, y1 = (S.hipY + S.knY) * 0.5, n = 12, rows = []
+  let prev = null
+  for (let i = 0; i <= n; i++) { const t = i / n, y = y0 + (y1 - y0) * t, b = bodyRing(S, y)
+    if (prev) { b.rx = Math.max(b.rx, prev.rx); b.rz = Math.max(b.rz, prev.rz) }
+    prev = { ...b }; const off = 0.006 + 0.015 * t ** 1.4
+    rows.push({ y, rx: b.rx + off, rz: b.rz + off * 0.8, zc: b.zc }) }
+  const at = (y) => { const f = Math.max(0, Math.min(n, (y - y0) / (y1 - y0) * n)), i = Math.min(n - 1, Math.floor(f)), u = f - i, a = rows[i], b = rows[i + 1]
+    return { rx: a.rx + (b.rx - a.rx) * u, rz: a.rz + (b.rz - a.rz) * u, zc: a.zc + (b.zc - a.zc) * u } }
+  SHELL = { y0, y1, rows, at }; return SHELL
+}
+// a thick open shell from angle a0 to a1 (0 = straight ahead) over the given rows: outer, inner, top, hem and the two edges
+function shellGeo(rows, a0, a1, th, hex, hexIn) {
+  const NA = 40, pos = [], col = [], idx = [], C = new THREE.Color(hex), Ci = new THREE.Color(hexIn)
+  const v = (r, a, inset) => [Math.sin(a) * (r.rx - inset), r.y, r.zc + Math.cos(a) * (r.rz - inset)]
+  const grid = (inset, c) => { const o = pos.length / 3; for (const r of rows) for (let j = 0; j <= NA; j++) { pos.push(...v(r, a0 + (a1 - a0) * j / NA, inset)); col.push(c.r, c.g, c.b) } return o }
+  const O = grid(0, C), I = grid(th, Ci), W = NA + 1, R = rows.length
+  for (let i = 0; i < R - 1; i++) for (let j = 0; j < NA; j++) { const a = i * W + j, b = a + 1, c = a + W, d = c + 1
+    idx.push(O + a, O + c, O + b, O + b, O + c, O + d); idx.push(I + a, I + b, I + c, I + b, I + d, I + c) }
+  for (let j = 0; j < NA; j++) { const t = j, b = (R - 1) * W + j
+    idx.push(O + t, O + t + 1, I + t, O + t + 1, I + t + 1, I + t); idx.push(O + b, I + b, O + b + 1, O + b + 1, I + b, I + b + 1) }
+  for (let i = 0; i < R - 1; i++) { const e0 = i * W, e1 = i * W + NA
+    idx.push(O + e0, I + e0, O + e0 + W, O + e0 + W, I + e0, I + e0 + W); idx.push(O + e1, O + e1 + W, I + e1, O + e1 + W, I + e1 + W, I + e1) }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx)
+  g.computeVertexNormals(); return g.toNonIndexed()
+}
+function clothesGeo(S, hipsY) {
+  const parts = [], sh = haoriShell(S)
+  // haori: the flared lower body, open at the front (the eri runs down its edges), a darker lining inside
+  parts.push(shellGeo(sh.rows, OPEN, 2 * Math.PI - OPEN, 0.0028, HAORI, '#1c2230'))
+  // sash: a tall band all the way round at the waist (under the haori, showing in the opening), two dark stripes, a knot
+  const H = 0.040, sy = S.hipY + 0.004 + H / 2, b = bodyRing(S, sy) // tall, sitting right on the trousers
+  const band = (dy, h, out, hex) => { const g = frontBand(b.rx + out, b.rz + out, b.zc, Math.PI, h, 0.0028, hex); g.translate(0, sy + dy, 0); return g }
+  parts.push(band(0, H, 0.0018, SASH), band(H * 0.18, 0.0024, 0.0044, SASH_D), band(-H * 0.24, 0.0024, 0.0044, SASH_D))
+  const z = b.zc + b.rz + 0.006
+  // a soft wrapped knot: a flat rounded middle with a loop each side, one short end hanging (sheet)
+  parts.push(ballAt([0, sy + 0.002, z - 0.001], 0.0072, SASH, [1.05, 1.0, 0.5]))
+  for (const sd of [-1, 1]) parts.push(ballAt([sd * 0.0095, sy + 0.003, z - 0.0025], 0.0062, SASH, [1.35, 0.75, 0.42]))
+  const tail = new THREE.BoxGeometry(0.0095, 0.016, 0.0035); tail.translate(0.001, sy - 0.0105, z - 0.003); parts.push(paint(tail, SASH))
+  // wide trousers from the hip to mid-calf, a darker hem band
+  const hem = S.anY + (S.knY - S.anY) * 0.35
+  // the seat: joins the two legs over the hips and crotch, so no body shows between them under the sash
+  { const r = bodyRing(S, S.hipY); parts.push(ballAt([0, S.hipY - 0.004, r.zc], 1, TROUSER, [r.rx + 0.006, 0.034, r.rz + 0.005])) }
+  for (const sd of [-1, 1]) { const hp = sd < 0 ? S.hpL : S.hpR, an = sd < 0 ? S.anL : S.anR, top = S.hipY + 0.006, len = top - hem
+    const leg = new THREE.CylinderGeometry(S.lr[0] * 1.32, S.lr[1] * 1.55, len, 18); leg.translate((hp.x + an.x) / 2 + sd * 0.003, hem + len / 2, (hp.z + an.z) / 2 + 0.002); parts.push(paint(leg, TROUSER))
+    const cuff = new THREE.CylinderGeometry(S.lr[1] * 1.6, S.lr[1] * 1.62, 0.006, 18); cuff.translate((hp.x + an.x) / 2 + sd * 0.003, hem + 0.003, (hp.z + an.z) / 2 + 0.002); parts.push(paint(cuff, '#3b3129')) }
+  const g = mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p).map(p => { for (const k of Object.keys(p.attributes)) if (!['position', 'normal', 'color'].includes(k)) p.deleteAttribute(k); return p }))
+  g.translate(0, -hipsY, 0); return g
+}
+
+const collarInk = (() => { const m = mkOutline(false); m.uniforms.uT.value = 0.0026; return m })()
 const propMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2; return m })()
 const plainMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
 
@@ -314,10 +427,9 @@ function attachLook(root) {
   }
   const chestZ = S.chest[1].z + S.chest[0].z
   // inner robe collar in the haori opening, and the haori's collar band down the front edges
-  add(chest, robeCollarGeo(), [0, S.neckY - chestY - 0.030, chestZ - 0.004])
+  const collars = collarsGeo(S, chestY); add(chest, collars); add(chest, collars, [0, 0, 0], collarInk)
   // sash round the belly, across the opening
-  const sy = S.bellyY - 0.014, [bc, br] = S.belly, k = Math.sqrt(Math.max(0.2, 1 - ((sy - bc.y) / br.y) ** 2))
-  add(hips, sashGeo(br.x * k + 0.002, br.z * k + 0.002, bc.z, 0.62), [0, sy - hipsY, 0])
+  const clothes = clothesGeo(S, hipsY); add(hips, clothes, [0, 0, 0], plainMat); add(hips, clothes, [0, 0, 0], collarInk)
   // sandals on the bare feet
   for (const k2 of ['L', 'R']) { const ft = root.getObjectByName('ft' + k2); if (ft) add(ft, sandalGeo(S, k2), [0, 0, 0], plainMat) }
   if (LIFE_OFF) {
@@ -346,6 +458,8 @@ function stillHold(B) {
 }
 
 const S0 = spec(BODY)
+// the jaw (and chin) dips below the neck line: keep it skin, not haori or robe (the painter's skinEll, a little inflated)
+const JAW_ELL = (() => { const c = S0.ck[0], r = S0.ck[2]; return [0, c.y - r.y * 0.1, c.z, r.x * 1.0, r.y * 1.2, r.z * 1.1] })()
 
 export const ISHI = {
   name: 'grandpa', age: 'elder', motion: ISHI_MOTION,
@@ -355,7 +469,7 @@ export const ISHI = {
   // openJacket painter: acc = navy haori to the upper thigh, top = cream robe in the opening, bottom = brown trousers
   // to mid-calf (bare: skin below legHem), shoe = skin (bare feet; 3D sandals sit under them)
   outfit: { type: 'openJacket', hemY: 'thigh', skin: SKIN, top: ROBE, acc: HAORI, acc2: HAORI, bottom: TROUSER, shoe: SKIN, shoeY: 0.0,
-    bare: true, legHem: S0.anY + (S0.knY - S0.anY) * 0.2, long: true, sleeve: 'none' },
+    skinEll: JAW_ELL, bare: true, legHem: S0.anY + (S0.knY - S0.anY) * 0.35, long: true, sleeve: 'none' },
   hold: {},
   walk: { rate: 7, stride: 0.42, knee: 0.55, bounce: 0.006, smooth: true, land: 0.25, arm: 0.35, lean: 0.12, twist: 0.08, sway: 0.06, idle: 'look' },
   ext: {
