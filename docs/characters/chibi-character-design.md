@@ -145,6 +145,12 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Hair is now only two balls: a cap `H_CAP [[0, 0.006, -0.0135], [0.0505, 0.059, 0.0615]]` whose front edge is the hairline across the forehead and which covers the back down to the nape, and a bun `BUN_C [0, 0.066, -0.030]`, `BUN_R 0.026`, slightly behind the top. The pass 19 locks and the nape volume are removed. Detail (locks, parting, bun wrap) to be added on this base step by step.
   - Tried: cap moved back and down to cover the nape (`[0, 0.004, -0.018]`) bared the top of the forehead; the final values split the difference.
 
+**Grandma Fuku, pass 21** (KT: hair puffier and fuller; forehead / top of head too narrow, closer to the jaw width but still visibly smaller; bun further back, half or less of it visible from the front): [`ref/fuku-pass21-compare.jpg`](ref/fuku-pass21-compare.jpg).
+  - Skull wider: `headW` 0.76 -> 0.86 (skull half-width ~0.050 against the jaw's ~0.0505 rx, still visibly narrower at the forehead).
+  - Fuller cap: `H_CAP [[0, 0.009, -0.019], [0.061, 0.061, 0.066]]`, set back so the forehead edge stays put.
+  - Bun back and lower: `BUN_C [0, 0.060, -0.050]`; about half of it shows above the dome from the front.
+  - Ears moved out to clear the fuller hair (`EAR {x 0.0605, y -0.0225, z 0.006}`); glasses arms follow.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
