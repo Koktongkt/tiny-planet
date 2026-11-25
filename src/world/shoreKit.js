@@ -76,7 +76,8 @@ export function buildShoreKit({ fine = true } = {}) {
 }
 const BEAD = (() => { const g = new THREE.SphereGeometry(1, 6, 4); g.deleteAttribute('uv'); return g })()
 
-// merge the parts into sector chunks: body = every part (vertex colours), hull = lip + beads + soil (ink outline)
+// merge the parts into sector chunks: body = every part (vertex colours), hull = lip + beads + soil (ink outline);
+// n = the chunk's middle (unit direction), for distance culling
 export function chunkKit(kit, cell = 4.5) {
   const buckets = new Map(), put = (g, hull) => {
     const p = g.attributes.position, idx = g.index ? g.index.array : null, n = idx ? idx.length : p.count
@@ -93,5 +94,6 @@ export function chunkKit(kit, cell = 4.5) {
     }
   }
   for (const [k, g] of Object.entries(kit)) if (g) put(g, k !== 'ink')
-  return [...buckets.values()].map(b => ({ body: mergeGeometries(b.body), hull: b.hull.length ? mergeGeometries(b.hull) : new THREE.BufferGeometry() }))
+  return [...buckets.values()].map(b => { const body = mergeGeometries(b.body); body.computeBoundingSphere()
+    return { body, hull: b.hull.length ? mergeGeometries(b.hull) : new THREE.BufferGeometry(), n: body.boundingSphere.center.clone().normalize() } })
 }

@@ -38,7 +38,7 @@ test('clear of bridge decks, piers, the lake dock and jump stones', () => {
 test('chunks: one body and one outline per sector, all triangles kept', () => {
   const ch = chunkKit(fine)
   assert.ok(ch.length >= 8 && ch.length <= 40, `${ch.length} chunks`)
-  for (const c of ch) assert.ok(c.body instanceof THREE.BufferGeometry && c.hull instanceof THREE.BufferGeometry)
+  for (const c of ch) { assert.ok(c.body instanceof THREE.BufferGeometry && c.hull instanceof THREE.BufferGeometry); assert.ok(Math.abs(c.n.length() - 1) < 1e-6, 'chunk centre for culling') }
   const body = ch.reduce((a, c) => a + tris(c.body), 0), hull = ch.reduce((a, c) => a + tris(c.hull), 0)
   assert.equal(body, tris(fine.lip) + tris(fine.beads) + tris(fine.ink)); assert.equal(hull, tris(fine.lip) + tris(fine.beads))
 })

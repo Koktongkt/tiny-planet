@@ -1,7 +1,7 @@
 // round6 (lazy chunk): trail edge stones, river-bank pebbles, stepping stones + marker stakes at the jump spots
 import * as THREE from 'three'
-import { WATER_DROP } from './world/shore.js'
-import { shoreWater, bakeShore } from './world/waterLook.js'
+import { WATER_DROP } from './world/shoreSetting.js'
+import { useLook } from './world/useLook.js'
 import { OLD_WORLD } from './world/flag.js'
 import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
@@ -87,7 +87,8 @@ function LegacyStream() {
 }
 export function Stream() { return OLD_WORLD ? <LegacyStream /> : <ShapedStream /> }
 // look A river: the shared water look with flow marks, shallows by its banks (src/world/waterLook.js)
-function ShapedStream() {
+function ShapedStream() { const L = useLook(); return L ? <ShapedStreamL L={L} /> : null }
+function ShapedStreamL({ L: { bakeShore, shoreWater } }) {
   const g = useMemo(() => bakeShore(ribbon(streamDir, (t) => streamHalf(t), -0.012 - WATER_DROP, 1200, null, [[-1], [-0.6], [0], [0.6], [1]]), (v) => v.clone().normalize()), [])
   const m = useMemo(() => shoreWater({ flow: true }), [])
   useFrame(() => { m.uniforms.uN.value = T.night; m.uniforms.uD.value = T.dusk })

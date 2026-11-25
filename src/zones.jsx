@@ -11,8 +11,8 @@ import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W,
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
-import { WATER_DROP } from './world/shore.js'
-import { shoreWater, bakeShore, LILY_PADS } from './world/waterLook.js' // water drawn lower than its gameplay level (look A banks; 0 in the old world)
+import { WATER_DROP } from './world/shoreSetting.js'
+import { useLook } from './world/useLook.js' // water drawn lower than its gameplay level (look A banks; 0 in the old world)
 import { railDir, railPoint, railTangent, railHeight, railBehind, railOff, onTrestle, deckHeight, lonAtArc, RAIL_LEN, TRESTLE, railSpan } from './world/railway.js'
 import * as ZL from './world/zoneLayout.js'
 
@@ -95,7 +95,9 @@ function LegacyWaterCap({ c, r, level, deep = '#3f9fc0', shallow = '#8fdcdc' }) 
   return <mesh quaternion={q} material={mat}><sphereGeometry args={[R + level - WATER_DROP, 72, 14, 0, Math.PI * 2, 0, r]} /></mesh>
 }
 // look A water: shallows to deep by distance from shore, ripple rings (src/world/waterLook.js)
-function ShapedWaterCap({ c, r, level, segs = [72, 14] }) {
+function ShapedWaterCap(props) { const L = useLook(); return L ? <ShapedWaterCapL L={L} {...props} /> : null }
+function ShapedWaterCapL({ L, c, r, level, segs = [72, 14] }) {
+  const { shoreWater, bakeShore } = L
   const mat = useMemo(() => shoreWater({ flow: false, centre: c }), [])
   const geo = useMemo(() => { const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().normalize())
     const g = new THREE.SphereGeometry(R + level - WATER_DROP, segs[0], segs[1], 0, Math.PI * 2, 0, r); g.applyQuaternion(q); return bakeShore(g, (v) => v.clone().normalize()) }, [])
@@ -104,9 +106,10 @@ function ShapedWaterCap({ c, r, level, segs = [72, 14] }) {
 }
 function WaterCap(props) { return OLD_WORLD ? <LegacyWaterCap {...props} /> : <ShapedWaterCap {...props} segs={[96, 24]} /> }
 // lily pads (look A): merged into one vertex-coloured mesh with one outline
-function LilyPads() {
+function LilyPads() { const L = useLook(); return L ? <LilyPadsL pads={L.LILY_PADS} /> : null }
+function LilyPadsL({ pads }) {
   const geo = useMemo(() => { const parts = []
-    for (const p of LILY_PADS) { const pl = place(p.n, 0, p.spin), m = new THREE.Matrix4().compose(p.n.clone().multiplyScalar(R + LAKE_W - WATER_DROP + 0.012), pl.q, new THREE.Vector3(1, 1, 1))
+    for (const p of pads) { const pl = place(p.n, 0, p.spin), m = new THREE.Matrix4().compose(p.n.clone().multiplyScalar(R + LAKE_W - WATER_DROP + 0.012), pl.q, new THREE.Vector3(1, 1, 1))
       const pad = new THREE.CylinderGeometry(p.s, p.s, 0.018, 18, 1, false, 0.35, Math.PI * 2 - 0.5); pad.deleteAttribute('uv'); parts.push([pad.applyMatrix4(m), '#5fae3e'])
       if (p.flower) { const f = new THREE.SphereGeometry(0.034, 10, 6); f.deleteAttribute('uv'); f.scale(1, 0.7, 1); f.translate(p.s * 0.3, 0.03, -p.s * 0.2); parts.push([f.applyMatrix4(m), '#ffb3c1']) } }
     return mergeGeometries(parts.map(([g, h]) => { g = g.index ? g.toNonIndexed() : g; const c = new THREE.Color(h), a = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < a.length; i += 3) { a[i] = c.r; a[i + 1] = c.g; a[i + 2] = c.b } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g })) }, [])
@@ -156,11 +159,12 @@ function Dock({ c, zr, b, level, len = 1.3 }) {
 // the sea: one cap around the south pole at R + SEA_W, up to just past the shoreline band (the terrain shelf makes the
 // visible shore). Its mesh sits at the planet's centre, so the horizon cull (which skips anything near the centre) never
 // drops it; walking, it only draws while the camera is within ~0.9 rad of the south cap.
-function Sea() {
-  const mat = useMemo(() => OLD_WORLD ? waterMaterial('#2f86b0', '#7fd0d8') : shoreWater({ flow: false, centre: new THREE.Vector3(0, -1, 0) }), []), g = useRef(), camera = useThree(s => s.camera)
+function Sea() { const L = useLook(); return OLD_WORLD || L ? <SeaL L={L} /> : null }
+function SeaL({ L }) {
+  const mat = useMemo(() => OLD_WORLD ? waterMaterial('#2f86b0', '#7fd0d8') : L.shoreWater({ flow: false, centre: new THREE.Vector3(0, -1, 0) }), []), g = useRef(), camera = useThree(s => s.camera)
   const q = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0)), [])
   const edge = Math.PI / 2 + SEA_LAT + 0.02 // angle from the south pole to the cap's rim
-  const geo = useMemo(() => { const sg = new THREE.SphereGeometry(R + SEA_W - WATER_DROP, 96, OLD_WORLD ? 12 : 40, 0, Math.PI * 2, 0, edge); sg.applyQuaternion(q); return OLD_WORLD ? sg : bakeShore(sg, (v) => v.clone().normalize()) }, [])
+  const geo = useMemo(() => { const sg = new THREE.SphereGeometry(R + SEA_W - WATER_DROP, 96, OLD_WORLD ? 12 : 40, 0, Math.PI * 2, 0, edge); sg.applyQuaternion(q); return OLD_WORLD ? sg : L.bakeShore(sg, (v) => v.clone().normalize()) }, [])
   useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk
     if (!g.current || !planetRef.current) return
     if (VIEW.mode === 'orbit') { g.current.visible = true; return }

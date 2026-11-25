@@ -6,11 +6,8 @@ import * as THREE from 'three'
 import { R, height, ZONES, zv, dir, LAKE_W, SEA_W, SEA_LAT, streamDir, streamHalf, streamNear } from '../world.js'
 import { WATERFALL } from './zoneLayout.js'
 import { railOff } from './railway.js'
-import { OLD_WORLD } from './flag.js'
-
-// every water surface is drawn this much below its gameplay level, so the carved grass lip stands proud of it and a
-// band of soil shows (look A). Gameplay levels are unchanged.
-export const WATER_DROP = OLD_WORLD ? 0 : 0.05
+import { WATER_DROP } from './shoreSetting.js'
+export { WATER_DROP }
 
 const TAU = Math.PI * 2, STEP = 0.05 // max spacing between points, world units
 const ss = (a, b, t) => { t = Math.min(1, Math.max(0, (t - a) / (b - a))); return t * t * (3 - 2 * t) }

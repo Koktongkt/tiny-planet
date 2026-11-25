@@ -43,7 +43,7 @@ import { paceFrame, stampActive } from './framePace.js'
 import { butterflyAngle, butterflyFrame } from './butterflies.js'
 import { VILLAGE, MILLS, HOUSES, LAMPS, SPAWN, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs, STAIR } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
-import { buildGround, grassColour } from './world/groundGeo.js'
+import { useLook } from './world/useLook.js'
 import { SHORE_FINE } from './world/shoreSetting.js'
 import { region } from './world/regions.js'
 import { YARD, CHIMNEY_TOP, yardColliders } from './home/yard.js'
@@ -91,7 +91,7 @@ const _wv = new THREE.Vector3(), _wv2 = new THREE.Vector3()
 // look A (2026-11-25 spec): one welded mesh, smooth on grass and faceted on rock, warm greens from her yard, shaded with
 // the props' warm ramp (same bytes as RAMP in props/kit.js, copied so kit.js stays out of the startup chunk)
 const WARM_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([196, 150, 140, 255, 236, 212, 196, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t })()
-function groundPaint() {
+function groundPaint(grassColour) {
   const sand = C('#d9bf86'), bank = C('#6aa95a'), worn = C('#c7cf86'), soil = C('#c08552'), bed = C('#4e7f7a')
   return (v, tmp, h) => {
     grassColour(v, tmp, h)
@@ -105,13 +105,14 @@ function groundPaint() {
 }
 function Ground() { return OLD_WORLD ? <LegacyGround /> : <ShapedGround /> }
 function ShapedGround() {
-  // the plain ground draws first; with carved banks on, the finer band is built in an idle slot after the first frame
-  // (~0.75 s of work in node) and swapped in, ideally while the title card is still up
-  const coarse = useMemo(() => buildGround({ fine: false, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }), [])
-  const idle = useIdleSlot(-2), fine = useMemo(() => SHORE_FINE && idle ? buildGround({ fine: true, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }) : null, [idle])
-  useEffect(() => { if (fine) coarse.dispose(); if (fine || !SHORE_FINE) window.__groundReady = true }, [fine])
+  // look A's builder loads in its own chunk right after startup; then the plain ground draws, and with carved banks on
+  // the finer band is built in an idle slot (~0.75 s of work in node) and swapped in, ideally under the title card
+  const L = useLook(), idle = useIdleSlot(-2)
+  const coarse = useMemo(() => L && L.buildGround({ fine: false, paint: groundPaint(L.grassColour), isRock: rockAt, rockPaint: rockify }), [L])
+  const fine = useMemo(() => L && SHORE_FINE && idle ? L.buildGround({ fine: true, paint: groundPaint(L.grassColour), isRock: rockAt, rockPaint: rockify }) : null, [L, idle])
+  useEffect(() => { if (fine) coarse.dispose(); if (L && (fine || !SHORE_FINE)) window.__groundReady = true }, [L, fine])
   const mat = useMemo(() => inkRim(paint(new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: WARM_RAMP }), 0.06, true, 1.6)), [])
-  return <mesh geometry={fine || coarse} material={mat} />
+  return coarse ? <mesh geometry={fine || coarse} material={mat} /> : null
 }
 function LegacyGround() {
   const geo = useMemo(() => {
