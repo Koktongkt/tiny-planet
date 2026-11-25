@@ -245,6 +245,20 @@ Golden sheet, before and after: [`ref/hoshino-jacket-compare.jpg`](ref/hoshino-j
 - **Trousers:** they reach lower over the shoes (`shoeY 0.028`), and the turn-ups follow.
 - **Pitfall (twice this session):** a `//` comment added mid-line in `GhibliPerson.jsx` silently comments out the rest of that line. Use `/* */` inside a line.
 
+### Professor Hoshino (draft): proportion and sleeve-line pass
+
+Before and after, plus a check at equal head height: [`ref/hoshino-proportion-compare.jpg`](ref/hoshino-proportion-compare.jpg).
+
+- **Proportions:** the long jacket made the torso read too long (KT). At equal head height, the sheet has collar-to-hem ≈ hem-to-floor and the hands ending just above the hem. Changes: `torso 1.14 → 1.00`, `leg 0.92 → 1.10`, `arm 1.12 → 1.00`, with the jacket hem still below the hands. Measured on the normalised sheet:
+
+  | | Sheet | Before | After |
+  |---|---|---|---|
+  | Hands end | ~445 | ~470 | ~450 |
+  | Jacket hem | ~465 | ~490 | ~470 |
+  | Visible legs | ~115 | ~95 | ~115 |
+
+- **Sleeve lines:** the ink hull only draws against the background, so where a sleeve hangs in front of the jacket its inner edge had no line from about halfway down. For `openJacket` only, the final body shading now inks the sleeve's own contour (arm region, `dot(N, V) < ~0.2`).
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.

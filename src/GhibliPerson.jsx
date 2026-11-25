@@ -202,6 +202,11 @@ const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
       c += ring*max(dot(N,V),0.)*lit*uLight*base*.75; }
     float fr = 1. - max(dot(N,V),0.); float rim = smoothstep(.62,.92,fr)*(.25+.55*lit);
     c += uRim*rim*.26;
+    #ifdef BODY
+      if (int(uO.x + .5) == 8) { // open jacket: ink the sleeve's own contour where it hangs in front of the body (the hull only draws against the background)
+        float am = smoothstep(.42, .58, vReg.x), ndv = dot(N, V);
+        c = mix(c, vec3(.22,.14,.10)*uLight, am*(1. - smoothstep(.16, .27, ndv))); }
+    #endif
     gl_FragColor = vec4(c,1.);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>

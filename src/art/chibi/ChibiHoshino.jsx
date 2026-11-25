@@ -111,7 +111,7 @@ function HoshinoHair({ set }) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 0.92, torso: 1.14, arm: 1.12, girth: 1.20, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.38, armA: 0.28, shDrop: 0.034, handL: 1.18,
+  body: { H: 0.90, head: 1.46, leg: 1.10, torso: 1.00, arm: 1.00, girth: 1.20, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.38, armA: 0.28, shDrop: 0.034, handL: 1.18,
     armR: [1.05, 1.45, 1.85], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.86,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
