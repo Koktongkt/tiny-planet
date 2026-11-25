@@ -104,3 +104,26 @@ export const HOSHINO_MOTION = motionProfile(HER_MOTION, {
   yawnUp: 1.35,
   restActs: ['look', 'sit'],
 })
+
+// Grandpa Ishi: slow and steady, leans on his cane, puffs his pipe. Calmest of the cast. (Draft; motion pass later.)
+export const ISHI_MOTION = motionProfile(HER_MOTION, {
+  name: 'ishi',
+  lively: 0.55,
+  sets: {
+    day: ['look', 'hum', 'look', 'rock'],
+    rain: ['look', 'shiver'],
+    night: ['yawn', 'look'],
+    seated: ['look', 'hum'],
+    hungry: ['look', 'hum'],
+    indoor: ['look', 'hum', 'rock'],
+    stove: ['hum', 'look'],
+  },
+  fidgetAfter: 4,
+  fidgetEvery: [9, 18],
+  sitAfter: 20,
+  lieChance: 0,
+  can: { skip: false, skid: false, wave: true, dodge: false, sit: true, lie: false, rainHunch: true, glanceAtCamera: true },
+  waveEvery: [30, 50],
+  yawnUp: 1.2,
+  restActs: ['sit', 'chat'],
+})

@@ -29,13 +29,24 @@ function drawFaces(W, kind) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
-  const fuku = kind === 'fuku'
+  const fuku = kind === 'fuku', ishi = kind === 'ishi' // ishi: 3D brows, nose and mustache (hair mesh); paint lines only
   const BROW = fuku ? '#6a6660' : '#1a1614'
   ;['happy', 'focus', 'sleepy', 'excited'].forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     const by = (name === 'excited' ? 0.0076 : name === 'sleepy' ? 0.0058 : name === 'focus' ? 0.0063 : 0.0066) + 0.0004 * FT + (fuku ? 0.0002 : 0)
     const arc = fuku ? (name === 'focus' ? 0.0024 : 0.0032) : (name === 'focus' ? 0.0020 : 0.0030)
+    if (ishi) { // soft forehead lines above the brows and crinkles at the outer eye corners
+      g.strokeStyle = 'rgba(176,112,86,0.55)'; g.lineWidth = 0.0011 * s
+      for (const [y, w, b] of [[0.0150, 0.0150, 0.0022], [0.0112, 0.0128, 0.0018], [0.0076, 0.0090, 0.0014]]) {
+        g.beginPath(); g.moveTo(X(-w), Y(y - b)); g.quadraticCurveTo(X(-w * 0.5), Y(y + b * 0.6), X(0), Y(y)); g.quadraticCurveTo(X(w * 0.5), Y(y + b * 0.6), X(w), Y(y - b)); g.stroke() }
+      g.strokeStyle = 'rgba(150,96,78,0.6)'
+      for (const sd of [-1, 1]) { const ex = sd * (EYE.x + EYE.rx * 1.08), ey = EYE.y + 0.0004
+        g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0006)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0030)); g.stroke()
+        g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0016)); g.lineTo(X(ex + sd * 0.0044), Y(ey - 0.0010)); g.stroke() }
+      if (name === 'excited') { const my = -0.0392; g.fillStyle = '#a3403a'; g.beginPath(); el(X(0), Y(my), 0.0058 * s, 0.0032 * s, 0, Math.PI); g.fill() }
+      g.restore(); return
+    }
     g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0056) * s
     for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0010)); g.stroke() }
     if (fuku) { // soft grey-brown smile lines at the eye corners

@@ -34,6 +34,9 @@ test('default game villagers do not use the draft Fuku or Hoshino looks', () => 
   assert.equal(chibiDraftName('baker', '?dev=chibi-drafts'), null)
   assert.equal(chibiDraftName('fuku', '?dev=chibi-drafts'), 'fuku')
   assert.equal(chibiDraftName('hoshino', '?dev=chibi-drafts'), 'hoshino')
+  assert.equal(chibiDraftName('grandpa', ''), null)
+  assert.equal(chibiDraftName('grandpa', '?dev=chibi-drafts'), 'ishi')
+  assert.equal(chibiDraftName('ishi', '?dev=chibi-drafts'), 'ishi')
 })
 
 test('the play path does not load the draft villager chunk', () => {
@@ -42,6 +45,7 @@ test('the play path does not load the draft villager chunk', () => {
   assert.equal(app.includes('ChibiVillager'), false)
   assert.equal(app.includes('ChibiFuku'), false)
   assert.equal(app.includes('ChibiHoshino'), false)
+  assert.equal(app.includes('ChibiIshi'), false)
   assert.match(app, /NEWCHAR \? <Character cfg=\{w\.cfg\}/)
   const lineup = src('debug/Lineup.jsx')
   assert.match(lineup, /chibi-drafts/)
