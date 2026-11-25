@@ -25,7 +25,8 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 const lin = (hex) => { const c = new THREE.Color(hex); return `vec3(${c.r.toFixed(5)},${c.g.toFixed(5)},${c.b.toFixed(5)})` }
 const f5 = (x) => x.toFixed(6)
 
-function drawFaces(W, kind) {
+function drawFaces(W, kind, off = {}) {
+  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
@@ -46,8 +47,8 @@ function drawFaces(W, kind) {
         g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0014)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0004)); g.stroke()
       }
     }
-    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10), 0.0017 * s, 0.0011 * s); g.fill()
-    const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10
+    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10 - nDy), 0.0017 * s, 0.0011 * s); g.fill()
+    const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10 - mDy
     if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
@@ -118,7 +119,7 @@ const ocol = (x, y, z, cx, cy, cz, rx, hy, rz, r) => { const a = (x - cx) / rx, 
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 export const headSDF = (x, y, z, cheek = CHEEK, hr = HR) => { const [cx, cy, cz, rx, ry, rz, k, r] = cheek
-  const jaw = (jx) => r == null ? ell(x, y, z, jx, cy, cz, rx, ry, rz) : ocol(x, y, z, jx, cy, cz, rx, ry, rz, r) // 8th value: flat-bottomed puck
+  const jaw = (jx) => r == null ? ell(x, y, z, jx, cy, cz, rx, ry, rz) : ell(x, y - Math.min(Math.max(y - cy, 0), r), z, jx, cy, cz, rx, ry, rz) // 8th value h: stretched up by h (straight sides, elliptical bottom)
   let h = smin(ell(x, y, z, 0, 0, 0, ...hr), Math.min(jaw(-cx), jaw(cx)), k)
   const fade = MID_FADE * x * x
   for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)
@@ -149,22 +150,22 @@ let GLASSES = null
 const glasses = () => GLASSES || (GLASSES = glassesGeo())
 
 const atlases = {}
-const faceMat = (kind, bl, dy) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
-  uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
+const faceMat = (kind, bl, dy, off) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+  uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind, off)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
     uBlush: { value: 1 }, uBig: { value: 1 }, uLash: { value: 0 }, uGaze: { value: new THREE.Vector2() }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
   fragmentShader: FACE_FS(bl, dy) })
 
 /** Face component factory. kind: 'fuku' | 'hoshino'. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Optional: cheek (head-frame jaw shape, must match body.cheek), hr (skull radii, must match body.headW), blushAt { dx, dy, dr } (moves / grows the blush),
- *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), glassesGeo (a character's own frames,
+ *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose } (extra drop), glassesGeo (a character's own frames,
  *  replaces the shared ones; it must apply the same featDy). */
-export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, hr = HR, blushAt, featDy = 0, glassesGeo: ownGlasses } = {}) {
+export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, hr = HR, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) {
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
   let gGeo = null
   const geo = () => faceGeoFor(cheek, hr)
   function Face({ st, lod }) {
-    const mat = useMemo(() => faceMat(kind, bl, featDy), [])
+    const mat = useMemo(() => faceMat(kind, bl, featDy, featOff), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
     useFrame(({ clock }, dt) => { dt = Math.min(dt, 0.05); const o = s.current, U = mat.uniforms, L = st.life
       const forced = (typeof window !== 'undefined' && window.__chibiFace) || q.get('face')

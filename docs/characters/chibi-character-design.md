@@ -107,6 +107,12 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Skull narrower than the jaw: `headW` 0.86 -> 0.80 (skull half-width ~0.0465 vs jaw ~0.052); hair cap 0.0575 wide and temples pulled in to match, so the top half reads slightly narrower.
   - Ears moved out and up (`EAR {x 0.059, y -0.009, z 0.004}`) so they show beside the wider jaw from the front; glasses arms follow.
 
+**Grandma Fuku, pass 13** (KT: trace the golden face contour): [`ref/fuku-pass13-compare.jpg`](ref/fuku-pass13-compare.jpg).
+  - Traced the sheet's front face row by row (scan from the centre to the outline). With A = face half-width: straight sides from the temples to just below the eyes, then a half-ellipse bottom about 0.5A tall (no flat part, no corners; the pass 11-12 puck read as sharp); chin 0.84A below the eye line, mouth 0.43A, nose 0.17A; eyes about 0.5A apart; forehead nearly as wide as the cheeks (about 2% narrower); hairline about 1A above the eyes; big ears centred about 0.19A below the eye line, outer edge about 1.3A; hair about 1.3A wide at the temples.
+  - The jaw's optional 8th value is now `h`: the jaw ellipsoid is stretched up by h (straight sides above its centre, elliptical bottom) in `spec` / `core` and `headSDF`, replacing the puck. Fuku: `FUKU_CHEEK = [0, -0.0387, 0.012, 0.0425, 0.016, 0.036, 0.012, 0.033]`, `headW 0.77`. Fitted to the sheet at the same eye spacing: widths within about 5-8% down the jaw, chin level matched.
+  - Mouth and nose lower: new optional `makeFace({ featOff: { mouth, nose } })` (Fuku 0.0045 / 0.002) on top of `featDy`.
+  - Hairline raised (cap moved back, front shapes up); temple hair moved out past the face edge and above the ears; ears big and low (`EAR {x 0.053, y -0.025}`, radii `[0.0072, 0.0140, 0.0098]`).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

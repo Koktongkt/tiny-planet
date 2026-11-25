@@ -27,12 +27,12 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0330, 0.0110, 0.0360, 0.0070, 0.0280, 0.0200, 0.0160]
-// pass 11/12: the jaw is a flat-bottomed oval puck (8th value = edge radius): no chin, an almost straight bottom line.
-// Pass 12: a big edge radius (0.016) rounds the jaw's corners inward, and the skull (body.headW) is a little narrower
-// than the jaw (skull half-width ~0.0465, jaw ~0.052), so the top half of the head is slightly less wide than the face
+const FUKU_CHEEK = [0, -0.0387, 0.0120, 0.0425, 0.0160, 0.0360, 0.0120, 0.0330]
+// pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
+// below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
+// The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
 const FEAT_DY = 0.003 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
-const HEAD_W = 0.80, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
+const HEAD_W = 0.77, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
@@ -42,23 +42,23 @@ function fukuGlasses() {
   const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
   br.scale(1, 0.42, 1); br.translate(0, EY + 0.0012, Z + 0.0024); parts.push(br)
   for (const sd of [-1, 1]) {
-    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EY + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0560, EY + 0.0030, 0.010)
+    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EY + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0495, EY + 0.0010, 0.006)
     const len = a.distanceTo(b), t = new THREE.CylinderGeometry(0.0010, 0.0010, len, 6)
     t.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
     t.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); parts.push(t)
   }
   const g = mergeGeometries(parts.map(p => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('uv'); return p })); g.computeVertexNormals(); return g
 }
-const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0010, dr: 1.12 }, featDy: FEAT_DY, glassesGeo: fukuGlasses })
+const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020 }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
-const EAR = { x: 0.0590, y: -0.009, z: 0.004 }
+const EAR = { x: 0.0530, y: -0.0250, z: 0.003 }
 const BUN_C = [0, 0.071, -0.013], BUN_R = 0.0285
 // main hair shapes: [centre, radii, rotation]
-const H_CAP = [[0, 0.012, -0.008], [0.0575, 0.057, 0.062]]
-const H_FRONT = [[0, 0.028, 0.027], [0.049, 0.027, 0.029]]
-const H_LOBE = (d) => [[d * 0.019, 0.036, 0.038], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
-const H_TEMPLE = (d) => [[d * 0.043, 0.012, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10]]
+const H_CAP = [[0, 0.012, -0.014], [0.0575, 0.057, 0.062]]
+const H_FRONT = [[0, 0.040, 0.020], [0.046, 0.024, 0.030]]
+const H_LOBE = (d) => [[d * 0.019, 0.044, 0.032], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
+const H_TEMPLE = (d) => [[d * 0.053, 0.010, -0.004], [0.011, 0.020, 0.022], [0.05, d * 0.30, d * 0.10]]
 function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 20, 14), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 20)
   // sheet: a big soft grey dome (wider than the face), a centre parting with two broad waves swept back, sides down
@@ -73,7 +73,7 @@ function fukuHair() {
     part(ring, [0, 0.055, -0.010], [0.0195, 0.0195, 0.0150], [Math.PI / 2 - 0.10, 0, 0]),
     ...[-1, 1].map(d => P(ballS, H_LOBE(d))),
     ...[-1, 1].map(d => P(ballS, H_TEMPLE(d))),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0066, 0.0150, 0.0074], [0, d * 0.7, d * 0.08], 1)),
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0072, 0.0140, 0.0098], [0, d * 0.7, d * 0.08], 1)),
   ]
   tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.45])
   tagAW(parts[1], () => [3, 0.2])
