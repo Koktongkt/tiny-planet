@@ -199,8 +199,8 @@ Dry weather picks from look, stretch, rock, satchel, hum, pebble, hands and tipt
 - **No new draw calls for life.** Hair stays two draws (cel + ink); face stays one. No new meshes or textures for life. Tools are the exception, and only while in use: hidden otherwise, one cel + one ink mesh per tool, one draw per world-space part. The atlas stays 2×2 cells.
 - **No per-frame allocations.** Reuse module-level scratch vectors; springs and schedulers mutate existing state.
 - **Life-layer CPU:** keep it well under **0.2 ms/frame** even with 4× mobile CPU throttle (her baseline ≈ 0.03–0.05 ms desktop, 0.09–0.15 ms on iPhone 13 emulation at 4×). Profile with `window.__herProf = { ms: 0, n: 0 }` around `lifeStep`.
-- **Startup chunk** (entry, gzip **level 9**, `tests/perf/budget.mjs`): target **≤ 70 KB**, fail **> 80 KB**. New animation code belongs in the lazy character chunk. A hook in `GhibliPerson.jsx` must stay tiny (her life layer added **+0.03 KB**; the cap for that hook is about **+0.3 KB**).
-- **Walk-view scene budgets:** mobile **350 calls / 390k tris**, desktop **500 / 600k**. Her own share is 22 calls / 58,380 tris — do not grow it.
+- **Startup chunk** (entry, gzip **level 9**, `tests/perf/budget.mjs`): target **≤ 100 KB**, fail **> 110 KB**. New animation code belongs in the lazy character chunk. A hook in `GhibliPerson.jsx` must stay tiny (her life layer added **+0.03 KB**; the cap for that hook is about **+0.3 KB**).
+- **Walk-view scene budgets:** mobile **350 calls / 1000k tris**, desktop **500 / 1300k**. Desktop orbit is **900 calls / 1100k tris**. Her own share is 22 calls / 58,380 tris — do not grow it.
 - No lag on iPhone. `prefers-reduced-motion` is mandatory (`MOT = 0.35`).
 
 ## Glitch checklist

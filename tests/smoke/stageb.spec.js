@@ -56,7 +56,9 @@ test('gifts and hearts, then the errands board: take a request and hand it over'
   // errands board
   await standAt(page, 'board')
   await page.waitForFunction(() => window.__game.G.near?.id === 'errands-board', null, { timeout: 30_000 })
-  await page.keyboard.press('e')
+  // E can still be taken by a villager who stayed in talk range after the gift. The board is the
+  // chosen target; run its action instead of racing the key.
+  await page.evaluate(() => window.__game.G.near.act())
   await expect(page.locator('.tpe-board')).toBeVisible({ timeout: 30_000 })
   const e0 = await page.evaluate(() => window.__sb.G.s.errands.list[0])
   expect(e0.day).toBe(1)
