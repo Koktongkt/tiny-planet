@@ -1,6 +1,8 @@
 // round6 (lazy chunk): trail edge stones, river-bank pebbles, stepping stones + marker stakes at the jump spots
 import * as THREE from 'three'
 import { WATER_DROP } from './world/shore.js'
+import { shoreWater, bakeShore } from './world/waterLook.js'
+import { OLD_WORLD } from './world/flag.js'
 import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
@@ -66,7 +68,7 @@ const PS = { g: null, m: null, merged: false }
 export function Path() { const g = useMemo(() => (PS.g = ribbon(pathDir, (t) => 0.17 * (1 + 0.08 * Math.sin(t * 13)), 0.045, 700, (d) => onBridge(d), PATH_X, (u) => 0.045 - 0.012 * Math.max(0, Math.abs(u) - 0.85) / 0.15)), []), ref = useRef()
   const m = useMemo(() => (PS.m = paint(toon('#ffffff', { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.16, true, 8)), [])
   useFrame(() => { if (ref.current) ref.current.visible = !PS.merged }); return <mesh ref={ref} geometry={g} material={m} /> }
-export function Stream() {
+function LegacyStream() {
   const g = useMemo(() => ribbon(streamDir, (t) => streamHalf(t), -0.012 - WATER_DROP, 1200, null, [[-1], [-0.6], [0], [0.6], [1]]), [])
   // round6: deeper colour toward the middle, a dark bank line + bright foam at the edges, two layers of drifting flow streaks
   const m = useMemo(() => new THREE.ShaderMaterial({ uniforms: { uTime: wind.time, uN: { value: 0 }, uD: { value: 0 } }, polygonOffset: true, polygonOffsetFactor: -3,
@@ -80,6 +82,14 @@ export function Stream() {
       c = mix(c, vec3(.29,.24,.2), smoothstep(.93,.985,e));
       c = mix(c, c*vec3(1.,.8,.75)+vec3(.12,.04,.06), uD*.5); c = mix(c, vec3(.1,.16,.32)+vec3(.15,.13,.05)*smoothstep(.85,.93,f), uN*.8);
       gl_FragColor = vec4(c,1.); }` }), [])
+  useFrame(() => { m.uniforms.uN.value = T.night; m.uniforms.uD.value = T.dusk })
+  return <mesh geometry={g} material={m} />
+}
+export function Stream() { return OLD_WORLD ? <LegacyStream /> : <ShapedStream /> }
+// look A river: the shared water look with flow marks, shallows by its banks (src/world/waterLook.js)
+function ShapedStream() {
+  const g = useMemo(() => bakeShore(ribbon(streamDir, (t) => streamHalf(t), -0.012 - WATER_DROP, 1200, null, [[-1], [-0.6], [0], [0.6], [1]]), (v) => v.clone().normalize()), [])
+  const m = useMemo(() => shoreWater({ flow: true }), [])
   useFrame(() => { m.uniforms.uN.value = T.night; m.uniforms.uD.value = T.dusk })
   return <mesh geometry={g} material={m} />
 }

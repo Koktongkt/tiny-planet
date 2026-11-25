@@ -11,7 +11,8 @@ import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W,
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
-import { WATER_DROP } from './world/shore.js' // water drawn lower than its gameplay level (look A banks; 0 in the old world)
+import { WATER_DROP } from './world/shore.js'
+import { shoreWater, bakeShore, LILY_PADS } from './world/waterLook.js' // water drawn lower than its gameplay level (look A banks; 0 in the old world)
 import { railDir, railPoint, railTangent, railHeight, railBehind, railOff, onTrestle, deckHeight, lonAtArc, RAIL_LEN, TRESTLE, railSpan } from './world/railway.js'
 import * as ZL from './world/zoneLayout.js'
 
@@ -87,11 +88,29 @@ function waterMaterial(deep, shallow) {
       gl_FragColor = vec4(c,1.); }` })
   return m
 }
-function WaterCap({ c, r, level, deep = '#3f9fc0', shallow = '#8fdcdc' }) {
+function LegacyWaterCap({ c, r, level, deep = '#3f9fc0', shallow = '#8fdcdc' }) {
   const mat = useMemo(() => waterMaterial(deep, shallow), [])
   const q = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().normalize()), [])
   useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk })
   return <mesh quaternion={q} material={mat}><sphereGeometry args={[R + level - WATER_DROP, 72, 14, 0, Math.PI * 2, 0, r]} /></mesh>
+}
+// look A water: shallows to deep by distance from shore, ripple rings (src/world/waterLook.js)
+function ShapedWaterCap({ c, r, level, segs = [72, 14] }) {
+  const mat = useMemo(() => shoreWater({ flow: false, centre: c }), [])
+  const geo = useMemo(() => { const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().normalize())
+    const g = new THREE.SphereGeometry(R + level - WATER_DROP, segs[0], segs[1], 0, Math.PI * 2, 0, r); g.applyQuaternion(q); return bakeShore(g, (v) => v.clone().normalize()) }, [])
+  useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk })
+  return <mesh geometry={geo} material={mat} />
+}
+function WaterCap(props) { return OLD_WORLD ? <LegacyWaterCap {...props} /> : <ShapedWaterCap {...props} segs={[96, 24]} /> }
+// lily pads (look A): merged into one vertex-coloured mesh with one outline
+function LilyPads() {
+  const geo = useMemo(() => { const parts = []
+    for (const p of LILY_PADS) { const pl = place(p.n, 0, p.spin), m = new THREE.Matrix4().compose(p.n.clone().multiplyScalar(R + LAKE_W - WATER_DROP + 0.012), pl.q, new THREE.Vector3(1, 1, 1))
+      const pad = new THREE.CylinderGeometry(p.s, p.s, 0.018, 18, 1, false, 0.35, Math.PI * 2 - 0.5); pad.deleteAttribute('uv'); parts.push([pad.applyMatrix4(m), '#5fae3e'])
+      if (p.flower) { const f = new THREE.SphereGeometry(0.034, 10, 6); f.deleteAttribute('uv'); f.scale(1, 0.7, 1); f.translate(p.s * 0.3, 0.03, -p.s * 0.2); parts.push([f.applyMatrix4(m), '#ffb3c1']) } }
+    return mergeGeometries(parts.map(([g, h]) => { g = g.index ? g.toNonIndexed() : g; const c = new THREE.Color(h), a = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < a.length; i += 3) { a[i] = c.r; a[i + 1] = c.g; a[i + 2] = c.b } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g })) }, [])
+  return <mesh geometry={geo} material={useMemo(() => toon('#ffffff', { vertexColors: true }), [])}><Outlines thickness={0.006} color={INK} /></mesh>
 }
 const fallMat = () => new THREE.ShaderMaterial({ transparent: true, side: THREE.DoubleSide, uniforms: { uTime: wind.time, uN: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
@@ -138,19 +157,20 @@ function Dock({ c, zr, b, level, len = 1.3 }) {
 // visible shore). Its mesh sits at the planet's centre, so the horizon cull (which skips anything near the centre) never
 // drops it; walking, it only draws while the camera is within ~0.9 rad of the south cap.
 function Sea() {
-  const mat = useMemo(() => waterMaterial('#2f86b0', '#7fd0d8'), []), g = useRef(), camera = useThree(s => s.camera)
+  const mat = useMemo(() => OLD_WORLD ? waterMaterial('#2f86b0', '#7fd0d8') : shoreWater({ flow: false, centre: new THREE.Vector3(0, -1, 0) }), []), g = useRef(), camera = useThree(s => s.camera)
   const q = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0)), [])
   const edge = Math.PI / 2 + SEA_LAT + 0.02 // angle from the south pole to the cap's rim
+  const geo = useMemo(() => { const sg = new THREE.SphereGeometry(R + SEA_W - WATER_DROP, 96, OLD_WORLD ? 12 : 40, 0, Math.PI * 2, 0, edge); sg.applyQuaternion(q); return OLD_WORLD ? sg : bakeShore(sg, (v) => v.clone().normalize()) }, [])
   useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk
     if (!g.current || !planetRef.current) return
     if (VIEW.mode === 'orbit') { g.current.visible = true; return }
     _w.copy(camera.position); planetRef.current.worldToLocal(_w); g.current.visible = Math.asin(_w.y / _w.length()) < SEA_LAT + 0.9 })
-  return <mesh ref={g} quaternion={q} material={mat}><sphereGeometry args={[R + SEA_W - WATER_DROP, 96, 12, 0, Math.PI * 2, 0, edge]} /></mesh>
+  return <mesh ref={g} geometry={geo} material={mat} />
 }
 function Lake() {
   const z = ZONES.lake, c = Zc.lake
   return <>
-    <WaterCap c={c} r={z.r * 1.12} level={LAKE_W} />
+    <WaterCap c={c} r={z.r * 1.12} level={LAKE_W} />{!OLD_WORLD && <LilyPads />}
     <Dock c={c} zr={z.r} b={LAKE_DOCK_B} level={LAKE_W} />
     <Boat n={around(c, z.r * 0.62, LAKE_DOCK_B + 0.35)} fwd={around(c, z.r * 0.3, LAKE_DOCK_B + 1.2).sub(around(c, z.r * 0.62, LAKE_DOCK_B + 0.35))} level={LAKE_W} />
     {[0, 1, 2, 3, 4, 5].map(k => { const n = around(c, z.r * (1.04 + 0.04 * (k % 2)), k * 1.05 + 0.5); return <Surface key={k} n={n} spin={k}><mesh position={[0, 0.02, 0]} scale={[1, 0.5, 0.8]} material={ZM.stone}><icosahedronGeometry args={[0.09 + 0.03 * (k % 3), 0]} /><Outlines thickness={0.006} color={INK} /></mesh></Surface> })}
