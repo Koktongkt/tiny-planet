@@ -31,6 +31,6 @@ test('Fuku and Hoshino profiles: every fidget in a set has a duration, her base 
     for (const [k, list] of Object.entries(P.sets)) for (const f of list) assert.ok(P.fidgets[f] > 0, `${P.name} ${k}: ${f}`)
   }
   assert.ok(FUKU_MOTION.fidgets.tea > 0 && FUKU_MOTION.sets.seated.includes('tea'))
-  assert.ok(HOSHINO_MOTION.fidgets.notebook > 0 && HOSHINO_MOTION.sets.day.includes('notebook'))
+  assert.ok(HOSHINO_MOTION.fidgets.glasses > 0 && !Object.values(HOSHINO_MOTION.sets).some(s => s.includes('notebook')))
   assert.ok(HOSHINO_MOTION.sets.day.includes('glasses'))
 })

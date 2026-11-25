@@ -81,19 +81,19 @@ export const FUKU_MOTION = motionProfile(HER_MOTION, {
   restActs: ['sit', 'chat'],
 })
 
-// Professor Hoshino: checks his notebook, pushes up his glasses. A little livelier than Fuku, still an elder.
+// Professor Hoshino: pushes up his glasses, studies his hands, looks about. No book (golden sheet: empty hands). A little livelier than Fuku, still an elder.
 export const HOSHINO_MOTION = motionProfile(HER_MOTION, {
   name: 'hoshino',
   lively: 0.75,
-  fidgets: { notebook: 3.8, glasses: 2.0 },
+  fidgets: { glasses: 2.0 },
   sets: {
-    day: ['look', 'notebook', 'glasses', 'look', 'hands'],
+    day: ['look', 'hands', 'glasses', 'look', 'hands'],
     rain: ['look', 'glasses', 'shiver'],
-    night: ['yawn', 'look', 'notebook'],
-    seated: ['look', 'notebook', 'glasses'],
-    hungry: ['look', 'notebook'],
-    indoor: ['look', 'notebook', 'glasses', 'hands'],
-    stove: ['look', 'notebook', 'hum'],
+    night: ['yawn', 'look', 'hands'],
+    seated: ['look', 'hands', 'glasses'],
+    hungry: ['look', 'hands'],
+    indoor: ['look', 'hands', 'glasses', 'hands'],
+    stove: ['look', 'hands', 'hum'],
   },
   fidgetAfter: 3.0,
   fidgetEvery: [6, 14],

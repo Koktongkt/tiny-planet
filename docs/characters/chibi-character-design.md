@@ -201,7 +201,26 @@ Golden reference: [`ref/hoshino-golden-turnaround.jpg`](ref/hoshino-golden-turna
 - **Ears:** lowered to the eye-to-mouth line and slightly bigger (`EAR { x 0.0565, y -0.021, z 0.002 }`, radii `0.0068 / 0.0125 / 0.0074`), fully visible below the cloud in side view.
 - **Glasses:** opt-in `makeFace({ wire })` → `wireGlassesGeo`: round lenses `r 0.0152` (~1.35× the eye), a gold wire `#b5843e` inked by a dark rim `#4a2e1c` just behind it, an arched bridge, and arms running back to the ears. One vertex-coloured mesh. Fuku keeps the plain rims.
 - Rejected on the way: a first cloud at `DOME r 0.064` with fat locks read as an afro and buried the forehead.
-- Not yet matched (outside this pass): the sheet has no scarf or notebook and shows arms hanging at the sides; the draft's walk still hides the rigged arms.
+- Done in the outfit pass below.
+
+### Professor Hoshino (draft): outfit pass against the golden turnaround
+
+Golden sheet, before and after: [`ref/hoshino-outfit-compare.jpg`](ref/hoshino-outfit-compare.jpg).
+
+- **Removed:** the notebook and pencil, the rust scarf, the custom still-pose sleeves and mittens (`stillArmGeo`, `readHold`), and every add-on chest mesh. These floated off the belly in side view. The `notebook` fidget is out of `HOSHINO_MOTION`; he uses `hands` and `glasses` instead. The old `notebook` pose code is still in `life.js`, unused.
+- **Arms:** the rigged arms are back (`arm 1.12`, `armA 0.30`, `armR [1.10, 1.05, 1.00]`, `hand 0.86`): long khaki sleeves hang at his sides and swing in the walk.
+- **Painted, not modelled:** the `openJacket` branch of the outfit painter (only Hoshino uses it) now draws everything onto the body, so nothing floats:
+  - an opening that cuts away below the vest;
+  - notch lapels with an inked edge and a front-edge line;
+  - the white shirt V and collar points (`acc2`);
+  - a dark green vest (`#3d4630`) with five gold buttons and soft points;
+  - two brown jacket buttons on his right panel;
+  - flap pockets at the hips;
+  - the hem line, a back vent, a curved back waist seam and the back collar.
+  - The arm and leg sections add a white shirt cuff at the wrist (`uO.w` carries the wrist height for this type) and painted trouser turn-ups.
+- **Palette:** trousers `#66653f` (warmer than the vest; the cool cel shadow turned a darker olive muddy and camo-like), shoes `#7a4a26`.
+- **Rejected:** mesh turn-ups (`outfit.cuffs`) read as fat leg-warmers, so they are painted instead.
+- **Not yet matched:** the sheet's sleeves are a little wider with more cuff showing, and the side view has no pocket or lapel detail.
 
 ## 5. Pitfalls
 
