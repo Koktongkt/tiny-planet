@@ -93,8 +93,8 @@ const _wv = new THREE.Vector3(), _wv2 = new THREE.Vector3()
 const WARM_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([196, 150, 140, 255, 236, 212, 196, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t })()
 function groundPaint() {
   const sand = C('#d9bf86'), bank = C('#6aa95a'), worn = C('#c7cf86'), soil = C('#c08552'), bed = C('#4e7f7a')
-  return (v, tmp) => {
-    grassColour(v, tmp)
+  return (v, tmp, h) => {
+    grassColour(v, tmp, h)
     const sn = streamNear(v), gap = sn.d - sn.half
     if (gap < 0.3) { if (gap < 0) tmp.copy(bed); else if (gap < 0.07) tmp.lerp(soil, 0.85); else tmp.lerp(bank, 0.5 * (1 - (gap - 0.07) / 0.23)) }
     const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.8 * (1 - dp / (0.05 * K)))
@@ -105,9 +105,13 @@ function groundPaint() {
 }
 function Ground() { return OLD_WORLD ? <LegacyGround /> : <ShapedGround /> }
 function ShapedGround() {
-  const geo = useMemo(() => buildGround({ fine: SHORE_FINE, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }), [])
+  // the plain ground draws first; with carved banks on, the finer band is built in an idle slot after the first frame
+  // (~0.75 s of work in node) and swapped in, ideally while the title card is still up
+  const coarse = useMemo(() => buildGround({ fine: false, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }), [])
+  const idle = useIdleSlot(-2), fine = useMemo(() => SHORE_FINE && idle ? buildGround({ fine: true, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }) : null, [idle])
+  useEffect(() => { if (fine) coarse.dispose() }, [fine])
   const mat = useMemo(() => inkRim(paint(new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: WARM_RAMP }), 0.06, true, 1.6)), [])
-  return <mesh geometry={geo} material={mat} />
+  return <mesh geometry={fine || coarse} material={mat} />
 }
 function LegacyGround() {
   const geo = useMemo(() => {

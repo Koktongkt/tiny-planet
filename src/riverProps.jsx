@@ -1,5 +1,6 @@
 // round6 (lazy chunk): trail edge stones, river-bank pebbles, stepping stones + marker stakes at the jump spots
 import * as THREE from 'three'
+import { WATER_DROP } from './world/shore.js'
 import React, { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
@@ -66,7 +67,7 @@ export function Path() { const g = useMemo(() => (PS.g = ribbon(pathDir, (t) => 
   const m = useMemo(() => (PS.m = paint(toon('#ffffff', { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), 0.16, true, 8)), [])
   useFrame(() => { if (ref.current) ref.current.visible = !PS.merged }); return <mesh ref={ref} geometry={g} material={m} /> }
 export function Stream() {
-  const g = useMemo(() => ribbon(streamDir, (t) => streamHalf(t), -0.012, 1200, null, [[-1], [-0.6], [0], [0.6], [1]]), [])
+  const g = useMemo(() => ribbon(streamDir, (t) => streamHalf(t), -0.012 - WATER_DROP, 1200, null, [[-1], [-0.6], [0], [0.6], [1]]), [])
   // round6: deeper colour toward the middle, a dark bank line + bright foam at the edges, two layers of drifting flow streaks
   const m = useMemo(() => new THREE.ShaderMaterial({ uniforms: { uTime: wind.time, uN: { value: 0 }, uD: { value: 0 } }, polygonOffset: true, polygonOffsetFactor: -3,
     vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,

@@ -6,6 +6,11 @@ import * as THREE from 'three'
 import { R, height, ZONES, zv, dir, LAKE_W, SEA_W, SEA_LAT, streamDir, streamHalf, streamNear } from '../world.js'
 import { WATERFALL } from './zoneLayout.js'
 import { railOff } from './railway.js'
+import { OLD_WORLD } from './flag.js'
+
+// every water surface is drawn this much below its gameplay level, so the carved grass lip stands proud of it and a
+// band of soil shows (look A). Gameplay levels are unchanged.
+export const WATER_DROP = OLD_WORLD ? 0 : 0.05
 
 const TAU = Math.PI * 2, STEP = 0.05 // max spacing between points, world units
 const ss = (a, b, t) => { t = Math.min(1, Math.max(0, (t - a) / (b - a))); return t * t * (3 - 2 * t) }
@@ -105,21 +110,29 @@ export const COVES = (() => {
 })()
 export const inCove = (n) => COVES.some(c => c.n.angleTo(n) < c.r)
 
-// ---- signed distance to the nearest shoreline point (bucket grid; exact within 1.5 world units) ----
-const CELL = 0.5, grid = new Map(), key = (i, j, k) => i * 73856093 ^ j * 19349663 ^ k * 83492791
-const cellOf = (n) => [Math.floor(n.x * R / CELL), Math.floor(n.y * R / CELL), Math.floor(n.z * R / CELL)]
-for (const r of SHORE_RUNS) for (const p of r.pts) { const [i, j, k] = cellOf(p.n), kk = key(i, j, k); if (!grid.has(kk)) grid.set(kk, []); grid.get(kk).push(p) }
+// ---- signed distance to the nearest shoreline point: exact within MAXD world units (all callers need: the fine band
+// < 0.9, bank colours < 0.3, water shading < 0.6); beyond that ±1, signed by whether the point is under water ----
+const MAXD = 0.9, CELL = 0.3, grid = new Map(), key = (i, j, k) => (i * 73856093) ^ (j * 19349663) ^ (k * 83492791)
+for (const r of SHORE_RUNS) for (const p of r.pts) { const kk = key(Math.floor(p.n.x * R / CELL), Math.floor(p.n.y * R / CELL), Math.floor(p.n.z * R / CELL)); if (!grid.has(kk)) grid.set(kk, []); grid.get(kk).push(p) }
+const FAR = MAXD, far = new Set()
+for (const r of SHORE_RUNS) for (const p of r.pts) far.add(key(Math.floor(p.n.x * R / FAR), Math.floor(p.n.y * R / FAR), Math.floor(p.n.z * R / FAR)))
 const _d = new THREE.Vector3()
 export function shoreDist(n) {
-  const [i, j, k] = cellOf(n)
-  for (let reach = 1; reach <= 3; reach++) {
-    let best = null, bd = Infinity
-    for (let a = -reach; a <= reach; a++) for (let b = -reach; b <= reach; b++) for (let c = -reach; c <= reach; c++) {
-      const cell = grid.get(key(i + a, j + b, k + c)); if (!cell) continue
+  { const a = Math.floor(n.x * R / FAR), b = Math.floor(n.y * R / FAR), c = Math.floor(n.z * R / FAR); let any = false // nothing within MAXD?
+    for (let x = -1; x <= 1 && !any; x++) for (let y = -1; y <= 1 && !any; y++) for (let z = -1; z <= 1 && !any; z++) if (far.has(key(a + x, b + y, c + z))) any = true
+    if (!any) return isWaterFar(n) ? -1 : 1 }
+  const i = Math.floor(n.x * R / CELL), j = Math.floor(n.y * R / CELL), k = Math.floor(n.z * R / CELL)
+  let best = null, bd = Infinity
+  for (let reach = 0; reach <= Math.ceil(MAXD / CELL); reach++) { // shells: only the cells at Chebyshev distance `reach`
+    for (let x = -reach; x <= reach; x++) for (let y = -reach; y <= reach; y++) for (let z = -reach; z <= reach; z++) {
+      if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) !== reach) continue
+      const cell = grid.get(key(i + x, j + y, k + z)); if (!cell) continue
       for (const p of cell) { const d = p.n.distanceToSquared(n); if (d < bd) { bd = d; best = p } }
     }
-    if (best && Math.sqrt(bd) * R <= reach * CELL) { const d = Math.sqrt(bd) * R; _d.copy(n).sub(best.n); return _d.dot(best.out) >= 0 ? d : -d }
+    if (best && Math.sqrt(bd) * R <= reach * CELL) break // nothing in a further shell can be closer
   }
-  return isWaterFar(n) ? -2 : 2
+  if (!best || Math.sqrt(bd) * R > MAXD) return isWaterFar(n) ? -1 : 1
+  const d = Math.sqrt(bd) * R; _d.copy(n).sub(best.n); return _d.dot(best.out) >= 0 ? d : -d
 }
-const isWaterFar = (n) => (n.angleTo(LAKE_C) < lakeR && visualGround(n) < LAKE_W) || visualGround(n) < SEA_W
+// far from every shore the river carve doesn't apply, so gameplay height decides (cheaper than visualGround)
+const isWaterFar = (n) => { const h = height(n); return h < SEA_W || (h < LAKE_W && n.angleTo(LAKE_C) < lakeR) }

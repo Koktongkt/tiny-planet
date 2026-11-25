@@ -11,6 +11,7 @@ import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W,
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
+import { WATER_DROP } from './world/shore.js' // water drawn lower than its gameplay level (look A banks; 0 in the old world)
 import { railDir, railPoint, railTangent, railHeight, railBehind, railOff, onTrestle, deckHeight, lonAtArc, RAIL_LEN, TRESTLE, railSpan } from './world/railway.js'
 import * as ZL from './world/zoneLayout.js'
 
@@ -90,7 +91,7 @@ function WaterCap({ c, r, level, deep = '#3f9fc0', shallow = '#8fdcdc' }) {
   const mat = useMemo(() => waterMaterial(deep, shallow), [])
   const q = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().normalize()), [])
   useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk })
-  return <mesh quaternion={q} material={mat}><sphereGeometry args={[R + level, 72, 14, 0, Math.PI * 2, 0, r]} /></mesh>
+  return <mesh quaternion={q} material={mat}><sphereGeometry args={[R + level - WATER_DROP, 72, 14, 0, Math.PI * 2, 0, r]} /></mesh>
 }
 const fallMat = () => new THREE.ShaderMaterial({ transparent: true, side: THREE.DoubleSide, uniforms: { uTime: wind.time, uN: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
@@ -115,7 +116,7 @@ const ZM = { plank: paint(toon('#b07a4f'), 0.18, true, 12), post: toon('#7a4e34'
 
 function Boat({ n, fwd, level, i = 0 }) {
   const g = useRef(); useFrame(() => { const t = wind.time.value; g.current.position.y = Math.sin(t * 1.4 + i) * 0.02; g.current.rotation.z = Math.sin(t * 1.1 + i) * 0.06; g.current.rotation.x = Math.sin(t * 0.9 + i * 2) * 0.03 })
-  return <Frame n={n} fwd={fwd} rad={R + level}><group ref={g}>
+  return <Frame n={n} fwd={fwd} rad={R + level - WATER_DROP}><group ref={g}>
     <mesh position={[0, 0.02, 0]} scale={[0.2, 0.11, 0.45]} material={ZM.hull}><sphereGeometry args={[1, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} /><Outlines thickness={0.01} color={INK} /></mesh>
     <mesh position={[0, 0.021, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.18, 0.42, 1]} material={ZM.hullIn}><circleGeometry args={[1, 18]} /></mesh>
     <mesh position={[0, 0.04, 0.05]} material={ZM.plank}><boxGeometry args={[0.34, 0.018, 0.08]} /></mesh>
@@ -144,7 +145,7 @@ function Sea() {
     if (!g.current || !planetRef.current) return
     if (VIEW.mode === 'orbit') { g.current.visible = true; return }
     _w.copy(camera.position); planetRef.current.worldToLocal(_w); g.current.visible = Math.asin(_w.y / _w.length()) < SEA_LAT + 0.9 })
-  return <mesh ref={g} quaternion={q} material={mat}><sphereGeometry args={[R + SEA_W, 96, 12, 0, Math.PI * 2, 0, edge]} /></mesh>
+  return <mesh ref={g} quaternion={q} material={mat}><sphereGeometry args={[R + SEA_W - WATER_DROP, 96, 12, 0, Math.PI * 2, 0, edge]} /></mesh>
 }
 function Lake() {
   const z = ZONES.lake, c = Zc.lake
