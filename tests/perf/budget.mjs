@@ -20,7 +20,7 @@ if (fs.existsSync(dist)) {
   if (kb > B.startup.failKB) fails.push(`startup chunk ${kb.toFixed(2)} KB gz > ${B.startup.failKB}`); else if (kb > B.startup.targetKB) warns.push(`startup chunk ${kb.toFixed(2)} KB gz > target ${B.startup.targetKB}`)
 } else warns.push('no dist/assets: startup chunk not checked')
 // 2. views
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
+const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
 const report = {}
 for (const dev of ['desktop', 'mobile']) {
   if (only && only !== dev) continue

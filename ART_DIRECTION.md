@@ -21,12 +21,17 @@
 - Ground uses **vertex colours** with noise patches, so the meadow looks dabbed with a brush.
 - Postprocessing: soft **bloom** (windows, lamps, fireflies, sun), a subtle **vignette**, and **paper grain** noise overlay.
 
-## Planet layout (radius 5)
-- North cap: a **village** of five cottages around a little square with a lamp post.
-- East: two **windmills** on a gentle rise.
-- A **winding sandy path** loops around the planet and links the village and windmills.
-- A **stream** meanders the other way and crosses under the path near the village.
-- Forest clusters of round and conifer trees are scattered across the rest (instanced).
+## Planet layout: one slope from the peak to the sea
+Full design: [`docs/superpowers/specs/2026-11-24-world-rework-design.md`](docs/superpowers/specs/2026-11-24-world-rework-design.md). Region data lives in `src/world/regions.js`; the old layout stays behind the dev-only `?world=old` flag until the new one is signed off.
+- **The slope:** the planet (R 10.4) runs downhill from **Keepers' Peak** at the north pole to a **sea** at the south cap. Everything in between sits where water, wind and people would put it.
+- **Four chains** tie the regions together so each place has a reason to be there:
+  - **Water:** a spring under the peak feeds one open **river**: over the **cliff** waterfall, through the **terraces**, past the **village**, into the **lake** (with **drowned ruins**) and out through a valley to the **harbour** and the sea.
+  - **Harvest:** rice terraces and meadow fields feed the village, and the **windmills** grind on the windward rise.
+  - **Wind:** the mills face the sea breeze; the lighthouse and harbour boats read it too.
+  - **The keepers:** an older people left a spiral on mossy stone at six sites (peak circle, torii footings by the **giant tree**, the lake ruins shore, the lighthouse base, the old bridge footings and the **museum** trench). Each one is a dig spot.
+- **Regions:** Peak, Cliff, Terraces, Village, Lake + Ruins, Museum (a restored keeper building on the lake shore), Harbour, Forest + Giant tree, Meadow + Mills, plus two open plots kept free for later regions.
+- **Path and river:** the sandy path is a closed loop; bridges sit wherever it crosses the river. The train circles the southern coast (eased inland around the harbour bay) and crosses the river on a **trestle**.
+- **Sea:** shallows along the shore are wadeable; deeper water stops her with a gentle toast. Gatherables, villagers and dig sites stay on dry ground.
 - **Soft lawn:** about 300 patches of short, rounded dome tufts (lobed edges, gentle wind sway), many with clumps of flowers, and smooth painted ground showing between them. No spiky blades.
 
 ## Lighting by time of day

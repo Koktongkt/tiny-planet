@@ -1,10 +1,11 @@
 // Screenshot runner. node shoot.mjs [name,name,...]   (extra: node shoot.mjs --custom '[["out.png","?query",holdW]]')
 import {chromium} from 'playwright'
-const b=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']})
+const b=await chromium.launch({executablePath:process.env.PW_CHROMIUM||undefined,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']})
 const errs=[]
 const url={day:'?t=day&view=orbit',dusk:'?t=dusk&view=orbit',night:'?t=night&view=orbit','character-closeup':'?t=day&view=hero',villagers:'?t=day&view=lineup',details:'?t=day&view=detail',
  'zones-lake-waterfall':'?t=day&view=zone&z=lake-waterfall','zones-terraces-train':'?t=day&view=zone&z=terraces-train&trainAt=2.75','zones-harbour-ruins':'?t=day&view=zone&z=harbour-ruins','zones-forest-giant':'?t=day&view=zone&z=forest-giant','zones-meadow-mills':'?t=day&view=zone&z=meadow-mills',
- 'village-square':'?t=day&view=zone&z=square','harbour-villagers':'?t=day&view=zone&z=harbour-people'}
+ 'village-square':'?t=day&view=zone&z=square','harbour-villagers':'?t=day&view=zone&z=harbour-people',
+ 'zones-peak':'?t=day&view=zone&z=peak','zones-lake-museum':'?t=day&view=zone&z=lake-museum','zones-train-trestle':'?t=day&view=zone&z=train-trestle'}
 let jobs
 if(process.argv[2]==='--custom') jobs=JSON.parse(process.argv[3]).map(([f,qs,keys,vw,js,wait])=>({f,qs,keys,vw,js,wait}))
 else jobs=(process.argv[2]?process.argv[2].split(','):Object.keys(url)).map(t=>({f:`screenshots/${t}.png`,qs:url[t],keys:t==='character-closeup',vw:[1280,800]}))

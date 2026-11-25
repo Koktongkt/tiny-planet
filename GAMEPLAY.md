@@ -69,17 +69,19 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 - **Train:** the train now stops at two stations on its ring, **Lakeside (village)** and **Forest Edge (ruins)**, waits 8 s, and pulls away. Stand on the platform while it waits and press E to board. The first ride is free, then 1 coin. She rides to the other stop and steps off onto the platform.
 - **Photo mode:** **P** or the **Photo** button. The HUD hides; drag / A D to orbit, W S to tilt, Q E or the wheel to zoom, R F for height, Space or the shutter to shoot. Seven filters. Each photo downloads as a PNG and a small JPEG thumbnail goes into the journal's Photos tab (12 kept, oldest dropped). Esc or Done closes.
 - **Journal (J):** tabs for Fish, Relics, Forage and Photos, with counts, best sizes and what's in the museum.
-- **Ruins museum + dig spots:** five old stones at the ruins can be dug once a day each (shards, crystals, coins, clay, and sometimes one of five new relics). The museum door beside the ruins opens Professor Hoshino's collection: donate each relic or rare fish once (+½ heart with him).
+- **Keeper sites + museum:** six dig spots, one at each keeper site (the peak circle, the torii footings by the giant tree, the lake ruins shore, the lighthouse base, the old bridge footings and the museum trench), can each be dug once a day (shards, crystals, coins, clay, and sometimes one of five new relics). The museum is a restored keeper building on the lake shore; its door opens Professor Hoshino's collection: donate each relic or rare fish once (+½ heart with him).
 - **First-day note:** Grandma Fuku's note lists seven first steps (walk, look, gather, craft, talk, plant, sleep) and ticks them off. It shows on day 1 until put away; Settings → "Read again" brings it back.
 
 ## Persistence
 - Saved to localStorage under `tinyplanet.save.v1` (the key keeps its historic name): inventory, discoveries, tools, placements, unlocks, taken spots, the day counter, the chest, Studio's plant waterings, and the **clock**.
-- Every save carries an explicit format version `v` (currently **6**). On load the save runs through an ordered migration chain in `src/save/schema.js` (v1 → v2 → v3 → v4 → v5 → v6), then missing or broken fields are filled from the defaults. A save without `v` is treated as v1. A save from a newer build still loads (fields it understands are kept).
+- Every save carries an explicit format version `v` (currently **8**). On load the save runs through an ordered migration chain in `src/save/schema.js` (v1 → … → v8), then missing or broken fields are filled from the defaults. A save without `v` is treated as v1. A save from a newer build still loads (fields it understands are kept).
 - **Time of day carries over.** The sun phase (`clock.a`) is saved every 15 s and when the tab is hidden or closed, so after a reload the day continues where it was: regrowth keeps going and the clock shows the right day. One in-game day is one real hour (`?daylen=<seconds>` to change it).
 - Save v3 adds `garden` (plots), `friends` (hearts, gifted today), `errands` (today's notes), `buffs` and `settings`. Old saves start with these empty on the day they're on.
 - Save v4 adds `fish` (species log), `journal` (forage + relics), `museum` (donations), `photos` (album metadata; thumbnails in `tinyplanet.photos`), `train` (rides), `tutorial` and `dig`. A save already past day 1 skips the first-day note. Seasons and weather come from the clock, so they need no fields.
 - Save v5 adds `energy` (0–100, a new game starts full). The bicycle is just `tools.bike`. Numbers, the recipe and the mount rules are in `docs/stage-e-contract.md`.
 - Save v6 adds `settings.autoCook`. A perfect dish is a bag id such as `soup_perfect`, not its own field.
+- Save v7 adds `hints` (pickup chip reminders).
+- Save v8 follows the world rework: her house moved, so outdoor decor is turned with it and keeps its offset from her door (`src/save/homeMove.js`). Indoor decor, garden plots and dig progress are unchanged.
 - Items respawn at each in-game sunrise (a spot taken on day *d* is back on day *d*+1).
 - **Sleep** in the bed skips to the next morning and advances the day (Day *n* → *n*+1), also after a reload. A nap skips two hours.
 - Old v1 saves (day counter, no clock) resume on their saved day at the default early-afternoon time.
