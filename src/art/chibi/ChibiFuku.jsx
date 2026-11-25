@@ -37,7 +37,7 @@ const HEAD_W = 0.76, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
 function fukuGlasses() {
-  const R = 0.0140, T = 0.0017, Z = 0.0552, EY = EYE.y - FEAT_DY, parts = []
+  const R = 0.0146, T = 0.0017, Z = 0.0552, EY = EYE.y - FEAT_DY - 0.0026, parts = [] // sits a little low: space between the eye and the bottom rim
   // half-rim: the frame runs only along the bottom half of each lens
   for (const sd of [-1, 1]) { const g = new THREE.TorusGeometry(R, T, 8, 16, Math.PI); g.rotateZ(Math.PI); g.rotateY(sd * 0.2); g.translate(sd * EYE.x, EY + 0.0006, Z); parts.push(g) }
   const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
@@ -54,45 +54,34 @@ const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush:
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
 const EAR = { x: 0.0560, y: -0.0215, z: 0.003 }
-const BUN_C = [0, 0.071, -0.013], BUN_R = 0.0285
-// main hair shapes: [centre, radii, rotation]
-const H_CAP = [[0, 0.012, -0.014], [0.0575, 0.057, 0.062]]
-const H_FRONT = [[0, 0.038, 0.015], [0.047, 0.026, 0.034]]
-const H_LOBE = (d) => [[d * 0.019, 0.044, 0.032], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
-const H_TEMPLE = (d) => [[d * 0.0555, 0.010, -0.004], [0.011, 0.020, 0.022], [0.05, d * 0.30, d * 0.10]]
+const BUN_C = [0, 0.089, -0.024], BUN_R = 0.0300
+// pass 18 rebuild, as on the sheet: ONE big smooth dome, wider than the face, set back so the hairline is high and
+// round and the sides stop just above the ears; a big round back tucking in at the nape; a round ball bun at the
+// top-back. No extra lobes or puffs (they made ledges, side buns and creases); the locks are painted (lines below).
+const H_CAP = [[0, 0.018, -0.020], [0.066, 0.058, 0.064]]
 function fukuHair() {
-  const ball = new THREE.SphereGeometry(1, 20, 14), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 20)
-  // sheet: a big soft grey dome (wider than the face), a centre parting with two broad waves swept back, sides down
-  // to the top of the ears, full cover behind down to the nape, and a big round top bun wrapped at its base.
-  // H_FRONT stands a little proud of the forehead so the hairline is a clean edge, not a grazing cut through the skin
-  const P = (geo, [c, r, rot]) => part(geo, c, r, rot)
+  const ball = new THREE.SphereGeometry(1, 28, 20), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 24)
   const parts = [
-    P(ball, H_CAP),
-    P(ball, H_FRONT),
-    part(ball, [0, -0.014, -0.024], [0.055, 0.042, 0.044]),
-    part(ball, BUN_C, [BUN_R, 0.0240, 0.0275]),
-    part(ring, [0, 0.055, -0.010], [0.0195, 0.0195, 0.0150], [Math.PI / 2 - 0.10, 0, 0]),
-    ...[-1, 1].map(d => P(ballS, H_LOBE(d))),
-    ...[-1, 1].map(d => P(ballS, H_TEMPLE(d))),
+    part(ball, ...H_CAP),
+    part(ball, [0, -0.012, -0.026], [0.056, 0.044, 0.046]),
+    part(ball, BUN_C, [BUN_R, 0.0270, 0.0290]),
+    part(ring, [0, 0.0700, -0.022], [0.0225, 0.0225, 0.0150], [Math.PI / 2 - 0.15, 0, 0]),
     // ears as on the sheet: a big C, widest at the top and tucked in toward the jaw at the bottom (top tilted out),
     // with a darker hollow on the front face
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0074, 0.0130, 0.0102], [0, d * 0.7, -d * 0.26], 1)),
     ...[-1, 1].map(d => part(ballS, [d * (EAR.x + 0.0036), EAR.y + 0.0010, EAR.z + 0.0030], [0.0032, 0.0086, 0.0058], [0, d * 0.7, -d * 0.26], 2)),
   ]
   tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.45])
-  tagAW(parts[1], () => [3, 0.2])
-  tagAW(parts[2], () => [3, 0])
-  tagAW(parts[3], (x, y) => [2, sm(0.05, 0.10, y)])
-  tagAW(parts[4], () => [2, 0.4])
-  for (const k of [5, 6]) tagAW(parts[k], () => [3, 0.45])
-  for (const k of [7, 8]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.5])
-  for (const k of [9, 10, 11, 12]) tagAW(parts[k], () => [3, 0])
+  tagAW(parts[1], () => [3, 0])
+  tagAW(parts[2], (x, y) => [2, sm(0.05, 0.10, y)])
+  tagAW(parts[3], () => [2, 0.4])
+  for (const k of [4, 5, 6, 7]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()
 // the sheet's swirl: painted locks flowing up from the hairline and round the head into the bun, a spiral on the bun
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b] }
-const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF, { lines: { c: [0, 0.004, -0.004], bun: BUN_C, br: BUN_R, n: 8, twist: 1.35, wave: 0.04, mirror: true, round: 0.12, bunN: 2, bunTwist: 0.9, width: 0.03, lock: 0.82, alpha: 0.6, ink: lin('#7a6c63') } })
+const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF, { lines: { c: [0, 0.004, -0.004], bun: BUN_C, br: BUN_R, n: 12, twist: 1.1, rings: 1.8, petals: 6, amp: 0.5, mirror: true, round: 0.10, petal: true, band: 0.35, bunN: 3, bunTwist: 1.4, width: 0.028, lock: 0.78, alpha: 0.62, ink: lin('#7a6c63') } })
 // a small depth bias so the hair's own smooth edge wins where it meets the faceted skin at the hairline (no ragged cut)
 hairMat.polygonOffset = true; hairMat.polygonOffsetFactor = -1; hairMat.polygonOffsetUnits = -2
 const hairInk = makeHairInk(FUKU_HAIR_OFF)

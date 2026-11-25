@@ -130,6 +130,11 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Hair locks mirror left / right (new `lines.mirror`, `round`): a parting in front and rounded U-scallops curving up into the bun behind, instead of one-way barber-pole twists. 8 locks, `twist 1.35` so the lines arc like the sheet's sweeping curves; darker, crisper lines (`#7a6c63`, alpha 0.6). Tried: plain `abs` mirror (sharp V chevrons behind, `round 0.12` softens them); `twist 0.55` (straight melon stripes).
   - Cleaner hairline: a small depth bias on the hair material (`polygonOffset -1/-2`) lets the hair's smooth edge win over the faceted skin; the front shape sits further back so the dome no longer shows a ledge.
 
+**Grandma Fuku, pass 18** (KT: glasses lower with space under the eyes and slightly bigger; hair totally off, rebuild it): [`ref/fuku-pass18-compare.jpg`](ref/fuku-pass18-compare.jpg).
+  - Glasses: rims R 0.0140 -> 0.0146 and the whole frame 0.0026 lower, so the half rim sits clear below the eyes.
+  - Hair rebuilt from scratch: ONE big smooth dome (`H_CAP [[0, 0.018, -0.020], [0.066, 0.058, 0.064]]`), wider than the face and set back, so the hairline is a high round arch and the sides stop just above the ears; a nape volume; a round ball bun (`BUN_R 0.030`) raised to sit on top of the dome with a wrap ring at its base. The old front, lobe and temple shapes are gone (they made a visor ledge, side buns and creases).
+  - Painted locks are now rings round the bun pushed out into petals (new `lines.rings / petals / amp`): 1.8 rings per radian, 6 petals, so the back shows two rows of scalloped locks and the front and sides show sweeping scalloped lock lines; each lock shaded darker at both edges (`petal`); the base sheen band toned down (`band 0.35`). Tried: locks running to the bun (from the front they converged like garlic segments); 2.6 rings / 8 petals (fish scales).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
