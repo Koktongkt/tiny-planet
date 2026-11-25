@@ -19,10 +19,11 @@ function Ico({ k }) { // tiny hand-inked glyphs
     minimap: <><circle cx="16" cy="16" r="11" {...p} fill="#f1e2bf" /><path d="M8 18 Q14 12 18 17 T25 13" {...p} stroke="#5f8fc4" /><path d="M16 9 L19 16 L16 14 L13 16Z" {...p} fill="#d9655b" strokeWidth="1.6" /></>,
     note: <><path d="M8 5 H22 L26 9 V27 H8Z" {...p} fill="#fbf3e2" /><path d="M12 13 H22 M12 17 H22 M12 21 H18" {...p} strokeWidth="1.6" /><circle cx="15" cy="5" r="2.4" {...p} fill="#d9655b" strokeWidth="1.4" /></>,
     reduceMotion: <><path d="M6 16 Q11 10 16 16 T26 16" {...p} /><circle cx="26" cy="16" r="2.4" fill="#3b2f22" /></>,
+    camFollow: <><rect x="5" y="10" width="17" height="12" rx="3" {...p} fill="#f4ead2" /><path d="M22 14 L28 11 V21 L22 18" {...p} fill="#d2e6a4" /><path d="M9 27 Q16 30 23 27" {...p} /></>,
     autoCook: <><path d="M8 14 h16 a8 7 0 0 1 -16 0 z" {...p} fill="#f4ead2" /><ellipse cx="16" cy="14" rx="8" ry="3" {...p} fill="#d2e6a4" /><path d="M22 16 h5" {...p} /></>,
   }[k]}</svg>
 }
-const LBL = { volume: 'Volume', music: 'Music', sfx: 'Sounds', ambience: 'Ambience', muted: 'Mute all', textScale: 'Text size', minimap: 'Minimap', reduceMotion: 'Calmer motion', autoCook: 'Auto-cook' }
+const LBL = { volume: 'Volume', music: 'Music', sfx: 'Sounds', ambience: 'Ambience', muted: 'Mute all', textScale: 'Text size', minimap: 'Minimap', reduceMotion: 'Calmer motion', autoCook: 'Auto-cook', camFollow: 'Camera follows her' }
 function Slider({ k, v, set, dim }) {
   return <label className={'tps-row' + (dim ? ' dim' : '')}><Ico k={k} /><span className="tps-l">{LBL[k]}</span>
     <input type="range" min="0" max="1" step="0.05" value={v} onChange={e => set(k, +e.target.value)} style={{ '--v': v * 100 + '%' }} aria-label={LBL[k]} />
@@ -55,6 +56,7 @@ export function SettingsPanel({ value = {}, onChange, onClose, onTutorial }) {
         <p className="tps-sample" style={{ fontSize: 20 * (value.textScale ?? 1) + 'px' }}>“The wind smells of rain and warm bread.”</p>
         {has('minimap') && <Toggle k="minimap" v={value.minimap} set={set} />}
         {has('reduceMotion') && <Toggle k="reduceMotion" v={value.reduceMotion} set={set} />}
+        <Toggle k="camFollow" v={value.camFollow !== false} set={set} />{/* on unless switched off: the camera eases round behind her when you leave it alone */}
         {onTutorial && <div className="tps-row"><Ico k="note" /><span className="tps-l">Grandma's welcome note</span><button className="tpx-btn tps-note" onClick={onTutorial}>Read again</button></div>}
       </div>
       <div className="tps-foot"><button className="tpx-btn go" onClick={onClose}>Done</button></div>

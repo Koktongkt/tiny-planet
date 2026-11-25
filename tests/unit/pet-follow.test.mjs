@@ -61,8 +61,15 @@ test('a short stop goes straight back to following', () => {
 })
 
 test('sitting: looks at her, stands only when she goes out of view', () => {
-  const F = newFollow(), o = run(F, 4, () => false); F.mode = 'sit'; F.settle = null
-  o.her.x = 0.1 // a small step aside: he just looks
-  const out = stepFollow(F, o.her, o.pet, DT)
+  // stepFollow picks a settle and a side with Math.random. Running a random settle first
+  // left him at a yaw where a 0.1 step was sometimes out of view, so mode became 'turn'.
+  // Place him facing her and pass a seeded rng so the probe never calls Math.random.
+  const rnd = seeded(1)
+  const F = newFollow()
+  F.mode = 'sit'; F.settle = null; F.t = 0; F.dur = 8
+  F.herAt = { x: 0, z: 1.2 }
+  const her = { x: 0.1, z: 1.2, yaw: 0, speed: 0 } // a small step aside: he just looks
+  const pet = { x: 0, z: 0, yaw: 0 } // already looking along +z, toward her
+  const out = stepFollow(F, her, pet, DT, rnd)
   assert.equal(F.mode, 'sit'); assert.ok(out.look !== null)
 })

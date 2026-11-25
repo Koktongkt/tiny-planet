@@ -49,13 +49,36 @@ test('crafts at the bench', async ({ page }) => {
   w.check()
 })
 
+// sleep() returns immediately when an idle walk already holds A.doing, and the day only advances
+// once that call actually begins. Clear the idle lock in the same turn, then wait for the day
+// (skipTime, early) and for the fade to finish (busy) as two states. The fade itself is a few
+// wall-clock timeouts; a stalled SwiftShader frame delays them, so the busy wait stays at 60 s.
+async function sleepToDay(page, day) {
+  await page.waitForFunction(() => !!(window.__homeAct && window.__home && window.__home.inside), null, { timeout: 60_000 })
+  const started = await page.evaluate(() => {
+    const H = window.__home, A = window.__homeAct.A
+    if (H.cancelIdle) H.cancelIdle()
+    if (A && A.doing === 'walk') { A.walk = null; A.doing = null; H.hp.target = null }
+    window.__game.G.s.taken['smoke-spot'] = 0
+    window.__homeAct.sleep()
+    return { busy: H.busy, doing: A && A.doing }
+  })
+  expect(started.doing, `sleep() did not start (busy ${started.busy})`).toBe('sleep')
+  try {
+    await page.waitForFunction((day) => window.__game.G.s.day === day, day, { timeout: 45_000 })
+  } catch (e) {
+    const snap = await page.evaluate(() => ({ day: window.__game?.G?.s?.day, busy: window.__home?.busy, doing: window.__homeAct?.A?.doing, fade: window.__home?.fade, a: window.__rot?.a }))
+    throw new Error(`sleep did not reach day ${day}: ${JSON.stringify(snap)}\n${e.message}`)
+  }
+  await page.waitForFunction(() => !window.__home.busy, null, { timeout: 60_000 })
+}
+
 test('sleep advances the day and the day survives a reload', async ({ page }) => {
   test.setTimeout(720_000) // three boots + two sleeps; CI runners are ~3x slower than a dev box
   const w = watchErrors(page); await boot(page, '?enter&reset')
   await boot(page, '?enter') // clean save from here; no ?reset on the reload below
   expect(await page.evaluate(() => window.__game.G.s.day)).toBe(0)
-  await page.evaluate(() => { window.__game.G.s.taken['smoke-spot'] = 0; window.__homeAct.sleep() })
-  await page.waitForFunction(() => window.__game.G.s.day === 1 && !window.__home.busy, null, { timeout: 60_000 })
+  await sleepToDay(page, 1)
   const a0 = await page.evaluate(() => window.__rot.a)
   await page.waitForTimeout(1200) // debounced save
   await page.reload(); await page.waitForFunction(() => window.__loadMarks?.game && !document.getElementById('ld') && window.__game?.L, null, { timeout: 200_000, polling: 500 })
@@ -65,8 +88,7 @@ test('sleep advances the day and the day survives a reload', async ({ page }) =>
   expect(Math.abs(s.a - a0)).toBeLessThan(0.3) // time of day carried over (not reset to the start phase)
   expect(s.taken).toBe(0) // yesterday's pick: available again today
   // a second sleep moves on to day 2 (it used to stall after a reload)
-  await page.evaluate(() => window.__homeAct.sleep())
-  await page.waitForFunction(() => window.__game.G.s.day === 2 && !window.__home.busy, null, { timeout: 60_000 })
+  await sleepToDay(page, 2)
   w.check()
 })
 
@@ -117,9 +139,30 @@ test('faces the direction of travel (outdoors and indoors)', async ({ page }) =>
     expect(r.med, keys.join('+') + ' median deg').toBeLessThan(25); expect(r.p90, keys.join('+') + ' p90 deg').toBeLessThan(45)
   }
   await boot(page)
+  // Indoors, W/S are camera-relative. From the default spot that walks her into the round table,
+  // and the samples are then a slide along the furniture (~90 degrees off the way she is facing).
+  // Stand where the next half-metre of that walk is open floor, already facing the way the key will take her.
   for (const keys of [['w'], ['s']]) {
-    await startFacingSampler(page); await holdFrames(page, keys, 40, 90_000)
-    const r = await facingStats(page); if (r.n > 3) expect(r.med, 'indoor ' + keys).toBeLessThan(25)
+    const placed = await page.evaluate((key) => {
+      const H = window.__home
+      if (H.cancelIdle) H.cancelIdle()
+      if (H.pose && H.pose.idle) H.pose = null
+      const cam = H.camYaw || Math.PI, dir = key === 's' ? cam + Math.PI : cam
+      const dx = Math.sin(dir), dz = Math.cos(dir)
+      let spot = null
+      for (let x = -1.15; x <= 1.15 && !spot; x += 0.12) for (let z = -1.15; z <= 1.25 && !spot; z += 0.12) {
+        let ok = H.freeAt(x, z, 0.12)
+        for (let t = 0.08; ok && t <= 0.55; t += 0.08) ok = H.freeAt(x + dx * t, z + dz * t, 0.12)
+        if (ok) spot = { x, z }
+      }
+      if (!spot) return null
+      H.hp.x = spot.x; H.hp.z = spot.z; H.hp.yaw = dir; H.hp.target = null
+      return spot
+    }, keys[0])
+    expect(placed, 'open floor for indoor ' + keys.join('+')).not.toBeNull()
+    await startFacingSampler(page); await holdFrames(page, keys, 16, 90_000)
+    const r = await facingStats(page); expect(r.n, 'indoor ' + keys).toBeGreaterThan(3)
+    expect(r.med, 'indoor ' + keys.join('+') + ' median deg').toBeLessThan(25)
   }
   w.check()
 })

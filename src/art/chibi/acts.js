@@ -69,7 +69,7 @@ export function herAct(a, B, mix, st, t, w) {
   const at = st.actT || 0, dur = st.actDur || 1, k = Math.min(1, at / dur)
   st.actMood = null
   if (a === 'water' || (a === 'cast' && st.actItem === 'rod') || (a === 'reel' && (st.actItem === 'caught' || st.actItem === 'slipped'))) return true // fishing.js poses these
-  if (a === 'pick') { const g = GATHER[gestureOf(st.actItem)] || GATHER.pluck; st.actMood = g(B, mix, w, k, at); return true }
+  if (a === 'pick') { const g = GATHER[gestureOf(st.actItem, st.life?.P?.gestures)] || GATHER.pluck; st.actMood = g(B, mix, w, k, at); return true }
   if (a === 'pet' && st.actItem === 'dog') { // Pip: crouch, both hands ruffling his head, fast and happy
     const r = Math.sin(at * 13), e = sst(0, 0.2, k); crouch(B, mix, w, 0.85)
     arm(B, mix, 'R', -1.2 + 0.18 * r, 0.05, -0.4 + 0.15 * r); arm(B, mix, 'L', -1.2 - 0.18 * r, 0.05, -0.4 - 0.15 * r)

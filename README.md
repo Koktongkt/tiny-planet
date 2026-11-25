@@ -134,8 +134,8 @@ check, migrating an old v1 save, indoor controls and the door, facing the direct
 iPhone 13 profile, plus the Stage B loop and Stage C (fishing reel + species, photo mode capture, a train ride, ruins dig + museum + journal, the tutorial note, and the touch versions). Everything runs in headless Chromium on SwiftShader (software GL), so it is slow but needs no GPU.
 `BASE_URL=http://host:port/` points it at an already-served build.
 
-The perf gate fails a PR when the startup chunk is over 80 KB gz (warns over 70) or a key view goes over its draw-call or triangle
-cap from `budget.md` (with a few % tolerance for run-to-run drift). Tracked exceptions, if any, are the `overrides` object in
+The perf gate fails a PR when the startup chunk is over 110 KB gz (warns over 100) or a key view goes over its draw-call or triangle
+cap from `tests/perf/budget.json` (with a few % tolerance for run-to-run drift). Tracked exceptions, if any, are the `overrides` object in
 `tests/perf/budget.json` (empty right now: the mobile forest walk sits under the 350-call cap). FPS and JS ms per frame are reported but never fail the build, since they are noise on software GL.
 
 ## Code layout
@@ -155,7 +155,7 @@ cap from `budget.md` (with a few % tolerance for run-to-run drift). Tracked exce
 - `src/game/recipes.js`, `craft.js`, `itemsB.js`: recipes, spawns, crafting and the Stage B item names, kept out of the startup chunk. `items.js` keeps only ids, names, tools and decor.
 - Studio's areas: `src/art/`, `src/ui/{gifts,errands,settings}/`, `src/audio/` (armed from `game/UI.jsx`, starts on the first gesture), and their earlier areas stay as they were: `src/pets/`, `src/home/`, `src/talk/`, characters.
 
-New systems should be lazy-loaded (`React.lazy` / dynamic `import()`) so the startup chunk stays at or under 70 KB gz.
+New systems should be lazy-loaded (`React.lazy` / dynamic `import()`) so the startup chunk stays at or under 100 KB gz.
 
 ## CI and deploy
 

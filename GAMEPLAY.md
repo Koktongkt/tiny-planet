@@ -3,7 +3,8 @@
 ## Controls
 | Action | Keyboard | Touch |
 |---|---|---|
-| Walk | WASD / arrow keys | Tap the ground |
+| Walk | WASD / arrow keys move her up, left, down and right on screen (she turns to face the way she walks); Shift runs; click the ground | Stick (screen-relative), or tap the ground |
+| Camera | Drag with the mouse (either button) to orbit and tilt; the wheel zooms (it starts wide). Leave it alone about 2 s while she walks and it eases round behind her (not when she walks toward you; Settings: Camera follows her). Holding the same keys keeps her path straight while it swings | Drag one finger to orbit and tilt; pinch to zoom |
 | Ride (once you own the bicycle) | R | Menu, then Ride. Menu, then Hop off, to stop |
 | Jump | Space | Jump button |
 | Gather / interact | E | Tap the prompt, or tap a prop (you walk to it and gather) |
@@ -15,7 +16,7 @@
 | Door (go in / out) | E at the door | ✋ Action, or tap the prompt |
 | Pet Mochi (cat) | E near him, indoors | ✋ Action |
 | Throw a stick for Pip (dog) | E near him, outdoors | ✋ Action |
-| Walk indoors | WASD / arrows (same as outside) | Stick (screen-relative), or tap the floor |
+| Walk indoors | Same as outside. The camera orbits about ±40° round the front of the room; zoom out to see the whole room | Same as outside |
 
 ## Gatherables
 | Zone | Items |
@@ -133,7 +134,7 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
 - **The interior** is a real room at the planet's centre (`src/home/Room.jsx`). While she is inside:
   - The camera renders only layer 5, which holds the room, her and the lights. The outside world costs nothing and can't show through.
   - The interior camera stays inside the walls. It eases after her and leans toward Mochi when he's close.
-- **The door:** press E at the blue door (inside) or at the Home house's front door (outside). A warm iris closes, she crosses over, and the follow camera lands behind her.
+- **The door:** press E at the blue door (inside) or at the Home house's front door (outside). A warm iris closes and she crosses over. Stepping out, the camera lands in front of her, looking at her with the door behind her.
 - **She lives there** (`src/home/homeLife.js`, wired in `Activities.jsx`):
   - Pressing E at an activity makes her walk the last steps to it and turn to face it before she starts. Any key cancels the walk.
   - She glances at Mochi when he's close and up to something, at the window by day, and at the stove fire in the evening.

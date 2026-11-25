@@ -10,8 +10,10 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, TRAVELLER, CEL_U, cel, mkOutline } from '../../GhibliPerson.jsx'
 import { buildSatchel } from './satchel.js'
 import { herAct } from './acts.js'
+import { HER_MOTION } from './motion.js'
 import { fishPhase, fishPose, fishPost, makeFishing } from './fishing.js'
 import { waterPhase, waterPose, waterPost, makeWatering } from './watering.js'
+import { makePuffs } from './puffs.js'
 import { makeLife, lifeStep, lifePost, HAIR_OFF, EXCITED_ACTS } from './life.js'
 import { approach } from './lifeCore.js'
 import { T, q } from '../../common.jsx'
@@ -341,13 +343,19 @@ const TAIL_GEO = (() => { const sh = new THREE.Shape(), w0 = 0.0105, w1 = 0.013,
 // fishing (anim pass 5): rod in her right hand, line + bobber in world space (added to the scene while she exists)
 let FISH = null
 const fishKit = () => FISH || (FISH = makeFishing(vcMat(), mkOutline(false)), typeof window !== 'undefined' && (window.__herFishKit = FISH), FISH)
-let WATER = null
+let WATER = null, PUFFS = null
+const puffs = () => PUFFS || (PUFFS = makePuffs())
+const _fw = new THREE.Vector3(), _fq = new THREE.Quaternion(), _fs = new THREE.Vector3()
+// skid dust at the front heel while she slides (world units scale with her)
+function dustPost(L, dt) { const D = puffs(), B = L.B
+  if (L.dust) { L.dustT = (L.dustT || 0) - dt; if (L.dustT <= 0) { L.dustT = 0.045; B.ftL.getWorldPosition(_fw); B.root.getWorldScale(_fs); D.emit(_fw, 2, 0.012 * _fs.y) } }
+  B.root.parent.getWorldQuaternion(_fq); D.step(dt, _fq) }
 const waterKit = () => WATER || (WATER = makeWatering(vcMat(), mkOutline(false)))
 function HandR() { return <><primitive object={fishKit().rod} /><primitive object={waterKit().can} /></> }
 function FishWorld() { const scene = useThree(s => s.scene)
-  React.useEffect(() => { const f = fishKit(), w = waterKit(); scene.add(f.line, f.bob, w.drops); return () => { scene.remove(f.line, f.bob, w.drops) } }, [scene]); return null }
+  React.useEffect(() => { const f = fishKit(), w = waterKit(); scene.add(f.line, f.bob, w.drops, puffs().mesh); return () => { scene.remove(f.line, f.bob, w.drops, puffs().mesh) } }, [scene]); return null }
 const LIFE_OFF = q.has('still') && !q.has('life')
-export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
+export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler', motion: HER_MOTION, // how she behaves: src/art/chibi/motion.js
   // pass 3: proportions from the concept front view (head : torso : legs ~ 42 : 36 : 22): a slightly smaller head over a
   // taller soft barrel torso, thick straight trouser legs, chunky round boots, short arms hanging close to the body
   // pass 4 arms (measured on the concept front): longer soft forearm ~70% of the puff-sleeve width, rounder mitten hands,
@@ -364,12 +372,12 @@ export const CHIBI = { ...TRAVELLER, name: 'chibi-her', age: 'toddler',
   // anim pass 2 (KT: too bouncy): a low rounded bob instead of a hop, weight carried in the hips and shoulders (more sway
   // and twist), a softer footfall squash, a slightly longer stride
   walk: { rate: 11, stride: 0.6, knee: 0.8, bounce: 0.011, smooth: true, land: 0.35, arm: 0.72, lean: 0.06, twist: 0.15, sway: 0.095, idle: 'contra' },
-  ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife()); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
+  ext: { life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, CHIBI.motion)); st.life = L; L.B = B; L.R = R_; if (typeof window !== 'undefined') window.__herLife = L
     const P = window.__herProf, t0 = P ? performance.now() : 0
     if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera)
     L.F = fishPhase(st); fishPose(L.F, B, st, dt, t, L); waterPose(waterPhase(st), B, st, dt, t, L)
     if (P) { P.ms += performance.now() - t0; P.n++ } }, // window.__herProf = { ms: 0, n: 0 }: CPU time of the life layer (perf runs)
-  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t); const L = st.life; if (L && L.B) { fishPost(fishKit(), L.B, L.F, L, t, dt, L.B.root.parent); waterPost(waterKit(), L.B, L, dt, L.B.root.parent) } }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
+  post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t); const L = st.life; if (L && L.B) { fishPost(fishKit(), L.B, L.F, L, t, dt, L.B.root.parent); waterPost(waterKit(), L.B, L, dt, L.B.root.parent); dustPost(L, dt) } }, // ?still in the studio: no life layer (matched before/after stills); add &life to keep it
     act: herAct, HandR, Face: ChibiFace, Hair: ChibiHair, sleeveGeo: SLEEVE_GEO, cuffGeo: CUFF_GEO, tailGeo: TAIL_GEO, tails: [-0.3, 0.24], tailX: 0.3, knot: [0, -0.023, 0.014, 1.6], ring: [1.22, 1.2, 1.2], bag: [-0.02, -0.024, 0.043, 1.3], strap: [0.82, 0.1, -0.02, 0.6, 0, 0.012, 2.4], strapC: '#8a4e2c', Bag: ChibiSatchel } }
 // on the bike the big chibi head would dwarf the frame: she eases down to RIDE_S while riding (the ride pose works in her
 // local space, so the seat, the pedal IK and the bars still line up at any scale)
