@@ -54,86 +54,23 @@ const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush:
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
 const EAR = { x: 0.0560, y: -0.0215, z: 0.003 }
-// pass 19: sculpted locks (no painted lines). A thin cap hugs the skull above a high hairline; over it, separate
-// flattened rounded lock strands run from the hairline (a centre parting in front, above the ears at the sides, the
-// nape behind) up and round into the bun. Neighbouring locks overlap, so the ink hull draws a real line wherever one
-// lock lies over another, the way the sheet's locks are drawn, and it holds from every angle.
-const BUN_C = [0, 0.071, -0.022], BUN_R = 0.0255
-const H_CAP = [[0, 0.012, -0.015], [0.0480, 0.0520, 0.0580]]
-const HAIR_Z0 = -0.006
-// distance from the head axis (x = 0, z = HAIR_Z0) to the top of skull-or-cap along azimuth az (0 = front) at height y
-function shellR(az, y) {
-  const dx = Math.sin(az), dz = Math.cos(az)
-  const inEll = (c, r, p) => ((p[0] - c[0]) / r[0]) ** 2 + ((p[1] - c[1]) / r[1]) ** 2 + ((p[2] - c[2]) / r[2]) ** 2 < 1
-  const inside = (m) => { const p = [dx * m, y, HAIR_Z0 + dz * m]; return inEll([0, 0, 0], FUKU_HR, p) || inEll(...H_CAP, p) || inEll(BUN_C, [BUN_R, BUN_R * 0.9, BUN_R], p) }
-  let lo = 0, hi = 0.12; for (let n = 0; n < 24; n++) { const m = (lo + hi) / 2; if (inside(m)) lo = m; else hi = m }
-  return lo
-}
-const shellP = (az, y, off = 0) => { const r = shellR(az, y) + off; return new THREE.Vector3(Math.sin(az) * r, y, HAIR_Z0 + Math.cos(az) * r) }
-// hairline height round the head: high round arch in front, just above the ears at the sides, the nape behind
-const hairlineY = (az) => { const a = Math.abs(az), t = a / (Math.PI / 2)
-  return a <= Math.PI / 2 ? 0.037 - 0.043 * Math.pow(t, 1.15) : -0.006 - 0.029 * Math.pow(t - 1, 0.9) }
-// one lock: from (az0, hairline) to (az1, y1) near the bun, w0 wide at the start, t0 proud of the shell
-function lockGeo(az0, az1, y1, w0, t0, bow = 0) {
-  const NS = 24, NR = 14, pos = [], idx = [], edge = []
-  const y0 = hairlineY(az0) + 0.002
-  for (let i = 0; i <= NS; i++) {
-    // rise first, sweep round later: the lock leaves the hairline heading up, so its width lies along the hairline
-    const t = i / NS, ea = Math.pow(t, 1.7), ey = 1 - Math.pow(1 - t, 1.7)
-    const az = az0 + (az1 - az0) * ea + bow * Math.sin(Math.PI * t), y = y0 + (y1 - y0) * ey
-    const c = shellP(az, y, 0.0004)
-    const ta = shellP(az + 0.01, y).sub(shellP(az - 0.01, y)), ty = shellP(az, y + 0.001).sub(shellP(az, y - 0.001))
-    const n = new THREE.Vector3().crossVectors(ta, ty).normalize()
-    if (n.dot(c.clone().sub(new THREE.Vector3(0, 0.004, HAIR_Z0))) < 0) n.negate()
-    // along-path direction, then the across-lock axis on the surface
-    const t2 = Math.min(1, t + 0.02), az2 = az0 + (az1 - az0) * Math.pow(t2, 1.7) + bow * Math.sin(Math.PI * t2), y2 = y0 + (y1 - y0) * (1 - Math.pow(1 - t2, 1.7))
-    const dir = shellP(az2, y2).sub(c).normalize(), bi = new THREE.Vector3().crossVectors(n, dir).normalize()
-    const tip = Math.sqrt(1 - (1 - Math.min(1, t / 0.07)) ** 2), tail = 1 - 0.5 * t // blunt rounded tip at the hairline
-    const w = w0 * tip * tail, th = t0 * (0.35 + 0.65 * tip) * (1 - 0.4 * t)
-    for (let j = 0; j < NR; j++) { const ph = (j / NR) * Math.PI * 2
-      // edge value for the hair shader's built-in lock line: ~0.5 along the lock's two side edges and round its tip
-      edge.push(Math.max(Math.abs(Math.cos(ph)) ** 1.6, i === 0 ? 1 : 0, i === 1 ? 0.8 : 0))
-      pos.push(c.x + bi.x * w * Math.cos(ph) + n.x * th * Math.sin(ph), c.y + bi.y * w * Math.cos(ph) + n.y * th * Math.sin(ph), c.z + bi.z * w * Math.cos(ph) + n.z * th * Math.sin(ph)) }
-  }
-  for (let i = 0; i < NS; i++) for (let j = 0; j < NR; j++) { const a = i * NR + j, b = i * NR + (j + 1) % NR, c = a + NR, d = b + NR; idx.push(a, b, d, a, d, c) }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals()
-  g.userData.edge = edge; return g
-}
-// after part(): write the lock edges into aSkin (0 = plain hair, ~0.3 shaded, 0.47-0.5 the ink line)
-const lockLines = (g, edge) => { const a = g.attributes.aSkin; for (let i = 0; i < a.count; i++) a.setX(i, 0.495 * edge[i]); return g }
+// pass 20 (KT: start simple): one ball wrapping the head, its front edge the hairline across the forehead, and one
+// bun ball slightly behind the top of the head. No locks or painted lines yet.
+const BUN_C = [0, 0.066, -0.030], BUN_R = 0.026
+const H_CAP = [[0, 0.006, -0.0135], [0.0505, 0.0590, 0.0615]]
 function fukuHair() {
-  const ball = new THREE.SphereGeometry(1, 28, 20), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 24)
-  const locks = []
-  // per side d: front locks from the parting sweep out and back; side locks from above the ears; back locks from the
-  // nape. [start azimuth, end azimuth, end height, width, thickness, bow]
-  const L = [
-    [0.12, 1.05, 0.050, 0.0165, 0.0072, 0.30], [0.52, 1.50, 0.048, 0.0170, 0.0074, 0.28], [0.92, 1.95, 0.047, 0.0170, 0.0074, 0.26],
-    [1.32, 2.30, 0.048, 0.0165, 0.0074, 0.22], [1.72, 2.65, 0.050, 0.0165, 0.0072, 0.20],
-    [2.12, 2.85, 0.052, 0.0170, 0.0072, 0.18], [2.55, 3.02, 0.054, 0.0170, 0.0070, 0.14], [2.98, 3.12, 0.056, 0.0150, 0.0066, 0.0],
-  ]
-  for (const d of [-1, 1]) for (const [a0, a1, y1, w, t, bow] of L) locks.push(lockGeo(d * a0, d * a1, y1, w, t, d * bow))
-  // the bun: a ball wrapped by two locks spiralling in, and a wrap ring at its base
-  const bunLock = (start, sz) => { const g = new THREE.TorusGeometry(1, 0.34, 10, 32, Math.PI * 1.5); g.rotateZ(start); g.scale(sz, sz, sz * 0.55); g.rotateX(-Math.PI / 2 + 0.35); g.translate(BUN_C[0], BUN_C[1] + 0.004, BUN_C[2] + 0.002); return g }
+  const ball = new THREE.SphereGeometry(1, 32, 24), ballS = new THREE.SphereGeometry(1, 14, 10)
   const parts = [
     part(ball, ...H_CAP),
-    part(ball, [0, -0.014, -0.022], [0.046, 0.036, 0.040]),
-    part(ball, BUN_C, [BUN_R, BUN_R * 0.9, BUN_R]),
-    part(ring, [0, BUN_C[1] - BUN_R * 0.78, BUN_C[2]], [BUN_R * 0.78, BUN_R * 0.78, BUN_R * 0.55], [Math.PI / 2 - 0.15, 0, 0]),
-    part(bunLock(0.6, BUN_R * 0.66), [0, 0, 0], [1, 1, 1]),
-    ...locks.map(g => lockLines(part(g, [0, 0, 0], [1, 1, 1]), g.userData.edge)),
+    part(ball, BUN_C, [BUN_R, BUN_R, BUN_R]),
     // ears as on the sheet: a big C, widest at the top and tucked in toward the jaw at the bottom (top tilted out),
     // with a darker hollow on the front face
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0074, 0.0130, 0.0102], [0, d * 0.7, -d * 0.26], 1)),
     ...[-1, 1].map(d => part(ballS, [d * (EAR.x + 0.0036), EAR.y + 0.0010, EAR.z + 0.0030], [0.0032, 0.0086, 0.0058], [0, d * 0.7, -d * 0.26], 2)),
   ]
-  const nL = locks.length
   tagAW(parts[0], () => [3, 0.1])
-  tagAW(parts[1], () => [3, 0])
-  tagAW(parts[2], (x, y) => [2, sm(0.05, 0.10, y)])
-  tagAW(parts[3], () => [2, 0.4]); parts[3].attributes.aSkin.array.fill(0.49) // inked wrap at the bun's base
-  tagAW(parts[4], () => [2, 0.6])
-  for (let k = 5; k < 5 + nL; k++) tagAW(parts[k], (x, y) => [3, 0.15 * sm(0, 0.06, y)])
-  for (let k = 5 + nL; k < parts.length; k++) tagAW(parts[k], () => [3, 0])
+  tagAW(parts[1], (x, y) => [2, sm(0.04, 0.09, y)])
+  for (let k = 2; k < parts.length; k++) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()

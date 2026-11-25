@@ -141,6 +141,10 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Hairline `hairlineY(az)`: a high round arch in front (0.037), just above the ears at the sides, the nape behind. The dome is now only a few mm proud of the skull: much thinner from the front, as on the sheet. Bun a round ball (`BUN_R 0.0255`) with a spiral wrap.
   - Tried: geometry-only overlaps relying on the ink hull (it draws only the silhouette, so the locks merged into one smooth cap); wider, thicker locks (the dome read as a helmet again).
 
+**Grandma Fuku, pass 20** (KT: start simple, one ball wrapping the head round the forehead, another ball slightly behind the head): [`ref/fuku-pass20-compare.jpg`](ref/fuku-pass20-compare.jpg).
+  - Hair is now only two balls: a cap `H_CAP [[0, 0.006, -0.0135], [0.0505, 0.059, 0.0615]]` whose front edge is the hairline across the forehead and which covers the back down to the nape, and a bun `BUN_C [0, 0.066, -0.030]`, `BUN_R 0.026`, slightly behind the top. The pass 19 locks and the nape volume are removed. Detail (locks, parting, bun wrap) to be added on this base step by step.
+  - Tried: cap moved back and down to cover the nape (`[0, 0.004, -0.018]`) bared the top of the forehead; the final values split the difference.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
