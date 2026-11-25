@@ -41,15 +41,19 @@ export const ZONE_COLLIDERS = [
   ...RUIN_COLS.map(c => ({ n: c.n, r: 0.13 / R })), ...CAMPHORS.map(c => ({ n: c.n, r: 0.16 * c.s / R })), ...HARBOUR_HOUSES.map(n => ({ n, r: 0.42 / R })), ...MILL_FIELD.map(n => ({ n, r: 0.3 / R })),
 ]
 // zone ground colours (applied in Ground vertex colours)
+const cForestA = C('#5f9c4a') // look A: the forest floor, warmer
 const cRock = C('#a8a294'), cPaddy = C('#a6dcc0'), cRiser = C('#8fb86a'), cForest = C('#4f8f52'), cMeadow = C('#c4e08a'), cSand = C('#e6d4a6'), cRuin = C('#9fb08a'), cBed = C('#7fb8b0')
 export function zoneColour(n, col) {
-  let a = angTo(n, 'forest'); if (a < ZONES.forest.r + 0.05) col.lerp(cForest, 0.55 * Math.min(1, (ZONES.forest.r + 0.05 - a) / 0.08))
+  let a = angTo(n, 'forest'); if (a < ZONES.forest.r + 0.05) col.lerp(OLD_WORLD ? cForest : cForestA, 0.55 * Math.min(1, (ZONES.forest.r + 0.05 - a) / 0.08))
   a = angTo(n, 'meadow'); if (a < ZONES.meadow.r) col.lerp(cMeadow, 0.35 * (1 - a / ZONES.meadow.r))
-  for (const k of ['lake', 'harbour']) { a = angTo(n, k); const r = ZONES[k].r; if (a < r * 1.3) col.lerp(a < r * 1.02 ? cBed : cSand, a < r * 1.02 ? 0.8 : Math.min(1, (r * 1.3 - a) / (r * 0.2)) * 0.85) }
+  // look A: grass runs right up to the carved banks, so the sandy ring round the lake and bay is legacy-only
+  for (const k of ['lake', 'harbour']) { a = angTo(n, k); const r = ZONES[k].r; if (a < r * 1.3) { if (a < r * 1.02) col.lerp(cBed, 0.8); else if (OLD_WORLD) col.lerp(cSand, Math.min(1, (r * 1.3 - a) / (r * 0.2)) * 0.85) } }
   a = angTo(n, 'terraces'); if (a < ZONES.terraces.r) { const f = (1.05 * Math.max(0, 1 - a / ZONES.terraces.r)) / 0.15; col.copy((f - Math.floor(f)) > 0.8 ? cRiser : cPaddy).lerp(CC('#c8e8a0'), 0.25 * Math.sin(n.x * 90) ** 2) }
   a = angTo(n, 'ruins'); if (a < ZONES.ruins.r) col.lerp(cRuin, 0.4)
   if (Math.abs(railOff(n)) < 0.16 / R && !onTrestle(Math.atan2(n.x, n.z))) col.lerp(CC('#b9a58a'), 0.8) // the ballast (none under the trestle)
 }
+// rock: the cliff's steep faces (they keep flat facets and the rock colour)
+export const rockAt = (n, nrm) => angTo(n, 'cliff') < ZONES.cliff.r + 0.05 && nrm.dot(n) < 0.86
 export const rockify = (n, nrm, col) => { if (angTo(n, 'cliff') < ZONES.cliff.r + 0.05) { const d = nrm.dot(n); if (d < 0.86) col.copy(cRock).multiplyScalar(0.85 + 0.25 * Math.sin(n.y * 300)) } }
 
 // ---------- distance culling ----------

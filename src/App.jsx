@@ -34,7 +34,7 @@ let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
 import { railDir, TRESTLE } from './world/railway.js'
-import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, HARBOUR_SPINS, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
+import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, rockAt, HARBOUR_HOUSES, HARBOUR_SPINS, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, setViewMode, subscribeView, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
@@ -43,6 +43,8 @@ import { paceFrame, stampActive } from './framePace.js'
 import { butterflyAngle, butterflyFrame } from './butterflies.js'
 import { VILLAGE, MILLS, HOUSES, LAMPS, SPAWN, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs, STAIR } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
+import { buildGround, grassColour } from './world/groundGeo.js'
+import { SHORE_FINE } from './world/shoreSetting.js'
 import { region } from './world/regions.js'
 import { YARD, CHIMNEY_TOP, yardColliders } from './home/yard.js'
 const HomeExteriorLazy = lazy(() => import('./home/Exterior.jsx')) // her chibi cottage + yard + crop garden (one baked mesh)
@@ -86,7 +88,28 @@ function wornAt(v) {
   return w
 }
 const _wv = new THREE.Vector3(), _wv2 = new THREE.Vector3()
-function Ground() {
+// look A (2026-11-25 spec): one welded mesh, smooth on grass and faceted on rock, warm greens from her yard, shaded with
+// the props' warm ramp (same bytes as RAMP in props/kit.js, copied so kit.js stays out of the startup chunk)
+const WARM_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([196, 150, 140, 255, 236, 212, 196, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t })()
+function groundPaint() {
+  const sand = C('#d9bf86'), bank = C('#6aa95a'), worn = C('#c7cf86'), soil = C('#c08552'), bed = C('#4e7f7a')
+  return (v, tmp) => {
+    grassColour(v, tmp)
+    const sn = streamNear(v), gap = sn.d - sn.half
+    if (gap < 0.3) { if (gap < 0) tmp.copy(bed); else if (gap < 0.07) tmp.lerp(soil, 0.85); else tmp.lerp(bank, 0.5 * (1 - (gap - 0.07) / 0.23)) }
+    const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.8 * (1 - dp / (0.05 * K)))
+    if (dp < 0.1 * K && dp >= 0.05 * K) tmp.lerp(worn, 0.35 * (1 - (dp - 0.05 * K) / (0.05 * K)) * (0.6 + 0.4 * Math.sin(v.x * 90 + v.z * 70)))
+    { const wd = wornAt(v); if (wd > 0) tmp.lerp(wd > 0.55 ? sand : worn, Math.min(0.75, wd)) }
+    zoneColour(v, tmp)
+  }
+}
+function Ground() { return OLD_WORLD ? <LegacyGround /> : <ShapedGround /> }
+function ShapedGround() {
+  const geo = useMemo(() => buildGround({ fine: SHORE_FINE, paint: groundPaint(), isRock: rockAt, rockPaint: rockify }), [])
+  const mat = useMemo(() => inkRim(paint(new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: WARM_RAMP }), 0.06, true, 1.6)), [])
+  return <mesh geometry={geo} material={mat} />
+}
+function LegacyGround() {
   const geo = useMemo(() => {
     const g = new THREE.IcosahedronGeometry(R, 64); const p = g.attributes.position, v = new THREE.Vector3(), cols = []
     const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#d9bf86'), bank = C('#5f9a5e'), worn = C('#c7cf86'), mud = C('#8f7d5c'), bed = C('#4e7f7a'), tmp = new THREE.Color()
