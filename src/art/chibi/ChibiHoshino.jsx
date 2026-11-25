@@ -18,53 +18,81 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f0c7a4'
 const HAIR_C = '#4e3a2c'
-const HAIR_GREY = '#8a847c'
+const HAIR_GREY = '#8c8379'
 const HAIR_BAND = '#7a5a44'
 const GLASS = '#2e2420'
 const JACKET = '#c09a66'
 const VEST = '#4e5238'
 const SHIRT = '#f4eee6'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, blush: 0.55 })
+// thin gold wire specs, larger than the eyes (golden sheet); arms meet the low ears
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ear: [0.0555, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55 })
 
-// skull HR is ~[0.058, 0.050, 0.055]; short cap ~10–15% wider than the face, ears out
-const EAR = { x: 0.061, y: -0.012, z: 0.006 }
+// skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
+// face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
+// the fringe rolls from his right to left. Ears sit low (eye-to-mouth line), tucked under the cloud.
+const EAR = { x: 0.0565, y: -0.021, z: 0.002 }
+const DOME = { c: [0, 0.009, -0.011], r: [0.0605, 0.0505, 0.0605] }
+const _m = new THREE.Matrix4(), _n = new THREE.Vector3(), _t = new THREE.Vector3(), _b = new THREE.Vector3()
+// one wave lock on the dome: az 0 = front (+z), +pi/2 = +x; el up from the equator. len along the
+// wave direction, wid across it, thk out from the head; roll turns the wave toward the crown.
+function lock(geo, az, el, push, [len, wid, thk], roll = 0, skin = 0) {
+  const [cx, cy, cz] = DOME.c, [rx, ry, rz] = DOME.r
+  const dx = Math.sin(az) * Math.cos(el), dy = Math.sin(el), dz = Math.cos(az) * Math.cos(el)
+  const pos = [cx + dx * rx * push, cy + dy * ry * push, cz + dz * rz * push]
+  _n.set(dx / rx, dy / ry, dz / rz).normalize()
+  _t.set(Math.cos(az), 0, -Math.sin(az)); _t.addScaledVector(_n, -_n.dot(_t)).normalize()
+  _b.crossVectors(_t, _n).normalize() // right-handed [t, n, b] keeps the winding
+  const t = _t.clone().multiplyScalar(Math.cos(roll)).addScaledVector(_b, Math.sin(roll))
+  const b = _b.clone().multiplyScalar(Math.cos(roll)).addScaledVector(_t, -Math.sin(roll))
+  const g = part(geo, [0, 0, 0], [1, 1, 1], [0, 0, 0], skin)
+  _m.makeBasis(t.multiplyScalar(len), _n.clone().multiplyScalar(thk), b.multiplyScalar(wid)).setPosition(...pos)
+  g.applyMatrix4(_m); return g
+}
 function hoshinoHair() {
-  const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 12, 9)
-  // small under-cap (not the silhouette). 4 chunky locks roll up and right from a left part,
-  // spilling past the head on the top-right and sides. Forehead stays open; no hook, no cloud.
+  const ball = new THREE.SphereGeometry(1, 18, 14), ballS = new THREE.SphereGeometry(1, 12, 9)
+  const L = (az, el, push, sz, roll) => lock(ballS, az, el, push, sz, roll)
   const parts = [
-    // under-cap covers the scalp; locks hug it as elongated waves, spilling out to the sides
-    part(ball, [0.003, 0.008, -0.006], [0.058, 0.047, 0.054]),
-    part(ball, [0, -0.006, -0.028], [0.046, 0.030, 0.034]),
-    // 1. left of the part: low chunky lock, swept back, hugging
-    part(ballS, [-0.032, 0.028, 0.010], [0.018, 0.015, 0.024], [0.40, -0.55, -0.10]),
-    // 2. from the part, an elongated wave rolling over the crown toward the right (ridge, not a bun)
-    part(ballS, [0.008, 0.046, 0.006], [0.036, 0.012, 0.026], [0.58, 0.40, 0.08]),
-    // 3. top-right spill, more to the side than up
-    part(ballS, [0.048, 0.044, 0.008], [0.022, 0.013, 0.020], [0.40, 0.68, 0.08]),
-    // 4. right-side lock, past the temple
-    part(ballS, [0.060, 0.026, 0.006], [0.016, 0.020, 0.018], [0.25, 0.70, 0.08]),
-    // front hairline waves (above the brows, not a hanging hook)
-    part(ballS, [0.012, 0.032, 0.046], [0.026, 0.011, 0.010], [0.20, 0.30, 0.04]),
-    part(ballS, [-0.016, 0.030, 0.042], [0.016, 0.010, 0.010], [0.16, -0.30, -0.03]),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0062, 0.0115, 0.0070], [0, d * 0.7, d * 0.08], 1)),
+    // the cloud body: crown, sides and the whole back of the head
+    part(ball, DOME.c, DOME.r),
+    // nape fill so no scalp shows from behind (ends above the collar)
+    part(ball, [0, -0.014, -0.028], [0.048, 0.028, 0.032]),
+    // crown waves (rolling toward his left, +x), hugging the dome
+    ...[-0.30, 0.60, 1.55, 2.60, 3.70, 4.85].map((az, k) => L(az, 0.98 + 0.06 * (k % 2), 0.97, [0.022, 0.017, 0.009], 0.5)),
+    // silhouette ring: side and back waves give the scalloped cloud outline
+    ...[1.00, 1.55, 2.10, 2.65, 3.20, 3.75, 4.30, 4.85, 5.30].map((az, k) =>
+      L(az, 0.40 + 0.06 * Math.sin(k * 2.1), 0.985, [0.022, 0.018, 0.010], 0.65)),
+    // lower ring: side puffs over the ear tops, then the back down to the nape
+    // (over the ears they ride higher so the whole ear shows below, as on the sheet)
+    ...[[1.22, 0.10], [1.66, 0.02], [2.15, -0.10], [2.70, -0.14], [3.25, -0.10], [3.80, -0.14], [4.35, -0.08], [4.65, 0.02], [5.06, 0.10]].map(([az, el]) =>
+      L(az, el, 0.97, [0.020, 0.016, 0.009], 0.75)),
+    L(2.55, -0.50, 0.93, [0.022, 0.014, 0.009], 0.3), L(3.15, -0.55, 0.93, [0.022, 0.014, 0.009], 0.2), L(3.75, -0.50, 0.93, [0.022, 0.014, 0.009], -0.3),
+    // fringe: one big wave rising off the forehead and sweeping back toward his left (open forehead),
+    // with a smaller curl dipping on his right (viewer's left)
+    L(-0.15, 0.80, 1.02, [0.026, 0.020, 0.012], 1.05),
+    L(0.30, 0.74, 1.0, [0.022, 0.016, 0.010], 0.75),
+    L(-0.45, 0.46, 1.0, [0.018, 0.014, 0.010], 0.25),
+    L(0.62, 0.50, 1.0, [0.019, 0.014, 0.009], 0.40),
+    L(-0.80, 0.18, 0.99, [0.017, 0.015, 0.009], 0.9),
+    L(0.86, 0.16, 0.99, [0.017, 0.015, 0.009], 1.0),
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0068, 0.0125, 0.0074], [0, d * 0.7, d * 0.08], 1)),
   ]
+  const n = parts.length
   tagAW(parts[0], () => [3, 0])
   tagAW(parts[1], () => [3, 0])
-  for (const k of [2, 3, 4, 5, 6, 7]) tagAW(parts[k], () => [2, 0.6])
-  for (const k of [8, 9]) tagAW(parts[k], () => [3, 0])
+  for (let k = 2; k < n - 2; k++) tagAW(parts[k], (x, y) => [2, 0.35 + 0.35 * sm(-0.01, 0.06, y)])
+  for (const k of [n - 2, n - 1]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 function hoshinoGrey() {
-  const ballS = new THREE.SphereGeometry(1, 10, 8)
-  // soft grey streak in the right temple lock, blended, not a hard patch
-  const parts = [
-    part(ballS, [0.050, 0.032, 0.006], [0.015, 0.018, 0.016], [0.28, 0.55, 0.08]),
-    part(ballS, [0.048, 0.018, 0.002], [0.012, 0.014, 0.013], [0.16, 0.40, 0.06]),
-  ]
-  tagAW(parts[0], () => [1, 0.5])
-  tagAW(parts[1], () => [1, 0.4])
+  const ballS = new THREE.SphereGeometry(1, 12, 9)
+  // soft grey at both temples and over the ears (lower front of the side cloud), blended, not a patch
+  const parts = []
+  for (const d of [-1, 1]) {
+    parts.push(lock(ballS, d * 1.02, -0.26, 1.0, [0.013, 0.012, 0.008], d * 1.2))
+    parts.push(lock(ballS, d * 1.20, -0.08, 1.01, [0.015, 0.012, 0.008], d * 0.9))
+  }
+  for (const g of parts) tagAW(g, () => [2, 0.4])
   return mergeHair(parts)
 }
 const HAIR_GEO = hoshinoHair()
