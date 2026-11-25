@@ -252,3 +252,13 @@ Before/after: [`ref/ishi-pass2-face-compare.jpg`](ref/ishi-pass2-face-compare.jp
 - **Face pieces** rebuilt as chains of overlapping lumps along a curve so the outlines are smooth: brows are thick crescents set high and wide (x 0.0175-0.044), the outer end drooping; the mustache is two full lobes (11 lumps each) from under the nose out to small flicked tips; the nose is a wider ball with a fine outline. Ears are bigger, lower (nose height) and further back, with an inner lump whose fine ink reads as the fold. The top knot moved back a little.
 - Cost: still 13 calls in the face close-up; tris ~43k -> ~57k (similar to her face close-up).
 - Not changed: the body's ink hull is thicker under the jaw than the sheet's thin outline (shared by every character).
+
+### Ishi pass 3 (KT: follow the mustache closely; the ears are wrong)
+
+Before/after: [`ref/ishi-pass3-compare.jpg`](ref/ishi-pass3-compare.jpg).
+
+- **Mustache**: traced off the sheet (`MUS_R` in `ChibiIshi.jsx`, head frame): one bell-shaped piece whose top edge hugs the sides of the nose and slopes down to pointed outer tips, a feathery underside of strand points and a V notch in the middle. Each half is a closed puff of rings shrinking from the outline to a centre, domed up to 0.0088 under the nose (the sheet's side view: it stands out nearly as far as the nose), thinner toward the tips. A flat extrude did not work: its few big cap triangles let the rounded face poke through.
+- **White hair shading**: the shared hair shader shaded everything with a warm brown, so the white mustache's underside came out peach and looked like skin showing through. `makeHairMat(..., shade)` takes an optional shadow tint (default unchanged); Ishi uses a light cool grey `[0.80, 0.80, 0.85]`, as on the sheet.
+- **Ears**: a flat C lying against the side of the head at nose height, set well back (`EAR` y -0.025, z -0.008), standing 0.0068 off the head and turned forward 0.62 so the bowl shows from the front: a flat disc, a thick rim curling round the back and top (opening toward the face), a small inner curl, and a darker warm bowl. The bowl uses a new hair-shader skin shade: `aSkin` 0.5-0.9 is a darker skin (1 stays plain skin, so Fuku's and Hoshino's ears are unchanged).
+- Face pieces are now placed on the real baked surface (`sdf` from `GhibliPerson.jsx` is exported for this); it matches the head SDF on the face, so nothing moved.
+- Cost: face close-up 13 calls / ~53k tris.

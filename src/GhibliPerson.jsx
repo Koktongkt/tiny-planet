@@ -299,7 +299,7 @@ function legD(S, p, k) {
   if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
   return smin(l, f, 0.012)
 }
-function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
+export function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
   let d = sdf(S, p)
   if (!S.b.bald) d = Math.min(d, ell(p, S.headC.clone().add(V3(0, 0.015, -0.02)), S.headR.clone().multiplyScalar(1.09))) // the hair helmet shades the scalp; bald: true (opt-in) leaves the scalp lit
