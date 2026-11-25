@@ -15,9 +15,9 @@ Three looks were rendered side by side in the engine next to her real cottage pr
 
 ## Goals
 
-1. The ground reads soft and rounded: no visible triangle facets anywhere on the planet.
+1. The ground reads soft and rounded: no visible triangle facets on grass (cliff and peak rock keep theirs this round).
 2. Ground colour uses a warm palette matched to her yard (see Palette), shaded with the props' warm toon ramp (`RAMP` in `src/props/kit.js`).
-3. Every shoreline (both river banks, the lake, the waterfall's plunge pool, the harbour bay, the whole sea coast) gets the A treatment: rounded grass lip, soil band, foam beads, ink lines.
+3. Every shoreline (both river banks, the lake, the waterfall's plunge pool, the harbour bay, the sea coast) gets the A treatment: rounded grass lip, soil band, foam beads, ink lines. The sea coast has a few sandy coves instead (see Sea coast).
 4. All water (river, lake, plunge pool, harbour, sea) shares one look: shallow-to-deep gradient, ripple rings on still water, flow marks on the river, lily pads on the lake. Day, dusk and night variants keep working.
 5. It stays inside the project's perf budget on `main` (`tests/perf/budget.json`: phone 1.0M triangles and 350 draw calls walking; desktop 1.3M / 500) and adds only a handful of draw calls.
 6. A single switch drops the finer bank terrain and keeps everything else (see Approaches), so the partner can fall back if phones suffer.
@@ -59,7 +59,7 @@ Three looks were rendered side by side in the engine next to her real cottage pr
 - **Palette** (from her yard; the spike's values are the starting point):
   - sunny grass `#b8dc62`, grass `#82c34a`, cool shade grass `#5aa26a`;
   - soil `#d08f55` to soil shadow `#a8673a`;
-  - wet sand at shallow edges `#e9d9b0` (sea coast only);
+  - wet sand `#e9d9b0` (the sea coves);
   - ink `PAL.ink` (`#4a3a35`-family, as the props use).
 - **Painting.** Colour comes from height and a slow noise: tops lean sunny, hollows lean cool, with soft patches. Existing colour rules for the path, worn ground and zones (`zoneColour`, `wornAt`, path sand) keep working on top.
 - **Material.** The props' warm toon ramp (`RAMP`) with vertex colours, keeping the ground's existing ink-rim shader so silhouettes stay outlined.
@@ -80,6 +80,20 @@ Built once from the shoreline contours of river (both sides), lake, plunge pool,
 - **Foam beads:** puffy, slightly flattened white beads of varying size along the waterline, ink outlined. All beads in one or a few merged or instanced meshes. Beads near her may be finer; distant beads simpler or culled.
 - **Ink waterline:** a thin ink line where water meets bank, under the foam.
 - Bridges, piers, the dock, stepping stones and the waterfall foot must not be buried in or float above the new pieces.
+
+### Sea coast (partner's call: C)
+
+- Most of the sea coast gets the same cake bank as inland water: grass lip, soil band, foam beads, ink waterline.
+- **A few small sandy coves** (about three to five, builder places them) break the bank where she can walk down into the wadeable shallows: wet sand `#e9d9b0` sloping into turquoise shallows, foam beads along the water's edge, no soil band. Good spots are near where she already reaches the coast (the harbour side, below the meadow, below the forest), clear of the railway.
+- The harbour keeps its quay and piers; where the bay meets them there is no grass lip.
+
+### Calls made by the writer (check while reading)
+
+- **Where the bank rim sits:** on the *visible* waterline (where the drawn ground meets the water level), not on the gameplay `waterAt` line. The carved drop below the rim stays shallow, so her feet don't look like they float when she wades the sea shelf, and the lake and harbour margins don't change.
+- **Things that stand on the ground do not follow the carved surface.** The lip stays low (about 0.03 high) and narrow, and sits at the water's edge, outside the ground she walks on. Nothing is re-placed onto a new visual height; a little sinking right at the lip is accepted.
+- **`SHORE_FINE` is a runtime setting:** on by default, `?shore=coarse` turns it off. The ground and shore kit are built for whichever is active. The perf script can take that URL parameter so both are measured. A later "desktop only" choice would set the default from the device.
+- **Cliff and peak rock keep their current faceted look** this round. Smooth shading is masked out where `rockify` paints rock, because their strata redesign is a later round.
+- **Zone colours are retuned** to sit on the new warm grass, keeping each zone's character, so every area matches the yard palette.
 
 ### Water (all bodies)
 
