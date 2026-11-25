@@ -72,7 +72,7 @@ test('BRIDGES[0] is the village crossing, and the bridge-footings dig site is be
   assert.ok(angle(BRIDGES[0].c, v) < region('village').r + 0.05, 'first bridge by the village')
   for (const b of BRIDGES) assert.ok(angle(b.c, v) >= angle(BRIDGES[0].c, v), 'sorted by distance to the village')
   const f = DIG_SITE_POS(4)
-  assert.ok(angle(f, v) < region('village').r, 'footings inside the village')
+  assert.ok(angle(f, v) < region('village').r + 0.08, 'footings at the village (its far bank: the near bank is the square)')
   assert.ok(angle(f, BRIDGES[0].c) * R < BRIDGES[0].L / 2 + 0.8, 'next to the first bridge')
   assert.equal(waterAt(f, -0.2), false, 'on dry ground')
   assert.ok(angle(DIG_SITE_POS(2), dir(0, 0)) >= 0, 'other sites resolve')

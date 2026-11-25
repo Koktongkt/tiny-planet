@@ -12,7 +12,7 @@ import { HOME } from '../home/state.js'
 import { YARD, DOG_BOWL, yardGate } from '../home/yard.js'
 import { onHouse } from '../world/village.js'
 import { GEO, cel, OUT } from '../home/kit.jsx'
-import { R, height, ZONES, LAKE_W, HARB_W, around, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, BRIDGES, JUMPS, BL, streamHalf, streamDir, streamAcross, streamSides } from '../world.js'
+import { R, height, ZONES, LAKE_W, HARB_W, around, zoneAng, pathDir, distToCurve, streamNear, onBridgeDeck, bridgeLift, BRIDGES, JUMPS, BL, streamHalf, streamDir, streamAcross, streamSides, waterAt } from '../world.js'
 import { TALK } from '../talk/state.js'
 import { T, q } from '../common.jsx'
 import { G, add, toast } from '../game/store.js'
@@ -131,7 +131,7 @@ export function Dog() {
   if (!D.init && HOME.outN && HOME.P) { D.init = true
     if (HOME.inside) { D.n.copy(HOME.outN); go('wait', 999) } else { D.n.copy(HOME.P.n).addScaledVector(HOME.P.fwd, -0.5 / R).normalize() }
     tan(D.n, HOME.homeN.clone().sub(D.n), D.f)
-    if (FORCE === 'splash') { const P = HOME.P, L = ZONES.lake, lc = new THREE.Vector3(L.x, L.y, L.z); P.n.copy(around(lc, L.r * 1.18, 2.2)); tan(P.n, lc.clone().sub(P.n), P.fwd) }
+    if (FORCE === 'splash') { const P = HOME.P, L = ZONES.lake, lc = new THREE.Vector3(L.x, L.y, L.z); let b = 2.2; while (waterAt(around(lc, L.r * 1.18, b)) && b < 8.4) b += 0.3; P.n.copy(around(lc, L.r * 1.18, b)) /* first dry bank from today's bearing (new world: 2.2 is the river inlet) */; tan(P.n, lc.clone().sub(P.n), P.fwd) }
     if (FORCE) { const P = HOME.P; D.n.copy(P.n).addScaledVector(P.fwd, 0.55 / R).addScaledVector(_s.crossVectors(P.n, P.fwd), 0.2 / R).normalize(); tan(D.n, P.n.clone().sub(D.n), D.f)
       if (DOGCAM) { P.n.copy(D.n).addScaledVector(D.f, -0.9 / R).normalize(); tan(P.n, D.n.clone().sub(P.n), P.fwd) }
       if (FORCE === 'fetch') { throwStick(); D.n.copy(P.n).addScaledVector(P.fwd, 0.25 / R).normalize() } else if (FORCE !== 'follow') go(FORCE, 999, { forced: true }); if (FORCE === 'wait') { D.n.copy(HOME.outN); tan(D.n, HOME.homeN.clone().sub(D.n), D.f) } }

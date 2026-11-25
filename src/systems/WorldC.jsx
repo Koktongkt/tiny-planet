@@ -1,10 +1,12 @@
-// Stage C 3D side (lazy chunk, mounted by systems/World3D.jsx): proximity prompts for the two train stations, the ruins
-// dig spots and the museum door, plus photo-mode capture (one frame read right after the composer renders it).
+// Stage C 3D side (lazy chunk, mounted by systems/World3D.jsx): proximity prompts for the two train stations, the
+// keeper-site dig spots and the museum door, plus photo-mode capture (one frame read right after the composer renders it).
 // Studio's art (stations, carriage, museum, rain, seasons) mounts here as its own lazy chunks once it lands.
 import * as THREE from 'three'
 import React, { useEffect, useReducer, lazy, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { R, height, around } from '../world.js'
+import { R, height, around, DIG_SITE_POS, MUSEUM_DOOR } from '../world.js'
+import { DIG_SITES } from '../world/regions.js'
+import { OLD_WORLD } from '../world/flag.js'
 import { G, setPanel, subscribe } from '../game/store.js'
 import { TRAIN_STOPS } from '../world/village.js'
 import { SC, PH, RIDE } from './liveC.js'
@@ -14,8 +16,11 @@ const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n
 export function layoutStageC(GAME) {
   const ruins = GAME.Zc && GAME.Zc.ruins
   const stations = TRAIN_STOPS.map(s => { const n = SC.platformN(s.id); return { id: s.id, n, pos: posOf(n) } })
-  const digs = ruins ? [0.3, 1.5, 2.7, 3.9, 5.1].map((b, i) => { const n = around(ruins, (0.5 + (i % 2) * 0.18) / R, b); return { i, n, pos: posOf(n) } }) : []
-  const museum = ruins ? (() => { const n = around(ruins, 1.05 / R, 0.9); return { n, pos: posOf(n) } })() : null
+  // reworked planet: one dig spot per keeper site (world/regions.js DIG_SITES order) and the museum door on its region,
+  // facing the path; ?world=old keeps the five stones and the door round the ruins
+  const at = (n, i) => ({ ...(i === undefined ? {} : { i }), n, pos: posOf(n) })
+  const digs = !OLD_WORLD ? DIG_SITES.map((s, i) => at(DIG_SITE_POS(i), i)) : ruins ? [0.3, 1.5, 2.7, 3.9, 5.1].map((b, i) => at(around(ruins, (0.5 + (i % 2) * 0.18) / R, b), i)) : []
+  const museum = !OLD_WORLD ? at(MUSEUM_DOOR) : ruins ? at(around(ruins, 1.05 / R, 0.9)) : null
   return { stations, digs, museum }
 }
 let LC = null, hooked = false

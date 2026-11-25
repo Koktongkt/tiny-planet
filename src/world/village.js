@@ -1,7 +1,7 @@
 // Village layout: the square, mills, houses and the little set-piece spots around the first bridge.
 // Pure data (positions on the unit sphere); every consumer imports from here.
 import * as THREE from 'three'
-import { R, place, BRIDGES, waterAt, onBridge, dir, around, zv } from '../world.js'
+import { R, place, BRIDGES, waterAt, onBridge, dir, around, zv, DIG_SITE_POS, MUSEUM_DOOR } from '../world.js'
 import { OLD_WORLD } from './flag.js'
 import * as LEGACY from './legacy.js'
 import { region, HOME_DIR, TRAIN_STOP_LONS } from './regions.js'
@@ -72,7 +72,8 @@ export const HAMLET = OLD_WORLD ? dir(0.6, 2.45) : HOUSES[5].clone().add(HOUSES[
 // TRAIN.fn(t) -> lon (set by the lazy schedule, systems/train.js); TRAIN.cars = the engine + carriage groups (zones.jsx Train)
 export const TRAIN_STOPS = W.TRAIN_STOPS
 export const TRAIN = { fn: null, cars: null }
-export const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c)]
+export const EXTRA_BUSY = [SPOTS.shrine, SPOTS.bus, SPOTS.cat, SPOTS.laundryA, SPOTS.laundryB, SPOTS.view1, SPOTS.view2, ...BRIDGES.map(b => b.c),
+  ...(OLD_WORLD ? [] : [...[0, 1, 2, 3, 4, 5].map(DIG_SITE_POS), MUSEUM_DOOR])] // (new: scatter keeps off the dig sites and the museum door)
 // Stage B garden beds beside Home (HOUSES[0]): 2 x 3 beds in the fenced garden left of the house, in the house frame
 // (+x right, +z out of the door). Shared by the lazy garden (systems/World3D.jsx) and the lawn, which keeps tufts out
 // from under the beds.

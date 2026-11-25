@@ -91,13 +91,14 @@ export function mixFor(L, Z) {
   const night = Z.night, day = 1 - night, inside = L.inside ? 1 : 0, orbit = L.mode === 'orbit' ? 1 : 0, out = (1 - inside) * (1 - orbit)
   const rain = Z.rain || 0, dry = 1 - 0.85 * rain // Stage C: birds shelter and crickets hush while it rains
   return {
-    wind: (orbit ? 0.75 : inside ? 0.22 : 0.32 + 0.55 * Z.hill + 0.12 * Z.lake) * (1 + 0.25 * rain),
-    windTone: orbit ? 0.9 : Z.hill,
-    birds: dry * day * (inside ? 0.35 : out) * (0.25 + 0.75 * Math.max(Z.forest, 0.55 * Z.village, 0.6 * Z.meadow)),
+    // (peak / sea: the reworked planet's summit and shore, reusing the wind, birds and lake-lap layers; 0 when absent)
+    wind: (orbit ? 0.75 : inside ? 0.22 : 0.32 + 0.55 * Math.max(Z.hill, Z.peak || 0) + 0.12 * Math.max(Z.lake, Z.sea || 0)) * (1 + 0.25 * rain),
+    windTone: orbit ? 0.9 : Math.max(Z.hill, Z.peak || 0),
+    birds: dry * day * (inside ? 0.35 : out) * (0.25 + 0.75 * Math.max(Z.forest, 0.55 * Z.village, 0.6 * Z.meadow, 0.7 * (Z.peak || 0))),
     coo: Z.meadow > 0.4 || Z.village > 0.4,
     insects: (1 - 0.7 * rain) * night * (inside ? 0.4 : out) * (0.55 + 0.45 * Math.max(Z.meadow, Z.forest, 0.6)),
     rain: rain * (orbit ? 0.35 : inside ? 0.5 : 1), roof: rain * inside,
-    river: out * Z.river, bubbles: out * Z.river * 0.9, lake: out * Z.lake,
+    river: out * Z.river, bubbles: out * Z.river * 0.9, lake: out * Math.max(Z.lake, Z.sea || 0),
     muffle: inside ? 0.12 : 1,
     // Stage C train: proximity (orbit = distant toy, indoors = faint), speed 0..1, riding = she's aboard (closer, louder)
     train: (Z.riding ? 1 : (Z.train || 0)) * (orbit ? 0.3 : inside ? 0.25 : 1), trainSpeed: Z.trainSpeed || 0, riding: Z.riding ? 1 : 0,

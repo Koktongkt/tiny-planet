@@ -28,9 +28,9 @@ test('museum sits on the lake shore', () => {
   const d = dist(by.museum, by.lake)
   assert.ok(d >= by.lake.r && d <= by.lake.r + 0.1, String(d))
 })
-test('six dig sites, each inside its region', () => {
+test('six dig sites, each inside its region (the drowned ruins and the lighthouse headland: at its edge)', () => {
   assert.equal(DIG_SITES.length, 6)
-  DIG_SITES.forEach((s, i) => { assert.equal(s.i, i); assert.ok(dist(s, by[s.region]) < by[s.region].r, `site ${i}`) })
+  DIG_SITES.forEach((s, i) => { assert.equal(s.i, i); assert.ok(dist(s, by[s.region]) < by[s.region].r + (i === 2 || i === 3 ? 0.05 : 0), `site ${i}`) })
 })
 test('region() returns the Z shape', () => {
   const z = region('lake')

@@ -27,6 +27,9 @@ const ABOVE = [0.75, 0.35, 0.6, 0.2, 0.8, 0.45, 0.3], TILT = [0, 0.1, 0, 0.25, 0
 export const RUIN_COLS = ABOVE.map((above, k) => { const n = around(RC, 0.55 / R, k * 0.9 + 0.3), base = height(n); return { n, base, above, h: LAKE_W - base + above, tilt: TILT[k] } })
 export const RUIN_ARCH = (() => { const n = around(RC, 0.15 / R, 2.4), base = height(n); return { n, fwd: toward(n, RC), base, depth: LAKE_W - base } })()
 export const RUIN_SLABS = (() => { const a = []; for (let i = 0; i < 60 && a.length < 18; i++) { const n = around(RC, Math.sqrt(rnd()) * 0.8 / R, rnd() * 6.283); if (height(n) > LAKE_W - 0.08 || RUIN_COLS.some(c => c.n.angleTo(n) * R < 0.2)) continue; a.push({ n, top: LAKE_W + 0.01 + rnd() * 0.025, spin: rnd() * 6, s: 0.8 + rnd() * 0.6 }) } return a })()
+// the ruins visitor (npc/routines.js; new world): the ruins are drowned, so they watch them from the dry west shore,
+// beside the lake ruins dig site (world/regions.js DIG_SITES[2])
+export const RUIN_WATCH = { stand: around(RC, 0.13, 3.6), day: around(RC, 0.135, 3.85) }
 
 // ---- the Harbour: a bay straddling the coast, open to the sea in the south; the railway eases round its head ----
 const HC = zv(ZONES.harbour), HR = ZONES.harbour.r
@@ -38,13 +41,14 @@ export const BOATS = [0, 1, 2].map(k => { const n = around(HC, HR * (0.7 - k * 0
 export const CRATES = [0, 1, 2, 3, 4].map(k => around(PIERS[0].root, (0.3 + 0.1 * (k % 2)) / R, -0.9 - k * 0.2)) // stacked on the shore beside the long pier's root (south of it)
 
 // harbour folk (npc/routines.js): the angler at the long pier's root looking out over the bay (pierEnd -> sea), a seat
-// a step inland, pacers on the east quay by the cargo, along the west shore and by the fishers' houses. pace: n +- range
+// a step inland, pacers on the east quay by the cargo, along the west shore (west of its houses, clear of the lighthouse
+// dig site) and by the fishers' houses. pace: n +- range
 // (world units) along tan.
 const tanAt = (n, b) => { const e1 = new THREE.Vector3(0, 1, 0).cross(n).normalize(), e2 = new THREE.Vector3().crossVectors(n, e1); return e1.multiplyScalar(Math.cos(b)).addScaledVector(e2, Math.sin(b)) }
 export const HARBOUR_FOLK = (() => { const P = PIERS[0], step = (n, d, dist) => n.clone().addScaledVector(d, dist / R).normalize()
   const pace = (la, lo, b, range) => { const n = dir(la, lo); return { n, tan: tanAt(n, b), range } }
   return { pierEnd: step(P.root, P.fwd, -0.1), pierSeat: dir(-0.74, 1.885), sea: step(P.root, P.fwd, 1.2),
-    quay: pace(-0.745, 1.86, Math.PI / 2, 0.3), west: pace(-0.75, 1.34, Math.PI / 2, 0.3), east: pace(-0.715, 2.015, 0, 0.35) } })()
+    quay: pace(-0.745, 1.86, Math.PI / 2, 0.3), west: pace(-0.77, 1.15, Math.PI / 2, 0.3), east: pace(-0.715, 2.015, 0, 0.35) } })()
 
 // ---- the waterfall: where the river drops off the cliff's downhill face (its lip just past the mesa rim) into the
 // plunge pool at the cliff foot ----

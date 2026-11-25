@@ -344,10 +344,16 @@ for (const b of BRIDGES) { let lo = 0, hi = 0; const _n = new THREE.Vector3()
   while (lo > -2 && wet(lo - 0.02)) lo -= 0.02; while (hi < 2 && wet(hi + 0.02)) hi += 0.02
   const mid = (lo + hi) / 2; b.c = b.c.clone().addScaledVector(b.tan, mid / R).normalize(); b.side.crossVectors(b.c, b.tan).normalize(); b.tan.crossVectors(b.side, b.c).normalize(); b.L = Math.max(0.8, hi - lo + 0.34) }
 // dig sites (world/regions.js DIG_SITES order) as unit vectors. Site 4, the footings of BRIDGES[0], is placed here (the
-// registry is pure data and only holds a placeholder): on the bank at the deck's village end, beside the path.
-const FOOTINGS = (() => { const b = BRIDGES[0], e = b.c.clone().addScaledVector(b.tan, (b.L / 2 + 0.3) / R), w = b.c.clone().addScaledVector(b.tan, -(b.L / 2 + 0.3) / R)
-  return (e.distanceTo(VILL) < w.distanceTo(VILL) ? e : w).addScaledVector(b.side, 0.35 / R).normalize() })()
+// registry is pure data and only holds a placeholder): on the far bank at the deck's end, beside the path. (The
+// village-end bank is the square itself: its bench, chat spots and lamps leave no room for a dig prompt.)
+const FOOTINGS = (() => { const b = BRIDGES[0], e = b.c.clone().addScaledVector(b.tan, (b.L / 2 + 0.2) / R), w = b.c.clone().addScaledVector(b.tan, -(b.L / 2 + 0.2) / R)
+  return (e.distanceTo(VILL) > w.distanceTo(VILL) ? e : w).addScaledVector(b.side, 0.5 / R).normalize() })()
 export const DIG_SITE_POS = (i) => i === 4 ? FOOTINGS.clone() : dir(DIG_SITES[i].lat, DIG_SITES[i].lon)
+// the museum door (systems/WorldC.jsx prompt, zones.jsx keeper arch): on the museum region, 0.8 r from its centre on the
+// side facing the path. null under ?world=old (the door stays beside the old ruins).
+export const MUSEUM_DOOR = OLD_WORLD ? null : (() => { const m = region('museum'), c = dir(m.lat, m.lon); let p = null, best = 9
+  for (let i = 0; i < 4000; i++) { const q = pathDir(i / 4000 * Math.PI * 2), d = q.angleTo(c); if (d < best) { best = d; p = q } }
+  const t = p.clone().addScaledVector(c, -c.dot(p)).normalize(); return c.multiplyScalar(Math.cos(m.r * 0.8)).addScaledVector(t, Math.sin(m.r * 0.8)).normalize() })()
 if (typeof window !== 'undefined') window.__river = OLD_WORLD ? { streamNear, waterAt, BRIDGES, JUMPS, streamHalf } : { streamNear, waterAt, BRIDGES, JUMPS, streamHalf, riverNear: RIVER.riverNear, riverDir: RIVER.riverDir, riverHalf: RIVER.riverHalf, RIVER_PTS: RIVER.RIVER_PTS }
 // old-style 'centre distance' (radians) measured from the new bank: scatter rules tuned for the thin stream keep their meaning
 export const streamDist = (n) => { const r = streamNear(n); return Math.max(0, r.d - r.half + 0.17) / R }

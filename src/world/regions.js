@@ -41,16 +41,18 @@ export const SEA_W = -0.2 // sea surface (same level as HARB_W)
 export const TRAIN_LAT = -0.62 // coast railway, just above the shore (world/railway.js eases it north round the Harbour bay)
 export const TRAIN_STOP_LONS = { village: 1.25, forest: 2.60 }
 
-// Dig sites in index order (today's dig.taken[0..4] keys stay valid; 5 is new). Each lies inside its region.
+// Dig sites in index order (today's dig.taken[0..4] keys stay valid; 5 is new). Each lies inside its region, or at its
+// edge where the region itself is water: the drowned ruins and the lighthouse headland get their nearest dry ground
+// (tests/unit/world-sites.test.mjs: dry, walkable, clear of props, within r + 0.05).
 const site = (i, id, d, tLat, tLon) => { const r = byId[id]; return { i, region: id, ...toward(r.lat, r.lon, tLat, tLon, d * r.r) } }
 export const DIG_SITES = [
   site(0, 'peak', 0.6, byId.cliff.lat, byId.cliff.lon), // Peak stone circle, offset toward the cliff
   site(1, 'giant', 0.8, byId.forest.lat, byId.forest.lon), // torii footings at the giant, forest-centre side
-  site(2, 'ruins', 0.6, byId.lake.lat, byId.lake.lon), // lake ruins shore (ruins overlap the lake)
-  site(3, 'harbour', 0.7, -0.72, 1.45), // lighthouse base, lighthouse side
+  { i: 2, region: 'ruins', lat: -0.0826, lon: 0.6460 }, // lake ruins shore: the dry west bank, 0.11 rad from the ruins centre
+  { i: 3, region: 'harbour', lat: -0.7470, lon: 1.3305 }, // lighthouse base: beside the lighthouse (zoneLayout.js LIGHTHOUSE -0.775, 1.32), bay side
   // Footings of BRIDGES[0]: a placeholder inside the village (toward the lake). The real spot depends on the path and
   // river geometry, so world.js computes it: DIG_SITE_POS(4), on the village bank beside the first bridge's deck.
   site(4, 'village', 0.7, byId.lake.lat, byId.lake.lon),
-  { i: 5, region: 'museum', lat: byId.museum.lat, lon: byId.museum.lon }, // museum trench, at the centre
+  { i: 5, region: 'museum', lat: 0.0256, lon: 1.0104 }, // museum trench: behind the hall, its west side (the door faces the path, east)
 ]
 for (const r of REGIONS) { const d = DIG_SITES.find(s => s.region === r.id); if (d) r.dig = { lat: d.lat, lon: d.lon } }

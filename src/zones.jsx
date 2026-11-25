@@ -7,7 +7,7 @@ import React, { useMemo, useRef } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
-import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve, underWater } from './world.js'
+import { R, K, height, rnd, place, around, zv, ZONES, TRAIN_LAT, SEA_LAT, SEA_W, LAKE_W, HARB_W, CLIFF_H, zoneAng, streamDist, wind, windify, dir, streamDir, pathDir, distToCurve, underWater, MUSEUM_DOOR } from './world.js'
 import { INK, T, C, CC, toon, MAT, VIEW, planetRef, Instanced, paint, Surface, glow, occ } from './common.jsx'
 import { TRAIN } from './world/village.js'
 import { OLD_WORLD } from './world/flag.js'
@@ -318,6 +318,16 @@ function BayHarbour() {
 }
 const Harbour = OLD_WORLD ? OldHarbour : BayHarbour
 
+// a standing keeper arch on dry ground (the old ruins' arch; the reworked museum door reuses it in phase 1)
+function KeeperArch({ n, fwd }) {
+  return <Frame n={n} fwd={fwd}>
+    {[-1, 1].map(s => <mesh key={s} position={[s * 0.32, 0.4, 0]} material={ZM.mossy}><boxGeometry args={[0.14, 0.8, 0.14]} /><Outlines thickness={0.006} color={INK} /></mesh>)}
+    <mesh position={[0, 0.84, 0]} rotation={[0, 0, 0.04]} material={ZM.mossy}><boxGeometry args={[0.86, 0.1, 0.16]} /><Outlines thickness={0.006} color={INK} /></mesh>
+    <mesh position={[0.1, 0.9, 0]} scale={[2.5, 0.35, 1]} material={ZM.moss}><sphereGeometry args={[0.09, 10, 6]} /></mesh>
+    <mesh position={[0.55, 0.06, 0.3]} rotation={[0, 0.5, Math.PI / 2]} material={ZM.mossy}><cylinderGeometry args={[0.08, 0.085, 0.55, 10]} /><Outlines thickness={0.006} color={INK} /></mesh>
+    <mesh position={[0, 0.03, 0.0]} rotation={[0, 0.3, 0]} material={ZM.mossy}><boxGeometry args={[0.3, 0.06, 0.2]} /></mesh>
+  </Frame>
+}
 function OldRuins() {
   const c = Zc.ruins
   const slabs = useMemo(() => { const a = []; for (let i = 0; i < 40; i++) { const n = around(c, Math.sqrt(rnd()) * 0.75 / R, rnd() * 6.283); a.push({ ...place(n, 0.005, rnd() * 6), s: 0.7 + rnd() * 0.6 }) } return a }, [])
@@ -330,13 +340,7 @@ function OldRuins() {
       <mesh position={[0, col.h + 0.012, 0]} scale={[1, 0.3, 1]} material={ZM.moss}><sphereGeometry args={[0.09, 10, 6]} /></mesh>
       {col.h > 0.5 && <mesh position={[0, col.h + 0.03, 0]} material={ZM.mossy}><boxGeometry args={[0.22, 0.05, 0.22]} /></mesh>}
     </group></Surface>)}
-    <Frame n={arch} fwd={archF}>
-      {[-1, 1].map(s => <mesh key={s} position={[s * 0.32, 0.4, 0]} material={ZM.mossy}><boxGeometry args={[0.14, 0.8, 0.14]} /><Outlines thickness={0.006} color={INK} /></mesh>)}
-      <mesh position={[0, 0.84, 0]} rotation={[0, 0, 0.04]} material={ZM.mossy}><boxGeometry args={[0.86, 0.1, 0.16]} /><Outlines thickness={0.006} color={INK} /></mesh>
-      <mesh position={[0.1, 0.9, 0]} scale={[2.5, 0.35, 1]} material={ZM.moss}><sphereGeometry args={[0.09, 10, 6]} /></mesh>
-      <mesh position={[0.55, 0.06, 0.3]} rotation={[0, 0.5, Math.PI / 2]} material={ZM.mossy}><cylinderGeometry args={[0.08, 0.085, 0.55, 10]} /><Outlines thickness={0.006} color={INK} /></mesh>
-      <mesh position={[0, 0.03, 0.0]} rotation={[0, 0.3, 0]} material={ZM.mossy}><boxGeometry args={[0.3, 0.06, 0.2]} /></mesh>
-    </Frame>
+    <KeeperArch n={arch} fwd={archF} />
     <Instanced items={ivy} geo={useMemo(() => { const g = new THREE.IcosahedronGeometry(0.035, 0); g.scale(1, 1.3, 0.6); return g }, [])} mat={useMemo(() => toon('#ffffff'), [])} />
   </>
 }
@@ -364,6 +368,9 @@ function DrownedRuins() {
   </>
 }
 const Ruins = OLD_WORLD ? OldRuins : DrownedRuins
+// Hoshino's museum door (world.js MUSEUM_DOOR, on the lake shore): the keepers' arch, opening toward the path. Phase 1
+// marker only; the hall's exterior comes with the museum's own region round.
+const MuseumDoor = () => <KeeperArch n={MUSEUM_DOOR} fwd={toward(MUSEUM_DOOR, zv(ZONES.museum)).negate()} />
 
 function Camphors() {
   const { trunks, crowns } = useMemo(() => {
@@ -425,6 +432,7 @@ export function Zones() {
     {TRESTLE && <Cull n={railDir(TRESTLE.lonC)} d={16}><Trestle /></Cull>}
     <Cull n={Zc.harbour} d={16}><Harbour /></Cull>
     <Cull n={Zc.ruins} d={OLD_WORLD ? 14 : 18}><Ruins /></Cull>{/* (new: the drowned ruins read from across the lake) */}
+    {MUSEUM_DOOR && <Cull n={MUSEUM_DOOR} d={16}><MuseumDoor /></Cull>}
     <Cull n={Zc.forest} d={18}><Camphors /></Cull>
     <GiantTree />
     <Cull n={Zc.meadow} d={16}><MeadowFlowers /></Cull>
