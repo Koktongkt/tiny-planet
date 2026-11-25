@@ -35,13 +35,17 @@ const ISHI_HAIR_OFF = new Float32Array(12)
 // (skull half-width 0.054, top 0.049, chin -0.060 in the head frame), widest at the eyes, a broad round lower face
 // (still ~0.89 W across at the mustache). Template: headS 1, CHEEK [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]
 const HEAD_S = [0.965, 0.98, 1.07]
-const JAW = [0, -0.029, 0.010, 0.046, 0.032, 0.034, 0.022]
+// the jaw reaches forward and down (sheet side view: under the nose the face drops nearly straight to a full round chin)
+const JAW = [0, -0.031, 0.019, 0.046, 0.032, 0.040, 0.022]
 // a broad round crown: the sheet's dome is still 0.7 W across 15% down from the top (a stretched skull came to a point)
 const CRANIUM = [0.014, -0.004, 0.048, 0.038, 0.054, 0.012]
-const HEAD = { headS: HEAD_S, cranium: CRANIUM, cheek: JAW }
+// a full round chin under the mustache: the front stays just behind the nose base and drops nearly straight down,
+// then the underside curves back to the neck (sheet side view)
+const CHIN = [-0.049, 0.030, 0.027, 0.015, 0.021, 0.012]
+const HEAD = { headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW }
 const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.02, girth: 1.26, shoulder: 1.10, chestW: 1.14, bellyZ: 1.0, shX: 1.20, armA: 0.50,
   armR: [0.35, 0.30, 0.25], legR: 1.30, legX: 1.08, foot: 1.20, bootW: 1.20, bootH: 1.00, bootL: 1.02, hand: 0.01,
-  headS: HEAD_S, cranium: CRANIUM, cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
+  headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
   anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true }
 const TOP = Math.max(0.0499 * HEAD_S[1], CRANIUM[0] + CRANIUM[3]) // skull top in the head frame
 const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD })
@@ -123,8 +127,12 @@ function earParts(sd) {
   const pos = [sd * (surfX(EAR.y, EAR.z) + 0.0068), EAR.y, EAR.z]
   const out = []
   for (const [g, w, sk] of [[disc, 0.7, 1], [bowl, 0.0, 0.75], [rim, 0.42, 1], [curl, 0.32, 1]]) {
+    // egg-shaped, broad end up (sheet): wider at the top, narrowing to the lobe, centre of mass raised
+    const P = g.attributes.position
+    for (let i = 0; i < P.count; i++) { const y = P.getY(i), u = Math.max(-1, Math.min(1, y / ry)); P.setZ(i, P.getZ(i) * (1 + 0.24 * u)); P.setY(i, y + 0.0012 * (1 - u * u)) }
+    g.rotateZ(-0.27) // the top flares out from the head, the lobe tucks in (the sheet's ears stand up, they don't droop)
     if (sd < 0) { g.scale(-1, 1, 1); const I = g.index.array; for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t } } // left ear: mirrored
-    g.rotateX(-0.12) // the top leans back a little
+    g.rotateX(-0.10) // stands nearly upright, the top a touch back (sheet side view)
     g.rotateY(-sd * EAR_TILT)
     g.translate(...pos); g.deleteAttribute('uv'); g.computeVertexNormals()
     g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(sk), 1))
