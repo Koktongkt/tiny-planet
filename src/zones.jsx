@@ -3,7 +3,7 @@
 // The reworked planet places its props from world/zoneLayout.js and runs the train on world/railway.js's coast ring
 // (with its river trestle); ?world=old keeps the placement below verbatim.
 import * as THREE from 'three'
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, lazy, Suspense } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Outlines } from '@react-three/drei'
@@ -94,27 +94,10 @@ function LegacyWaterCap({ c, r, level, deep = '#3f9fc0', shallow = '#8fdcdc' }) 
   useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk })
   return <mesh quaternion={q} material={mat}><sphereGeometry args={[R + level - WATER_DROP, 72, 14, 0, Math.PI * 2, 0, r]} /></mesh>
 }
-// look A water: shallows to deep by distance from shore, ripple rings (src/world/waterLook.js)
-function ShapedWaterCap(props) { const L = useLook(); return L ? <ShapedWaterCapL L={L} {...props} /> : null }
-function ShapedWaterCapL({ L, c, r, level, segs = [72, 14] }) {
-  const { shoreWater, bakeShore } = L
-  const mat = useMemo(() => shoreWater({ flow: false, centre: c }), [])
-  const geo = useMemo(() => { const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().normalize())
-    const g = new THREE.SphereGeometry(R + level - WATER_DROP, segs[0], segs[1], 0, Math.PI * 2, 0, r); g.applyQuaternion(q); return bakeShore(g, (v) => v.clone().normalize()) }, [])
-  useFrame(() => { mat.uniforms.uN.value = T.night; mat.uniforms.uD.value = T.dusk })
-  return <mesh geometry={geo} material={mat} />
-}
-function WaterCap(props) { return OLD_WORLD ? <LegacyWaterCap {...props} /> : <ShapedWaterCap {...props} segs={[96, 24]} /> }
-// lily pads (look A): merged into one vertex-coloured mesh with one outline
-function LilyPads() { const L = useLook(); return L ? <LilyPadsL pads={L.LILY_PADS} /> : null }
-function LilyPadsL({ pads }) {
-  const geo = useMemo(() => { const parts = []
-    for (const p of pads) { const pl = place(p.n, 0, p.spin), m = new THREE.Matrix4().compose(p.n.clone().multiplyScalar(R + LAKE_W - WATER_DROP + 0.012), pl.q, new THREE.Vector3(1, 1, 1))
-      const pad = new THREE.CylinderGeometry(p.s, p.s, 0.018, 18, 1, false, 0.35, Math.PI * 2 - 0.5); pad.deleteAttribute('uv'); parts.push([pad.applyMatrix4(m), '#5fae3e'])
-      if (p.flower) { const f = new THREE.SphereGeometry(0.034, 10, 6); f.deleteAttribute('uv'); f.scale(1, 0.7, 1); f.translate(p.s * 0.3, 0.03, -p.s * 0.2); parts.push([f.applyMatrix4(m), '#ffb3c1']) } }
-    return mergeGeometries(parts.map(([g, h]) => { g = g.index ? g.toNonIndexed() : g; const c = new THREE.Color(h), a = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < a.length; i += 3) { a[i] = c.r; a[i + 1] = c.g; a[i + 2] = c.b } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g })) }, [])
-  return <mesh geometry={geo} material={useMemo(() => toon('#ffffff', { vertexColors: true }), [])}><Outlines thickness={0.006} color={INK} /></mesh>
-}
+// look A water and lily pads live in their own lazy chunk (src/world/WaterBits.jsx): keeps the startup chunk small
+const ShapedWaterCap = lazy(() => import('./world/WaterBits.jsx').then(m => ({ default: m.ShapedWaterCap })))
+const LilyPads = lazy(() => import('./world/WaterBits.jsx').then(m => ({ default: m.LilyPads })))
+function WaterCap(props) { return OLD_WORLD ? <LegacyWaterCap {...props} /> : <Suspense fallback={null}><ShapedWaterCap {...props} segs={[96, 24]} /></Suspense> }
 const fallMat = () => new THREE.ShaderMaterial({ transparent: true, side: THREE.DoubleSide, uniforms: { uTime: wind.time, uN: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
   fragmentShader: `varying vec2 vUv; uniform float uTime,uN; float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
@@ -174,7 +157,7 @@ function SeaL({ L }) {
 function Lake() {
   const z = ZONES.lake, c = Zc.lake
   return <>
-    <WaterCap c={c} r={z.r * 1.12} level={LAKE_W} />{!OLD_WORLD && <LilyPads />}
+    <WaterCap c={c} r={z.r * 1.12} level={LAKE_W} />{!OLD_WORLD && <Suspense fallback={null}><LilyPads /></Suspense>}
     <Dock c={c} zr={z.r} b={LAKE_DOCK_B} level={LAKE_W} />
     <Boat n={around(c, z.r * 0.62, LAKE_DOCK_B + 0.35)} fwd={around(c, z.r * 0.3, LAKE_DOCK_B + 1.2).sub(around(c, z.r * 0.62, LAKE_DOCK_B + 0.35))} level={LAKE_W} />
     {[0, 1, 2, 3, 4, 5].map(k => { const n = around(c, z.r * (1.04 + 0.04 * (k % 2)), k * 1.05 + 0.5); return <Surface key={k} n={n} spin={k}><mesh position={[0, 0.02, 0]} scale={[1, 0.5, 0.8]} material={ZM.stone}><icosahedronGeometry args={[0.09 + 0.03 * (k % 3), 0]} /><Outlines thickness={0.006} color={INK} /></mesh></Surface> })}
