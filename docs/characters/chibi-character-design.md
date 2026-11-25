@@ -70,6 +70,15 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 - Approved in-game eye and bun shots: [`ref/pass8-eye-closeup.jpg`](ref/pass8-eye-closeup.jpg), [`ref/pass9-front-compare.jpg`](ref/pass9-front-compare.jpg).
 - Cast and villager concept sheets (per-character hair, colours, age, outfit — not a licence to start them): [`ref/chibi-sheet-main-cast.jpg`](ref/chibi-sheet-main-cast.jpg) (Her, Grandma Fuku, Professor Hoshino, Grandpa Ishi) and [`ref/chibi-sheet-villagers.jpg`](ref/chibi-sheet-villagers.jpg) (Kiko, Gonta, Mr. Tanabe, Momo, Hana, Daikichi). Ishi's sheet has a stray bun glitch; do not copy it.
 
+**Grandma Fuku, pass 8** (draft, dev-only: `?view=charstudio&dev=chibi-drafts&char=fuku`): polished against her turnaround sheet. Sheet / before / after: [`ref/fuku-pass8-compare.jpg`](ref/fuku-pass8-compare.jpg).
+  - Pose: the teacup is gone; hands clasped at the waist as on the sheet, in every pose (still, idle, walk). Sleeves are chest-parented meshes (round shoulder, sleeve, elbow, forearm, cuff, two mitten hands) with their own ink hull; the tiny skinned arms are collapsed (`hideRigHands`) so no skin stub shows.
+  - Skirt: the SDF long skirt (`body.skirt 'long'`) replaces the lathe skirt and the painted leg gap. Two new optional body knobs in `spec()`: `skirtFlare` (hem radius, default 1.12 / 1.3) and `skirtTop` (waist radius, default 0.96); Fuku uses 1.34 / 0.86 (the narrower top removes the waist crease). Skirt `#88618f`, cardigan `#9a73a0`.
+  - Cardigan: a thin flared hem flap at knee height with a darker lip (open at the front under the apron); the painted cardigan line sits under it. Props sit on the real body surface via the new `coreSDF` export.
+  - Apron: waist to just above the hem, wrapped on the body surface, five scallops; bigger pincushion (three pins, as on the sheet). Cream V collar enlarged; glasses `#6e4a2e`.
+  - Hair: bigger dome, two broad waves at the parting instead of the curls, temple volume, low swept ridges, larger bun with a wrap ring, and full cover down to the nape (the back no longer shows bare skin).
+  - Cost: one merged cel mesh + one ink hull per bone (hips, chest) replaces nine prop meshes; studio draw calls 20 -> 15.
+  - Open for KT: shoulder roundness, cardigan hem height, hair wave lines (the sheet's swirl lines are not modelled), glasses rim weight (shared with Hoshino).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

@@ -268,7 +268,7 @@ export function spec(b = {}) {
   }
   S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
   S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn, 0.012 * fs * S.hn)
-  if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirt === 'long' ? 1.12 : 1.3)] }
+  if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * (b.skirtTop ?? 0.96), b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirtFlare ?? (b.skirt === 'long' ? 1.12 : 1.3))] } // skirtFlare / skirtTop: optional hem / waist radius (x belly width)
   S.hemY = S.skirt ? S.skirt[2] : S.knY
   S.top = S.headC.y + S.headR.y
   specCache.set(key, S); return S
@@ -282,6 +282,8 @@ function core(S, p) {
   if (S.mf) { const fade = S.mfFade * (p.x - S.headC.x) ** 2; for (const [c, r, k, rr] of S.mf) h = smin(h, (rr == null ? ell(p, c, r) : ocol(p, c, r, rr)) + fade, k) } // midfaceFade: recede away from the centre line (profile unchanged)
   return smin(d, h, 0.012)
 }
+// torso/skirt/head distance (no arms or legs), for props that must sit on the body surface (e.g. a hem or an apron)
+export const coreSDF = (S, x, y, z) => core(S, V3(x, y, z))
 function armD(S, p, k) {
   const sd = k === 'L' ? -1 : 1
   const a = smin(cap(p, S['sh' + k], S['el' + k], S.ar[0], S.ar[1]), cap(p, S['el' + k], S['wr' + k], S.ar[1], S.ar[2]), 0.008)
