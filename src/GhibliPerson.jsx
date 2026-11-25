@@ -253,7 +253,7 @@ export function spec(b = {}) {
   S.neck = [V3(0, S.shY + 0.005, -0.002 + 0.03 * hc), V3(0, S.shY + 0.055, 0.004 + 0.045 * hc), 0.021 * (0.9 + 0.1 * gw), 0.019]
   S.headR = V3(0.068 * hd * (b.headW ?? 1), 0.0584 * hd, 0.0648 * hd) // headW: optional head width (x only)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
-  if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
+  if (b.cheek) { const [x, y, z, rx, ry, rz, k, r] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]) } // round mochi cheeks (head-frame units); optional 8th value r: a flat-bottomed oval puck (half height ry, edge radius r) instead of an ellipsoid
   if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
@@ -278,7 +278,7 @@ function core(S, p) {
   d = smin(d, cap(p, S.neck[0], S.neck[1], S.neck[2], S.neck[3]), 0.02)
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
-  let h = ell(p, S.headC, S.headR); if (S.ck) h = smin(h, Math.min(ell(p, S.ck[0], S.ck[2]), ell(p, S.ck[1], S.ck[2])), S.ck[3])
+  let h = ell(p, S.headC, S.headR); if (S.ck) { const jaw = (c) => S.ck[4] == null ? ell(p, c, S.ck[2]) : ocol(p, c, S.ck[2], S.ck[4]); h = smin(h, Math.min(jaw(S.ck[0]), jaw(S.ck[1])), S.ck[3]) }
   if (S.mf) { const fade = S.mfFade * (p.x - S.headC.x) ** 2; for (const [c, r, k, rr] of S.mf) h = smin(h, (rr == null ? ell(p, c, r) : ocol(p, c, r, rr)) + fade, k) } // midfaceFade: recede away from the centre line (profile unchanged)
   return smin(d, h, 0.012)
 }

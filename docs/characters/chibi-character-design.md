@@ -94,6 +94,14 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Arms thicker from the side: oval sleeves (`ovalTube`): upper arm 1.22x deeper front-to-back, forearm and cuff 1.18x / 1.14x taller.
   - Hoshino and Her are unchanged (all new options default off; Hoshino's render matched to within run-to-run noise).
 
+**Grandma Fuku, pass 11** (KT feedback on pass 10): sheet / pass 10 / pass 11, body and face: [`ref/fuku-pass11-compare.jpg`](ref/fuku-pass11-compare.jpg).
+  - Jaw: full to the bottom, no visible chin, an almost straight bottom line. The cheek shape takes an optional 8th value (edge radius): the jaw is then a flat-bottomed oval puck (`ocol`, half height = ry) instead of an ellipsoid, in both the body bake (`spec` / `core`) and `headSDF`. Fuku: `FUKU_CHEEK = [0, -0.033, 0.011, 0.040, 0.013, 0.032, 0.020, 0.010]` (puck as wide as the skull, bottom at -0.056).
+  - Face narrower again: `headW` 0.92 -> 0.86; ears, glasses arms, hair cap, temples and nape follow.
+  - Features lower: new optional `makeFace({ featDy })` moves brows, eyes, nose, mouth and blush down together (shifts the decal sampling); Fuku 0.003, and her glasses apply the same offset.
+  - Ears taller: radii `[0.0066, 0.0150, 0.0074]` (were `[0.0062, 0.0115, 0.0070]`).
+  - Shoulders: a clearer slope. The sleeve shoulder is 0.024 below the rig shoulder line, with a long tapering tube from high at the neck base. The rig's own shoulder is pulled in (`shX 0.90`, `shoulder 0.90`) and its stub shrunk (`armR 0.06`, `hand 0.002`); sleeves use their own `SH_X 0.060`. A flattened cardigan yoke per side closes the gap where the body's skin paint showed through (found by tinting the body skin green).
+  - Puffy sleeves: `ovalTube(..., puff)` bulges the middle of each segment (upper arm 0.22, forearm 0.24) on top of the oval cross-sections.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
