@@ -105,7 +105,7 @@ const PAINT = `
     } else if (ty == 8) { // open jacket (Hoshino): notch lapels over a buttoned vest (uTop) and shirt collar (uAcc2),
       // cut away below the vest to show the trousers; flap pockets, two jacket buttons, back seams. Hem at uY.x.
       float J = 1. - waist, ny = uY.y - y, vb = uY.x + .034;
-      float hw = .010 + .018*clamp(ny/.04, 0., 1.) + max(0., vb - y)*.85;  // half-width of the opening
+      float hw = .010 + .018*clamp(ny/.04, 0., 1.) + max(0., vb - y)*.40;  // half-width of the opening
       float open = front * aa(hw - ax) * J;
       float vTop = uY.y - .034 + ax*1.15;                                  // vest V neckline
       vec3 inner = mix(uTop, uAcc2, aa(y - vTop));                         // shirt above the V
@@ -125,7 +125,7 @@ const PAINT = `
       torso = mix(torso, uAcc*.52, lap * max(notch, aa(.0009 - abs(d - lw)) * aa(lw - .002)));
       torso = mix(torso, uAcc*.56, front * J * aa(.0010 - abs(d)) * aa(uY.y - .002 - y));   // front edge
       // two jacket buttons on his right panel (viewer's left)
-      for (int i = 0; i < 2; i++) { float by = vb + .030 - float(i)*.024, bx = -(.010 + .018 + max(0., vb - by)*.85 + .0075);
+      for (int i = 0; i < 2; i++) { float by = vb + .030 - float(i)*.024, bx = -(.010 + .018 + max(0., vb - by)*.40 + .0075);
         float r = length(vec2(x - bx, y - by)); torso = mix(torso, uAcc*.42, front*J*aa(.0036 - r)); torso = mix(torso, uAcc*.66, front*J*aa(.0023 - r)); }
       // flap pockets on the hips
       vec2 pq = vec2((atan(ax, max(z - .008, 1e-4)) - .90)*.075, y - (uY.x + .032)); float pr = max(abs(pq.x) - .0205, abs(pq.y) - .017); // wraps the hip: seen from the side too
@@ -142,17 +142,18 @@ const PAINT = `
     // arms
     vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
-    if (ty == 8) { float sw = fwidth(vReg.x)*1.4 + 1e-4; armSeam = aa(sw - abs(vReg.x - .5)); } // inked sleeve/body seam
+    if (ty == 8) { float sw = fwidth(vReg.x)*2.2 + 1e-4; armSeam = aa(sw - abs(vReg.x - .5)); } // inked sleeve/body seam
     if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
-      float cb = aa(.0055 - abs(y - uO.w - .0040)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - uO.w - .0098))); }
+      float cy = uO.w - .0135; float cb = aa(.0050 - abs(y - cy)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - cy - .0058))); } // cuff at the flared sleeve's open end
     // legs
     vec3 legC = mix(uBottom, uSkin, uO.z * aa(uY.w - y));
     if (ty == 8) { float tu = aa(uY.z + .013 - y); legC = mix(legC, uBottom*.88, tu); legC = mix(legC, uBottom*.62, aa(.0010 - abs(y - uY.z - .013))); } // turn-ups
     vec3 c = mix(torso, legC, leg);
     c = mix(c, armC, arm);
+    if (ty == 8) hand *= aa(uO.w - .0185 - y); // flared sleeve covers the top of the hand: skin only below the cuff
     c = mix(c, uSkin, max(hand, neck * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
-    c = mix(c, uAcc*.55, armSeam * (1. - hand));
+    c = mix(c, uAcc*.48, armSeam * (1. - hand));
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
       c = mix(c, uShoe*.42, boot * aa(.0098 - y));
@@ -236,6 +237,7 @@ function bodyMat(cfg, S) {
   const hemY = o.hemY == null ? (o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist)
     : o.hemY === 'hip' ? S.hipY + 0.008
     : o.hemY === 'thigh' ? (S.hipY + S.knY) * 0.5
+    : o.hemY === 'skirt' ? S.skirt[2] + 0.0015
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
@@ -302,6 +304,8 @@ export function spec(b = {}) {
   S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
   S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn * (b.handL ?? 1), 0.012 * fs * S.hn) // handL: optional longer hand
   if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirt === 'long' ? 1.12 : 1.3)] }
+  // skirt 'jacket': a short flared jacket skirt with a flat hem; b.jacket = [hem drop below mid-thigh, flare]
+  if (b.skirt === 'jacket') { const [drop, flare] = b.jacket ?? [0, 1.06]; S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, (S.hipY + S.knY) * 0.5 - drop, S.belly[1].x * flare] }
   S.hemY = S.skirt ? S.skirt[2] : S.knY
   S.top = S.headC.y + S.headR.y
   specCache.set(key, S); return S
@@ -386,7 +390,7 @@ function bake(S, RES = 72) {
     const hipsF = THREE.MathUtils.smoothstep(p.y, S.hipY - 0.023, S.hipY + 0.025)
     let ws = wb.map(([bi, b]) => [bi, (b[0] === 'hips' ? hipsF : 1) / (Math.pow(segD(p, b[3][0], b[3][1]) / b[4], 6) + 1e-4), b[0]])
     // skirt surface follows the hips more than the legs
-    if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004) ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
+    if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004 && !(S.b.skirt === 'jacket' && Math.min(armD(S, p, 'L'), armD(S, p, 'R')) < 0.004)) /* a jacket skirt leaves the arms on the arm bones */ ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
     ws.sort((a, b) => b[1] - a[1]); ws = ws.slice(0, 4)
     const tot = ws.reduce((s, w) => s + w[1], 0); let rA = 0, rF = 0, rL = 0
     ws.forEach(([bi, w, nm], k) => { si[i * 4 + k] = bi; sw[i * 4 + k] = w / tot; if (nm.startsWith('up') || nm.startsWith('fo')) rA += w / tot; if (nm.startsWith('fo')) rF += w / tot; if (nm.startsWith('th') || nm.endsWith('n') || nm.startsWith('ft')) rL += w / tot })
