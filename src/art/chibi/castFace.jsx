@@ -38,13 +38,13 @@ function drawFaces(W, kind) {
     const arc = fuku ? (name === 'focus' ? 0.0024 : 0.0032) : (name === 'focus' ? 0.0020 : 0.0030)
     if (ishi) { // soft forehead lines above the brows and crinkles at the outer eye corners
       g.strokeStyle = 'rgba(176,112,86,0.55)'; g.lineWidth = 0.0011 * s
-      for (const [y, w, b] of [[0.0150, 0.0150, 0.0022], [0.0112, 0.0128, 0.0018], [0.0076, 0.0090, 0.0014]]) {
+      for (const [y, w, b] of [[0.0180, 0.0170, 0.0020], [0.0155, 0.0135, 0.0016]]) {
         g.beginPath(); g.moveTo(X(-w), Y(y - b)); g.quadraticCurveTo(X(-w * 0.5), Y(y + b * 0.6), X(0), Y(y)); g.quadraticCurveTo(X(w * 0.5), Y(y + b * 0.6), X(w), Y(y - b)); g.stroke() }
       g.strokeStyle = 'rgba(150,96,78,0.6)'
       for (const sd of [-1, 1]) { const ex = sd * (EYE.x + EYE.rx * 1.08), ey = EYE.y + 0.0004
         g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0006)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0030)); g.stroke()
         g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0016)); g.lineTo(X(ex + sd * 0.0044), Y(ey - 0.0010)); g.stroke() }
-      if (name === 'excited') { const my = -0.0392; g.fillStyle = '#a3403a'; g.beginPath(); el(X(0), Y(my), 0.0058 * s, 0.0032 * s, 0, Math.PI); g.fill() }
+      if (name === 'excited') { const my = -0.0462; g.fillStyle = '#a3403a'; g.beginPath(); el(X(0), Y(my), 0.0058 * s, 0.0032 * s, 0, Math.PI); g.fill() }
       g.restore(); return
     }
     g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0056) * s
@@ -128,20 +128,26 @@ const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; retu
 const ocol = (x, y, z, cx, cy, cz, rx, hy, rz, r) => { const a = (x - cx) / rx, c = (z - cz) / rz, qx = (Math.sqrt(a * a + c * c) - 1) * Math.min(rx, rz), qy = Math.abs(y - cy) - hy
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r }
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
-export const headSDF = (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = CHEEK
-  let h = smin(ell(x, y, z, 0, 0, 0, ...HR), Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
-  const fade = MID_FADE * x * x
-  for (const [my, mz, a, b, c, mk, r] of MIDFACE) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)
-  return h }
+/** head SDF in the head frame. headS scales the skull radii (body.headS), cheek is the jaw ellipsoid (body.cheek);
+ *  cranium an extra dome (body.cranium); all must match the character's body so the face decal and anything placed on the face sit on the baked surface. */
+export const makeHeadSDF = ({ headS = [1, 1, 1], cranium = null, cheek = CHEEK, midface = MIDFACE, fade: mfade = MID_FADE } = {}) => { const hr = HR.map((r, i) => r * headS[i])
+  return (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = cheek
+    let h = ell(x, y, z, 0, 0, 0, ...hr); if (cranium) { const [cy, cz, rx, ry, rz, k] = cranium; h = smin(h, ell(x, y, z, 0, cy, cz, rx, ry, rz), k) }
+    h = smin(h, Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
+    const fade = mfade * x * x
+    for (const [my, mz, a, b, c, mk, r] of midface) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)
+    return h } }
+export const headSDF = makeHeadSDF()
 
-export const faceGeo = (() => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
+export const makeFaceGeo = (headSDF) => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
   for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = (u * 2 - 1) * FX, y = FY0 + v * (FY1 - FY0)
     let z = 0.09, hit = false; for (; z > -0.01; z -= 0.0008) if (headSDF(x, y, z) < 0) { hit = true; break }
     if (hit) { let a = z, b = z + 0.0008; for (let n = 0; n < 16; n++) { const m = (a + b) / 2; if (headSDF(x, y, m) < 0) a = m; else b = m } z = b + 0.0009 }
     pos.push(x, y, z); uv.push(u, v); ok.push(hit && z > 0.004) }
   for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1
     if (ok[a] && ok[b] && ok[c] && ok[d]) idx.push(a, b, d, a, d, c) }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g })()
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g }
+export const faceGeo = makeFaceGeo(headSDF)
 
 function glassesGeo() {
   const parts = []
@@ -161,8 +167,9 @@ const faceMat = (kind) => new THREE.ShaderMaterial({ transparent: true, depthWri
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
   fragmentShader: FACE_FS })
 
-/** Face component factory. kind: 'fuku' | 'hoshino'. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
-export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1 } = {}) {
+/** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
+export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, shape } = {}) {
+  const geo = shape ? makeFaceGeo(makeHeadSDF(shape)) : faceGeo
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
@@ -186,7 +193,7 @@ export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1 }
       o.mix = approach(o.mix, 1, 9, dt); o.lash = approach(o.lash, lashT, 6, dt); o.big = approach(o.big, bigT, 8, dt)
       U.uCellA.value = o.A; U.uCellB.value = o.B; U.uMix.value = o.mix; U.uOpen.value = open; U.uLash.value = o.lash; U.uBig.value = o.big
       U.uGaze.value.set(gx, gy); U.uSquint.value = squint; U.uBlush.value = blushU })
-    return <group ref={lod(2)}><mesh geometry={faceGeo} material={mat} renderOrder={2} />
+    return <group ref={lod(2)}><mesh geometry={geo} material={mat} renderOrder={2} />
       {glassC && <mesh geometry={glasses()} material={cel(glassC)} />}</group>
   }
   return Face

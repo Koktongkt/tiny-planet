@@ -10,7 +10,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, cel, spec } from '../../GhibliPerson.jsx'
 import { ISHI_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { CHEEK, MIDFACE, MID_FADE, EYE, headSDF, makeFace } from './castFace.jsx'
+import { MIDFACE, MID_FADE, makeHeadSDF, makeFace } from './castFace.jsx'
 import { part, tagAW, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
 
@@ -31,7 +31,17 @@ const WOOD_D = '#5c3520'
 const STRAP = '#7a4a2c'
 const SOLE = '#5a3622'
 const ISHI_HAIR_OFF = new Float32Array(12)
-const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62 })
+// his head, measured off the sheet's front and side views with the eye size as the scale: as tall as wide
+// (skull half-width 0.054, top 0.049, chin -0.060 in the head frame), widest at the eyes, a broad round lower face
+// (still ~0.89 W across at the mustache). Template: headS 1, CHEEK [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]
+const HEAD_S = [0.965, 0.98, 1.07]
+const JAW = [0, -0.029, 0.010, 0.046, 0.032, 0.034, 0.022]
+// a broad round crown: the sheet's dome is still 0.7 W across 15% down from the top (a stretched skull came to a point)
+const CRANIUM = [0.014, -0.004, 0.048, 0.038, 0.054, 0.012]
+const HEAD = { headS: HEAD_S, cranium: CRANIUM, cheek: JAW }
+const headSDF = makeHeadSDF(HEAD)
+const TOP = Math.max(0.0499 * HEAD_S[1], CRANIUM[0] + CRANIUM[3]) // skull top in the head frame
+const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD })
 
 // front surface of the head (head frame) at (x, y): the face SDF, marched from the front
 function surfZ(x, y) {
@@ -42,39 +52,42 @@ function surfZ(x, y) {
 // a lump that sits on the face at (x, y), pushed out by `out` along +z, turned with the head's curve
 const onFace = (geo, x, y, out, r, rot = [0, 0, 0], skin = 0) => part(geo, [x, y, surfZ(x, y) + out], r, [rot[0], rot[1] + Math.asin(Math.max(-0.9, Math.min(0.9, x / 0.058))), rot[2]], skin)
 
-const EAR = { x: 0.0610, y: -0.016, z: 0.000 }
+const EAR = { x: 0.0570, y: -0.025, z: -0.006 }
 function ishiHair() {
   const ball = new THREE.SphereGeometry(1, 16, 12), ballS = new THREE.SphereGeometry(1, 12, 9), ring = new THREE.TorusGeometry(1, 0.3, 6, 18)
   const parts = [
     // top knot: a round white bun a little behind the crown, a soft second lobe and a wrap ring at its base
-    part(ball, [0, 0.0585, -0.010], [0.0205, 0.0165, 0.0195]),
-    part(ballS, [0.003, 0.0700, -0.012], [0.0125, 0.0080, 0.0120], [0.1, 0, 0.12]),
-    part(ring, [0, 0.0475, -0.008], [0.0150, 0.0150, 0.0110], [Math.PI / 2 - 0.14, 0, 0]),
+    part(ball, [0, TOP + 0.0080, -0.016], [0.0205, 0.0165, 0.0195]),
+    part(ballS, [0.003, TOP + 0.0195, -0.018], [0.0125, 0.0080, 0.0120], [0.1, 0, 0.12]),
+    part(ring, [0, TOP - 0.0030, -0.014], [0.0150, 0.0150, 0.0110], [Math.PI / 2 - 0.14, 0, 0]),
   ]
   const nKnot = parts.length
-  // bushy brows: three puffs each, thick in the middle, the outer end drooping
-  for (const sd of [-1, 1]) {
-    parts.push(onFace(ballS, sd * 0.0105, -0.0008, -0.0004, [0.0060, 0.0050, 0.0046], [0, 0, sd * 0.35]))
-    parts.push(onFace(ballS, sd * 0.0185, 0.0026, 0.0000, [0.0078, 0.0060, 0.0052], [0, 0, sd * 0.12]))
-    parts.push(onFace(ballS, sd * 0.0275, 0.0026, -0.0002, [0.0078, 0.0058, 0.0050], [0, 0, -sd * 0.22]))
-    parts.push(onFace(ballS, sd * 0.0350, -0.0024, -0.0008, [0.0060, 0.0050, 0.0044], [0, 0, -sd * 0.75]))
-  }
+  // brows: thick smooth white arches set high and wide, a chain of overlapping lumps along an arc so the outline is
+  // one smooth crescent (sheet: inner end over the eye's inner edge, rising, then drooping past the outer corner)
+  for (const sd of [-1, 1]) for (let i = 0; i < 7; i++) { const t = i / 6
+    const x = 0.0175 + 0.0265 * t, y = 0.0062 + 0.0060 * Math.sin(Math.PI * Math.min(1, t * 1.15)) - 0.0042 * t * t
+    const r = 0.0048 + 0.0016 * Math.sin(Math.PI * (0.25 + 0.6 * t)), slope = Math.cos(Math.PI * Math.min(1, t * 1.15)) * 0.7 - 0.5 * t
+    parts.push(onFace(ballS, sd * x, y, -0.0004 - 0.0004 * t, [r * 1.5, r, r * 0.95], [0, 0, sd * slope])) }
   const nBrow = parts.length
-  // broad mustache: from under the nose out and down to soft rounded tips past the mouth corners
-  for (const sd of [-1, 1]) {
-    parts.push(onFace(ball, sd * 0.0050, -0.0335, 0.0030, [0.0085, 0.0068, 0.0068], [0, 0, -sd * 0.15]))
-    parts.push(onFace(ball, sd * 0.0135, -0.0350, 0.0024, [0.0092, 0.0070, 0.0064], [0, 0, -sd * 0.30]))
-    parts.push(onFace(ball, sd * 0.0215, -0.0372, 0.0014, [0.0078, 0.0062, 0.0054], [0, 0, -sd * 0.55]))
-    parts.push(onFace(ball, sd * 0.0275, -0.0400, 0.0004, [0.0056, 0.0050, 0.0044], [0, 0, -sd * 0.85]))
-  }
+  // mustache: two full lobes from under the nose, out and down to small tips that flick out (sheet: 0.75..0.92 H),
+  // a chain along each lobe so the top edge is smooth; the lower edge keeps a soft scallop
+  for (const sd of [-1, 1]) for (let i = 0; i < 11; i++) { const t = i / 10
+    const x = 0.0030 + 0.0270 * t, y = -0.0365 - 0.0095 * Math.sin(Math.PI * 0.5 * Math.min(1, t * 1.25)) + 0.0020 * Math.max(0, t - 0.8) / 0.2
+    const r = 0.0078 - 0.0034 * t * t, out = 0.0030 - 0.0026 * t
+    parts.push(onFace(ball, sd * x, y, out, [r * 1.12, r, r], [0, 0, -sd * (0.1 + 0.45 * t)])) }
   const nMus = parts.length
   // round nose (skin) and big ears (skin)
-  parts.push(onFace(ball, 0, -0.0250, 0.0022, [0.0098, 0.0082, 0.0080], [0, 0, 0], 1))
-  for (const sd of [-1, 1]) parts.push(part(ball, [sd * EAR.x, EAR.y, EAR.z], [0.0070, 0.0172, 0.0128], [0, -sd * 0.55, sd * 0.12], 1))
+  parts.push(onFace(ball, 0, -0.0284, 0.0042, [0.0114, 0.0080, 0.0094], [0, 0, 0], 1))
+  // big ears with an inner fold: a smaller lump set into the front face of each ear, whose fine ink reads as the C
+  for (const sd of [-1, 1]) {
+    parts.push(part(ball, [sd * EAR.x, EAR.y, EAR.z], [0.0072, 0.0196, 0.0148], [0, -sd * 0.40, sd * 0.14], 1))
+    const a = -sd * 0.40, nx = Math.cos(a) * sd, nz = -Math.sin(a) * sd // the ear's outward normal (local +x turned by a)
+    parts.push(part(ballS, [sd * EAR.x + nx * 0.0042, EAR.y - 0.001, EAR.z + nz * 0.0042 + 0.0012], [0.0034, 0.0118, 0.0082], [0, a, sd * 0.14], 1))
+  }
   for (let k = 0; k < parts.length; k++) {
     tagAW(parts[k], () => (k < nKnot ? [2, 0.3] : [3, 0]))
     // ink weight per piece: the brows, mustache and nose sit on the face and take a fine line (the sheet's thin outline)
-    const w = k < nKnot ? 1 : k < nMus + 1 ? 0.38 : 0.7
+    const w = k < nKnot ? 1 : k < nMus ? 0.38 : k === nMus ? 0.55 : (k - nMus) % 2 === 0 ? 0.35 : 0.7
     parts[k].setAttribute('aInk', new THREE.Float32BufferAttribute(new Float32Array(parts[k].attributes.position.count).fill(w), 1))
   }
   return mergeHair(parts)
@@ -259,8 +272,8 @@ function stillHold(B) {
 
 const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.02, girth: 1.26, shoulder: 1.10, chestW: 1.14, bellyZ: 1.0, shX: 1.20, armA: 0.50,
   armR: [0.35, 0.30, 0.25], legR: 1.30, legX: 1.08, foot: 1.20, bootW: 1.20, bootH: 1.00, bootL: 1.02, hand: 0.01,
-  cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
-  anY: 0.040, footY: 0.020, soleY: 0.0068 }
+  headS: HEAD_S, cranium: CRANIUM, cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
+  anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true }
 const S0 = spec(BODY)
 
 export const ISHI = {
