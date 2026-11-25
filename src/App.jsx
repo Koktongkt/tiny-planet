@@ -663,6 +663,9 @@ function GameSlot({ ui }) { const [, f] = useState(0); useEffect(() => onBoot('g
 window.__player = P
 // far zones (lake, harbour, cliff, terraces, ruins…) mount in the first idle slot after the first frame
 function DeferredZones() { return useIdleSlot(-1) ? <Zones /> : null }
+// look A shore kit (grass lip, foam beads, ink waterline): new world only, after the first frame
+const ShoreKitLazy = lazy(() => import('./world/ShoreKit.jsx'))
+function DeferredShore() { return useIdleSlot(-1) ? <Suspense fallback={null}><ShoreKitLazy /></Suspense> : null }
 // The world mounts in a few slices (one per task) so the loader keeps animating while React builds ~3k objects.
 // Same tree, same order: later slices just appear a few frames later, all before shaders compile and the first frame.
 const SLICES = 4
@@ -682,7 +685,7 @@ function Planet() {
     {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {k >= 3 && NEWCHAR && <Bench />}
     {VIEW.mode === 'lineup' && <Suspense fallback={null}><LineupLazy /></Suspense>}
-    <DeferredZones />
+    <DeferredZones />{!OLD_WORLD && <DeferredShore />}
     {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} spin={HARBOUR_SPINS[i]} /></Cull>)}
     {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
     <Traveller /><HomeLayer />{k >= 4 && <Details />}
