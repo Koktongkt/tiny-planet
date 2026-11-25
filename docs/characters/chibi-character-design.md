@@ -102,6 +102,11 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Shoulders: a clearer slope. The sleeve shoulder is 0.024 below the rig shoulder line, with a long tapering tube from high at the neck base. The rig's own shoulder is pulled in (`shX 0.90`, `shoulder 0.90`) and its stub shrunk (`armR 0.06`, `hand 0.002`); sleeves use their own `SH_X 0.060`. A flattened cardigan yoke per side closes the gap where the body's skin paint showed through (found by tinting the body skin green).
   - Puffy sleeves: `ovalTube(..., puff)` bulges the middle of each segment (upper arm 0.22, forearm 0.24) on top of the oval cross-sections.
 
+**Grandma Fuku, pass 12** (KT: jaw ends too sharp, top half of the head should be slightly less wide than the face): [`ref/fuku-pass12-compare.jpg`](ref/fuku-pass12-compare.jpg).
+  - Jaw puck edge radius 0.010 -> 0.016 with the core shrunk to keep the size (`FUKU_CHEEK = [0, -0.033, 0.011, 0.036, 0.007, 0.028, 0.020, 0.016]`): the corners round inward, bottom still almost straight.
+  - Skull narrower than the jaw: `headW` 0.86 -> 0.80 (skull half-width ~0.0465 vs jaw ~0.052); hair cap 0.0575 wide and temples pulled in to match, so the top half reads slightly narrower.
+  - Ears moved out and up (`EAR {x 0.059, y -0.009, z 0.004}`) so they show beside the wider jaw from the front; glasses arms follow.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

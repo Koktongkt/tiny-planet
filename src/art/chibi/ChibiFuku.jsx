@@ -27,11 +27,12 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0330, 0.0110, 0.0400, 0.0130, 0.0320, 0.0200, 0.0100]
-// pass 11: the jaw is a flat-bottomed oval puck (8th value = edge radius), as wide as the narrower skull (body.headW),
-// so the sides run straight down and the bottom is an almost straight line: no chin, a rounded block
+const FUKU_CHEEK = [0, -0.0330, 0.0110, 0.0360, 0.0070, 0.0280, 0.0200, 0.0160]
+// pass 11/12: the jaw is a flat-bottomed oval puck (8th value = edge radius): no chin, an almost straight bottom line.
+// Pass 12: a big edge radius (0.016) rounds the jaw's corners inward, and the skull (body.headW) is a little narrower
+// than the jaw (skull half-width ~0.0465, jaw ~0.052), so the top half of the head is slightly less wide than the face
 const FEAT_DY = 0.003 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
-const HEAD_W = 0.86, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
+const HEAD_W = 0.80, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
@@ -41,7 +42,7 @@ function fukuGlasses() {
   const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
   br.scale(1, 0.42, 1); br.translate(0, EY + 0.0012, Z + 0.0024); parts.push(br)
   for (const sd of [-1, 1]) {
-    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EY + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0510, EY + 0.0030, 0.010)
+    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EY + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0560, EY + 0.0030, 0.010)
     const len = a.distanceTo(b), t = new THREE.CylinderGeometry(0.0010, 0.0010, len, 6)
     t.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
     t.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); parts.push(t)
@@ -51,13 +52,13 @@ function fukuGlasses() {
 const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0010, dr: 1.12 }, featDy: FEAT_DY, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
-const EAR = { x: 0.054, y: -0.013, z: 0.006 }
+const EAR = { x: 0.0590, y: -0.009, z: 0.004 }
 const BUN_C = [0, 0.071, -0.013], BUN_R = 0.0285
 // main hair shapes: [centre, radii, rotation]
-const H_CAP = [[0, 0.012, -0.008], [0.060, 0.057, 0.062]]
+const H_CAP = [[0, 0.012, -0.008], [0.0575, 0.057, 0.062]]
 const H_FRONT = [[0, 0.028, 0.027], [0.049, 0.027, 0.029]]
 const H_LOBE = (d) => [[d * 0.019, 0.036, 0.038], [0.023, 0.014, 0.017], [0.30, d * 0.36, d * 0.18]]
-const H_TEMPLE = (d) => [[d * 0.045, 0.010, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10]]
+const H_TEMPLE = (d) => [[d * 0.043, 0.012, 0.010], [0.019, 0.025, 0.030], [0.05, d * 0.30, d * 0.10]]
 function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 20, 14), ballS = new THREE.SphereGeometry(1, 14, 10), ring = new THREE.TorusGeometry(1, 0.30, 8, 20)
   // sheet: a big soft grey dome (wider than the face), a centre parting with two broad waves swept back, sides down
