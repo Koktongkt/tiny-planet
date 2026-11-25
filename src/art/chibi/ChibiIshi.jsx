@@ -36,7 +36,7 @@ const ISHI_HAIR_OFF = new Float32Array(12)
 // (still ~0.89 W across at the mustache). Template: headS 1, CHEEK [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]
 const HEAD_S = [0.965, 0.98, 1.07]
 // the jaw reaches forward and down (sheet side view: under the nose the face drops nearly straight to a full round chin)
-const JAW = [0, -0.031, 0.019, 0.046, 0.032, 0.040, 0.022]
+const JAW = [0, -0.030, 0.017, 0.0530, 0.033, 0.041, 0.026] // wide and round: full cheeks, the lower sides of the face gently round
 // a broad round crown: the sheet's dome is still 0.7 W across 15% down from the top (a stretched skull came to a point)
 const CRANIUM = [0.014, -0.004, 0.048, 0.038, 0.054, 0.012]
 // a full round chin under the mustache: the front stays just behind the nose base and drops nearly straight down,
@@ -48,7 +48,7 @@ const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.02, girth: 1.
   headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
   anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true }
 const TOP = Math.max(0.0499 * HEAD_S[1], CRANIUM[0] + CRANIUM[3]) // skull top in the head frame
-const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD })
+const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD, fy1: 0.034 }) // the decal reaches up the forehead for the wrinkles
 
 // the baked surface in the head frame (origin S.headC, scale 1.17 * head): the whole body SDF, so the chin's blend
 // into the neck counts (the head-only SDF sits behind the real lower face, and pieces placed on it were buried)

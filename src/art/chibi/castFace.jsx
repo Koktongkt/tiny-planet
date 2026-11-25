@@ -13,7 +13,7 @@ export const HR = [0.068 / 1.17, 0.0584 / 1.17, 0.0648 / 1.17]
 export const CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]
 export const MIDFACE = [[-0.0278, 0.0397, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]
 export const MID_FADE = 0
-const FX = 0.052, FY0 = -0.047, FY1 = 0.019
+const FX = 0.052, FY0 = -0.047, FY1_DEF = 0.019 // decal region; a face can reach higher (makeFace fy1) for marks up the forehead
 export const FACES = ['happy', 'blink', 'sleepy', 'excited', 'focus']
 const CELL = { happy: 0, blink: 0, focus: 1, sleepy: 2, excited: 3, yawn: 3, tired: 1, hungry: 2 }
 const FT = 1, FDY = 0.0022 * FT, FDX = 0.0032 * FT, FS = 1 - 0.09 * FT
@@ -25,7 +25,7 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 const lin = (hex) => { const c = new THREE.Color(hex); return `vec3(${c.r.toFixed(5)},${c.g.toFixed(5)},${c.b.toFixed(5)})` }
 const f5 = (x) => x.toFixed(6)
 
-function drawFaces(W, kind) {
+function drawFaces(W, kind, FY1 = FY1_DEF) {
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
@@ -37,9 +37,11 @@ function drawFaces(W, kind) {
     const by = (name === 'excited' ? 0.0076 : name === 'sleepy' ? 0.0058 : name === 'focus' ? 0.0063 : 0.0066) + 0.0004 * FT + (fuku ? 0.0002 : 0)
     const arc = fuku ? (name === 'focus' ? 0.0024 : 0.0032) : (name === 'focus' ? 0.0020 : 0.0030)
     if (ishi) { // soft forehead lines above the brows and crinkles at the outer eye corners
-      g.strokeStyle = 'rgba(176,112,86,0.55)'; g.lineWidth = 0.0011 * s
-      for (const [y, w, b] of [[0.0180, 0.0170, 0.0020], [0.0155, 0.0135, 0.0016]]) {
-        g.beginPath(); g.moveTo(X(-w), Y(y - b)); g.quadraticCurveTo(X(-w * 0.5), Y(y + b * 0.6), X(0), Y(y)); g.quadraticCurveTo(X(w * 0.5), Y(y + b * 0.6), X(w), Y(y - b)); g.stroke() }
+      // two faint lines high on the forehead (sheet: ~0.2 H from the top), arched upward, a soft wave at the middle
+      g.strokeStyle = 'rgba(184,124,98,0.30)'; g.lineWidth = 0.0009 * s
+      for (const [y, w, b] of [[0.0292, 0.0175, 0.0040], [0.0254, 0.0150, 0.0034]]) {
+        g.beginPath(); g.moveTo(X(-w), Y(y - b)); g.bezierCurveTo(X(-w * 0.62), Y(y + b * 0.05), X(-w * 0.3), Y(y + b * 0.02), X(0), Y(y - b * 0.06))
+        g.bezierCurveTo(X(w * 0.3), Y(y + b * 0.02), X(w * 0.62), Y(y + b * 0.05), X(w), Y(y - b)); g.stroke() }
       g.strokeStyle = 'rgba(150,96,78,0.6)'
       for (const sd of [-1, 1]) { const ex = sd * (EYE.x + EYE.rx * 1.08), ey = EYE.y + 0.0004
         g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0006)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0030)); g.stroke()
@@ -77,7 +79,7 @@ function drawFaces(W, kind) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t
 }
 
-const FACE_FS = `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
+const faceFS = (FY1 = FY1_DEF) => `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
   vec4 cellTex(float k, vec2 u){ vec2 cl = vec2(mod(k, 2.), floor(k*.5)); return texture2D(map, vec2((cl.x + u.x)*.5, (1. - cl.y + u.y)*.5)); }
   float cov(float d){ return clamp(.5 - d/max(fwidth(d), 1e-7), 0., 1.); }
   float eSD(vec2 d, vec2 R){ vec2 q = d/R; float k = max(length(q), 1e-5); return (k - 1.)/max(length(q/(R*k)), 1e-5); }
@@ -139,7 +141,7 @@ export const makeHeadSDF = ({ headS = [1, 1, 1], cranium = null, chin = null, ch
     return h } }
 export const headSDF = makeHeadSDF()
 
-export const makeFaceGeo = (headSDF) => { const NX = 30, NY = 22, pos = [], uv = [], ok = [], idx = []
+export const makeFaceGeo = (headSDF, FY1 = FY1_DEF) => { const NX = 30, NY = Math.round(22 * (FY1 - FY0) / (FY1_DEF - FY0)), pos = [], uv = [], ok = [], idx = []
   for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { const u = i / NX, v = j / NY, x = (u * 2 - 1) * FX, y = FY0 + v * (FY1 - FY0)
     let z = 0.09, hit = false; for (; z > -0.01; z -= 0.0008) if (headSDF(x, y, z) < 0) { hit = true; break }
     if (hit) { let a = z, b = z + 0.0008; for (let n = 0; n < 16; n++) { const m = (a + b) / 2; if (headSDF(x, y, m) < 0) a = m; else b = m } z = b + 0.0009 }
@@ -161,17 +163,17 @@ let GLASSES = null
 const glasses = () => GLASSES || (GLASSES = glassesGeo())
 
 const atlases = {}
-const faceMat = (kind) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
-  uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
+const faceMat = (kind, fy1) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+  uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind, fy1)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
     uBlush: { value: 1 }, uBig: { value: 1 }, uLash: { value: 0 }, uGaze: { value: new THREE.Vector2() }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: FACE_FS })
+  fragmentShader: faceFS(fy1) })
 
 /** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
-export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, shape } = {}) {
-  const geo = shape ? makeFaceGeo(makeHeadSDF(shape)) : faceGeo
+export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, shape, fy1 } = {}) {
+  const geo = shape || fy1 ? makeFaceGeo(makeHeadSDF(shape), fy1) : faceGeo
   function Face({ st, lod }) {
-    const mat = useMemo(() => faceMat(kind), [])
+    const mat = useMemo(() => faceMat(kind, fy1), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
     useFrame(({ clock }, dt) => { dt = Math.min(dt, 0.05); const o = s.current, U = mat.uniforms, L = st.life
       const forced = (typeof window !== 'undefined' && window.__chibiFace) || q.get('face')
