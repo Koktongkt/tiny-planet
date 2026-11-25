@@ -53,6 +53,7 @@ function linesGLSL(L) {
       c = mix(c, ${v(L.ink)} * (uLight * .7 + uAmb), (lnM * fade * (1. - bun) + lnB * bun) * ${f4(L.alpha ?? 0.5)}); }
 `
 }
+// aSkin: 0 hair, 1 skin (ears), 2 darker skin (the hollow of an ear)
 export function makeHairMat(skin, hair, band, uOff, opts = {}) {
   return new THREE.ShaderMaterial({
     uniforms: { uOff: { value: uOff }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim,
@@ -62,7 +63,7 @@ export function makeHairMat(skin, hair, band, uOff, opts = {}) {
     fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin; varying vec3 vN, vV, vO; varying float vSkin;
       void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
         float ndl = dot(N, L), lit = smoothstep(-.04, .12, ndl), sk = step(.5, vSkin);
-        vec3 base = mix(uHair, uSkin, sk), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
+        vec3 base = mix(uHair, uSkin, sk) * (1. - .2*step(1.5, vSkin)), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
         vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
         vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
         float band = 1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)));

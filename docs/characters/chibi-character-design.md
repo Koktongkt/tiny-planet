@@ -117,6 +117,10 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Face about 6% wider: jaw rx 0.0425 -> 0.0452 (rz 0.0365), `headW` 0.77 -> 0.82; ears, glasses arms and temple hair moved out with it.
   - Ears rounder and a little higher, not hanging lobes: ry 0.0140 -> 0.0115, `EAR {x 0.0558, y -0.0225}`.
 
+**Grandma Fuku, pass 15** (KT: ears should be reversed; bottom cheeks a little fuller): [`ref/fuku-pass15-compare.jpg`](ref/fuku-pass15-compare.jpg).
+  - Ears: the sheet's ear is a big C, widest at the top and tucked in toward the jaw at the bottom; ours showed its bulk at the bottom (a lobe). The tilt is reversed (top out, `rz -d*0.26`, was `+d*0.08`), ears a little bigger (`[0.0074, 0.0130, 0.0102]`, `EAR y -0.0215`), and a darker hollow on the front face: hair-material `aSkin 2` = skin darkened 20% (new in `castHair.js`; ears with aSkin 1 unchanged). Tried and dropped: reversing the turn (`rotY -d*0.7`), which showed the ear edge-on from the front.
+  - Lower cheeks fuller: the jaw's bottom ellipse is flatter and lower (ry 0.016 -> 0.0145, centre -0.0387 -> -0.0402, stretch h 0.0345) so the full width carries further down; a touch wider and deeper (rx 0.0462, rz 0.038). Chin level unchanged.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

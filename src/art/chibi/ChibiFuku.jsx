@@ -27,7 +27,7 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0387, 0.0120, 0.0452, 0.0160, 0.0365, 0.0120, 0.0330]
+const FUKU_CHEEK = [0, -0.0402, 0.0120, 0.0462, 0.0145, 0.0380, 0.0120, 0.0345]
 // pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
@@ -52,7 +52,7 @@ function fukuGlasses() {
 const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020 }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
-const EAR = { x: 0.0558, y: -0.0225, z: 0.003 }
+const EAR = { x: 0.0560, y: -0.0215, z: 0.003 }
 const BUN_C = [0, 0.071, -0.013], BUN_R = 0.0285
 // main hair shapes: [centre, radii, rotation]
 const H_CAP = [[0, 0.012, -0.014], [0.0575, 0.057, 0.062]]
@@ -73,7 +73,10 @@ function fukuHair() {
     part(ring, [0, 0.055, -0.010], [0.0195, 0.0195, 0.0150], [Math.PI / 2 - 0.10, 0, 0]),
     ...[-1, 1].map(d => P(ballS, H_LOBE(d))),
     ...[-1, 1].map(d => P(ballS, H_TEMPLE(d))),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0072, 0.0115, 0.0098], [0, d * 0.7, d * 0.08], 1)),
+    // ears as on the sheet: a big C, widest at the top and tucked in toward the jaw at the bottom (top tilted out),
+    // with a darker hollow on the front face
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0074, 0.0130, 0.0102], [0, d * 0.7, -d * 0.26], 1)),
+    ...[-1, 1].map(d => part(ballS, [d * (EAR.x + 0.0036), EAR.y + 0.0010, EAR.z + 0.0030], [0.0032, 0.0086, 0.0058], [0, d * 0.7, -d * 0.26], 2)),
   ]
   tagAW(parts[0], (x, y, z) => [3, sm(0.02, -0.03, y) * sm(-0.01, 0.04, z) * 0.45])
   tagAW(parts[1], () => [3, 0.2])
@@ -82,7 +85,7 @@ function fukuHair() {
   tagAW(parts[4], () => [2, 0.4])
   for (const k of [5, 6]) tagAW(parts[k], () => [3, 0.45])
   for (const k of [7, 8]) tagAW(parts[k], (x) => [x < 0 ? 0 : 1, 0.5])
-  for (const k of [9, 10]) tagAW(parts[k], () => [3, 0])
+  for (const k of [9, 10, 11, 12]) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()
