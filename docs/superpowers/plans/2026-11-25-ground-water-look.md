@@ -6,7 +6,7 @@
 
 **Architecture:** Pure, node-testable builders in `src/world/` produce geometry (shorelines, the ground mesh with a finer band near water, shore-kit meshes, a distance-to-shore attribute for water). Thin React components in `src/world/` and the existing `Ground` / `WaterCap` / `Sea` / `Stream` render them. One runtime setting, `SHORE_FINE` (`?shore=coarse` turns it off), picks carved banks or the drawn-on fallback. `?world=old` keeps today's code paths untouched.
 
-**Tech Stack:** three.js r16x, React Three Fiber, Vite, `node --test` unit tests, Playwright smoke and perf scripts.
+**Tech Stack:** three.js 0.169, React Three Fiber, Vite, `node --test` unit tests, Playwright smoke and perf scripts.
 
 **Spec:** `docs/superpowers/specs/2026-11-25-ground-water-look-design.md`
 
