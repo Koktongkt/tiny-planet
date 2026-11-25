@@ -4,6 +4,7 @@
 // fishing spot stands on the first dry bank past the water's edge (in the lake or the bay, never the open sea).
 import { R, height, around, ZONES, LAKE_W, HARB_W, waterAt, seaDepth, DIG_SITE_POS } from '../world.js'
 import { OLD_WORLD } from '../world/flag.js'
+import { WATER_DROP } from '../world/shoreSetting.js'
 import { SPAWNS } from './recipes.js'
 import { FORAGE } from './forageTable.js'
 
@@ -52,7 +53,7 @@ export function placeSpots(Zc, village, blocked, showcaseFrom) {
       const id = `${item}-${zone}-${i}`
       const water = mode === 'water'
       const level = zone === 'lake' ? LAKE_W : HARB_W
-      const pos = water ? pn.clone().multiplyScalar(R + level + 0.01) : posOf(pn, lift)
+      const pos = water ? pn.clone().multiplyScalar(R + level - WATER_DROP + 0.01) : posOf(pn, lift) // on the drawn water
       spots.push({ id, item, zone, n: pn, stand: stand || pn, pos, standPos: stand ? posOf(stand) : pos, night: mode === 'night', water, spin: rr() * 6.28, s: 1.35 + rr() * 0.35 })
       i++
     }

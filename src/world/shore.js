@@ -20,12 +20,12 @@ export function visualGround(n) {
 
 const tangentOut = (n, from) => from.clone().addScaledVector(n, -n.dot(from)).normalize()
 // march from c along bearing direction d (unit tangent at c) until the drawn ground rises above `level`
-function march(c, d, level, maxA, stepA = 0.004 / R) {
+function march(c, d, level, maxA, stepA = 0.03 / R) { // stride, then bisect to the crossing (~1e-4 world units)
   const axis = new THREE.Vector3().crossVectors(c, d).normalize(), p = new THREE.Vector3()
   for (let a = stepA; a < maxA; a += stepA) {
     p.copy(c).applyAxisAngle(axis, a)
     if (visualGround(p) > level) { // refine the crossing between a - step and a
-      let lo = a - stepA, hi = a; for (let k = 0; k < 12; k++) { const m = (lo + hi) / 2; p.copy(c).applyAxisAngle(axis, m); if (visualGround(p) > level) hi = m; else lo = m }
+      let lo = a - stepA, hi = a; for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; p.copy(c).applyAxisAngle(axis, m); if (visualGround(p) > level) hi = m; else lo = m }
       const n = c.clone().applyAxisAngle(axis, hi).normalize(), out = d.clone().applyAxisAngle(axis, hi)
       return { n, out: tangentOut(n, out) }
     }
@@ -76,9 +76,9 @@ function riverRuns() {
   return runs
 }
 function seaRuns() { // march north from the south pole on every longitude
-  const S = new THREE.Vector3(0, -1, 0), M = 1440, runs = []; let run = []
+  const S = new THREE.Vector3(0, -1, 0), M = 720, runs = []; let run = []
   for (let i = 0; i < M; i++) {
-    const lon = i / M * TAU, d = new THREE.Vector3(Math.sin(lon), 0, Math.cos(lon)), h = march(S, d, SEA_W, Math.PI / 2 + SEA_LAT + 0.5, 0.008 / R)
+    const lon = i / M * TAU, d = new THREE.Vector3(Math.sin(lon), 0, Math.cos(lon)), h = march(S, d, SEA_W, Math.PI / 2 + SEA_LAT + 0.5)
     const prev = run[run.length - 1], ok = h && streamNear(h.n).d > streamNear(h.n).half + 0.02
     if (ok && (!prev || prev.n.angleTo(h.n) * R < 0.6)) run.push({ ...h, level: SEA_W, harbour: h.n.angleTo(HARB_C) < harbR })
     else { if (run.length) runs.push(run); run = ok ? [{ ...h, level: SEA_W, harbour: h.n.angleTo(HARB_C) < harbR }] : [] }

@@ -49,3 +49,10 @@ test('shoreDist: negative in water, positive on land, ~0 on the line', () => {
 
 test('setting: carved banks on by default', () => { assert.equal(SHORE_FINE, true) })
 
+
+// final review: tracing the shorelines runs when look A's chunk loads (before idle slots), so it must be quick
+import { execFileSync } from 'node:child_process'
+test('shorelines trace quickly when the module loads', () => {
+  const out = execFileSync(process.execPath, ['--input-type=module', '-e', "await import('./src/world.js'); const t0 = performance.now(); await import('./src/world/shore.js'); console.log(performance.now() - t0)"], { encoding: 'utf8' })
+  const ms = +out.trim(); assert.ok(ms < 250, `shore.js takes ${ms.toFixed(0)} ms to load`)
+})

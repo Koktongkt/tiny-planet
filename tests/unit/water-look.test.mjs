@@ -27,3 +27,16 @@ test('lily pads float on the open lake, clear of the ruins', () => {
     for (const col of RUIN_COLS) assert.ok(col.n.angleTo(p.n) * R > 0.35, 'pad on a ruin column')
   }
 })
+
+// final review: things that sit ON the water follow the drawn surface (WATER_DROP below the gameplay level)
+import { placeSpots } from '../../src/game/spotLayout.js'
+import { HARB_W, streamDist, distToCurve, pathDir, K } from '../../src/world.js'
+import { WATER_DROP } from '../../src/world/shoreSetting.js'
+import { HOUSES, VILLAGE } from '../../src/world/village.js'
+test('fishing spots float on the drawn water', () => {
+  const Zc = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => [k, zv(z)]))
+  const blocked = (n) => streamDist(n) < 0.07 * K || distToCurve(n, pathDir, 140) < 0.035 * K || HOUSES.some(h => h.angleTo(n) < 0.14 * K)
+  const spots = placeSpots(Zc, VILLAGE, blocked, Zc.meadow).filter(s => s.water)
+  assert.ok(spots.length >= 6)
+  for (const s of spots) { const lvl = s.zone === 'lake' ? LAKE_W : HARB_W; assert.ok(Math.abs(s.pos.length() - (R + lvl - WATER_DROP)) < 0.02, `${s.id} ${(s.pos.length() - R - lvl + WATER_DROP).toFixed(3)} off the surface`) }
+})
