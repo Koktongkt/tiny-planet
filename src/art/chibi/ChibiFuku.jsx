@@ -27,22 +27,23 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0402, 0.0120, 0.0462, 0.0145, 0.0380, 0.0120, 0.0345]
+const FUKU_CHEEK = [0, -0.0405, 0.0120, 0.0505, 0.0150, 0.0390, 0.0180, 0.0120]
 // pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
 const FEAT_DY = 0.003 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
-const HEAD_W = 0.82, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
+const HEAD_W = 0.76, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
 function fukuGlasses() {
   const R = 0.0140, T = 0.0017, Z = 0.0552, EY = EYE.y - FEAT_DY, parts = []
-  for (const sd of [-1, 1]) { const g = new THREE.TorusGeometry(R, T, 8, 28); g.rotateY(sd * 0.2); g.translate(sd * EYE.x, EY + 0.0006, Z); parts.push(g) }
+  // half-rim: the frame runs only along the bottom half of each lens
+  for (const sd of [-1, 1]) { const g = new THREE.TorusGeometry(R, T, 8, 16, Math.PI); g.rotateZ(Math.PI); g.rotateY(sd * 0.2); g.translate(sd * EYE.x, EY + 0.0006, Z); parts.push(g) }
   const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
-  br.scale(1, 0.42, 1); br.translate(0, EY + 0.0012, Z + 0.0024); parts.push(br)
+  br.scale(1, 0.42, 1); br.translate(0, EY + 0.0006, Z + 0.0024); parts.push(br)
   for (const sd of [-1, 1]) {
-    const a = new THREE.Vector3(sd * (EYE.x + R * 0.96), EY + 0.0022, Z - 0.0040), b = new THREE.Vector3(sd * 0.0525, EY + 0.0010, 0.006)
+    const a = new THREE.Vector3(sd * (EYE.x + R * 0.98), EY + 0.0006, Z - 0.0032), b = new THREE.Vector3(sd * 0.0525, EY + 0.0010, 0.006)
     const len = a.distanceTo(b), t = new THREE.CylinderGeometry(0.0010, 0.0010, len, 6)
     t.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
     t.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); parts.push(t)
