@@ -1,9 +1,9 @@
 // Ambient audio graph: pure WebAudio, works on a live AudioContext or an OfflineAudioContext (previews / tests).
-// Every layer is procedural (filtered noise, oscillators, LFOs) except the piano loop, which is streamed by ambient.js.
+// Ambient layers are procedural (filtered noise, oscillators, LFOs). The score feeds the music bus separately.
 // Nothing here runs per frame: ambient.js calls setMix() + schedule() at ~10 Hz; the audio thread does the rest.
 //
 //   layers ─► amb (bus) ─► muffle (lowpass, closes indoors) ─┐
-//   music (media element, ambient.js)────────────────────────┼─► master ─► soft limiter ─► destination
+//   music (score player, ambient.js)─────────────────────────┼─► master ─► soft limiter ─► destination
 //   sfx (src/act.js blips, optional) ────────────────────────┘
 const clamp = (x, a = 0, b = 1) => x < a ? a : x > b ? b : x
 const rnd = (a, b) => a + Math.random() * (b - a)
