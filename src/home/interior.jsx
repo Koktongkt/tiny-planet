@@ -8,7 +8,7 @@
 import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { HOME, ROOM, DOOR, BLOCKS, wallH, wallAt } from './state.js'
+import { HOME, ROOM, DOOR, BLOCKS, wallH, wallAt, roomToWorld } from './state.js'
 import { O, GEO, tm, OUT } from './kit.jsx'
 import { T, CC } from '../common.jsx'
 import { toonRamp } from '../world.js'
@@ -42,9 +42,11 @@ P.petBowls = against(-158, 0.36, 0.14)
 P.coatStand = against(158, 0.26, 0.12)
 P.wardrobe = against(90, 0.38, 0.24)
 P.nightstand = against(112, 0.19, 0.18)
-P.bed = against(130, 0.5, 0.72)
+P.bed = against(137, 0.5, 0.72)
 // the bed alcove: a half-wall with a quarter-round top, from the round wall toward the middle (like the concept)
-export const ALCOVE = { phi: 103, len: 0.5 }
+const ALCOVE = { phi: 101, len: 0.45, depth: 0.07 }
+const [alcoveX, alcoveZ] = polar(ALCOVE.phi, R + 0.02)
+const alcoveYaw = (270 - ALCOVE.phi) * D2R
 P.flowerPot = against(147, 0.17, 0.17)
 const pol = (phi, r, yaw = 0) => { const [x, z] = polar(phi, r); return { x, z, yaw } }
 P.petBed = pol(-147, 0.98, 0.4)
@@ -88,7 +90,7 @@ export const SPOTS = {
     const on = (along, side) => [P.bed.x + h[0] * along + px * side, P.bed.z + h[1] * along + pz * side], f = (along) => { const [x, z] = on(along, 0.42); return { x, z } }
     const [bx, bz] = on(0.02, 0.05), [kx, kz] = on(-0.12, 0.08); return { bed: { x: bx, z: bz, from: f(0.02) }, knead: { x: kx, z: kz, from: f(-0.12) } } })(),
   tub: { x: P.tub.x, z: P.tub.z, r: 0.155, h: 0.21 },
-  bowl: (() => { const [x, z] = local(P.petBowls, -0.1, 0); return { x, z } })(),
+  bowl: (() => { const [x, z] = local(P.petBowls, -0.1, 0), [eatX, eatZ] = local(P.petBowls, -0.1, 0.13); return { x, z, eatX, eatZ } })(),
   petBed: { x: P.petBed.x, z: P.petBed.z, r: 0.15 },
   window: (() => { const [x, z] = polar(LW, R - 0.07), [fx, fz] = polar(LW, R - 0.36); return { x, z, y: 0.395, from: { x: fx, z: fz }, face: -LW * D2R + Math.PI } })(),
   shelf: (() => { const [x, z] = local(P.bookShelf, 0.14, 0.06), [fx, fz] = local(P.bookShelf, 0.14, 0.42); return { x, z, y: 0.6, from: { x: fx, z: fz } } })(),
@@ -98,8 +100,10 @@ export const SPOTS = {
 
 // furniture footprints for collision (rotated boxes -> their x/z bounds, trimmed a little so round walls don't over-block)
 // oriented boxes (they turn with the prop), plus their x/z bounds for a quick reject
-const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size, c = Math.cos(pl.yaw), s = Math.sin(pl.yaw), hw = w / 2 * k, hd = d / 2 * k, ex = hw * Math.abs(c) + hd * Math.abs(s), ez = hw * Math.abs(s) + hd * Math.abs(c)
+const footprint = (id, pl, hw, hd) => { const c = Math.cos(pl.yaw), s = Math.sin(pl.yaw), ex = hw * Math.abs(c) + hd * Math.abs(s), ez = hw * Math.abs(s) + hd * Math.abs(c)
   return { id, obb: true, cx: pl.x, cz: pl.z, c, s, hw, hd, x0: pl.x - ex, x1: pl.x + ex, z0: pl.z - ez, z1: pl.z + ez } }
+const fp = (id, pl, k = 0.88) => { const [w, , d] = CATALOG[id].size; return footprint(id, pl, w * k / 2, d * k / 2) }
+const alcoveHalfLength = (ALCOVE.len + 0.02) / 2
 export const BLOCK_LIST = () => [
   fp('counter', P.counter), fp('fridge', P.fridge), fp('firewood', P.firewood), { ...fp('woodStove', P.stove, 0.7), id: 'stove' }, fp('desk', P.desk), fp('stool', P.stool, 0.8), fp('armchair', P.armchair, 0.9),
   fp('bigPlant', P.bigPlant, 0.75), fp('petBowls', P.petBowls, 0.7), { ...fp('petBed', P.petBed, 0.85), id: 'petbed', round: true }, fp('coatStand', P.coatStand, 0.7),
@@ -107,7 +111,7 @@ export const BLOCK_LIST = () => [
   { ...fp('roundTable', P.table, 0.95), id: 'table', round: true }, { ...fp('pouf', P.poufL, 0.85), id: 'poufL', round: true }, { ...fp('pouf', P.poufR, 0.85), id: 'poufR', round: true },
   { id: 'bathSide', x0: NOOK.x0 - 0.04, x1: NOOK.x0 + 0.04, z0: -1.6, z1: NOOK.z1 + 0.03 },
   { id: 'bathFront1', x0: NOOK.x0 - 0.04, x1: 0.95, z0: NOOK.z1 - 0.04, z1: NOOK.z1 + 0.04 }, { id: 'bathFront2', x0: 1.31, x1: 1.6, z0: NOOK.z1 - 0.04, z1: NOOK.z1 + 0.04 },
-  (() => { const [ax, az] = polar(ALCOVE.phi, R), [bx, bz] = polar(ALCOVE.phi, R - ALCOVE.len); return { id: 'alcove', x0: Math.min(ax, bx) - 0.05, x1: Math.max(ax, bx) + 0.05, z0: Math.min(az, bz) - 0.05, z1: Math.max(az, bz) + 0.05 } })(),
+  (() => { const [x, z] = local({ x: alcoveX, z: alcoveZ, yaw: alcoveYaw }, alcoveHalfLength, 0); return footprint('alcove', { x, z, yaw: alcoveYaw }, alcoveHalfLength, ALCOVE.depth / 2 + 0.015) })(),
   { id: 'tub', x0: P.tub.x - 0.16, x1: P.tub.x + 0.16, z0: P.tub.z - 0.16, z1: P.tub.z + 0.16, round: true }, fp('toilet', P.toilet, 0.85),
 ]
 
@@ -262,16 +266,24 @@ export function Smoke() {
 }
 
 // the bed alcove half-wall, with a little shelf, a picture and a plant on the bed side
-// part C: the half-wall stands between the camera and the wardrobe, so it fades while she's at the wardrobe
-export const WARDROBE_FRONT = local(P.wardrobe, 0, 0.36)
-// the only free floor in front of the bedside lamp is the tight gap between the alcove wall and the bed
-export const NIGHT_STAND = (() => { const a = Math.atan2(P.nightstand.x, P.nightstand.z) + 0.2; return [P.nightstand.x - Math.sin(a) * 0.2, P.nightstand.z - Math.cos(a) * 0.2] })()
-export const atWardrobe = (hp) => Math.hypot(hp.x - WARDROBE_FRONT[0], hp.z - WARDROBE_FRONT[1]) < 0.42 || Math.hypot(hp.x - NIGHT_STAND[0], hp.z - NIGHT_STAND[1]) < 0.22
-function Alcove() {
-  const [x, z] = polar(ALCOVE.phi, R + 0.02), dx = -Math.sin(ALCOVE.phi * D2R), dz = Math.cos(ALCOVE.phi * D2R), rot = Math.atan2(-dz, dx) // local +x runs in toward the middle
-  const ref = useRef(); useSeeThrough(ref, atWardrobe)
-  return <group ref={ref} position={[x, 0, z]} rotation-y={rot}>
-    <Prop id="alcoveWall" opts={{ len: ALCOVE.len + 0.02, h: 0.85, low: 0.3, d: 0.07, shadow: false }} />
+export function Alcove() {
+  const ref = useRef()
+  const sight = useMemo(() => new THREE.Raycaster(), [])
+  const hits = useMemo(() => [], [])
+  useSeeThrough(ref, (hp, camera, meshes) => {
+    // Check low and high on the player so a partial obstruction also fades.
+    sight.ray.origin.setFromMatrixPosition(camera.matrixWorld)
+    for (const y of [0.1, 0.27]) {
+      sight.ray.direction.copy(roomToWorld(hp.x, y, hp.z)).sub(sight.ray.origin)
+      sight.far = sight.ray.direction.length()
+      sight.ray.direction.normalize()
+      hits.length = 0
+      if (sight.intersectObjects(meshes, false, hits).length) return true
+    }
+    return false
+  })
+  return <group ref={ref} position={[alcoveX, 0, alcoveZ]} rotation-y={alcoveYaw}>
+    <Prop id="alcoveWall" opts={{ len: ALCOVE.len + 0.02, h: 0.85, low: 0.3, d: ALCOVE.depth, shadow: false }} />
     <group position={[0.2, 0.3, -0.04]} rotation-y={Math.PI}><Prop id="bookShelf" opts={{}} scale={[0.55, 1, 0.7]} /></group>
     <group position={[0.17, 0.52, -0.045]} rotation-y={Math.PI}><Prop id="picture" /></group>
     <group position={[0.4, 0.3, -0.05]} rotation-y={Math.PI} scale={0.6}><Prop id="flowerPot" opts={{ shadow: false }} /></group>
@@ -294,10 +306,10 @@ export const inBath = (hp) => hp.x > NOOK.x0 - 0.03 && hp.z < NOOK.z1 + 0.06
 // see-through when want() holds: a group's solid parts fade (own material copies), its outlines hide. Bath walls, alcove.
 function useSeeThrough(ref, want) {
   const st = useRef(0), mats = useRef(null)
-  useFrame((_, dt) => { const g = ref.current; if (!g) return
+  useFrame(({ camera }, dt) => { const g = ref.current; if (!g) return
     if (!mats.current) { const fill = [], outl = []; g.traverse(m => { if (!m.isMesh) return; if (m.userData.outline || m.material.isShaderMaterial) { outl.push(m); return } if (m.material.transparent) return
       m.material = m.material.clone(); m.material.transparent = true; fill.push(m) }); mats.current = { fill, outl } }
-    const w = HOME.inside && want(HOME.hp) ? 1 : 0; if (!w && st.current === 0) return // settled solid: nothing to do
+    const w = HOME.inside && want(HOME.hp, camera, mats.current.fill) ? 1 : 0; if (!w && st.current === 0) return // settled solid: nothing to do
     st.current += (w - st.current) * Math.min(1, dt * 6); if (st.current < 1e-3) st.current = 0; const k = st.current
     for (const m of mats.current.fill) { m.material.opacity = 1 - 0.72 * k; m.material.depthWrite = k < 0.02; m.renderOrder = k > 0.02 ? 6 : 0 }
     for (const m of mats.current.outl) m.visible = k < 0.15 })
@@ -324,7 +336,6 @@ export function Shell() {
     <Prop id="mat" {...at(P.kitchenMat)} opts={{ w: 0.42, d: 0.2, shadow: false }} /><Prop id="mat" {...at(P.deskMat)} opts={{ w: 0.36, d: 0.26, shadow: false }} />
     <group position={[P.shelfPlant.x, P.shelfPlant.y, P.shelfPlant.z]} rotation-y={P.shelfPlant.yaw} scale={0.75}><Prop id="plant" opts={{ shadow: false }} /></group>
     {[-64, -100, 34, 72].map(ph => { const pl = onWall(ph, 0), z = polar(ph, R)[1]; return <Prop key={ph} id="timber" opts={{ h: wallH(z) - 0.02 }} {...at(pl)} /> })}
-    <Alcove />
     <Prop id="desk" {...at(P.desk)} /><Prop id="pegboard" {...at(P.pegboard)} /><Prop id="stool" {...at(P.stool)} />
     <Prop id="armchair" {...at(P.armchair)} /><Prop id="petBed" {...at(P.petBed)} /><Prop id="petBowls" {...at(P.petBowls)} />
     <Prop id="roundRug" {...at(P.rug)} opts={{ rx: 0.52, rz: 0.4, shadow: false }} />

@@ -6,7 +6,7 @@ import { startAct } from '../act.js'
 import React, { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Quadruped, newPet, POSE0 } from './Quadruped.jsx'
-import { HOME, freeAt, resolve } from '../home/state.js'
+import { HOME, freeAt, clearFloorLine, resolve } from '../home/state.js'
 import { atRoom } from '../game/prompt/anchors.js'
 import { STILL } from '../game/prompt/still.js'
 import { newRest, petOffer, petLeft } from './petPrompt.js'
@@ -16,6 +16,7 @@ import { GEO, cel, OUT, canvasTex } from '../home/kit.jsx'
 import { T, q } from '../common.jsx'
 import { toast } from '../game/store.js'
 import { Hearts, burst } from './fx.jsx'
+import { findCatPath } from './catPath.js'
 
 export const CAT_CFG = {
   gait: { walkTo: 0.5, trotTo: 0.8, runAt: 1.0, strideMin: 0.03, strideMax: 0.08, run: 'bound', reach: 0.05, lift: 0.012 }, // rig units/s; Motion Studio (st.loco) only for now
@@ -41,8 +42,9 @@ const FORCE = q.get('cat')
 
 export function Cat() {
   const st = useMemo(() => newPet(), []), root = useRef(), ball = useRef(), hearts = useRef()
+  const route = useRef(null)
   const c = CAT
-  const go = (state, dur, extra = {}) => { c.state = state; c.t = 0; c.dur = dur; c.target = null; Object.assign(c, { sub: 0 }, extra) }
+  const go = (state, dur, extra = {}) => { c.state = state; c.t = 0; c.dur = dur; c.target = null; route.current = null; Object.assign(c, { sub: 0 }, extra) }
   if (!c.init) { c.init = true
     if (FORCE) { const s = FORCE; if (s === 'nap') Object.assign(c, { x: SPOT.beam.x, z: SPOT.beam.z, y: 0 }); if (s === 'bed' || s === 'knead') Object.assign(c, { x: SPOT.bed.x, z: SPOT.bed.z, y: 0.29 }); if (s === 'sill') Object.assign(c, { x: SPOT.sill.x, z: SPOT.sill.z, y: SPOT.sill.y, yaw: SPOT.sill.face })
       if (s === 'rub' || s === 'pet' || s === 'ignore') Object.assign(HOME.hp, { x: -0.3, z: -0.32, yaw: -1.9 }), Object.assign(c, { x: -0.58, z: -0.4, yaw: 1.3 }); if (s === 'chase' || s === 'bat') Object.assign(c, { x: -0.2, z: 0.6 }); const NF = ['bed', 'rug', 'chair', 'shelf', 'sillNap', 'basket']; if (NF.includes(s)) Object.assign(c, { x: SPOT[s].x, z: SPOT[s].z, y: SPOT[s].y, onFrom: SPOT[s].from }); if (q.get('petcam')) Object.assign(HOME.hp, { x: 0.6, z: 0.8, yaw: -2.2 })
@@ -50,7 +52,7 @@ export function Cat() {
   }
   // petting / proximity
   useMemo(() => { HOME.near.push((consider) => {
-    if (!HOME.inside || HOME.busy || c.hop) return
+    if (!HOME.inside || HOME.busy || c.hop || c.state === 'eat' || c.ball.held) return
     const d = Math.hypot(HOME.hp.x - c.x, HOME.hp.z - c.z) + Math.max(0, c.y - 0.3)
     if (d >= 0.38) { petLeft(CREST, performance.now()); return }
     const quiet = petOffer(CREST, { asking: c.state === 'rub', stillMs: STILL.ms, now: performance.now() }) === 'quiet'
@@ -67,28 +69,74 @@ export function Cat() {
     dt = Math.min(dt, 0.05); c.t += dt; c.clock = (c.clock || 0) + dt; c.ignoreCD -= dt; c.approachCD -= dt
     const g = st.goal, hp = HOME.hp, dHer = Math.hypot(hp.x - c.x, hp.z - c.z), onFloor = c.y < 0.01
     Object.assign(g, POSE0); g.tailUp = 0.45; g.tailWag = 0.12; g.tailSpeed = 2.2
-    let move = 0, speed = 0.18, face = null
+    let move = 0, speed = 0.18, face = null, step = null
     // ---------- hop arc onto / off furniture ----------
     if (c.hop) { const h = c.hop; h.t += dt / h.dur; const k = Math.min(1, h.t); c.x = h.a.x + (h.b.x - h.a.x) * k; c.z = h.a.z + (h.b.z - h.a.z) * k; c.y = h.a.y + (h.b.y - h.a.y) * k + Math.sin(k * Math.PI) * (0.12 + Math.abs(h.b.y - h.a.y) * 0.4)
       c.yaw += ang(Math.atan2(h.b.x - h.a.x, h.b.z - h.a.z) - c.yaw) * Math.min(1, dt * 12); g.crouch = k < 0.15 ? 1 : 0; g.stretch = k > 0.15 && k < 0.7 ? 0.6 : 0; g.tailUp = 0.9
-      if (k >= 1) c.hop = null; st.speed = 0; apply(); return }
+      if (k >= 1) c.hop = null; st.speed = 0; apply(dt); return }
     const hopTo = (b) => { c.hop = { a: { x: c.x, y: c.y, z: c.z }, b, t: 0, dur: 0.45 + Math.abs(b.y - c.y) * 0.35 } }
     // go somewhere on the floor (steering around furniture); returns true on arrival
     const walkTo = (tx, tz, r = 0.05, fast) => { const dx = tx - c.x, dz = tz - c.z, d = Math.hypot(dx, dz); if (d < r) return true
       let want = Math.atan2(dx, dz); for (const o of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) { const a = want + o; if (freeAt(c.x + Math.sin(a) * 0.07, c.z + Math.cos(a) * 0.07, 0.04)) { want = a; break } }
       c.yaw += ang(want - c.yaw) * Math.min(1, dt * 7); move = 1; speed = fast ? 0.55 : 0.2; return false }
+    const approachOnFloor = (tx, tz, radius, pace) => {
+      if (clearFloorLine(c.x, c.z, tx, tz, 0.04)) {
+        route.current = null
+        if (Math.hypot(tx - c.x, tz - c.z) <= radius) return true
+      } else {
+        let r = route.current
+        if (!r || Math.hypot(tx - r.x, tz - r.z) > 0.12 || r.retry <= c.clock) {
+          r = route.current = { x: tx, z: tz, path: findCatPath(c.x, c.z, tx, tz), retry: Infinity }
+          if (!r.path.length) r.retry = c.clock + 0.5
+        }
+        const target = r.path.at(-1)
+        if (!target) return false
+        tx = target.x; tz = target.z
+      }
+      const dx = tx - c.x, dz = tz - c.z, d = Math.hypot(dx, dz)
+      const turn = ang(Math.atan2(dx, dz) - c.yaw)
+      c.yaw += turn * Math.min(1, dt * 8)
+      if (Math.abs(turn) < 0.7) {
+        const amount = Math.min(d, pace * dt)
+        if (amount > 0) { move = amount / (pace * dt); speed = pace; step = { x: dx / d * amount, z: dz / d * amount } }
+        if (amount === d && route.current) {
+          route.current.path.pop()
+          if (!route.current.path.length) route.current.retry = c.clock
+        }
+      }
+      return false
+    }
     // reach a spot that may be up on furniture
     const reach = (s, fast) => { if (Math.abs(c.y - s.y) < 0.02) return Math.hypot(s.x - c.x, s.z - c.z) < 0.08 || walkTo(s.x, s.z, 0.06, fast)
       if (c.y > 0.01 && (s.y < 0.01 || Math.hypot(s.x - c.x, s.z - c.z) > 0.15)) { const f = c.onFrom || { x: c.x + (c.x > 0.6 ? -0.3 : 0.28), z: c.z }; c.onFrom = null; hopTo({ x: f.x, y: 0, z: f.z }); return false }
       if (!s.from) { walkTo(s.x, s.z, 0.06, fast); return false } const f = s.from; if (walkTo(f.x, f.z, 0.06, fast)) c.onFrom = f, hopTo({ x: s.x, y: s.y, z: s.z }); return false }
     // ---------- brain ----------
     // round7: she filled his bowl: he heads over and eats (unless forced / mid-cuddle)
-    if (CAT.bowl > 0 && c.state !== 'eat' && !c.forced && c.state !== 'petted' && c.state !== 'stretch') go('eat', 30)
+    if (c.bowl > 0 && c.state !== 'eat' && !c.forced && c.state !== 'petted' && c.state !== 'stretch') go('eat', 30, { ate: 0 })
+    else if (c.ball.held && c.state !== 'eat' && c.state !== 'followYarn') go('followYarn', Infinity, { forced: false })
+    else if (!c.ball.held && c.state === 'followYarn') next()
     const S = c.state
-    if (S === 'eat') { const b = CAT.bowlPos || SPOTS.bowl // round7: eat from his bowl
-      if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }, true); else if (walkTo(b.x - 0.12, b.z, 0.03, c.t < 1.5)) { face = Math.atan2(b.x - c.x, b.z - c.z); const chew = Math.sin(c.t * 10); g.crouch = 0.55; g.headPitch = 0.75 + chew * 0.06; g.mouth = Math.max(0, chew) * 0.3; g.eyes = 0.45; g.tailUp = 0.7; g.tailWag = 0.25; g.earBack = -0.1
-        c.ate = (c.ate || 0) + dt; if (c.ate > 5.5) { c.ate = 0; CAT.bowl = 0; toast(`${c.name} licks the bowl clean and washes his face.`, 'fish', 2600); go('groom', 4) } } else { g.tailUp = 1.1 }
-      if (c.t > c.dur) { CAT.bowl = 0; next() } }
+    if (S === 'eat') {
+      const b = SPOTS.bowl
+      if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }, true)
+      else if (c.ate > 0 || approachOnFloor(b.eatX, b.eatZ, 0.015, 0.35)) {
+        face = Math.atan2(b.x - c.x, b.z - c.z)
+        c.ate = (c.ate || 0) + dt
+        const chew = Math.sin(c.ate * 10)
+        g.crouch = 0.55; g.headPitch = 0.75 + chew * 0.06; g.mouth = Math.max(0, chew) * 0.3; g.eyes = 0.45; g.tailUp = 0.7; g.tailWag = 0.25; g.earBack = -0.1
+        if (c.ate > 5.5) { c.bowl = 0; toast(`${c.name} licks the bowl clean and washes his face.`, 'fish', 2600); go('groom', 4) }
+      } else g.tailUp = 1.1
+      if (c.t > c.dur) { c.bowl = 0; next() }
+    }
+    else if (S === 'followYarn') {
+      g.tailUp = 1.1; g.tailWag = 0.4
+      if (!onFloor) reach({ x: c.x, z: c.z, y: 0 })
+      else if (approachOnFloor(hp.x, hp.z, c.sub ? 0.31 : 0.24, 0.65)) {
+        c.sub = 1
+        face = Math.atan2(c.ball.hx - c.x, c.ball.hz - c.z)
+        g.headPitch = -0.3
+      } else c.sub = 0
+    }
     else if (S === 'wander') { if (!c.target) { for (let i = 0; i < 20; i++) { const x = -1.3 + Math.random() * 2.6, z = -0.8 + Math.random() * 1.7; if (freeAt(x, z, 0.08)) { c.target = { x, z }; break } } }
       if (!onFloor) reach({ x: c.x, z: c.z, y: 0 }); else if (c.target && walkTo(c.target.x, c.target.z, 0.06)) c.target = null
       if (c.t > c.dur) next() }
@@ -137,7 +185,7 @@ export function Cat() {
     // she heads for a comfy spot: sometimes he races her to it and curls up there (claims it)
     c.claimCD -= dt; c.scanT -= dt
     if (c.scanT < 0 && !c.forced) { c.scanT = 0.5; const mv = Math.hypot(hp.x - (c.hpx ?? hp.x), hp.z - (c.hpz ?? hp.z)); c.hpx = hp.x; c.hpz = hp.z
-      if (mv > 0.03 && c.claimCD < 0 && S !== 'claim' && S !== 'petted' && S !== 'rub' && S !== 'hearth') for (const k of ['rug', 'chair', 'bed']) { const sp = SPOT[k], d1 = Math.hypot(hp.x - sp.x, hp.z - sp.z)
+      if (mv > 0.03 && c.claimCD < 0 && S !== 'eat' && S !== 'followYarn' && S !== 'claim' && S !== 'petted' && S !== 'rub' && S !== 'hearth') for (const k of ['rug', 'chair', 'bed']) { const sp = SPOT[k], d1 = Math.hypot(hp.x - sp.x, hp.z - sp.z)
         if (d1 < 0.55 && d1 > 0.18 && Math.hypot(c.x - sp.x, c.z - sp.z) < 1.6) { c.claimCD = 40; if (Math.random() < 0.55) { go('claim', 14 + Math.random() * 10, { where: k, claimed: false }); break } } } }
     function next() { const day = T.day > 0.5, cd = c.cd || (c.cd = {}), now = c.clock || 0
       const W = { nap: day ? 1.3 : 0.5, napBasket: 1.3, napBed: 1.1, napRug: 0.9, napChair: 0.8, napShelf: 0.7, napSill: day ? 0.5 : 0.9, groom: 1.4, stretch: 0.7, chase: 1.1, bat: 1.2, sill: day ? 1.5 : 0.7, knead: 0.8, zoom: T.night > 0.5 || T.dusk > 0.4 ? 0.9 : 0.45, wander: 1.4 }
@@ -148,18 +196,22 @@ export function Cat() {
       if (k === 'nap') nap('beam'); else if (k === 'napBasket') nap('basket'); else if (k === 'napBed') nap('bed'); else if (k === 'napRug') nap('rug'); else if (k === 'napChair') nap('chair'); else if (k === 'napShelf') nap('shelf'); else if (k === 'napSill') nap('sillNap')
       else if (k === 'groom') go('groom', 4 + Math.random() * 3); else if (k === 'stretch') go('stretch', 2.6); else if (k === 'chase') go('chase', 12); else if (k === 'bat') go('bat', 6 + Math.random() * 5); else if (k === 'sill') go('sill', 10 + Math.random() * 10); else if (k === 'knead') go('knead', 4); else if (k === 'zoom') go('zoom', 4 + Math.random() * 2.5); else go('wander', 3 + Math.random() * 3) }
     if (face != null) c.yaw += ang(face - c.yaw) * Math.min(1, dt * 4)
-    if (move) { const s = speed * move; c.x += Math.sin(c.yaw) * s * dt; c.z += Math.cos(c.yaw) * s * dt; if (onFloor) resolve(c, 0.04) }
+    if (move) { const s = speed * move; c.x += step?.x ?? Math.sin(c.yaw) * s * dt; c.z += step?.z ?? Math.cos(c.yaw) * s * dt; if (onFloor) resolve(c, 0.04) }
     st.speed += (move * speed - st.speed) * Math.min(1, dt * 8); st.run = speed > 0.4 ? 1 : 0; st.phase += dt * st.speed / (CAT_CFG.stride * CAT_SCALE) * 1.6
-    apply()
+    apply(dt)
   })
-  function apply() {
+  function apply(dt) {
     root.current.position.set(c.x, c.y, c.z); root.current.rotation.set(0, c.yaw, 0)
     // yarn ball rolls with friction and bounces off walls / furniture
-    const b = c.ball, dt = 1 / 60
+    const b = c.ball
     if (b.held) { ball.current.position.set(b.hx, b.hy, b.hz); return } // part C: in her hand (Activities.jsx keeps hx/hy/hz on her hand)
     const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt
-    if (freeAt(nx, nz, 0.03)) { b.x = nx; b.z = nz } else { if (!freeAt(nx, b.z, 0.03)) b.vx *= -0.6; if (!freeAt(b.x, nz, 0.03)) b.vz *= -0.6 }
-    b.vx *= 0.985; b.vz *= 0.985; const sp = Math.hypot(b.vx, b.vz); b.spin += sp * dt / 0.03
+    if (freeAt(nx, nz, 0.03)) { b.x = nx; b.z = nz }
+    else if (freeAt(nx, b.z, 0.03)) { b.x = nx; b.vz *= -0.6 }
+    else if (freeAt(b.x, nz, 0.03)) { b.z = nz; b.vx *= -0.6 }
+    else { b.vx *= -0.6; b.vz *= -0.6 }
+    const friction = 0.985 ** (dt * 60)
+    b.vx *= friction; b.vz *= friction; const sp = Math.hypot(b.vx, b.vz); b.spin += sp * dt / 0.03
     ball.current.position.set(b.x, 0.03, b.z); ball.current.rotation.set(b.spin, Math.atan2(b.vx, b.vz), 0)
   }
   return <>

@@ -29,6 +29,7 @@ import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
+import { CAT } from './pets/catState.js'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
@@ -559,6 +560,7 @@ function Traveller() {
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
     PST.air = HOME.inside || HOME.alt ? 0 : Math.max(0, P.h - floorLift(P.n)) // lets her contact shadow stay on the ground mid-jump
     tickAct(PST); PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
+    PST.carryYarn = HOME.inside && CAT.ball.held
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
