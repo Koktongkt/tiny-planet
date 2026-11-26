@@ -143,8 +143,10 @@ const PAINT = `
     vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
     if (ty == 8) { // armhole seam: runs up the front of the shoulder, over the top and down the back, at the sleeve's edge
-      float sx = uArm.x - .012 + max(0., uArm.y - y)*.18;            // leans out a little toward the armpit
-      armSeam = aa(.0013 - abs(ax - sx)) * aa(y - (uArm.y - .046)) * aa(uY.y - .004 - y) * (1. - neck); }
+      float sx = uArm.x + .007 + max(0., uArm.y - y)*.08;            // where the sleeve shows past the body, leaning out toward the armpit
+      armSeam = aa(.0013 - abs(ax - sx)) * aa(y - (uArm.y - .040)) * aa(uY.y - .004 - y) * (1. - neck);
+      float under = 1. - smoothstep(.10, .22, abs(vReg.x - .5));     // soft line where the sleeve meets the body, below the armpit
+      armSeam = max(armSeam, under * aa(uArm.y - .040 - y) * .85); }
     if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
       float cy = uO.w - .0135; float cb = aa(.0050 - abs(y - cy)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - cy - .0058))); } // cuff at the flared sleeve's open end
     // legs

@@ -268,6 +268,14 @@ Before and after, plus a check at equal head height: [`ref/hoshino-trousers-comp
 - **Torso:** a little shorter again (`torso 0.95`), with longer legs (`leg 1.14`).
 - **Shoulder seams:** the weight-based sleeve seam followed the mesh and came out patchy and jagged on the shoulders. It is replaced by an analytic armhole: a line at `|x| ≈ shoulder.x − 0.012`, leaning out toward the armpit, running up the front, over the top and down the back. It is capped at the neck, because an uncapped first try drew across the face. A new uniform `uArm` (shoulder position, `armA`) feeds it. A first try as a ring perpendicular to the arm read as a short horizontal dash, the wrong direction.
 
+### Professor Hoshino (draft): shoulder pass (no pads, unbroken outline)
+
+Before and after, with shoulder close-ups: [`ref/hoshino-shoulder-compare.jpg`](ref/hoshino-shoulder-compare.jpg).
+
+- **Pads and broken outline:** the upper-arm cap sat at the dropped, pushed-out shoulder joint (`shX 1.38`, `armR[0] 1.05`). It bulged past the body as a shoulder pad. The sharp inward crease where it met the body hid part of the ink hull, so the outline broke there (KT circled both).
+- **Fix:** tuck the arm root inside the shoulder (`shX 1.22`) with a slimmer upper sleeve (`armR [0.80, 1.40, 1.85]`). Hang a little wider (`armA 0.34`) so the hands clear the jacket. The shoulder now flows straight into the sleeve and the outline is continuous. The sleeve still flares to the hand.
+- **Armhole seam:** it sits where the sleeve shows past the body (`|x| ≈ shoulder.x + 0.007`), not at the joint. The joint now sits inside the wider jacket body, so a seam placed at the joint ran down the chest like braces. Below the armpit, a soft line follows the sleeve/body weight boundary along the inner sleeve. It is wide and soft, so it does not break into steps like the old thin one.
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.
