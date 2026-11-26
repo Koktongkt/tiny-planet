@@ -276,6 +276,21 @@ Before and after, with shoulder close-ups: [`ref/hoshino-shoulder-compare.jpg`](
 - **Fix:** tuck the arm root inside the shoulder (`shX 1.22`) with a slimmer upper sleeve (`armR [0.80, 1.40, 1.85]`). Hang a little wider (`armA 0.34`) so the hands clear the jacket. The shoulder now flows straight into the sleeve and the outline is continuous. The sleeve still flares to the hand.
 - **Armhole seam:** it sits where the sleeve shows past the body (`|x| ≈ shoulder.x + 0.007`), not at the joint. The joint now sits inside the wider jacket body, so a seam placed at the joint ran down the chest like braces. Below the armpit, a soft line follows the sleeve/body weight boundary along the inner sleeve. It is wide and soft, so it does not break into steps like the old thin one.
 
+### Professor Hoshino (draft): jacket laid out from the sheet
+
+Golden sheet, before and after (front, 3/4, side, back): [`ref/hoshino-jacket-shape-compare.jpg`](ref/hoshino-jacket-shape-compare.jpg).
+
+- **Painter layout:** the `openJacket` painter now places everything in `t = (neckY − y) / (neckY − hem)`, so the layout keeps its proportions whatever the torso length. It uses a small segment-distance helper (`sgd`) for crisp ink lines.
+  - **Opening:** near-straight, half-width `0.0215 + 0.003·t`. The sheet's vest shows about 36% of the jacket front.
+  - **Shirt and vest:** white shirt down to the vest V at `t 0.20`, with spread collar points and two small shirt buttons. The vest has four big gold buttons (`t 0.31 + 0.135·i`) and points at `t 0.84`, with trousers below.
+  - **Lapels:** a standing collar edge, a notch at `t 0.14`, the lapel peak about 0.0245 out, and a break into the front edge at `t 0.58`.
+  - **Buttons:** two large brown buttons on his right front (`t 0.66`, `0.90`), between the vest and the pocket.
+  - **Pockets:** rounded flap pockets centred about 0.98 rad round the hip, `t 0.65–0.90`, flap line at `t 0.70`.
+  - **Back:** collar band at `t 0.07`, centre seam to the hem, and a curved waist fold at `t 0.66`.
+- **Sleeves as tubes:** new optional body knob `armK` (arm-to-body blend, default 0.014). Hoshino uses `0.006`, so each sleeve keeps its own surface, and a crisp ink line runs on the sharp sleeve/body crease below the armpit.
+- **Body and arms:** body slimmer (`girth 1.20 → 1.05`), sleeves fuller and more even (`armR [1.02, 1.45, 1.70]`). `shX 1.30`, `armA 0.30`, `shDrop 0.044`: the lower shoulder joint keeps the fuller sleeve top under the shoulder slope. Rejected: `armR[0] 1.20` at `shDrop 0.030` brought the shoulder-pad bumps back.
+- **Not yet matched:** the cel shading still lays brown-purple shadow bands across the chest and shoulders; the sheet is nearly flat. The side view has no lapel or vest edge.
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.

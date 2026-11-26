@@ -53,6 +53,7 @@ const VS = `#include <common>
 // outfit painter. uY = (waistY, neckY, shoeY, legHemY); uO = (type, longSleeve, bareLegs, apronW); uZ = (chestY, bellyZ, hipY, 0)
 const PAINT = `
   float aa(float d){ float w = fwidth(d)*1.1 + 1e-6; return smoothstep(-w, w, d); }
+  float sgd(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba*clamp(dot(pa, ba)/dot(ba, ba), 0., 1.)); }
   vec3 outfit(){
     float x = vO.x, ax = abs(x), y = vO.y, z = vO.z, front = aa(z - .004), back = 1. - front;
     float arm = smoothstep(.42,.58,vReg.x), fore = smoothstep(.42,.58,vReg.y), leg = smoothstep(.42,.58,vReg.z), hand = smoothstep(.4,.6,vReg.w);
@@ -102,42 +103,53 @@ const PAINT = `
     } else if (ty == 7) { // shirt: small V neckline
       float v = front * aa((y - uY.y + .022) - ax * 1.3);
       torso = mix(torso, uSkin, v * (1. - neck));
-    } else if (ty == 8) { // open jacket (Hoshino): notch lapels over a buttoned vest (uTop) and shirt collar (uAcc2),
-      // cut away below the vest to show the trousers; flap pockets, two jacket buttons, back seams. Hem at uY.x.
-      float J = 1. - waist, ny = uY.y - y, vb = uY.x + .034;
-      float hw = .010 + .018*clamp(ny/.04, 0., 1.) + max(0., vb - y)*.40;  // half-width of the opening
+    } else if (ty == 8) { // open jacket (Hoshino), laid out from his golden sheet in t = 0 (neck) .. 1 (hem):
+      // a near-straight opening shows the shirt collar and a 4-button vest; big notch lapels break at t .58; two brown
+      // buttons on his right front; rounded flap pockets at t .62-.92; back collar band, centre seam and waist fold.
+      float J = 1. - waist, H = max(uY.y - uY.x, .01), t = (uY.y - y)/H;
+      float hw = .0215 + .003*clamp(t, 0., 1.);                              // opening half-width (fronts hang straight)
       float open = front * aa(hw - ax) * J;
-      float vTop = uY.y - .034 + ax*1.15;                                  // vest V neckline
-      vec3 inner = mix(uTop, uAcc2, aa(y - vTop));                         // shirt above the V
-      inner = mix(inner, uAcc2*.72, aa(.0009 - abs(y - vTop)) * aa(.016 - ax));
-      inner = mix(inner, uAcc2*.70, aa(.0008 - abs(ax - (y - (uY.y - .030))*.9)) * aa(y - vTop) * aa(uY.y - .004 - y)); // collar points
-      inner = mix(inner, uBottom, aa(vb - .006 + ax*.35 - y));               // vest ends in soft points; trousers below
-      float bt = 0., bg = 0.;                                              // five gold vest buttons
-      for (int i = 0; i < 5; i++) { float r = length(vec2(x, y - (uY.y - .050 - float(i)*.0185))); bt = max(bt, aa(.0027 - r)); bg = max(bg, aa(.0018 - r)); }
-      float onV = aa(y - vb + .004) * aa(vTop - .004 - y);
-      inner = mix(inner, vec3(.36,.26,.10), bt*onV); inner = mix(inner, vec3(.86,.68,.36), bg*onV);
+      vec2 P = vec2(ax, y);
+      #define TY(v) (uY.y - (v)*H)
+      // inside the opening: white shirt down to the vest V, the vest, trousers below the vest points
+      float vTop = TY(.20) + ax*1.3, vBot = TY(.84) + (hw - ax)*.55;
+      vec3 inner = mix(uTop, uAcc2, aa(y - vTop));
+      inner = mix(inner, uBottom, aa(vBot - y));
+      float ink2 = aa(.0010 - abs(y - vTop)) * aa(y - vBot);                 // vest neckline
+      ink2 = max(ink2, aa(.0010 - abs(y - vBot)) * aa(vTop - y));             // vest points
+      // shirt collar: spread points with a placket and two small buttons
+      ink2 = max(ink2, aa(.0009 - sgd(P, vec2(.0005, TY(.03)), vec2(.0125, TY(.16)))));
+      ink2 = max(ink2, aa(.0009 - sgd(P, vec2(.0125, TY(.16)), vec2(.0160, TY(.01)))));
+      float sb = 0.; for (int i = 0; i < 2; i++) sb = max(sb, aa(.0017 - length(vec2(x, y - TY(.09 + float(i)*.065)))));
+      inner = mix(inner, uAcc2*.80, sb * aa(y - vTop));
+      // four gold vest buttons
+      float bt = 0., bg = 0.;
+      for (int i = 0; i < 4; i++) { float r = length(vec2(x, y - TY(.31 + float(i)*.135))); bt = max(bt, aa(.0036 - r)); bg = max(bg, aa(.0025 - r)); }
+      inner = mix(inner, vec3(.36,.25,.10), bt); inner = mix(inner, vec3(.88,.68,.34), bg);
+      inner = mix(inner, vec3(.22,.16,.10), ink2);
       torso = mix(uAcc, inner, open);
-      // lapels: a band outside the opening that tapers out by mid-chest, a notch near the collar
-      float lw = .0175*clamp((y - (uY.y - .074))/.040, 0., 1.), d = ax - hw;
-      float lap = front * J * aa(d) * aa(lw - d) * aa(uY.y - .002 - y);
-      float notch = aa(.0011 - abs(y - (uY.y - .019) + (d - lw*.6)*.6)) * aa(d - lw*.35);
-      torso = mix(torso, uAcc*.86, lap);
-      torso = mix(torso, uAcc*.52, lap * max(notch, aa(.0009 - abs(d - lw)) * aa(lw - .002)));
-      torso = mix(torso, uAcc*.56, front * J * aa(.0010 - abs(d)) * aa(uY.y - .002 - y));   // front edge
-      // two jacket buttons on his right panel (viewer's left)
-      for (int i = 0; i < 2; i++) { float by = vb + .030 - float(i)*.024, bx = -(.010 + .018 + max(0., vb - by)*.40 + .0075);
-        float r = length(vec2(x - bx, y - by)); torso = mix(torso, uAcc*.42, front*J*aa(.0036 - r)); torso = mix(torso, uAcc*.66, front*J*aa(.0023 - r)); }
-      // flap pockets on the hips
-      vec2 pq = vec2((atan(ax, max(z - .008, 1e-4)) - .90)*.075, y - (uY.x + .032)); float pr = max(abs(pq.x) - .0205, abs(pq.y) - .017); // wraps the hip: seen from the side too
-      float pocket = J * (1. - open) * aa(-pr);
-      float flap = pocket * aa(pq.y - .007);
-      torso = mix(torso, uAcc*.92, flap);
-      torso = mix(torso, uAcc*.55, J * (1. - open) * aa(z - .008) * max(aa(.0012 - abs(pr)), aa(.0011 - abs(pq.y - .007)) * aa(.0205 - abs(pq.x))));
-      // hem edge, back vent, back waist seam and collar
-      torso = mix(torso, uAcc*.62, J * aa(.0011 - abs(y - uY.x - .0012)) * (1. - open));
-      torso = mix(torso, uAcc*.66, back * J * aa(.0009 - ax) * aa(uY.x + .034 - y));
-      torso = mix(torso, uAcc*.70, back * aa(.0009 - abs(y - (uY.x + .050) - ax*ax*3.)));
-      torso = mix(torso, uAcc*.88, back * aa(y - (uY.y - .010)) * (1. - neck));
+      // jacket ink: front edges neck to hem, the standing collar and notch lapels
+      float ink = front * J * aa(.0011 - abs(ax - hw)) * aa(uY.y - .002 - y);
+      float tN = .14, tB = .58;
+      vec2 c0 = vec2(hw + .003, TY(-.01)), c1 = vec2(hw + .0125, TY(tN)), c2 = vec2(hw + .0085, TY(tN + .035)), c3 = vec2(hw + .0245, TY(tN + .055)), c4 = vec2(hw, TY(tB));
+      float lap = min(min(sgd(P, c0, c1), sgd(P, c1, c2)), min(sgd(P, c2, c3), sgd(P, c3, c4)));
+      ink = max(ink, front * J * aa(.0011 - lap));
+      // two brown buttons on his right front (viewer's left), just outside the edge
+      for (int i = 0; i < 2; i++) { float r = length(vec2(x + hw + .0060, y - TY(.66 + float(i)*.24)));
+        torso = mix(torso, uAcc*.44, front*J*aa(.0047 - r)); torso = mix(torso, uAcc*.62, front*J*aa(.0032 - r)); }
+      // rounded flap pockets, wrapping the hip
+      vec2 pq = vec2((atan(ax, max(z - .008, 1e-4)) - .98)*.075, y - TY(.775)); vec2 pd = abs(pq) - vec2(.0195, .125*H) + .004;
+      float pr = length(max(pd, 0.)) + min(max(pd.x, pd.y), 0.) - .004;
+      float pk = J * (1. - open) * aa(z - .008);
+      ink = max(ink, pk * aa(.0011 - abs(pr)));
+      ink = max(ink, pk * aa(-pr) * aa(.0010 - abs(y - TY(.70))));           // flap edge
+      // hem, back collar band, centre back seam, waist fold
+      ink = max(ink, J * (1. - open) * aa(.0012 - abs(y - uY.x - .0012)));
+      ink = max(ink, back * aa(.0011 - abs(y - TY(.07) + ax*ax*2.)) * (1. - neck));
+      ink = max(ink, back * J * aa(.0010 - ax) * aa(TY(.07) - y));
+      ink = max(ink, back * J * aa(.0011 - abs(y - TY(.66) - ax*ax*4.)) * aa(.045 - ax));
+      torso = mix(torso, uAcc*.50, ink);
+      #undef TY
     }
     // arms
     vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
@@ -146,7 +158,8 @@ const PAINT = `
       float sx = uArm.x + .007 + max(0., uArm.y - y)*.08;            // where the sleeve shows past the body, leaning out toward the armpit
       armSeam = aa(.0013 - abs(ax - sx)) * aa(y - (uArm.y - .040)) * aa(uY.y - .004 - y) * (1. - neck);
       float under = 1. - smoothstep(.10, .22, abs(vReg.x - .5));     // soft line where the sleeve meets the body, below the armpit
-      armSeam = max(armSeam, under * aa(uArm.y - .040 - y) * .85); }
+      armSeam = max(armSeam, under * aa(uArm.y - .040 - y) * .85);
+      armSeam = max(armSeam, aa(fwidth(vReg.x)*1.6 + 1e-4 - abs(vReg.x - .5)) * aa(uArm.y - .030 - y)); } // crisp line on the sharp sleeve/body crease (armK)
     if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
       float cy = uO.w - .0135; float cb = aa(.0050 - abs(y - cy)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - cy - .0058))); } // cuff at the flared sleeve's open end
     // legs
@@ -345,7 +358,7 @@ function legD(S, p, k) {
   if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
   return smin(l, f, 0.012)
 }
-function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
+function sdf(S, p) { const c = core(S, p), ak = S.b.armK ?? 0.014; return Math.min(smin(c, armD(S, p, 'L'), ak), smin(c, armD(S, p, 'R'), ak), /* armK: optional arm-to-body blend */ smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
   let d = sdf(S, p)
   d = Math.min(d, ell(p, S.headC.clone().add(V3(0, 0.015, -0.02)), S.headR.clone().multiplyScalar(1.09)))

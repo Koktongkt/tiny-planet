@@ -111,8 +111,8 @@ function HoshinoHair({ set }) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.00, girth: 1.20, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.22, armA: 0.34, shDrop: 0.034, handL: 1.18,
-    armR: [0.80, 1.40, 1.85], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
+  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.00, girth: 1.05, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.30, armA: 0.30, shDrop: 0.044, armK: 0.006, handL: 1.18,
+    armR: [1.02, 1.45, 1.70], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
