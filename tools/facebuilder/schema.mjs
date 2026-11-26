@@ -4,6 +4,7 @@ export const CHARACTERS = {
   her: { label: 'Main character', file: 'src/art/chibi/ChibiHer.jsx' },
   fuku: { label: 'Grandma Fuku', file: 'src/art/chibi/ChibiFuku.jsx' },
   ishi: { label: 'Grandpa Ishi', file: 'src/art/chibi/ChibiIshi.jsx' },
+  hoshino: { label: 'Professor Hoshino', file: 'src/art/chibi/ChibiHoshino.jsx' },
 }
 const N = '[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:e[-+]?\\d+)?'
 const numbers = () => new RegExp(N, 'gi')
@@ -67,11 +68,60 @@ const ishi = [
     n('nose.width','Nose width',.008,.016),n('nose.height','Nose height',.005,.012),n('nose.depth','Nose depth',.006,.014)]),
   hex('skin','Skin colour','const SKIN =\\s*'),hex('hairColor','Hair colour','const HAIR_C =\\s*')
 ]
-const groups = {her,fuku,ishi}
+// Keep the professor's head and decal in sync without touching the other cast.
+const hoshino = [
+  array('skull','Skull','HOSHINO_HEAD_S',[n('head.width','Skull width',.89,1.13,.01),n('head.height','Skull height',.89,1.13,.01),n('head.depth','Skull depth',.89,1.13,.01)]),
+  jaw('HOSHINO_CHEEK'),
+  custom('profile','Nose / chin profile',/const HOSHINO_MIDFACE = (\[\[[^\n]+\]\])/,[
+    n('nose.y','Nose height',-.037,-.017),n('nose.z','Nose projection',.026,.048,.0006),n('nose.width','Nose width',.020,.038),n('nose.height','Nose vertical extent',.003,.013),n('nose.depth','Nose depth',.008,.020),n('nose.blend','Nose blend',.0008,.008,.0002),n('nose.edge','Nose edge rounding',.0005,.003,.0002),
+    n('chin.y','Chin height',-.045,-.025),n('chin.z','Chin projection',.019,.040,.0006),n('chin.width','Chin width',.020,.044),n('chin.height','Chin height radius',.011,.023),n('chin.depth','Chin depth',.016,.034),n('chin.blend','Chin blend',.003,.012)
+  ]),
+  scalar('fade','Nose / chin profile','const HOSHINO_MID_FADE =\\s*',n('profile.fade','Side blending',0,28,.5)),
+  faceScalar('eyeS','Eye size',.75,1.3),
+  faceScalar('defaultSquint','Resting squint',0,.5),
+  faceScalar('blush','Blush intensity',0,1),
+  ear(),
+  custom('earSize','Ears',/EAR\.z\], (\[[^\]]+\])/,[
+    n('ear.width','Ear thickness',.003,.010),n('ear.height','Ear height',.007,.018),n('ear.depth','Ear depth',.004,.012)
+  ]),
+  custom('capSize','Hair cap',/\/\/ under-cap covers the scalp[^\n]*\n\s*part\(ball, \[[^\]]+\], (\[[^\]]+\])/,[
+    n('hair.cap.width','Cap width',.048,.072),n('hair.cap.height','Cap height',.039,.062),n('hair.cap.depth','Cap depth',.046,.068)
+  ]),
+  custom('crownPosition','Hair crown',/\/\/ 2\. from the part[^\n]*\n\s*part\(ballS, (\[[^\]]+\])/,[
+    n('hair.crown.x','Crown lock horizontal position',-.010,.027),n('hair.crown.y','Crown lock height',.035,.065),n('hair.crown.z','Crown lock depth',-.010,.022)
+  ]),
+  custom('crownSize','Hair crown',/\/\/ 2\. from the part[^\n]*\n\s*part\(ballS, \[[^\]]+\], (\[[^\]]+\])/,[
+    n('hair.crown.width','Crown lock width',.024,.048),n('hair.crown.height','Crown lock thickness',.006,.024),n('hair.crown.depth','Crown lock depth radius',.016,.037)
+  ]),
+  custom('frontRight','Hairline',/\/\/ front hairline waves[^\n]*\n\s*part\(ballS, (\[[^\]]+\])/,[
+    n('hair.fringe.right.x','Right wave horizontal position',.001,.025),n('hair.fringe.right.y','Right wave height',.019,.047),n('hair.fringe.right.z','Right wave depth',.033,.058)
+  ]),
+  custom('frontLeft','Hairline',/\/\/ front hairline waves[^\n]*\n\s*part\(ballS,[^\n]*\n\s*part\(ballS, (\[[^\]]+\])/,[
+    n('hair.fringe.left.x','Left wave horizontal position',-.030,-.002),n('hair.fringe.left.y','Left wave height',.019,.047),n('hair.fringe.left.z','Left wave depth',.030,.055)
+  ]),
+  hex('skin','Skin colour','const SKIN =\\s*'),hex('hairColor','Hair colour','const HAIR_C =\\s*'),
+  hex('hairGrey','Grey streak colour','const HAIR_GREY =\\s*'),hex('hairBand','Hair highlight colour','const HAIR_BAND =\\s*'),
+  hex('glasses','Glasses colour','const GLASS =\\s*')
+]
+const groups = {her,fuku,ishi,hoshino}
 
 // Fuku originally inherits the shared face silhouette. Give only Fuku her own
 // jaw and use it in BOTH the body spec and the projected face decal.
 function prepare(id, source) {
+  if (id === 'hoshino') {
+    if (source.includes('const HOSHINO_CHEEK =')) return source
+    const anchor = "const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, blush: 0.55 })"
+    if (!source.includes(anchor) || !source.includes('cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE')) throw new Error('Hoshino face adapter needs updating for this source revision.')
+    return source.replace('import { CHEEK, MIDFACE, MID_FADE, makeFace }','import { makeFace }')
+      .replace(anchor, [
+        'const HOSHINO_HEAD_S = [1, 1, 1]',
+        'const HOSHINO_CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]',
+        'const HOSHINO_MIDFACE = [[-0.0278, 0.0397, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]',
+        'const HOSHINO_MID_FADE = 0',
+        "const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1 })"
+      ].join('\n'))
+      .replace('cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE','headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE')
+  }
   if (id !== 'fuku' || source.includes('const FUKU_CHEEK =')) return source
   const anchor = 'const Face = makeFace({ kind: \'fuku\', glasses: GLASS, defaultSquint: 0.1, blush: 0.72 })'
   if (!source.includes(anchor) || !source.includes('cheek: CHEEK, midface: MIDFACE')) throw new Error('Fuku face adapter needs updating for this source revision.')

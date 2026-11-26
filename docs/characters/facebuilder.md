@@ -10,7 +10,7 @@ Use the existing Tiny Planet character renderer to tune faces without asking an 
    npm run facebuilder -- --char ishi --wait
    ```
 
-   Other IDs: `her`, `fuku`. Use an interactive terminal or a background process with output capture so the agent can wait for the completion message. Open the printed local URL, normally http://127.0.0.1:5191/facebuilder?char=ishi. If the agent runs in a remote/virtual environment, forward the loopback port using its trusted development preview feature; do not expose this write-capable server publicly.
+   Other IDs: `her`, `fuku`, `hoshino`. Use an interactive terminal or a background process with output capture so the agent can wait for the completion message. Open the printed local URL, normally http://127.0.0.1:5191/facebuilder?char=ishi. If the agent runs in a remote/virtual environment, forward the loopback port using its trusted development preview feature; do not expose this write-capable server publicly.
 
 2. Make edits in the right inspector. The 3D viewport is the real existing character studio rendered in an iframe. The preview shader, rig, hair and baked meshes are unchanged; changing an input triggers a debounced iframe reload with dev-only in-memory value overrides. It's a refresh-based preview, not instant continuous sculpting.
 3. Check front, both 3/4 and side views, full body and elevated studio angle. Compare original/draft; add a concept image overlay if helpful. Lock individual controls against accidental edits. Undo or reset unlocked controls as necessary.
@@ -21,9 +21,9 @@ Omit `--wait` to keep the server running after approval. Reload the editor to st
 
 ## Design and safeguards
 
-- `tools/facebuilder/schema.mjs` maps human-readable controls to existing source constants. Existing values are the baseline; there are no separate runtime character presets. Her nose profile, eyes, cheeks, ears and hair; Fuku's cheeks, eyes, blush, ears, bun and palette; Ishi's skull, crown, chin, cheeks, occiput, nose, moustache, ears and palette are covered.
+- `tools/facebuilder/schema.mjs` maps human-readable controls to existing source constants. Existing values are the baseline; there are no separate runtime character presets. Her nose profile, eyes, cheeks, ears and hair; Fuku's cheeks, eyes, blush, ears, bun and palette; Ishi's skull, crown, chin, cheeks, occiput, nose, moustache, ears and palette; Hoshino's skull, cheeks, nose/chin profile, eyes, ears, cap, crown lock, hairline and colours are covered.
 - Preview transforms run only in the dedicated Vite server, without writing source. The server listens on 127.0.0.1:5191; submissions require a random per-session token, known character and bounded numeric/color controls. A source hash prevents clobbering concurrent agent edits. If an existing geometry constant is restructured, the adapter fails closed and must be updated.
-- Fuku shares the default cheek with other characters. On the first changed submission we create a Fuku-specific cheek constant connected to both the SDF body and projected face, preserving the other characters. The preview applies the equivalent adapter.
+- Fuku shares the default cheek with other characters. On the first changed submission we create a Fuku-specific cheek constant connected to both the SDF body and projected face, preserving the other characters. The preview applies the equivalent adapter. Hoshino likewise gets private skull, cheek and profile parameters used by both the mesh and decal only on an edited submission.
 - Feature locks protect editor controls; the submitted receipt declares the mapped design parameters approved and locked for the agent. This is an agent review contract, not an immutable filesystem permission. Do not alter shared rendering functions in ways that change a locked character's appearance without review.
 - This version deliberately uses existing procedural parameters, not arbitrary mesh sculpting or curve point manipulation. New controls should be added to the adapter and tested with current source. It does not install browser packages, auto-commit, or require an AI/API integration.
 
