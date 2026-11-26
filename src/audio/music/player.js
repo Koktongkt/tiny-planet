@@ -38,12 +38,12 @@ export function createMusic(ctx, out, { staged = true, log = null, recordings = 
   const wave = (k) => WAVE[k] || (WAVE[k] = (() => { const h = LIVE[k].h, re = new Float32Array(h.length), im = Float32Array.from(h); return ctx.createPeriodicWave(re, im) })())
 
   // ---- decks ----
-  function deck(id, t, fadeIn, buffer) {
+  function deck(id, t, fadeIn, track) {
     const g = G(0); g.connect(tone)
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + fadeIn)
-    if (buffer) {
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(track?.gain ?? 1, t + fadeIn)
+    if (track) {
       const source = ctx.createBufferSource()
-      source.buffer = buffer; source.loop = true
+      source.buffer = track.buffer; source.loop = true
       source.connect(g); source.start(t)
       const d = { id, g, source, end: Infinity }
       decks.push(d); return d
@@ -66,13 +66,13 @@ export function createMusic(ctx, out, { staged = true, log = null, recordings = 
   }
 
   // Keep only the requested load and the buffers used by the active or fading decks.
-  function loadRecording(url) {
+  function loadRecording(track) {
     recording?.controller.abort()
     recording = null
-    if (!url) return
+    if (!track) return
     const controller = new AbortController()
-    const request = recording = { controller, buffer: null, failed: false }
-    fetch(url, { signal: controller.signal }).then(res => {
+    const request = recording = { controller, buffer: null, failed: false, gain: 10 ** (track.gainDb / 20) }
+    fetch(track.url, { signal: controller.signal }).then(res => {
       if (!res.ok) throw new Error(`Music request failed (${res.status})`)
       return res.arrayBuffer()
     }).then(data => ctx.decodeAudioData(data)).then(buffer => {
@@ -168,11 +168,11 @@ export function createMusic(ctx, out, { staged = true, log = null, recordings = 
       loadRecording(cur?.id === id ? null : recordings[id])
     }
     if (cur?.id !== id) {
-      const buffer = recording?.buffer
-      if (recording && !buffer && !recording.failed) return
-      if (!cur && !buffer) { need(instsFor(id), true); if (staged && !ready(id)) return }
-      if (cur) { fadeOut(cur, now); cur = deck(id, now + 0.35, XF, buffer) }
-      else cur = deck(id, now + 0.25, 3.5, buffer)
+      const track = recording?.buffer ? recording : null
+      if (recording && !track && !recording.failed) return
+      if (!cur && !track) { need(instsFor(id), true); if (staged && !ready(id)) return }
+      if (cur) { fadeOut(cur, now); cur = deck(id, now + 0.35, XF, track) }
+      else cur = deck(id, now + 0.25, 3.5, track)
     }
     const out = id === 'outdoor', wet = out ? scene.rain || 0 : 0
     tone.frequency.setTargetAtTime(16000 - 12500 * wet, now, 0.8)

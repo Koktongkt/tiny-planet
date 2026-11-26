@@ -17,6 +17,6 @@ Tiny Planet uses **no third-party 3D models, textures or images**. Every mesh (t
 
 ## Ambient audio & music (Stage B, first-party, no third-party sounds)
 - Wind, river/stream, lake lapping, night insects, birdsong and river bubbles (`src/audio/engine.js`): synthesised live in the browser with WebAudio (filtered white/brown noise, oscillators, LFOs). No sample files, no downloads.
-- Music: the supplied “Sunlit Valley Stroll” recording plays outdoors (`src/audio/music/tracks/`). The four original folk and waltz pieces are stored in `src/audio/music/score.js` and synthesised in the browser: “Little Planet Waltz” (outdoor fallback), “Lamplight” (house), “Professor Hoshino's Cabinet” (museum), and “Rails Through the Meadow” (train).
+- Music: the supplied MP3s in `src/audio/music/tracks/` play “Sunlit Hearthside Tales” in the house and “Sunlit Valley Stroll” outdoors. The original pieces in `src/audio/music/score.js` play in the museum and on the train and serve as fallbacks for the house and outdoor recordings.
 - Activity SFX (`src/audio/sfx.js`): footsteps, fishing, foraging, digging, camera, journal, donations, dialogue voices, doors, coins, train bell, jingles, pet bark / meow — all synthesised once in the browser (first-party).
 - UI blips (`src/act.js`): synthesised WebAudio tones (first-party); a fallback until the audio chunk's SFX are loaded.

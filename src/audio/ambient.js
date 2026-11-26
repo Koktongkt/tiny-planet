@@ -54,7 +54,9 @@ export function startAudio(opts = {}) {
     import('./music/player.js').then(m => {
       if (!API) return
       M = D.music = m.createMusic(ctx, E.music, { recordings: {
-        outdoor: new URL('./music/tracks/sunlit-valley-stroll.mp3', import.meta.url).href,
+        // Match each recording's integrated loudness to the score it replaces.
+        house: { url: new URL('./music/tracks/sunlit-hearthside-tales.mp3', import.meta.url).href, gainDb: -4.9 },
+        outdoor: { url: new URL('./music/tracks/sunlit-valley-stroll.mp3', import.meta.url).href, gainDb: -7.9 },
       } })
     })
   }
