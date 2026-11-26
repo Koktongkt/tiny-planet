@@ -10,6 +10,7 @@ import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferG
 import { Character, cel, spec, sdf, mkOutline } from '../../GhibliPerson.jsx'
 import { ISHI_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
+import { envelope } from './lifeCore.js'
 import { MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
 import { part, tagAW, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
@@ -45,12 +46,12 @@ const CHIN = [-0.049, 0.026, 0.027, 0.015, 0.019, 0.012] // pass 8: pulled back 
 // the lower back of the skull is full and round down to the neck (sheet side view), not flat above the nape
 const OCCIPUT = [-0.018, -0.024, 0.042, 0.030, 0.039, 0.016]
 const HEAD = { headS: HEAD_S, cranium: CRANIUM, chin: CHIN, lumps: [OCCIPUT], cheek: JAW }
-const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.02, girth: 1.26, shoulder: 1.10, chestW: 1.14, bellyZ: 1.0, shX: 1.20, armA: 0.50,
-  armR: [0.35, 0.30, 0.25], legR: 1.30, legX: 1.08, foot: 1.20, bootW: 1.20, bootH: 1.00, bootL: 1.02, hand: 0.01,
+const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.92, girth: 1.26, shoulder: 1.10, chestW: 1.14, bellyZ: 1.0, shX: 1.20, armA: 0.50,
+  armR: [0.8, 0.75, 0.7], legR: 1.30, legX: 1.08, foot: 1.20, bootW: 1.20, bootH: 1.00, bootL: 1.02, hand: 1.15,
   headS: HEAD_S, cranium: CRANIUM, chin: CHIN, lumps: [OCCIPUT], cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
-  anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true, headUp: 0.012 }
+  anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true, headUp: 0.012, armStrict: true }
 const TOP = Math.max(0.0499 * HEAD_S[1], CRANIUM[0] + CRANIUM[3]) // skull top in the head frame
-const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD, fy1: 0.034, eyeS: 1.12 }) // the decal reaches up the forehead for the wrinkles
+const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD, fy1: 0.034, fy0: -0.060, eyeS: 1.12 }) // the decal reaches up the forehead for the wrinkles
 
 // the baked surface in the head frame (origin S.headC, scale 1.17 * head): the whole body SDF, so the chin's blend
 // into the neck counts (the head-only SDF sits behind the real lower face, and pieces placed on it were buried)
@@ -163,6 +164,7 @@ function ishiHair() {
     const x = 0.0175 + 0.0185 * t, y = 0.0064 + 0.0048 * Math.sin(Math.PI * t) - 0.0010 * t
     const r = 0.0052 + 0.0012 * Math.sin(Math.PI * t), slope = Math.cos(Math.PI * t) * 0.6
     parts.push(onFace(ballS, sd * x, y, -0.0004 - 0.0004 * t, [r * 1.5, r, r * 0.95], [0, 0, sd * slope])) }
+  const nBrow = parts.length
   const ink = parts.map((_, k) => (k < nKnot ? 1 : 0.38)) // ink weight per piece: face pieces take a fine line
   const add = (g, w) => { parts.push(g); ink.push(w) }
   add(mustacheGeo(), 0.3) // a fine hull for the silhouette; the soft grey rim carries the outline on the face
@@ -170,7 +172,7 @@ function ishiHair() {
   add(onFace(ball, 0, -0.0284, 0.0042, [0.0114, 0.0080, 0.0094], [0, 0, 0], 1), 0.55)
   for (const sd of [-1, 1]) for (const [g, w] of earParts(sd)) add(g, w)
   for (let k = 0; k < parts.length; k++) {
-    tagAW(parts[k], () => (k < nKnot ? [2, 0.3] : [3, 0]))
+    tagAW(parts[k], () => (k < nKnot ? [2, 0.3] : k < nBrow ? [3, 1] : k === nBrow ? [0, 1] : [3, 0])) // brows: group 3, mustache: group 0 (both posed by his life layer)
     parts[k].setAttribute('aInk', new THREE.Float32BufferAttribute(new Float32Array(parts[k].attributes.position.count).fill(ink[k]), 1))
   }
   return mergeHair(parts)
@@ -224,30 +226,6 @@ function robeCollarGeo() {
   }
   return merged(parts)
 }
-
-// wide haori sleeve: shoulder pad, upper arm, elbow, and a forearm that opens into a broad square-ish sleeve mouth
-function haoriArmGeo(sd, sh, elbow, wrist) {
-  const cap = ballAt([sh[0], sh[1] - 0.004, sh[2]], 0.0175, HAORI, [1.1, 0.95, 0.9])
-  const yoke = ballAt([sh[0] - sd * 0.004, sh[1] - 0.014, sh[2] - 0.020], 0.022, HAORI, [0.9, 1.15, 1.25])
-  const parts = [yoke, cap,
-    tubeBetween(sh, elbow, 0.0215, 0.0215, HAORI),
-    ballAt(elbow, 0.0216, HAORI),
-    tubeBetween(elbow, wrist, 0.0222, 0.0300, HAORI, 10),
-  ]
-  // sleeve mouth: a dark rim so the opening reads, and the hanging bag of the sleeve under the forearm
-  const W = new THREE.Vector3(...wrist), E = new THREE.Vector3(...elbow), d = W.clone().sub(E).normalize()
-  const rim = new THREE.TorusGeometry(0.0287, 0.0026, 6, 16)
-  rim.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)); rim.translate(...wrist)
-  parts.push(paint(rim, HAORI_D))
-  const inner = new THREE.CircleGeometry(0.0283, 14)
-  inner.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)); inner.translate(W.x - d.x * 0.001, W.y - d.y * 0.001, W.z - d.z * 0.001)
-  parts.push(paint(inner, '#171c28'))
-  const bag = E.clone().lerp(W, 0.62); bag.y -= 0.012
-  parts.push(ballAt(bag.toArray(), 0.023, HAORI, [0.9, 1.3, 1.05]))
-  return merged(parts)
-}
-
-const mittenGeo = (s = 1) => { const g = new THREE.SphereGeometry(0.0128 * s, 12, 9); g.scale(1.1, 1.0, 0.95); return paint(g, SKIN) }
 
 // gnarled walking stick from the ground up to a rounded knob, with a few knots
 function caneGeo(bottom, top) {
@@ -427,11 +405,118 @@ function clothesGeo(S, hipsY) {
   g.translate(0, -hipsY, 0); return g
 }
 
+// ---- arms on the rig: his rest pose, the sleeves, smoke ----
+// rest pose (bone eulers): his right (L bones) hangs a little forward with the fist on the cane; his left (R) is bent up,
+// the pipe in his fist in front of the belly. Blended in under any game action, and the life layer adds on top.
+// his rest pose (bone eulers [upper arm], [forearm]); the arms hang from the rig's shoulders, down and a little out
+const REST = { L: [[-0.22, 0, 0.02], [-0.42, 0, 0]], R: [[-0.22, 0, 0.10], [-0.92, -0.62, 0]] }
+function restArms(B, st, w) {
+  for (const k of ['L', 'R']) { const [u, f] = REST[k], up = B['up' + k], fo = B['fo' + k]
+    up.rotation.x += (u[0] - up.rotation.x) * w; up.rotation.y += (u[1] - up.rotation.y) * w; up.rotation.z += (u[2] - up.rotation.z) * w
+    fo.rotation.x += (f[0] - fo.rotation.x) * w; fo.rotation.y += (f[1] - fo.rotation.y) * w; fo.rotation.z += (f[2] - fo.rotation.z) * w }
+  const m = st.move || 0; B.upL.rotation.x += Math.sin(st.phase || 0) * 0.16 * m * w; B.foL.rotation.x -= 0.1 * m * w // the cane arm steps along with him
+}
+// the arm in its rest pose, unparented (the body's bones are unrotated at rest): to place props and sleeves in bone space
+function restRigAt(S, k, r) { const up = new THREE.Object3D(), fo = new THREE.Object3D(); up.position.copy(S['sh' + k]); fo.position.copy(S['el' + k]).sub(S['sh' + k]); up.add(fo)
+  up.rotation.set(...r[0]); fo.rotation.set(...r[1]); up.updateMatrixWorld(true); return fo }
+const restRig = (S, k) => restRigAt(S, k, REST[k])
+// the pipe in the right fist (bone frame of the forearm at rest): where its stem tip ends up, and the arm angles that put
+// that tip at his mouth (solved once, by a small search, in the body's rest frame)
+const PIPE_S = 1.45, PIPE_TIP = [-0.032, 0.012, 0.004]
+let DRAW = null
+function pipeAt(S) { const fo = restRig(S, 'R'), hand = fo.localToWorld(S.hdR.clone().sub(S.elR)); return { fo, at: hand.add(new THREE.Vector3(-0.003, 0.007, 0.006)) } }
+function solveDraw(S) {
+  // his arms are short (a chibi): he meets the pipe halfway, nodding a little while the fist tips the stem up to his lips.
+  // Unknowns: upper arm (x, z), forearm (x <= 0: the elbow bends forward only, y), head nod hp, pipe tip in the fist pr.
+  const { fo, at } = pipeAt(S), atFo = fo.worldToLocal(at.clone()), tipFo = fo.worldToLocal(at.clone().add(new THREE.Vector3(...PIPE_TIP).multiplyScalar(PIPE_S)))
+  const kk = 1.17 * (S.b.head ?? 1), my = -0.050, mouth0 = S.headC.clone().add(new THREE.Vector3(0.004, my * kk, (surfZ(0, my) + 0.004) * kk))
+  const pivot = new THREE.Vector3(0, S.shY + 0.045, S.neck[1].z * 0.7), X = new THREE.Vector3(1, 0, 0)
+  const lim = [[-2.6, 0.4], [-1.4, 0.5], [-2.5, 0], [-1.3, 1.3], [0, 0.32], [-1.4, 1.4]], pose = (q) => [[q[0], 0, q[1]], [q[2], q[3], 0]]
+  const err = (q) => { const tip = tipFo.clone().sub(atFo).applyAxisAngle(X, q[5]).add(atFo), w = restRigAt(S, 'R', pose(q)).localToWorld(tip)
+    const mouth = mouth0.clone().sub(pivot).applyAxisAngle(X, q[4]).add(pivot); return w.distanceTo(mouth) + 0.004 * q[4] }
+  const q = [-1.2, -0.3, -1.2, -0.4, 0.1, 0.4]; let e = err(q)
+  for (let st = 0.5; st > 0.002; st *= 0.6) for (let it = 0; it < 8; it++) for (let i = 0; i < 6; i++) for (const sg of [1, -1]) { const t = q.slice(); t[i] = Math.min(lim[i][1], Math.max(lim[i][0], t[i] + sg * st)); const e2 = err(t); if (e2 < e) { e = e2; q[i] = t[i] } }
+  DRAW = pose(q); DRAW.nod = q[4]; DRAW.tip = q[5]; DRAW.err = e - 0.004 * q[4]
+}
+// a wide haori sleeve in two pieces: the upper arm (on the upper-arm bone) and the forearm opening to a broad mouth
+// (on the forearm bone), with a dark rim and the sleeve's hanging bag. The rig's own slim arm and mitten sit inside.
+function sleeveGeos(S, k) {
+  const e = S['el' + k].clone().sub(S['sh' + k]), w = S['wr' + k].clone().sub(S['el' + k]).multiplyScalar(0.86), d = w.clone().normalize()
+  const upper = merged([ballAt([0, 0, 0], 0.0235, HAORI, [1.05, 0.95, 1.0]), tubeBetween([0, 0, 0], e.toArray(), 0.0232, 0.0236, HAORI)])
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)
+  const rim = new THREE.TorusGeometry(0.0300, 0.0026, 6, 16); rim.applyQuaternion(q); rim.translate(w.x, w.y, w.z)
+  const inner = new THREE.CircleGeometry(0.0296, 14); inner.applyQuaternion(q); inner.translate(w.x - d.x * 0.001, w.y - d.y * 0.001, w.z - d.z * 0.001)
+  const down = new THREE.Vector3(0, -1, 0).applyQuaternion(restRig(S, k).getWorldQuaternion(new THREE.Quaternion()).invert()) // world down, in the forearm's frame at rest
+  const bag = w.clone().multiplyScalar(0.6).addScaledVector(down, 0.009)
+  const fore = merged([ballAt([0, 0, 0], 0.0236, HAORI), tubeBetween([0, 0, 0], w.toArray(), 0.0236, 0.0310, HAORI, 12), paint(rim, HAORI_D), paint(inner, '#171c28'), ballAt(bag.toArray(), 0.021, HAORI, [0.9, 1.3, 1.05])])
+  return [upper, fore]
+}
+// smoke puffs: soft pale balls that drift up, swell and fade (one draw while any are alive)
+function makeSmoke() {
+  const N = 22, mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshBasicMaterial({ color: '#efebe5', transparent: true, opacity: 0.88, depthWrite: false }), N)
+  mesh.frustumCulled = false; mesh.visible = false; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.renderOrder = 3
+  const P = Array.from({ length: N }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), t: 9, life: 1, s: 0, ph: 0 })), M = new THREE.Matrix4()
+  let head = 0
+  return { mesh,
+    emit(pos, vel, size, life) { const o = P[head]; head = (head + 1) % N; o.p.copy(pos); o.v.copy(vel); o.t = 0; o.life = life * (0.85 + Math.random() * 0.3); o.s = size * (0.8 + Math.random() * 0.4); o.ph = Math.random() * 6.3 },
+    step(dt, up, side) { let alive = 0
+      for (const o of P) { let r = 0
+        if (o.t < o.life) { o.t += dt; const k = Math.min(1, o.t / o.life)
+          o.v.multiplyScalar(Math.exp(-1.2 * dt)); o.p.addScaledVector(o.v, dt).addScaledVector(up, o.s * 3.2 * dt).addScaledVector(side, Math.sin(o.t * 2.4 + o.ph) * o.s * 1.6 * dt)
+          r = o.s * (0.55 + 1.5 * k) * Math.sin(Math.min(1, k * 1.15) * Math.PI) ** 0.6; if (r > 0) alive++ }
+        M.makeScale(r, r, r).setPosition(o.p); mesh.setMatrixAt(P.indexOf(o), M) }
+      mesh.instanceMatrix.needsUpdate = true; mesh.visible = alive > 0 } }
+}
+const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+// ---- his own idle actions on top of the shared life layer (which times them: L.fid, L.fu) ----
+// smoke: raise the pipe, a slow draw with the eyes closed, lower it, tip the head back a touch and let the smoke out
+// laugh: a big, loud "ho ho ho": leans way back, belly bouncing, his free hand on his belly, eyes squeezed into ^ ^,
+// the mustache lifting off a wide open mouth
+function ishiActs(L, B, st, dt) {
+  L.arc = 0; L.smoke = 0; L.exhale = 0; L.draw = 0; L.pipeTip = 0
+  let lift = 0, brow = 0
+  const FID = L.P.fidgets, idleOk = (st.move || 0) < 0.2
+  if (L.fid === 'smoke' && idleOk) { const d = FID.smoke, k = L.fu / d, e = envelope(L.fu, d, 0.6)
+    const up = sst(0.03, 0.2, k) * (1 - sst(0.5, 0.64, k)), draw = sst(0.22, 0.28, k) * (1 - sst(0.46, 0.52, k)), ex = sst(0.6, 0.66, k) * (1 - sst(0.88, 0.98, k))
+    if (DRAW) { const [u, f] = DRAW, a = up * e // the pipe up to his mouth (solved pose), and back down
+      B.upR.rotation.x += (u[0] - B.upR.rotation.x) * a; B.upR.rotation.z += (u[2] - B.upR.rotation.z) * a; B.foR.rotation.x += (f[0] - B.foR.rotation.x) * a; B.foR.rotation.y += (f[1] - B.foR.rotation.y) * a
+      B.head.rotation.x += DRAW.nod * a; L.pipeTip = DRAW.tip * a }
+    B.head.rotation.x -= 0.16 * ex; B.chest.rotation.x -= 0.04 * ex
+    B.chest.scale.y *= 1 + 0.035 * draw - 0.025 * ex; B.chest.scale.x *= 1 + 0.015 * draw
+    L.open = Math.min(L.open, 1 - 0.92 * draw); L.squint = Math.max(L.squint, 0.55 * ex + 0.25 * e); brow = 0.0008 * ex
+    L.smoke = e; L.draw = draw; L.exhale = ex }
+  if (L.fid === 'laugh' && idleOk) { const d = FID.laugh, k = L.fu / d, e = envelope(L.fu, d, 0.32)
+    const ho = Math.abs(Math.sin(L.fu * 9)) * sst(0.1, 0.22, k) * (1 - sst(0.78, 0.92, k)) * e
+    B.root.rotation.x -= 0.09 * e; B.chest.rotation.x -= 0.26 * e; B.head.rotation.x -= 0.2 * e + 0.05 * ho
+    B.chest.scale.y *= 1 + 0.04 * ho; B.chest.scale.x *= 1 + 0.015 * ho; B.root.position.y += 0.004 * ho
+    B.upR.rotation.x -= 0.1 * e; B.upR.rotation.z -= 0.3 * e; B.foR.rotation.x -= 0.25 * e + 0.2 * ho // the free hand on his belly
+    B.upL.rotation.z += 0.04 * e; B.foL.rotation.x -= 0.06 * e
+    L.arc = sst(0.05, 0.4, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0042 * e + 0.0009 * ho; brow = 0.0024 * e }
+  // hair groups: 0 = the mustache (lifts when he laughs), 3 = the brows (raise); the knot (2) keeps the life layer's spring
+  const OFF = L.hairOff; OFF[0] = 0; OFF[1] = lift; OFF[2] = lift * 0.35; OFF[9] = 0; OFF[10] = brow; OFF[11] = 0
+}
+const _w = new THREE.Vector3(), _u = new THREE.Vector3(), _sd = new THREE.Vector3(), _hq = new THREE.Quaternion(), _sc = new THREE.Vector3()
+function smokeStep(L, st, dt) {
+  const K = st.ishi; if (!K || !K.smoke || !L) return
+  if (K.pipe) K.pipe.rotation.x = L.pipeTip || 0
+  const sm = K.smoke; K.head?.getWorldQuaternion(_hq); _u.set(0, 1, 0); _sd.set(1, 0, 0)
+  if (K.head) { K.head.parent.getWorldQuaternion(_hq); _u.set(0, 1, 0).applyQuaternion(_hq); _sd.set(1, 0, 0).applyQuaternion(_hq) }
+  const ws = K.fo ? K.fo.getWorldScale(_sc).x : 1
+  // the bowl smoulders: a thin wisp now and then, more while he draws on it
+  if (K.fo && K.bowl) { K.wisp = (K.wisp ?? 0) - dt * (1 + 4 * (L.draw || 0))
+    if (K.wisp <= 0) { K.wisp = 0.55; K.fo.localToWorld(_w.copy(K.bowl)); sm.emit(_w, _u.clone().multiplyScalar(0.03 * ws), 0.0075 * ws, 2.0) } }
+  // the exhale: a soft stream from under the mustache, out and up
+  if (K.head && L.exhale > 0.25) { K.ex = (K.ex ?? 0) - dt
+    if (K.ex <= 0) { K.ex = 0.07; K.head.localToWorld(_w.copy(K.mouth)); K.head.getWorldQuaternion(_hq); const fwd = new THREE.Vector3(0, -0.2, 1).applyQuaternion(_hq)
+      sm.emit(_w, fwd.multiplyScalar(0.09 * ws).addScaledVector(_u, 0.03 * ws), 0.013 * ws * (0.6 + 0.6 * L.exhale), 2.0) } }
+  sm.step(dt, _u, _sd)
+}
+
 const collarInk = (() => { const m = mkOutline(false); m.uniforms.uT.value = 0.0026; return m })()
 const propMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2; return m })()
 const plainMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
 
-function attachLook(root) {
+function attachLook(root, st) {
   const chest = root.getObjectByName('chest'), hips = root.getObjectByName('hips')
   if (!chest || !hips) return () => {}
   const S = spec(ISHI.body), out = []
@@ -442,37 +527,40 @@ function attachLook(root) {
   }
   const chestZ = S.chest[1].z + S.chest[0].z
   // inner robe collar in the haori opening, and the haori's collar band down the front edges
-  const collars = collarsGeo(S, chestY); add(chest, collars); add(chest, collars, [0, 0, 0], collarInk)
+  // the clothes are measured against the body without its arms (the arms hang at his sides and would swell the haori)
+  const SM = spec({ ...ISHI.body, arm: 0.02, hand: 0.01 })
+  const collars = collarsGeo(SM, chestY); add(chest, collars); add(chest, collars, [0, 0, 0], collarInk)
   // sash round the belly, across the opening
-  const clothes = clothesGeo(S, hipsY); add(hips, clothes, [0, 0, 0], plainMat); add(hips, clothes, [0, 0, 0], collarInk)
+  const clothes = clothesGeo(SM, hipsY); add(hips, clothes, [0, 0, 0], plainMat); add(hips, clothes, [0, 0, 0], collarInk)
   // sandals on the bare feet
   for (const k2 of ['L', 'R']) { const ft = root.getObjectByName('ft' + k2); if (ft) add(ft, sandalGeo(S, k2), [0, 0, 0], plainMat) }
-  if (LIFE_OFF) {
-    // his right (viewer's left): arm hangs a little forward, hand grips the cane at hip height; cane stands by the foot
-    // his left (viewer's right): forearm bent up, hand holds the pipe in front of the belly
-    const shY = S.shY - chestY - 0.004
-    for (const sd of [-1, 1]) {
-      const sh = [sd * (Math.abs(S.shL.x) + 0.010), shY + 0.002, S.shL.z + 0.004] // out on the oversized shoulders
-      const cane = sd < 0
-      const hand = cane ? [-0.096, -0.050, 0.042] : [0.056, -0.014, chestZ + 0.026]
-      const elbow = cane ? [-0.098, -0.010, 0.006] : [0.100, -0.026, 0.014]
-      const wrist = new THREE.Vector3(...elbow).lerp(new THREE.Vector3(...hand), 0.72).toArray()
-      add(chest, haoriArmGeo(sd, sh, elbow, wrist))
-      add(chest, mittenGeo(cane ? 1.05 : 1), hand, propMat, [0.2, sd * -0.3, sd * 0.2])
-      if (cane) add(chest, caneGeo([hand[0] - 0.004, -chestY + 0.004, hand[2] + 0.004], [hand[0], hand[1] + 0.012, hand[2]]))
-      else add(chest, pipeGeo(-1), [hand[0] - 0.002, hand[1] + 0.006, hand[2] + 0.004], propMat, [0.15, 0.25, 0]).scale.setScalar(1.45)
-    }
-  }
+  // arms (pass 11): the wide haori sleeves, the cane and the pipe ride the arm bones, so every pose moves them
+  const kit = { sleeves: [] }
+  for (const k of ['L', 'R']) { const up = root.getObjectByName('up' + k), fo = root.getObjectByName('fo' + k); if (!up || !fo) continue
+    const [gu, gf] = sleeveGeos(S, k); add(up, gu); add(fo, gf)
+    const rig = restRig(S, k), inv = rig.matrixWorld.clone().invert(), hand = rig.localToWorld(S['hd' + k].clone().sub(S['el' + k]))
+    if (k === 'L') { // the cane stands by his foot, his fist round the top
+      const g = caneGeo([hand.x - 0.002, 0.004, hand.z + 0.004], [hand.x, hand.y + 0.010, hand.z]); g.applyMatrix4(inv); add(fo, g) }
+    else { // the pipe sits upright in his fist, the stem toward his middle; its bowl top is where the smoke rises
+      const at = hand.clone().add(new THREE.Vector3(-0.003, 0.007, 0.006)), rot = new THREE.Matrix4().extractRotation(inv), g = pipeGeo(-1); g.scale(PIPE_S, PIPE_S, PIPE_S); g.applyMatrix4(rot)
+      kit.pipe = add(fo, g, at.clone().applyMatrix4(inv).toArray()) // pivots in the fist (tipped toward his mouth when he draws)
+      kit.fo = kit.pipe; kit.bowl = new THREE.Vector3(0, 0.0175 * PIPE_S, 0).applyMatrix4(rot) } }
+  // smoke: one InstancedMesh in world space (the scene), and the mouth point in the head bone's frame
+  const head = root.getObjectByName('head')
+  if (head && head.userData.rest) { const r = head.userData.rest, kk = 1.17 * (ISHI.body.head ?? 1), my = -0.047
+    kit.head = head; kit.mouth = new THREE.Vector3(0, S.headC.y - r.y + my * kk, S.headC.z - r.z + (surfZ(0, my) + 0.008) * kk) }
+  let scene = root; while (scene.parent) scene = scene.parent
+  kit.smoke = makeSmoke(); scene.add(kit.smoke.mesh); kit.smoke.mesh.layers.mask = root.layers.mask
+  st.ishi = kit
+  if (typeof window !== 'undefined' && q.get('char') === 'ishi') window.__ishiRoot = root // studio probes
+  out.push(kit.smoke.mesh)
   return () => out.forEach(m => m.removeFromParent())
 }
 
-function stillHold(B) {
-  // still pose: the chest-parented haori sleeves above are the arms; the skinned rig's are tiny (body.arm / hand)
-  B.upL.rotation.set(0.2, 0.1, -0.4); B.upR.rotation.set(0.2, -0.1, 0.4)
-  B.foL.rotation.set(-0.8, 0, 0); B.foR.rotation.set(-0.8, 0, 0)
-}
 
 const S0 = spec(BODY)
+solveDraw(S0)
+if (typeof window !== 'undefined') window.__ishiDraw = DRAW
 // the jaw (and chin) dips below the neck line: keep it skin, not haori or robe (the painter's skinEll, a little inflated)
 const JAW_ELL = (() => { const c = S0.ck[0], r = S0.ck[2]; return [0, c.y - r.y * 0.1, c.z, r.x * 1.0, r.y * 1.2, r.z * 1.1] })()
 
@@ -486,11 +574,14 @@ export const ISHI = {
   outfit: { type: 'openJacket', hemY: 'thigh', skin: SKIN, top: ROBE, acc: HAORI, acc2: HAORI, bottom: TROUSER, shoe: SKIN, shoeY: 0.0,
     skinEll: JAW_ELL, bare: true, legHem: S0.anY + (S0.knY - S0.anY) * 0.35, long: true, sleeve: 'none' },
   hold: {},
-  walk: { rate: 7, stride: 0.42, knee: 0.55, bounce: 0.006, smooth: true, land: 0.25, arm: 0.35, lean: 0.12, twist: 0.08, sway: 0.06, idle: 'look' },
+  // a slow, chill walk: short unhurried steps, a low bob, an easy side-to-side sway, a little stoop
+  walk: { rate: 5.8, stride: 0.36, knee: 0.48, bounce: 0.005, smooth: true, land: 0.2, arm: 0.2, lean: 0.14, twist: 0.06, sway: 0.09, idle: 'look' },
   ext: {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, ISHI_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = ISHI_HAIR_OFF
-      if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera); else stillHold(B) },
-    post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) },
+      if (typeof window !== 'undefined' && q.get('char') === 'ishi') window.__herLife = L // studio captures (tools/chibi-clip.mjs) drive the life layer through this
+      const aw = st.act ? Math.min(1, st.actW ?? 1) : 0; restArms(B, st, 1 - aw)
+      if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); ishiActs(L, B, st, dt) } },
+    post: (R_, st, dt, t) => { if (!LIFE_OFF) { lifePost(st.life, R_, st, dt, t); smokeStep(st.life, st, dt) } },
     Face, Hair: IshiHair,
   },
 }
@@ -499,7 +590,7 @@ export function ChibiIshi({ st, scale = 0.8, res }) {
   const g = useRef()
   const r = res ?? (TOUCH ? 40 : 52)
   useEffect(() => { let off = null, n = 0
-    const iv = setInterval(() => { const root = g.current; if (root && root.getObjectByName('chest') && root.getObjectByName('hips')) { off = attachLook(root); clearInterval(iv) } else if (++n > 50) clearInterval(iv) }, 80)
+    const iv = setInterval(() => { const root = g.current; if (root && root.getObjectByName('chest') && root.getObjectByName('hips')) { off = attachLook(root, st); clearInterval(iv) } else if (++n > 50) clearInterval(iv) }, 80)
     return () => { clearInterval(iv); off && off() } }, [])
   return <group ref={g}><Character cfg={ISHI} st={st} res={r} scale={scale} /></group>
 }

@@ -105,25 +105,27 @@ export const HOSHINO_MOTION = motionProfile(HER_MOTION, {
   restActs: ['look', 'sit'],
 })
 
-// Grandpa Ishi: slow and steady, leans on his cane, puffs his pipe. Calmest of the cast. (Draft; motion pass later.)
+// Grandpa Ishi: slow, chill and loud. Leans on his cane, puffs his pipe, and now and then laughs out loud ("ho ho ho",
+// leaning way back). His own idle actions (smoke, laugh) are posed in ChibiIshi.jsx on top of this life layer.
 export const ISHI_MOTION = motionProfile(HER_MOTION, {
   name: 'ishi',
-  lively: 0.55,
+  lively: 0.6,
+  fidgets: { smoke: 6.5, laugh: 3.0 },
   sets: {
-    day: ['look', 'hum', 'look', 'rock'],
-    rain: ['look', 'shiver'],
-    night: ['yawn', 'look'],
-    seated: ['look', 'hum'],
-    hungry: ['look', 'hum'],
-    indoor: ['look', 'hum', 'rock'],
-    stove: ['hum', 'look'],
+    day: ['smoke', 'look', 'laugh', 'smoke', 'look', 'laugh'],
+    rain: ['look', 'smoke', 'shiver'],
+    night: ['smoke', 'look', 'smoke', 'laugh'],
+    seated: ['smoke', 'look', 'laugh'],
+    hungry: ['look', 'smoke'],
+    indoor: ['smoke', 'look', 'laugh'],
+    stove: ['smoke', 'look'],
   },
-  fidgetAfter: 4,
-  fidgetEvery: [9, 18],
-  sitAfter: 20,
+  fidgetAfter: 3,
+  fidgetEvery: [4, 9],
+  sitAfter: 999,
   lieChance: 0,
-  can: { skip: false, skid: false, wave: true, dodge: false, sit: true, lie: false, rainHunch: true, glanceAtCamera: true },
-  waveEvery: [30, 50],
-  yawnUp: 1.2,
+  can: { skip: false, skid: false, wave: true, dodge: false, sit: false, lie: false, rainHunch: true, glanceAtCamera: true },
+  waveEvery: [25, 45],
+  yawnUp: 1.0,
   restActs: ['sit', 'chat'],
 })

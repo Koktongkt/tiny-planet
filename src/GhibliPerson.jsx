@@ -355,6 +355,9 @@ function bake(S, RES = 72) {
     ao[i] = Math.max(0, Math.min(1, 1 - o * 1.4))
     const hipsF = THREE.MathUtils.smoothstep(p.y, S.hipY - 0.023, S.hipY + 0.025)
     let ws = wb.map(([bi, b]) => [bi, (b[0] === 'hips' ? hipsF : 1) / (Math.pow(segD(p, b[3][0], b[3][1]) / b[4], 6) + 1e-4), b[0]])
+    // armStrict (opt-in): a vertex that clearly belongs to an arm (nearer the arm's surface than the torso's) follows only the
+    // arm bones, so a forearm bent far from the body takes its hand along (by default the hips' wide falloff holds the hand back)
+    if (S.b.armStrict) { const dL = armD(S, p, 'L'), dR = armD(S, p, 'R'), dc = core(S, p); if (Math.min(dL, dR) < dc - 0.003) { const k = dL < dR ? 'L' : 'R'; ws = ws.filter(w => w[2] === 'up' + k || w[2] === 'fo' + k) } }
     // skirt surface follows the hips more than the legs
     if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004) ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
     ws.sort((a, b) => b[1] - a[1]); ws = ws.slice(0, 4)

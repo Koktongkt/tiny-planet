@@ -241,3 +241,17 @@ Do not start a villager until KT asks. When they do:
 5. Tune hair and scarf clamps for *their* hair and costume (a bob, a hat, or no satchel will need different limits than her side buns).
 6. Run the unit tests, the startup-chunk check, the glitch checklist, and a follow-camera capture (meadow or another open spot). Confirm reduced-motion still damps them.
 7. Commit, do not push, and wait for KT.
+
+## Grandpa Ishi (motion pass 1)
+
+Vibe (KT): slow-moving, chill and loud. Clips: [`ref/ishi-anim-pass1.jpg`](ref/ishi-anim-pass1.jpg). Code: `ISHI_MOTION` in `motion.js`; his own poses in `src/art/chibi/ChibiIshi.jsx` (`restArms`, `ishiActs`, `smokeStep`), on top of the shared life layer (which times them as fidgets).
+
+- **Arms on the rig.** Until now the drafts hid the rig's arms and drew fixed chest-parented sleeves, so nothing could move. Ishi has real arms; the wide haori sleeves (upper arm + forearm with the mouth and hanging bag), the cane and the pipe ride the arm bones. `REST` is his rest pose (right fist on the cane, left fist holding the pipe at the belly), blended in under game actions; the cane arm steps along when he walks.
+- New opt-in body knob `armStrict`: a vertex nearer an arm's surface than the torso's follows only that arm's bones. Without it the hips' wide skin falloff held the hand back at the waist whenever the forearm bent away from the body (a stretched hand floating off the fist).
+- **Walk**: slow and chill: `rate 5.8`, `stride 0.36`, `bounce 0.005`, `sway 0.09`, `arm 0.2`, a slight stoop (`lean 0.14`).
+- **Profile**: `lively 0.6`; idle every 4-9 s after 3 s still; picks between `smoke` (6.5 s) and `laugh` (3 s) with the odd look round; no sitting on the grass, no skip, skid, lie or dodge.
+- **Smoke** (6.5 s): raises the pipe to his lips, a slow draw (eyes shut, chest swells), lowers it, tips his head back and lets the smoke out (squinting, content). His arms are too short to reach his mouth, so the pose is solved once (`solveDraw`, a small coordinate search): upper arm, forearm (the elbow bends forward only), a nod of up to 0.32 and the pipe tipping up to 1.4 rad in his fist; error 0.002 unit. The bowl smoulders with a thin wisp, faster while he draws; the exhale is a stream from under the mustache. Smoke is one InstancedMesh in the scene (22 puffs, 1 draw while alive).
+- **Laugh** (3 s): a big loud "ho ho ho": leans way back (root -0.09, chest -0.26, head -0.2), the belly bounces at 9 Hz, his free hand on his belly, blush up. Face: a new `laugh` mood (the excited atlas cell with an open laughing mouth under the mustache) and `uArc` in the face shader, which flips the closed-eye lash into a squeezed happy ^. The mustache lifts off the mouth and the brows rise through hair groups 0 and 3 (`aW`), so no extra draws.
+- Face decal can reach lower per character (`makeFace({ fy0 })`) for the mouth under his mustache.
+- Pitfall: `hips.position.z` is not reset by the base rig; adding to it slid him across the floor every frame. Use root y and rotations only.
+- Not done yet: a loud laugh triggered by talking to him or by events (it is an idle fidget for now), smoking while seated on the bench, the in-game follow camera check (he is still a dev-only draft).
