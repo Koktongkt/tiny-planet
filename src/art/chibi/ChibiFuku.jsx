@@ -31,7 +31,7 @@ const FUKU_CHEEK = [0, -0.0405, 0.0120, 0.0505, 0.0150, 0.0390, 0.0180, 0.0120]
 // pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
-const FEAT_DY = 0.003 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
+const FEAT_DY = 0.0012 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
 const HEAD_W = 0.86, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
@@ -56,8 +56,8 @@ const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush:
 const EAR = { x: 0.0605, y: -0.0225, z: 0.006 }
 // pass 20 (KT: start simple): one ball wrapping the head, its front edge the hairline across the forehead, and one
 // bun ball slightly behind the top of the head. No locks or painted lines yet.
-const BUN_C = [0, 0.060, -0.050], BUN_R = 0.026
-const H_CAP = [[0, 0.009, -0.019], [0.0610, 0.0610, 0.0660]]
+const BUN_C = [0, 0.068, -0.050], BUN_R = 0.026
+const H_CAP = [[0, 0.010, -0.019], [0.0650, 0.0640, 0.0690]]
 // pass 22: the forehead hairline traced from the sheet: a rounded block (superellipse, power 4) with a flat top, straight
 // sides down the temples and rounded corners, plus a small dip at the parting. Head-frame units.
 const HL = { a: 0.0460, top: 0.040, bot: -0.072, p: 4, dip: 0.0035, dipW: 0.0075, low: -0.008 }
@@ -82,9 +82,9 @@ function shapeCap(g) {
     fr[i] = smooth(-0.005, 0.02, z); se[i] = seOf(x, y)
     if (fr[i] > 0) {
       v.set(x, y, z); const r = v.length(), cover = smooth(HL.low - 0.006, HL.low + 0.004, y)
-      const lip = smooth(1.2, 1.0, se[i]) * cover // roll the hair down onto the skin as it nears the hairline
+      const lip = smooth(1.45, 1.0, se[i]) ** 1.6 * cover // roll the hair down onto the skin as it nears the hairline
       const [sx, sy, sz] = onSkin(x, y, z, 0), sr = Math.hypot(sx, sy, sz)
-      const out = r + (Math.max(r, sr + 0.0055) - r) * cover, nr = r + ((out + (sr + 0.0035 - out) * lip) - r) * fr[i]
+      const out = r + (Math.max(r, sr + 0.0100) - r) * cover, nr = r + ((out + (sr + 0.0035 - out) * lip) - r) * fr[i]
       v.normalize(); x = v.x * nr; y = v.y * nr; z = v.z * nr
     }
     P.setXYZ(i, x, y, z)
@@ -112,11 +112,11 @@ function hairlineInk() {
     const th = Math.PI * (-0.5 + i / 80) // from the left side round the top to the right side, as a superellipse
     const c = Math.cos(th), sn = Math.sin(th)
     let x = -Math.sign(sn) * HL.a * Math.abs(sn) ** (2 / HL.p); if (Math.abs(sn) < 1e-6) x = 0
-    const [cy, hb] = winAt(x); x *= 0.985; const y = cy + hb * 0.985 * Math.abs(c) ** (2 / HL.p) // just inside the hair edge
+    const [cy, hb] = winAt(x); x *= 0.972; const y = cy + hb * 0.975 * Math.abs(c) ** (2 / HL.p) // just inside the hair edge
     if (y < HL.low) continue
     // find the skin along a ray from the centre through (x, y) on the front
     let lo = 0, hi = 0.12; for (let k = 0; k < 26; k++) { const m = (lo + hi) / 2; if (headSDF(x, y, m, FUKU_CHEEK, FUKU_HR) < 0) lo = m; else hi = m }
-    pts.push(new THREE.Vector3(x, y, lo + 0.0028))
+    pts.push(new THREE.Vector3(x, y, lo + 0.0042))
   }
   const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.0012, 6, false)
   g.setAttribute('aSkin', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(0.48), 1))

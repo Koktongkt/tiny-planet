@@ -156,6 +156,10 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Back balanced: behind the cap centre the dome is pulled in (z x 0.80) and its mass lowered (up to 0.007), so in profile it rounds down to the nape instead of bulging high.
   - Tried: tucking the cap under the skin inside the line without cutting it (ragged edge where it grazed the faceted skin); laying the hair 1.2 mm over the skin (the skin flickered through); covering the temples down to eye level (strips of hair beside the eyes).
 
+**Grandma Fuku, pass 23** (KT: hair a little puffier so it doesn't look wrapped round the head; brows, eyes, nose, glasses and mouth slightly higher): [`ref/fuku-pass23-compare.jpg`](ref/fuku-pass23-compare.jpg).
+  - Puffier hair: cap `[[0, 0.010, -0.019], [0.065, 0.064, 0.069]]`; in front it stands 0.010 off the skin (was 0.0055) and rolls down to the hairline over a wider band (`lip = smooth(1.45, 1.0, se)^1.6`), so the edge reads as a soft rolled lip instead of a skin-tight wrap. Bun raised to `[0, 0.068, -0.050]` so about half still shows from the front; hairline ink moved slightly inside the edge and lifted (0.972 / 0.975, skin + 0.0042) so the fuller lip doesn't hide it.
+  - Features higher: `FEAT_DY` 0.003 -> 0.0012 (brows, eyes, nose, mouth, blush and glasses move together).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
