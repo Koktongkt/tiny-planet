@@ -256,7 +256,7 @@ export function spec(b = {}) {
   const hS = b.headS ?? [1, 1, 1]; S.headR = V3(0.068 * hd * hS[0], 0.0584 * hd * hS[1], 0.0648 * hd * hS[2]) // headS: optional skull radii scale (default = old)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc + (b.headUp ?? 0), 0.008 + 0.055 * hc) // headUp: optional lift of the head off the shoulders (default 0)
   if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
-  S.cr = [b.cranium, b.chin].filter(Boolean).map(([y, z, rx, ry, rz, k]) => { const s = 1.17 * hd; return [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] }) // optional head lumps blended into the skull (head-frame units, shaded with it): cranium (a broader, taller crown), chin (a fuller lower face)
+  S.cr = [b.cranium, b.chin, ...(b.lumps ?? [])].filter(Boolean).map(([y, z, rx, ry, rz, k]) => { const s = 1.17 * hd; return [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] }) // optional head lumps blended into the skull (head-frame units, shaded with it): cranium (a broader, taller crown), chin (a fuller lower face), lumps (any more)
   if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw

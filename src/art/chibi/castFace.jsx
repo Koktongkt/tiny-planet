@@ -131,9 +131,9 @@ const ocol = (x, y, z, cx, cy, cz, rx, hy, rz, r) => { const a = (x - cx) / rx, 
 const ell = (x, y, z, cx, cy, cz, rx, ry, rz) => { const a = (x - cx) / rx, b = (y - cy) / ry, c = (z - cz) / rz; return (Math.sqrt(a * a + b * b + c * c) - 1) * Math.min(rx, ry, rz) }
 /** head SDF in the head frame. headS scales the skull radii (body.headS), cheek is the jaw ellipsoid (body.cheek);
  *  cranium / chin extra lumps (body.cranium, body.chin); all must match the character's body so the face decal and anything placed on the face sit on the baked surface. */
-export const makeHeadSDF = ({ headS = [1, 1, 1], cranium = null, chin = null, cheek = CHEEK, midface = MIDFACE, fade: mfade = MID_FADE } = {}) => { const hr = HR.map((r, i) => r * headS[i])
+export const makeHeadSDF = ({ headS = [1, 1, 1], cranium = null, chin = null, lumps = [], cheek = CHEEK, midface = MIDFACE, fade: mfade = MID_FADE } = {}) => { const hr = HR.map((r, i) => r * headS[i])
   return (x, y, z) => { const [cx, cy, cz, rx, ry, rz, k] = cheek
-    let h = ell(x, y, z, 0, 0, 0, ...hr); for (const L of [cranium, chin]) if (L) { const [cy, cz, rx, ry, rz, k] = L; h = smin(h, ell(x, y, z, 0, cy, cz, rx, ry, rz), k) }
+    let h = ell(x, y, z, 0, 0, 0, ...hr); for (const L of [cranium, chin, ...lumps]) if (L) { const [cy, cz, rx, ry, rz, k] = L; h = smin(h, ell(x, y, z, 0, cy, cz, rx, ry, rz), k) }
     h = smin(h, Math.min(ell(x, y, z, -cx, cy, cz, rx, ry, rz), ell(x, y, z, cx, cy, cz, rx, ry, rz)), k)
     const fade = mfade * x * x
     for (const [my, mz, a, b, c, mk, r] of midface) h = smin(h, (r != null ? ocol(x, y, z, 0, my, mz, a, b, c, r) : ell(x, y, z, 0, my, mz, a, b, c)) + fade, mk)

@@ -34,18 +34,20 @@ const ISHI_HAIR_OFF = new Float32Array(12)
 // his head, measured off the sheet's front and side views with the eye size as the scale: as tall as wide
 // (skull half-width 0.054, top 0.049, chin -0.060 in the head frame), widest at the eyes, a broad round lower face
 // (still ~0.89 W across at the mustache). Template: headS 1, CHEEK [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]
-const HEAD_S = [0.965, 0.98, 1.07]
+const HEAD_S = [0.95, 0.98, 1.07]
 // the jaw reaches forward and down (sheet side view: under the nose the face drops nearly straight to a full round chin)
-const JAW = [0, -0.030, 0.017, 0.0530, 0.033, 0.041, 0.026] // wide and round: full cheeks, the lower sides of the face gently round
+const JAW = [0, -0.035, 0.017, 0.0520, 0.031, 0.041, 0.026] // wide and round, widest below the ears: full lower cheeks, the sides pulled in a little at the ears
 // a broad round crown: the sheet's dome is still 0.7 W across 15% down from the top (a stretched skull came to a point)
 const CRANIUM = [0.014, -0.004, 0.048, 0.038, 0.054, 0.012]
 // a full round chin under the mustache: the front stays just behind the nose base and drops nearly straight down,
 // then the underside curves back to the neck (sheet side view)
 const CHIN = [-0.049, 0.030, 0.027, 0.015, 0.021, 0.012]
-const HEAD = { headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW }
+// the lower back of the skull is full and round down to the neck (sheet side view), not flat above the nape
+const OCCIPUT = [-0.018, -0.024, 0.042, 0.030, 0.039, 0.016]
+const HEAD = { headS: HEAD_S, cranium: CRANIUM, chin: CHIN, lumps: [OCCIPUT], cheek: JAW }
 const BODY = { H: 0.90, head: 1.46, leg: 0.90, torso: 1.12, arm: 0.02, girth: 1.26, shoulder: 1.10, chestW: 1.14, bellyZ: 1.0, shX: 1.20, armA: 0.50,
   armR: [0.35, 0.30, 0.25], legR: 1.30, legX: 1.08, foot: 1.20, bootW: 1.20, bootH: 1.00, bootL: 1.02, hand: 0.01,
-  headS: HEAD_S, cranium: CRANIUM, chin: CHIN, cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
+  headS: HEAD_S, cranium: CRANIUM, chin: CHIN, lumps: [OCCIPUT], cheek: JAW, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.12,
   anY: 0.040, footY: 0.020, soleY: 0.0068, bald: true, headUp: 0.012 }
 const TOP = Math.max(0.0499 * HEAD_S[1], CRANIUM[0] + CRANIUM[3]) // skull top in the head frame
 const Face = makeFace({ kind: 'ishi', defaultSquint: 0.04, blush: 0.62, shape: HEAD, fy1: 0.034, eyeS: 1.12 }) // the decal reaches up the forehead for the wrinkles
@@ -222,20 +224,20 @@ function haoriArmGeo(sd, sh, elbow, wrist) {
   const cap = ballAt([sh[0], sh[1] - 0.004, sh[2]], 0.0175, HAORI, [1.1, 0.95, 0.9])
   const yoke = ballAt([sh[0] - sd * 0.004, sh[1] - 0.014, sh[2] - 0.020], 0.022, HAORI, [0.9, 1.15, 1.25])
   const parts = [yoke, cap,
-    tubeBetween(sh, elbow, 0.0175, 0.0175, HAORI),
-    ballAt(elbow, 0.0176, HAORI),
-    tubeBetween(elbow, wrist, 0.0180, 0.0255, HAORI, 10),
+    tubeBetween(sh, elbow, 0.0215, 0.0215, HAORI),
+    ballAt(elbow, 0.0216, HAORI),
+    tubeBetween(elbow, wrist, 0.0222, 0.0300, HAORI, 10),
   ]
   // sleeve mouth: a dark rim so the opening reads, and the hanging bag of the sleeve under the forearm
   const W = new THREE.Vector3(...wrist), E = new THREE.Vector3(...elbow), d = W.clone().sub(E).normalize()
-  const rim = new THREE.TorusGeometry(0.0242, 0.0024, 6, 16)
+  const rim = new THREE.TorusGeometry(0.0287, 0.0026, 6, 16)
   rim.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)); rim.translate(...wrist)
   parts.push(paint(rim, HAORI_D))
-  const inner = new THREE.CircleGeometry(0.0238, 14)
+  const inner = new THREE.CircleGeometry(0.0283, 14)
   inner.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d)); inner.translate(W.x - d.x * 0.001, W.y - d.y * 0.001, W.z - d.z * 0.001)
   parts.push(paint(inner, '#171c28'))
   const bag = E.clone().lerp(W, 0.62); bag.y -= 0.012
-  parts.push(ballAt(bag.toArray(), 0.019, HAORI, [0.9, 1.3, 1.05]))
+  parts.push(ballAt(bag.toArray(), 0.023, HAORI, [0.9, 1.3, 1.05]))
   return merged(parts)
 }
 
@@ -333,11 +335,11 @@ function collarsGeo(S, chestY) {
   // haori eri: right front edge (hem -> neck), round the back of the neck, left front edge (neck -> hem)
   const eri = [], stand = [], ew = []
   const sh = haoriShell(S)
-  const edgeAt = (sd, y) => { if (y > sh.y0 + 0.004) return front(sd * (edge(y) + 0.0045), y) // on the chest: the painted haori
-    const r = sh.at(y), a = sd * (OPEN + 0.07); return [new THREE.Vector3(Math.sin(a) * r.rx, y, r.zc + Math.cos(a) * r.rz), new THREE.Vector3(Math.sin(a) / r.rx, 0, Math.cos(a) / r.rz).normalize()] } // on the flared shell, along its edge
+  const edgeAt = (sd, y) => { // along the shell's opening edge, just inside it
+    const r = sh.at(y), a = sd * (r.a + 0.05); return [new THREE.Vector3(Math.sin(a) * r.rx, y, r.zc + Math.cos(a) * r.rz), new THREE.Vector3(Math.sin(a) / r.rx, 0, Math.cos(a) / r.rz).normalize()] } // on the flared shell, along its edge
   for (let i = 0; i <= 16; i++) { const y = hemY + (nY - 0.010 - hemY) * i / 16; eri.push(edgeAt(1, y)); stand.push(0); ew.push(0.0105) }
   const A0 = 0.62
-  for (let i = 0; i <= 18; i++) { const a = A0 + (2 * Math.PI - 2 * A0) * i / 18, up = 0.5 - 0.5 * Math.cos(a); eri.push(round(a, nY - 0.002 + 0.012 * up, rn)); stand.push(0.85); ew.push(0.0105 + 0.0075 * up) } // stands taller round the back
+  for (let i = 0; i <= 18; i++) { const a = A0 + (2 * Math.PI - 2 * A0) * i / 18, up = 0.5 - 0.5 * Math.cos(a); { const [p, N] = round(a, nY - 0.002 + 0.012 * up, rn); eri.push([p.clone().addScaledVector(N, 0.010), N]) } stand.push(0.85); ew.push(0.0105 + 0.0075 * up) } // stands taller round the back
   for (let i = 16; i >= 0; i--) { const y = hemY + (nY - 0.010 - hemY) * i / 16; eri.push(edgeAt(-1, y)); stand.push(0); ew.push(0.0105) }
   parts.push(sweepBand(eri, ew, 0.0030, 0.0004, HAORI_D, stand))
   // robe collar: from the side of the neck round to the front, then down to cross into a V (left over right)
@@ -354,30 +356,35 @@ function collarsGeo(S, chestY) {
 
 // ---- the loose clothes (sheet): a boxy haori that flares from under the arms to mid-thigh, open at the front; a tall
 // wrapped sash with a knot; wide trousers to mid-calf. Built in unit space against the measured body, one mesh + ink.
-const OPEN = 0.52 // the haori's front opening, as an angle each side of straight ahead
 function bodyRing(S, y) { // the body's cross-section at height y: half-width rx, front/back -> centre zc and half-depth rz
   const [px] = rayToBody(S, new THREE.Vector3(0.25, y, S.belly[0].z), new THREE.Vector3(-1, 0, 0))
   const [pf] = rayToBody(S, new THREE.Vector3(0, y, 0.25), new THREE.Vector3(0, 0, -1)), [pb] = rayToBody(S, new THREE.Vector3(0, y, -0.25), new THREE.Vector3(0, 0, 1))
   return { rx: px.x, zc: (pf.z + pb.z) / 2, rz: (pf.z - pb.z) / 2 }
 }
 let SHELL = null
-function haoriShell(S) { // { y0, y1, at(y) -> { rx, rz, zc } } for the outer surface; the body below the hips keeps the hip width
+const haoriEdge = (S, y) => 0.014 + (S.neckY - y) * 0.18 + 0.0045 // the opening edge (the painter's lapel line), where the eri runs
+function haoriShell(S) { // an oversized haori: from the neck over the shoulders, standing well off the body, flaring to mid-thigh
   if (SHELL) return SHELL
-  const y0 = S.chestY - 0.004, y1 = (S.hipY + S.knY) * 0.5, n = 12, rows = []
-  let prev = null
-  for (let i = 0; i <= n; i++) { const t = i / n, y = y0 + (y1 - y0) * t, b = bodyRing(S, y)
-    if (prev) { b.rx = Math.max(b.rx, prev.rx); b.rz = Math.max(b.rz, prev.rz) }
-    prev = { ...b }; const off = 0.006 + 0.015 * t ** 1.4
-    rows.push({ y, rx: b.rx + off, rz: b.rz + off * 0.8, zc: b.zc }) }
-  const at = (y) => { const f = Math.max(0, Math.min(n, (y - y0) / (y1 - y0) * n)), i = Math.min(n - 1, Math.floor(f)), u = f - i, a = rows[i], b = rows[i + 1]
-    return { rx: a.rx + (b.rx - a.rx) * u, rz: a.rz + (b.rz - a.rz) * u, zc: a.zc + (b.zc - a.zc) * u } }
-  SHELL = { y0, y1, rows, at }; return SHELL
+  const nY = S.neckY, rn = S.neck[2], nz = S.neck[0].z, yTop = nY - 0.006, yS = S.shY, y1 = (S.hipY + S.knY) * 0.5, rows = []
+  const ring = (y, t) => { const b = bodyRing(S, y), off = 0.012 + 0.024 * t ** 1.3; return { y, rx: b.rx + off, rz: b.rz + off * 0.85, zc: b.zc } }
+  const sh = ring(yS - 0.004, 0)
+  // over the shoulders: from a collar round the neck out to the shoulder line, a soft round slope
+  for (let i = 0; i <= 5; i++) { const u = i / 5, e = Math.sin(u * Math.PI / 2), y = yTop + (yS - 0.004 - yTop) * u
+    rows.push({ y, rx: rn + 0.013 + (sh.rx - rn - 0.013) * e, rz: rn + 0.011 + (sh.rz - rn - 0.011) * e, zc: nz + (sh.zc - nz) * e }) }
+  let prev = sh
+  for (let i = 1; i <= 14; i++) { const t = i / 14, y = yS - 0.004 + (y1 - yS + 0.004) * t, r = ring(y, t)
+    r.rx = Math.max(r.rx, prev.rx); r.rz = Math.max(r.rz, prev.rz * 0.985); prev = r; rows.push(r) }
+  for (const r of rows) r.a = Math.asin(Math.min(0.92, haoriEdge(S, r.y) / r.rx)) // the opening follows the lapel line
+  const n = rows.length - 1
+  const at = (y) => { let i = 0; while (i < n - 1 && rows[i + 1].y > y) i++; const a = rows[i], b = rows[i + 1], u = Math.max(0, Math.min(1, (y - a.y) / (b.y - a.y)))
+    return { rx: a.rx + (b.rx - a.rx) * u, rz: a.rz + (b.rz - a.rz) * u, zc: a.zc + (b.zc - a.zc) * u, a: a.a + (b.a - a.a) * u } }
+  SHELL = { y0: yTop, y1, rows, at }; return SHELL
 }
 // a thick open shell from angle a0 to a1 (0 = straight ahead) over the given rows: outer, inner, top, hem and the two edges
-function shellGeo(rows, a0, a1, th, hex, hexIn) {
+function shellGeo(rows, th, hex, hexIn) { // each row opens from its own angle r.a round the back to -r.a
   const NA = 40, pos = [], col = [], idx = [], C = new THREE.Color(hex), Ci = new THREE.Color(hexIn)
   const v = (r, a, inset) => [Math.sin(a) * (r.rx - inset), r.y, r.zc + Math.cos(a) * (r.rz - inset)]
-  const grid = (inset, c) => { const o = pos.length / 3; for (const r of rows) for (let j = 0; j <= NA; j++) { pos.push(...v(r, a0 + (a1 - a0) * j / NA, inset)); col.push(c.r, c.g, c.b) } return o }
+  const grid = (inset, c) => { const o = pos.length / 3; for (const r of rows) for (let j = 0; j <= NA; j++) { pos.push(...v(r, r.a + (2 * Math.PI - 2 * r.a) * j / NA, inset)); col.push(c.r, c.g, c.b) } return o }
   const O = grid(0, C), I = grid(th, Ci), W = NA + 1, R = rows.length
   for (let i = 0; i < R - 1; i++) for (let j = 0; j < NA; j++) { const a = i * W + j, b = a + 1, c = a + W, d = c + 1
     idx.push(O + a, O + c, O + b, O + b, O + c, O + d); idx.push(I + a, I + b, I + c, I + b, I + d, I + c) }
@@ -391,7 +398,7 @@ function shellGeo(rows, a0, a1, th, hex, hexIn) {
 function clothesGeo(S, hipsY) {
   const parts = [], sh = haoriShell(S)
   // haori: the flared lower body, open at the front (the eri runs down its edges), a darker lining inside
-  parts.push(shellGeo(sh.rows, OPEN, 2 * Math.PI - OPEN, 0.0028, HAORI, '#1c2230'))
+  parts.push(shellGeo(sh.rows, 0.0030, HAORI, '#1c2230'))
   // sash: a tall band all the way round at the waist (under the haori, showing in the opening), two dark stripes, a knot
   const H = 0.040, sy = S.hipY + 0.004 + H / 2, b = bodyRing(S, sy) // tall, sitting right on the trousers
   const band = (dy, h, out, hex) => { const g = frontBand(b.rx + out, b.rz + out, b.zc, Math.PI, h, 0.0028, hex); g.translate(0, sy + dy, 0); return g }
@@ -437,10 +444,10 @@ function attachLook(root) {
     // his left (viewer's right): forearm bent up, hand holds the pipe in front of the belly
     const shY = S.shY - chestY - 0.004
     for (const sd of [-1, 1]) {
-      const sh = [sd * Math.abs(S.shL.x), shY, S.shL.z + 0.004]
+      const sh = [sd * (Math.abs(S.shL.x) + 0.010), shY + 0.002, S.shL.z + 0.004] // out on the oversized shoulders
       const cane = sd < 0
-      const hand = cane ? [-0.086, -0.050, 0.040] : [0.056, -0.014, chestZ + 0.026]
-      const elbow = cane ? [-0.084, -0.010, 0.006] : [0.086, -0.026, 0.014]
+      const hand = cane ? [-0.096, -0.050, 0.042] : [0.056, -0.014, chestZ + 0.026]
+      const elbow = cane ? [-0.098, -0.010, 0.006] : [0.100, -0.026, 0.014]
       const wrist = new THREE.Vector3(...elbow).lerp(new THREE.Vector3(...hand), 0.72).toArray()
       add(chest, haoriArmGeo(sd, sh, elbow, wrist))
       add(chest, mittenGeo(cane ? 1.05 : 1), hand, propMat, [0.2, sd * -0.3, sd * 0.2])
