@@ -291,6 +291,22 @@ Golden sheet, before and after (front, 3/4, side, back): [`ref/hoshino-jacket-sh
 - **Body and arms:** body slimmer (`girth 1.20 → 1.05`), sleeves fuller and more even (`armR [1.02, 1.45, 1.70]`). `shX 1.30`, `armA 0.30`, `shDrop 0.044`: the lower shoulder joint keeps the fuller sleeve top under the shoulder slope. Rejected: `armR[0] 1.20` at `shDrop 0.030` brought the shoulder-pad bumps back.
 - **Not yet matched:** the cel shading still lays brown-purple shadow bands across the chest and shoulders; the sheet is nearly flat. The side view has no lapel or vest edge.
 
+### Professor Hoshino (draft): upper body rebuilt (KT: "weird, contorted")
+
+Before and after, with upper-body close-ups: [`ref/hoshino-upperbody-compare.jpg`](ref/hoshino-upperbody-compare.jpg).
+
+- **What was wrong:**
+  - The chest ellipsoid rose almost to the neck, so the torso top was a flat box with square corners.
+  - The arms hung from below those corners (`shDrop 0.044`), leaving a step at each shoulder.
+  - The sleeves swelled to a club at the wrist (`armR[2] 1.70`).
+  - The shared rest pose bends every forearm forward by about 0.3–0.4 rad, so in side view the arm curled forward like a banana.
+- **New shape:** a rounded trapezoid like the sheet.
+  - Narrower chest top (`chestW 0.85`).
+  - Sleeves start at the collar slope (`shX 0.90`, `shDrop 0.012`, `armK 0.010`) and angle out (`armA 0.34`) toward the hem.
+  - Sleeves are an even tube, only slightly wider at the cuff (`armR [1.25, 1.30, 1.40]`), with `arm 1.08` so the hands still end above the hem.
+- **Forearm bend:** new optional walk knob `walk.fore`, the resting forearm bend (default `-0.28` keeps every other character). Hoshino uses `-0.06`, so his arms hang straight in side view.
+- **Tried on the way:** a narrow chest with low arms (`chestW 0.80`, `shX 1.15`) brought back the shoulder bumps. Arms rooted at `shX 1.00` with no drop still left rounded square corners.
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.

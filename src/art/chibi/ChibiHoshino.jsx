@@ -111,8 +111,8 @@ function HoshinoHair({ set }) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.00, girth: 1.05, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.30, armA: 0.30, shDrop: 0.044, armK: 0.006, handL: 1.18,
-    armR: [1.02, 1.45, 1.70], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
+  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.08, girth: 1.05, shoulder: 1.00, chestW: 0.85, bellyZ: 0.96, shX: 0.90, armA: 0.34, shDrop: 0.012, armK: 0.010, handL: 1.18,
+    armR: [1.25, 1.30, 1.40], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
@@ -122,7 +122,7 @@ export const HOSHINO = {
   // bottom = olive trousers with painted turn-ups.
   outfit: { type: 'openJacket', hemY: 'skirt', skin: SKIN, top: VEST, acc: JACKET, acc2: SHIRT, bottom: TROUSER, shoe: '#7a4a26', shoeY: 0.027, long: true, sleeve: 'none', seams: true },
   hold: {},
-  walk: { rate: 8, stride: 0.48, knee: 0.6, bounce: 0.008, smooth: true, land: 0.28, arm: 0.45, lean: 0.12, twist: 0.1, sway: 0.07, idle: 'look' },
+  walk: { fore: -0.06, rate: 8, stride: 0.48, knee: 0.6, bounce: 0.008, smooth: true, land: 0.28, arm: 0.45, lean: 0.12, twist: 0.1, sway: 0.07, idle: 'look' },
   ext: {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, HOSHINO_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = HOSHINO_HAIR_OFF
       if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera) },

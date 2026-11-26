@@ -600,7 +600,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     for (const [k, sg] of [['L', 1], ['R', -1]]) {
       const lag = Math.sin(p - 0.5) * sg, up = B['up' + k], fo = B['fo' + k], side = k === 'L' ? -1 : 1, h = hold[k]
       const swingAmt = h === 'umbrella' || h === 'rod' ? 0.08 : h === 'cane' ? 0.25 : h === 'basket' ? 0.3 : W.arm
-      let ux = lag * swingAmt * m + 0.05 * i, uz = side * (-0.05 * i + Math.sin(t * 1.6 + side) * 0.03 * i - 0.08 * m), fx = -0.28 - Math.max(0, -lag) * 0.55 * m * (swingAmt / 0.75) - 0.1 * i
+      let ux = lag * swingAmt * m + 0.05 * i, uz = side * (-0.05 * i + Math.sin(t * 1.6 + side) * 0.03 * i - 0.08 * m), fx = (W.fore ?? -0.28) - Math.max(0, -lag) * 0.55 * m * (swingAmt / 0.75) - 0.1 * i * (W.fore != null ? 0.3 : 1) /* walk.fore: optional resting forearm bend */
       if (h === 'umbrella') { ux = -0.35; fx = -1.15 } else if (h === 'rod') { ux = -0.4; fx = -0.8 } else if (h === 'basket') { fx = -1.1; uz -= side * 0.12 } else if (h === 'cane') { ux = -0.2 + Math.sin(p) * 0.1 * m; fx = -0.35 }
       if (idle === 'wave' && k === 'R') { uz = side * -2.3 * i + uz * m; fx = -0.5 - Math.sin(t * 8) * 0.35 * i; ux *= m }
       up.rotation.set(ux, 0, uz)
