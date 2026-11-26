@@ -28,20 +28,20 @@ const SASH_D = '#553522'
 const TROUSER = '#4a3e34'
 const WOOD = '#7a4a2a'
 const WOOD_D = '#5c3520'
-const STRAP = '#7a4a2c'
-const SOLE = '#5a3622'
+const STRAP = '#563220'
+const SOLE = '#3c2216'
 const ISHI_HAIR_OFF = new Float32Array(12)
 // his head, measured off the sheet's front and side views with the eye size as the scale: as tall as wide
 // (skull half-width 0.054, top 0.049, chin -0.060 in the head frame), widest at the eyes, a broad round lower face
 // (still ~0.89 W across at the mustache). Template: headS 1, CHEEK [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]
 const HEAD_S = [0.95, 0.98, 1.07]
 // the jaw reaches forward and down (sheet side view: under the nose the face drops nearly straight to a full round chin)
-const JAW = [0, -0.035, 0.017, 0.0520, 0.031, 0.041, 0.026] // wide and round, widest below the ears: full lower cheeks, the sides pulled in a little at the ears
+const JAW = [0, -0.035, 0.014, 0.0520, 0.031, 0.041, 0.026] // wide and round, widest below the ears: full lower cheeks, the sides pulled in a little at the ears
 // a broad round crown: the sheet's dome is still 0.7 W across 15% down from the top (a stretched skull came to a point)
 const CRANIUM = [0.014, -0.004, 0.048, 0.038, 0.054, 0.012]
 // a full round chin under the mustache: the front stays just behind the nose base and drops nearly straight down,
 // then the underside curves back to the neck (sheet side view)
-const CHIN = [-0.049, 0.030, 0.027, 0.015, 0.021, 0.012]
+const CHIN = [-0.049, 0.026, 0.027, 0.015, 0.019, 0.012] // pass 8: pulled back a little (less full under the nose in profile)
 // the lower back of the skull is full and round down to the neck (sheet side view), not flat above the nape
 const OCCIPUT = [-0.018, -0.024, 0.042, 0.030, 0.039, 0.016]
 const HEAD = { headS: HEAD_S, cranium: CRANIUM, chin: CHIN, lumps: [OCCIPUT], cheek: JAW }
@@ -71,9 +71,10 @@ const EAR = { y: -0.025, z: -0.008 }
 // mustache traced off the sheet's portrait (head frame; nose centre (0, -0.0284)): one solid bell-shaped piece, the top
 // edge hugging the sides of the nose and sloping down to pointed outer tips, a feathery underside of strand points
 // and a V notch in the middle. Built as a rounded slab (extrude + bevel) bent onto the face, thickest under the nose.
-const MUS_R = [[0, -0.0352], [0.0060, -0.0334], [0.0105, -0.0296], [0.0150, -0.0290], [0.0200, -0.0314], [0.0248, -0.0360],
-  [0.0284, -0.0420], [0.0307, -0.0474], [0.0270, -0.0458], [0.0246, -0.0500], [0.0210, -0.0476], [0.0180, -0.0512],
-  [0.0144, -0.0484], [0.0108, -0.0506], [0.0078, -0.0468], [0.0030, -0.0430], [0, -0.0414]]
+// pass 8 (KT: cuter): smaller and rounder, a soft round tip and two gentle scallops underneath instead of strand points
+const MUS_R = [[0, -0.0350], [0.0060, -0.0333], [0.0100, -0.0300], [0.0140, -0.0294], [0.0185, -0.0314], [0.0225, -0.0350],
+  [0.0252, -0.0395], [0.0262, -0.0430], [0.0252, -0.0452], [0.0230, -0.0460], [0.0206, -0.0450], [0.0186, -0.0466],
+  [0.0160, -0.0473], [0.0134, -0.0462], [0.0112, -0.0469], [0.0085, -0.0459], [0.0055, -0.0434], [0.0025, -0.0414], [0, -0.0405]]
 function mustacheGeo() {
   // each half is a closed puff: rings shrink from the outline to a centre point; the front rings dome out from the face
   // (thickest under the nose, thinner toward the tip), the back rings sit just inside the head. Dense, so it follows
@@ -85,7 +86,7 @@ function mustacheGeo() {
       for (let k = 0; k < n; k++) ring.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]) }
     const C = [sd * 0.0125, -0.0405], K = 7, M = ring.length, pos = [], idx = []
     const at = (j, s, front) => { const [px, py] = ring[j], x = C[0] + (px - C[0]) * s, y = C[1] + (py - C[1]) * s
-      const H = 0.0088 - 0.0056 * Math.min(1, Math.abs(x) / 0.031) - 0.0012 * Math.max(0, Math.min(1, (-0.043 - y) / 0.008))
+      const H = 0.0078 - 0.0046 * Math.min(1, Math.abs(x) / 0.027) - 0.0012 * Math.max(0, Math.min(1, (-0.043 - y) / 0.008))
       const z = front ? surfZ(x, y) - 0.0006 + H * Math.sqrt(Math.max(0, 1 - s * s)) : surfZ(x, y) - 0.0028 + 0.0022 * (1 - Math.sqrt(Math.max(0, 1 - s * s)))
       pos.push(x, y, z) }
     // rings 0..K front (s = 1 - k/K), then back; the outline ring (s = 1) is shared
@@ -153,9 +154,10 @@ function ishiHair() {
   const nKnot = parts.length
   // brows: thick smooth white arches set high and wide, a chain of overlapping lumps along an arc so the outline is
   // one smooth crescent (sheet: inner end over the eye's inner edge, rising, then drooping past the outer corner)
-  for (const sd of [-1, 1]) for (let i = 0; i < 7; i++) { const t = i / 6
-    const x = 0.0175 + 0.0265 * t, y = 0.0062 + 0.0060 * Math.sin(Math.PI * Math.min(1, t * 1.15)) - 0.0042 * t * t
-    const r = 0.0048 + 0.0016 * Math.sin(Math.PI * (0.25 + 0.6 * t)), slope = Math.cos(Math.PI * Math.min(1, t * 1.15)) * 0.7 - 0.5 * t
+  // pass 8 (KT: shorter, cuter): a short plump arch over the eye, round at both ends, no long droop
+  for (const sd of [-1, 1]) for (let i = 0; i < 6; i++) { const t = i / 5
+    const x = 0.0175 + 0.0185 * t, y = 0.0064 + 0.0048 * Math.sin(Math.PI * t) - 0.0010 * t
+    const r = 0.0052 + 0.0012 * Math.sin(Math.PI * t), slope = Math.cos(Math.PI * t) * 0.6
     parts.push(onFace(ballS, sd * x, y, -0.0004 - 0.0004 * t, [r * 1.5, r, r * 0.95], [0, 0, sd * slope])) }
   const ink = parts.map((_, k) => (k < nKnot ? 1 : 0.38)) // ink weight per piece: face pieces take a fine line
   const add = (g, w) => { parts.push(g); ink.push(w) }
@@ -293,10 +295,12 @@ function sashGeo(a, b, cz, t) {
 function sandalGeo(S, k) {
   const an = S['an' + k], ft = S['ft' + k], fr = S.fr, parts = []
   const fz = ft.z - an.z, fy = ft.y - an.y, soleTop = fy - fr.y * 0.78
-  const sole = new THREE.CylinderGeometry(1, 1, 0.0062, 20); sole.scale(fr.x * 1.12, 1, fr.z * 1.10); sole.translate(0, soleTop - 0.0031, fz + 0.001)
+  const sole = new THREE.CylinderGeometry(1, 1, 0.0072, 20); sole.scale(fr.x * 1.14, 1, fr.z * 1.12); sole.translate(0, soleTop - 0.0036, fz + 0.001)
   parts.push(paint(sole, SOLE))
-  for (const [dz, w, rr] of [[0.012, 0.0072, 0.96], [-0.006, 0.0062, 1.0]]) {
-    const s = new THREE.TorusGeometry(1, 0.08, 6, 18, Math.PI); s.scale(fr.x * rr * 1.04, fr.y * 1.1, w * 6); s.translate(0, soleTop + 0.001, fz + dz)
+  for (const [dz, w] of [[0.011, 0.0115], [-0.007, 0.0100]]) { // two wide chunky bands (sheet), w = band width
+    // the foot's cross-section at this point: the strap arches from the sole up over the top of the foot
+    const q = Math.sqrt(Math.max(0.15, 1 - (dz / fr.z) ** 2)), rx = fr.x * q * 1.08, ry = (fy - soleTop + fr.y * q) * 1.05
+    const s = new THREE.TorusGeometry(1, 0.26, 8, 18, Math.PI); s.scale(rx, ry, w / 0.52); s.translate(0, soleTop - 0.001, fz + dz)
     parts.push(paint(s, STRAP))
   }
   return merged(parts)

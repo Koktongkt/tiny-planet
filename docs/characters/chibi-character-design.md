@@ -297,3 +297,12 @@ Compare: [`ref/ishi-pass7-compare.jpg`](ref/ishi-pass7-compare.jpg).
 - **Back of the head**: new opt-in `body.lumps` (a list of head lumps, same form as `cranium` / `chin`; `makeHeadSDF` takes `lumps` too). Ishi: `OCCIPUT [-0.018, -0.024, 0.042, 0.030, 0.039, 0.016]`, so the skull rounds right down to the nape in profile.
 - **Oversized haori**: the shell now starts at the neck and covers the shoulders in a soft round slope (from a collar 0.013 off the neck out to the shoulder line), stands 0.012 off the body and flares to 0.036 at the hem; its front opening follows the lapel line row by row (`haoriEdge`), and the eri runs along that edge. The standing back collar sits on top of it. Sleeves are bigger (upper arm 0.0215, mouth 0.030) and hang from shoulders moved out 0.010.
 - Cost: turnaround 22 calls / ~68k tris.
+
+### Ishi pass 8 (KT: shorter, cuter brows; cuter mustache; darker sandals; less full mouth and chin in profile)
+
+Compare: [`ref/ishi-pass8-compare.jpg`](ref/ishi-pass8-compare.jpg).
+
+- **Brows**: a short plump arch over each eye (6 lumps, x 0.0175 to 0.036, was to 0.044), round at both ends, no long outer droop.
+- **Mustache**: smaller and rounder (`MUS_R` half-width 0.026, was 0.031): a soft round tip and two gentle scallops underneath instead of strand points; a little less puff (0.0078 under the nose).
+- **Mouth and chin**: pulled back in profile (`CHIN` z 0.030 -> 0.026, rz 0.021 -> 0.019; `JAW` z 0.017 -> 0.014).
+- **Sandals**: darker (straps `#563220`, soles `#3c2216`) and chunkier: each strap arches from the sole over the foot's real cross-section at that point (they were buried inside the foot), with a thick band (tube 0.26); the sole is a touch thicker.
