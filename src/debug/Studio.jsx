@@ -2,7 +2,7 @@
 // Lazy chunk: none of this ships in the startup bundle. Boot (shader precompile + start the loop) is passed in by App
 // and mounted together with the scene, so it still compiles what the studio shows.
 // DRAFT Grandma Fuku and Professor Hoshino are not the default. They appear only with ?dev=chibi-drafts
-// (?char=fuku|hoshino, or &cast for her beside both drafts).
+// (?char=fuku|hoshino|ishi, or &cast for her beside both drafts).
 import * as THREE from 'three'
 import React, { useMemo, lazy, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -22,7 +22,7 @@ const CHIBI = q.get('chibi') !== '0' && !SPRITE
 const NEWCHAR = !q.has('oldchar')
 const DRAFTS = draftsEnabled(location.search)
 const draftId = chibiDraftName(q.get('char'), location.search)
-const CAST = DRAFTS && q.has('cast') // her + draft Fuku + draft Hoshino
+const CAST = DRAFTS && q.has('cast') // her + draft Fuku, Hoshino and Ishi
 const SEQ = q.get('seq'), seqT = { t: 0, yaw: 0 }
 if (typeof window !== 'undefined') window.__seqT = seqT
 const ANGLES = { front: 0, three: 0.75, side: Math.PI / 2, back: Math.PI }
@@ -68,7 +68,7 @@ function Studio() {
       {k === 'old' && CHIBI ? <GhibliPerson st={stOld} /> : k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : CHIBI && draftId ? <Suspense fallback={null}><ChibiVillagerDraft name={draftId} st={stNew} scale={1} res={72} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={stNew} /></Suspense> : <GhibliPerson st={stNew} />}
     </group>)}
     {CAST && <group>
-      {[['her', -0.38], ['fuku', 0], ['hoshino', 0.38]].map(([name, x]) => <group key={name} position={[x, 0.001, 0]}>
+      {[['her', -0.57], ['fuku', -0.19], ['hoshino', 0.19], ['ishi', 0.57]].map(([name, x]) => <group key={name} position={[x, 0.001, 0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
         {name === 'her' ? <Suspense fallback={null}><ChibiHer st={stNew} /></Suspense> : <Suspense fallback={null}><ChibiVillagerDraft name={name} st={stNew} scale={1} res={72} /></Suspense>}
       </group>)}

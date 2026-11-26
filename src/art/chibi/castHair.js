@@ -31,21 +31,23 @@ export function makeHairInk(uOff) {
   return m
 }
 
-export function makeHairMat(skin, hair, band, uOff) {
+/** shade: optional hair shadow tint (default warm brown, for dark hair; white hair wants a light cool grey) */
+export function makeHairMat(skin, hair, band, uOff, shade = [0.68, 0.55, 0.5]) {
   return new THREE.ShaderMaterial({
     uniforms: { uOff: { value: uOff }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim,
-      uHair: { value: new THREE.Color(hair) }, uBand: { value: new THREE.Color(band) }, uSkin: { value: new THREE.Color(skin) } },
+      uHair: { value: new THREE.Color(hair) }, uBand: { value: new THREE.Color(band) }, uSkin: { value: new THREE.Color(skin) }, uHShade: { value: new THREE.Vector3(...shade) } },
     vertexShader: HOFF + `attribute float aSkin; varying vec3 vN, vV, vO; varying float vSkin;
       void main(){ vO = position; vSkin = aSkin; vec4 mv = modelViewMatrix*vec4(position + hoff(),1.); vN = normalize(normalMatrix*normal); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin; varying vec3 vN, vV, vO; varying float vSkin;
+    fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin, uHShade; varying vec3 vN, vV, vO; varying float vSkin;
       void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
         float ndl = dot(N, L), lit = smoothstep(-.04, .12, ndl), sk = step(.5, vSkin);
-        vec3 base = mix(uHair, uSkin, sk), shade = base*mix(vec3(.68,.55,.5), vec3(.86,.68,.66), sk);
+        vec3 base = mix(uHair, uSkin, sk), shade = base*mix(uHShade, vec3(.86,.68,.66), sk);
         vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
         vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
         float band = 1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)));
         c = mix(c, uBand*uLight*(.75 + .25*lit), band*(1. - sk)*(.3 + .32*lit)*smoothstep(-.2, .5, dot(N, V)));
         c *= 1. - (1. - sk)*.3*smoothstep(.1, .38, vSkin);
+        c *= 1. - sk*.24*(1. - step(.9, vSkin)); // aSkin 0.5..0.9: a darker skin tone (the inside of an ear); 1 = plain skin
         c = mix(c, vec3(.17,.1,.08), (1. - sk)*smoothstep(.455, .488, vSkin));
         float fr = 1. - max(dot(N, V), 0.); c += uRim*smoothstep(.62, .92, fr)*(.2 + .5*lit)*.22;
         gl_FragColor = vec4(c, 1.);
