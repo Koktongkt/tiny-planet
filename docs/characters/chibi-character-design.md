@@ -164,6 +164,11 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 
 **Grandma Fuku, pass 25** (KT picked option D from [`ref/fuku-features-ladder.jpg`](ref/fuku-features-ladder.jpg)): `FEAT_DY` -0.0033. Next, the forehead width at the hairline: ladder [`ref/fuku-forehead-ladder.jpg`](ref/fuku-forehead-ladder.jpg) widens the hairline opening and the skull together (`HL.a` / `headW`: A 0.046 / 0.86 now, B 0.0485 / 0.89, C 0.051 / 0.92, D 0.0535 / 0.95; forehead 159 / 167 / 176 / 185 px at the same eye size). The cheeks widen a little with the skull.
 
+**Grandma Fuku, pass 26** (KT picked forehead option D; eyes bigger at the same spacing; hair puffier at both sides): [`ref/fuku-pass26-compare.jpg`](ref/fuku-pass26-compare.jpg).
+  - Forehead D: `headW` 0.95, `HL.a` 0.0535.
+  - Eyes 14% bigger with the same centres: new optional `featOff.eyeScale` in `castFace.jsx` scales the eye radii only (default 1; Hoshino unchanged). Glasses rims grow with them (R 0.0146 -> 0.016).
+  - Hair wider at the sides: cap x radius 0.065 -> 0.0735; ears (`EAR.x` 0.067) and glasses arms moved out to stay clear.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

@@ -68,13 +68,13 @@ function drawFaces(W, kind, off = {}) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t
 }
 
-const FACE_FS = (BL = BLUSH, DY = 0) => `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
+const FACE_FS = (BL = BLUSH, DY = 0, ES = 1) => `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
   vec4 cellTex(float k, vec2 u){ vec2 cl = vec2(mod(k, 2.), floor(k*.5)); return texture2D(map, vec2((cl.x + u.x)*.5, (1. - cl.y + u.y)*.5)); }
   float cov(float d){ return clamp(.5 - d/max(fwidth(d), 1e-7), 0., 1.); }
   float eSD(vec2 d, vec2 R){ vec2 q = d/R; float k = max(length(q), 1e-5); return (k - 1.)/max(length(q/(R*k)), 1e-5); }
   void over(inout vec4 c, vec3 col, float a){ c.rgb = col*a + c.rgb*(1. - a); c.a = a + c.a*(1. - a); }
   void eye(inout vec4 c, vec2 p, float sd){
-    vec2 E = vec2(sd*${f5(EYE.x)}, ${f5(EYE.y)}), R = vec2(${f5(EYE.rx)}, ${f5(EYE.ry)})*uBig;
+    vec2 E = vec2(sd*${f5(EYE.x)}, ${f5(EYE.y)}), R = vec2(${f5(EYE.rx * ES)}, ${f5(EYE.ry * ES)})*uBig;
     float o = uOpen, k = smoothstep(.1, .3, o), ry = R.y*max(o, .03);
     vec2 Es = vec2(E.x, E.y - R.y + ry), Rs = vec2(R.x, ry), d = p - Es;
     vec4 e = vec4(0.);
@@ -155,11 +155,11 @@ const faceMat = (kind, bl, dy, off) => new THREE.ShaderMaterial({ transparent: t
   uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind, off)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
     uBlush: { value: 1 }, uBig: { value: 1 }, uLash: { value: 0 }, uGaze: { value: new THREE.Vector2() }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: FACE_FS(bl, dy) })
+  fragmentShader: FACE_FS(bl, dy, off?.eyeScale ?? 1) })
 
 /** Face component factory. kind: 'fuku' | 'hoshino'. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Optional: cheek (head-frame jaw shape, must match body.cheek), hr (skull radii, must match body.headW), blushAt { dx, dy, dr } (moves / grows the blush),
- *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose, brow: { color, edge, width } } (extra drop; own brows), glassesGeo (a character's own frames,
+ *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose, brow: { color, edge, width }, eyeScale } (extra drop; own brows; bigger eyes, same centres), glassesGeo (a character's own frames,
  *  replaces the shared ones; it must apply the same featDy). */
 export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, hr = HR, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) {
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH

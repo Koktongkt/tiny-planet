@@ -32,35 +32,35 @@ const FUKU_CHEEK = [0, -0.0405, 0.0120, 0.0505, 0.0150, 0.0390, 0.0180, 0.0120]
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
 const FEAT_DY = -0.0033 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
-const HEAD_W = 0.86, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
+const HEAD_W = 0.95, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
 function fukuGlasses() {
-  const R = 0.0146, T = 0.0017, Z = 0.0552, EY = EYE.y - FEAT_DY - 0.0026, parts = [] // sits a little low: space between the eye and the bottom rim
+  const R = 0.0160, T = 0.0017, Z = 0.0552, EY = EYE.y - FEAT_DY - 0.0026, parts = [] // sits a little low: space between the eye and the bottom rim
   // half-rim: the frame runs only along the bottom half of each lens
   for (const sd of [-1, 1]) { const g = new THREE.TorusGeometry(R, T, 8, 16, Math.PI); g.rotateZ(Math.PI); g.rotateY(sd * 0.2); g.translate(sd * EYE.x, EY + 0.0006, Z); parts.push(g) }
   const inner = EYE.x - R * Math.cos(0.2), br = new THREE.TorusGeometry(inner, 0.0013, 6, 14, Math.PI)
   br.scale(1, 0.42, 1); br.translate(0, EY + 0.0006, Z + 0.0024); parts.push(br)
   for (const sd of [-1, 1]) {
-    const a = new THREE.Vector3(sd * (EYE.x + R * 0.98), EY + 0.0006, Z - 0.0032), b = new THREE.Vector3(sd * 0.0575, EY + 0.0010, 0.008)
+    const a = new THREE.Vector3(sd * (EYE.x + R * 0.98), EY + 0.0006, Z - 0.0032), b = new THREE.Vector3(sd * 0.0640, EY + 0.0010, 0.008)
     const len = a.distanceTo(b), t = new THREE.CylinderGeometry(0.0010, 0.0010, len, 6)
     t.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
     t.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); parts.push(t)
   }
   const g = mergeGeometries(parts.map(p => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('uv'); return p })); g.computeVertexNormals(); return g
 }
-const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020, brow: { color: '#c9c2ba', edge: '#9d948c', width: 0.0056 } }, glassesGeo: fukuGlasses })
+const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020, eyeScale: 1.14, brow: { color: '#c9c2ba', edge: '#9d948c', width: 0.0056 } }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
-const EAR = { x: 0.0605, y: -0.0225, z: 0.006 }
+const EAR = { x: 0.0670, y: -0.0225, z: 0.006 }
 // pass 20 (KT: start simple): one ball wrapping the head, its front edge the hairline across the forehead, and one
 // bun ball slightly behind the top of the head. No locks or painted lines yet.
 const BUN_C = [0, 0.068, -0.050], BUN_R = 0.026
-const H_CAP = [[0, 0.010, -0.019], [0.0650, 0.0640, 0.0690]]
+const H_CAP = [[0, 0.010, -0.019], [0.0735, 0.0640, 0.0690]]
 // pass 22: the forehead hairline traced from the sheet: a rounded block (superellipse, power 4) with a flat top, straight
 // sides down the temples and rounded corners, plus a small dip at the parting. Head-frame units.
-const HL = { a: 0.0460, top: 0.040, bot: -0.072, p: 4, dip: 0.0035, dipW: 0.0075, low: -0.008 }
+const HL = { a: 0.0535, top: 0.040, bot: -0.072, p: 4, dip: 0.0035, dipW: 0.0075, low: -0.008 }
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 // distance from the skull centre to the skin along a direction
 function skinR(dx, dy, dz) { let lo = 0, hi = 0.12
