@@ -169,6 +169,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Eyes 14% bigger with the same centres: new optional `featOff.eyeScale` in `castFace.jsx` scales the eye radii only (default 1; Hoshino unchanged). Glasses rims grow with them (R 0.0146 -> 0.016).
   - Hair wider at the sides: cap x radius 0.065 -> 0.0735; ears (`EAR.x` 0.067) and glasses arms moved out to stay clear.
 
+**Grandma Fuku, eye spacing ladder** (KT: eyes and brows further apart): new optional `featOff.eyeDx` in `castFace.jsx` moves the eyes, brows and eye-corner lines out by dx per side (default 0); Fuku's glasses follow via `EYE_DX`. Ladder [`ref/fuku-eyespacing-ladder.jpg`](ref/fuku-eyespacing-ladder.jpg): A 0 (now), B 0.0015, C 0.0030, D 0.0045.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

@@ -26,7 +26,7 @@ const lin = (hex) => { const c = new THREE.Color(hex); return `vec3(${c.r.toFixe
 const f5 = (x) => x.toFixed(6)
 
 function drawFaces(W, kind, off = {}) {
-  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0, bw = off.brow // brow { color, edge, width }: a character's own brows
+  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0, eDx = off.eyeDx ?? 0, bw = off.brow // brow { color, edge, width }: a character's own brows
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
@@ -37,13 +37,13 @@ function drawFaces(W, kind, off = {}) {
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
     const by = (name === 'excited' ? 0.0076 : name === 'sleepy' ? 0.0058 : name === 'focus' ? 0.0063 : 0.0066) + 0.0004 * FT + (fuku ? 0.0002 : 0)
     const arc = fuku ? (name === 'focus' ? 0.0024 : 0.0032) : (name === 'focus' ? 0.0020 : 0.0030)
-    const brow = () => { for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0010)); g.stroke() } }
+    const brow = () => { for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx + eDx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx + eDx)), Y(by + arc), X(sd * (0.0328 - bx + eDx)), Y(by - 0.0010)); g.stroke() } }
     if (bw?.edge) { g.strokeStyle = bw.edge; g.lineWidth = (bw.width + 0.0012) * s; brow() } // thin darker rim round a soft brow
     g.strokeStyle = BROW; g.lineWidth = (bw?.width ?? (fuku ? 0.0032 : 0.0056)) * s; brow()
     if (fuku) { // soft grey-brown smile lines at the eye corners
       g.strokeStyle = 'rgba(120,100,90,0.62)'; g.lineWidth = 0.0011 * s
       for (const sd of [-1, 1]) {
-        const ex = sd * (EYE.x + EYE.rx * 1.04), ey = EYE.y + 0.0002
+        const ex = sd * (EYE.x + eDx + EYE.rx * 1.04), ey = EYE.y + 0.0002
         g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0010)); g.lineTo(X(ex + sd * 0.0052), Y(ey + 0.0042)); g.stroke()
         g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0014)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0004)); g.stroke()
       }
@@ -68,13 +68,13 @@ function drawFaces(W, kind, off = {}) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t
 }
 
-const FACE_FS = (BL = BLUSH, DY = 0, ES = 1) => `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
+const FACE_FS = (BL = BLUSH, DY = 0, ES = 1, EDX = 0) => `uniform sampler2D map; uniform float uCellA, uCellB, uMix, uOpen, uSquint, uBlush, uBig, uLash; uniform vec2 uGaze; uniform vec3 uLight, uAmb; varying vec2 vUv;
   vec4 cellTex(float k, vec2 u){ vec2 cl = vec2(mod(k, 2.), floor(k*.5)); return texture2D(map, vec2((cl.x + u.x)*.5, (1. - cl.y + u.y)*.5)); }
   float cov(float d){ return clamp(.5 - d/max(fwidth(d), 1e-7), 0., 1.); }
   float eSD(vec2 d, vec2 R){ vec2 q = d/R; float k = max(length(q), 1e-5); return (k - 1.)/max(length(q/(R*k)), 1e-5); }
   void over(inout vec4 c, vec3 col, float a){ c.rgb = col*a + c.rgb*(1. - a); c.a = a + c.a*(1. - a); }
   void eye(inout vec4 c, vec2 p, float sd){
-    vec2 E = vec2(sd*${f5(EYE.x)}, ${f5(EYE.y)}), R = vec2(${f5(EYE.rx * ES)}, ${f5(EYE.ry * ES)})*uBig;
+    vec2 E = vec2(sd*${f5(EYE.x + EDX)}, ${f5(EYE.y)}), R = vec2(${f5(EYE.rx * ES)}, ${f5(EYE.ry * ES)})*uBig;
     float o = uOpen, k = smoothstep(.1, .3, o), ry = R.y*max(o, .03);
     vec2 Es = vec2(E.x, E.y - R.y + ry), Rs = vec2(R.x, ry), d = p - Es;
     vec4 e = vec4(0.);
@@ -155,11 +155,11 @@ const faceMat = (kind, bl, dy, off) => new THREE.ShaderMaterial({ transparent: t
   uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind, off)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
     uBlush: { value: 1 }, uBig: { value: 1 }, uLash: { value: 0 }, uGaze: { value: new THREE.Vector2() }, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: FACE_FS(bl, dy, off?.eyeScale ?? 1) })
+  fragmentShader: FACE_FS(bl, dy, off?.eyeScale ?? 1, off?.eyeDx ?? 0) })
 
 /** Face component factory. kind: 'fuku' | 'hoshino'. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Optional: cheek (head-frame jaw shape, must match body.cheek), hr (skull radii, must match body.headW), blushAt { dx, dy, dr } (moves / grows the blush),
- *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose, brow: { color, edge, width }, eyeScale } (extra drop; own brows; bigger eyes, same centres), glassesGeo (a character's own frames,
+ *  featDy (moves brows, eyes, nose, mouth and blush down by this much, head frame), featOff { mouth, nose, brow: { color, edge, width }, eyeScale, eyeDx } (extra drop; own brows; bigger eyes, same centres; eyes and brows further apart), glassesGeo (a character's own frames,
  *  replaces the shared ones; it must apply the same featDy). */
 export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, cheek = CHEEK, hr = HR, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) {
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
