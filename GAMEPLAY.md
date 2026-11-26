@@ -145,9 +145,9 @@ The Rope Bridge climbs the cliff on the side away from the lake. At the top is a
   - **Lamps:** E at the desk lamp or the bedside mushroom lamp switches it on or off. The bulb dims and its warm floor pool fades. Saved in `G.s.home.lamps` (default on). The hanging lantern stays automatic.
   - **Curtains:** E at the sink opens or closes the kitchen window's curtains. Closed hides its sunlight patch on the floor. Saved in `G.s.home.curtains` (default open).
   - **Stove:** in the evening or at night, "Add a log to the fire": she takes a log from the woodpile and pushes it into the stove. The fire flares (bigger flame, sparks, brighter floor glow) and settles back over about 3 minutes. Mochi comes to sit at the hearth and watch it, then curls up there. By day the same spot says "Tidy the woodpile".
-  - **Yarn ball:** when it's lying still near her, E: she picks it up and tosses it, and Mochi chases it. If he's napping, half the time he only opens one eye.
-  - **See-through alcove:** the bed alcove's half-wall fades while she's at the wardrobe or the bedside lamp, as the bath walls do in the bath.
-  - Debug: `__homeAct.lamp('desk'|'night')`, `__homeAct.curtains()`, `__homeAct.log()`, `__homeAct.toss()`.
+  - **Yarn ball:** press E near the ball to pick it up. Mochi follows while she carries it. Turn or walk in the direction you want to throw, then press E again.
+  - **See-through alcove:** the bed alcove's half-wall fades when it blocks the camera's view of her.
+  - Debug: `__homeAct.lamp('desk'|'night')`, `__homeAct.curtains()`, `__homeAct.log()`, `__homeAct.pickUpBall()`, `__homeAct.toss()`.
 - **Decor:** placing a decor item from the Bag while indoors puts it on the floor in front of her. The ghost preview is green on free floor. The item is saved in `placed` with an `in: [x, z]` room position. Press E next to it to pick it up again.
 - **Mochi, the cat** (`src/pets/Cat.jsx`):
   - He stays indoors and runs a small state machine: nap (curled in the sunbeam, or on the bed), groom, stretch then yawn, chase the yarn ball (stalk, butt-wiggle, pounce), sit on the windowsill, knead the quilt, and wander.
