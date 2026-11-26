@@ -160,6 +160,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Puffier hair: cap `[[0, 0.010, -0.019], [0.065, 0.064, 0.069]]`; in front it stands 0.010 off the skin (was 0.0055) and rolls down to the hairline over a wider band (`lip = smooth(1.45, 1.0, se)^1.6`), so the edge reads as a soft rolled lip instead of a skin-tight wrap. Bun raised to `[0, 0.068, -0.050]` so about half still shows from the front; hairline ink moved slightly inside the edge and lifted (0.972 / 0.975, skin + 0.0042) so the fuller lip doesn't hide it.
   - Features higher: `FEAT_DY` 0.003 -> 0.0012 (brows, eyes, nose, mouth, blush and glasses move together).
 
+**Grandma Fuku, pass 24** (KT: brows, eyes, nose and mouth slightly higher again): [`ref/fuku-pass24-compare.jpg`](ref/fuku-pass24-compare.jpg). `FEAT_DY` 0.0012 -> -0.0006 (the same step again; negative moves the features up from the shared layout). Glasses and blush move with them.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
