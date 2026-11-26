@@ -162,6 +162,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 
 **Grandma Fuku, pass 24** (KT: brows, eyes, nose and mouth slightly higher again): [`ref/fuku-pass24-compare.jpg`](ref/fuku-pass24-compare.jpg). `FEAT_DY` 0.0012 -> -0.0006 (the same step again; negative moves the features up from the shared layout). Glasses and blush move with them.
 
+**Grandma Fuku, pass 25** (KT picked option D from [`ref/fuku-features-ladder.jpg`](ref/fuku-features-ladder.jpg)): `FEAT_DY` -0.0033. Next, the forehead width at the hairline: ladder [`ref/fuku-forehead-ladder.jpg`](ref/fuku-forehead-ladder.jpg) widens the hairline opening and the skull together (`HL.a` / `headW`: A 0.046 / 0.86 now, B 0.0485 / 0.89, C 0.051 / 0.92, D 0.0535 / 0.95; forehead 159 / 167 / 176 / 185 px at the same eye size). The cheeks widen a little with the skull.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

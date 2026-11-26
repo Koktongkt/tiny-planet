@@ -31,7 +31,7 @@ const FUKU_CHEEK = [0, -0.0405, 0.0120, 0.0505, 0.0150, 0.0390, 0.0180, 0.0120]
 // pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
-const FEAT_DY = -0.0006 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
+const FEAT_DY = -0.0033 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
 const HEAD_W = 0.86, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
 
