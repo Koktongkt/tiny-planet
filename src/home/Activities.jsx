@@ -414,9 +414,9 @@ if (!HOME.actHooked) { HOME.actHooked = true
     for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, at: atRoom(pl.stand[0], pl.stand[1], 0.55), icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => GO.water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
     // part C
     const h = H()
-    for (const k of ['desk', 'night']) { const l = LAMPS[k], dist = d(l.stand[0], l.stand[1])
-      if (k === 'night' && (dist >= 0.22 || !clearFloorLine(hp.x, hp.z, ...l.stand, 0.085))) continue
-      consider({ kind: 'ext', inside: true, id: 'lamp-' + k, at: atRoom(l.at[0], l.at[1], l.y + 0.1), icon: h.lamps[k] ? 'moon' : 'sun', verb: h.lamps[k] ? 'Switch off' : 'Switch on', name: l.name, act: () => goThen(l.stand, l.face, () => lampSwitch(k)) }, dist, 0.22)
+    for (const k of ['desk', 'night']) { const l = LAMPS[k], dist = d(l.stand[0], l.stand[1]), range = k === 'night' ? 0.3 : 0.22
+      if (dist >= range || (k === 'night' && !clearFloorLine(hp.x, hp.z, ...l.stand, 0.085))) continue
+      consider({ kind: 'ext', inside: true, id: 'lamp-' + k, at: atRoom(l.at[0], l.at[1], l.y + 0.1), icon: h.lamps[k] ? 'moon' : 'sun', verb: h.lamps[k] ? 'Switch off' : 'Switch on', name: l.name, act: () => goThen(l.stand, l.face, () => lampSwitch(k)) }, dist, range)
     }
     consider({ kind: 'ext', inside: true, id: 'curtains', at: atRoom(CURT.pl.x * 0.95, CURT.pl.z * 0.95, 0.9), icon: h.curtains ? 'moon' : 'sun', verb: h.curtains ? 'Close' : 'Open', name: 'the curtains', act: () => goThen(CURT.stand, CURT.face, curtains) }, d(CURT.stand[0], CURT.stand[1]), 0.24)
     consider({ kind: 'ext', inside: true, id: 'stove-log', at: atRoom(STOVE_FIRE[0], STOVE_FIRE[1], 0.5), icon: 'leaf', verb: evening() ? 'Add a log' : 'Tidy', name: evening() ? 'to the fire' : 'the woodpile', act: () => goThen(STOVE_STAND, faceTo(STOVE_STAND, WOOD.x, WOOD.z), stoveLog) }, d(STOVE_STAND[0], STOVE_STAND[1]), 0.24)
