@@ -111,8 +111,8 @@ function HoshinoHair({ set }) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 1.10, torso: 1.00, arm: 1.00, girth: 1.20, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.38, armA: 0.28, shDrop: 0.034, handL: 1.18,
-    armR: [1.05, 1.45, 1.85], legR: 1.24, legX: 1.06, foot: 1.20, bootW: 1.22, bootH: 1.16, bootL: 1.00, hand: 0.86,
+  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.00, girth: 1.20, shoulder: 1.00, chestW: 1.12, bellyZ: 0.96, shX: 1.38, armA: 0.28, shDrop: 0.034, handL: 1.18,
+    armR: [1.05, 1.45, 1.85], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
     cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
@@ -120,7 +120,7 @@ export const HOSHINO = {
   // openJacket painter (all painted, nothing floats): acc = khaki jacket to mid-thigh with notch lapels, flap
   // pockets and two buttons; top = dark green vest with five gold buttons; acc2 = white shirt collar and cuffs;
   // bottom = olive trousers with painted turn-ups.
-  outfit: { type: 'openJacket', hemY: 'skirt', skin: SKIN, top: VEST, acc: JACKET, acc2: SHIRT, bottom: TROUSER, shoe: '#7a4a26', shoeY: 0.028, long: true, sleeve: 'none', seams: true },
+  outfit: { type: 'openJacket', hemY: 'skirt', skin: SKIN, top: VEST, acc: JACKET, acc2: SHIRT, bottom: TROUSER, shoe: '#7a4a26', shoeY: 0.027, long: true, sleeve: 'none', seams: true },
   hold: {},
   walk: { rate: 8, stride: 0.48, knee: 0.6, bounce: 0.008, smooth: true, land: 0.28, arm: 0.45, lean: 0.12, twist: 0.1, sway: 0.07, idle: 'look' },
   ext: {

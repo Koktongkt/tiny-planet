@@ -142,7 +142,9 @@ const PAINT = `
     // arms
     vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
-    if (ty == 8) { float sw = fwidth(vReg.x)*2.2 + 1e-4; armSeam = aa(sw - abs(vReg.x - .5)); } // inked sleeve/body seam
+    if (ty == 8) { // armhole seam: runs up the front of the shoulder, over the top and down the back, at the sleeve's edge
+      float sx = uArm.x - .012 + max(0., uArm.y - y)*.18;            // leans out a little toward the armpit
+      armSeam = aa(.0013 - abs(ax - sx)) * aa(y - (uArm.y - .046)) * aa(uY.y - .004 - y) * (1. - neck); }
     if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
       float cy = uO.w - .0135; float cb = aa(.0050 - abs(y - cy)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - cy - .0058))); } // cuff at the flared sleeve's open end
     // legs
@@ -153,7 +155,7 @@ const PAINT = `
     if (ty == 8) hand *= aa(uO.w - .0185 - y); // flared sleeve covers the top of the hand: skin only below the cuff
     c = mix(c, uSkin, max(hand, neck * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
-    c = mix(c, uAcc*.48, armSeam * (1. - hand));
+    c = mix(c, uAcc*.45, armSeam);
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
       c = mix(c, uShoe*.42, boot * aa(.0098 - y));
@@ -165,7 +167,7 @@ const PAINT = `
 // a warm band where light turns to shadow on skin; sky fill from above and grass bounce from below (local up, so it
 // works anywhere on the planet); fine cloth / fur grain; and a strand texture + sheen ring on hair (aKind = 1).
 const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
-  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ;
+  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uArm;
   varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   ${PAINT}
   float h3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
@@ -246,6 +248,7 @@ function bodyMat(cfg, S) {
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
+    uArm: { value: new THREE.Vector4(S.shR.x, S.shR.y, S.shR.z, S.armA) }, // openJacket armhole seam
     uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.type === 'openJacket' ? S.wrR.y : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
@@ -306,7 +309,7 @@ export function spec(b = {}) {
     S['hp' + k] = V3(sd * hx, S.hipY, 0.004); S['kn' + k] = V3(sd * (hx + 0.001), S.knY, 0.007); S['an' + k] = V3(sd * (hx + 0.002), S.anY, 0.004)
     S['ft' + k] = V3(sd * (hx + 0.002), b.footY ?? 0.014, 0.012); S['dir' + k] = dir
   }
-  S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
+  S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map((r, i) => r * (b.legR ?? 1) * (b.legRs?.[i] ?? 1)) // legRs: optional per-joint scale [thigh, knee, ankle]
   S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn * (b.handL ?? 1), 0.012 * fs * S.hn) // handL: optional longer hand
   if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirt === 'long' ? 1.12 : 1.3)] }
   // skirt 'jacket': a short flared jacket skirt with a flat hem; b.jacket = [hem drop below mid-thigh, flare]

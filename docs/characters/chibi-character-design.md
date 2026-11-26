@@ -259,6 +259,15 @@ Before and after, plus a check at equal head height: [`ref/hoshino-proportion-co
 
 - **Sleeve lines:** the ink hull only draws against the background, so where a sleeve hangs in front of the jacket its inner edge had no line from about halfway down. For `openJacket` only, the final body shading now inks the sleeve's own contour (arm region, `dot(N, V) < ~0.2`).
 
+### Professor Hoshino (draft): trousers and shoulder-seam pass
+
+Before and after, plus a check at equal head height: [`ref/hoshino-trousers-compare.jpg`](ref/hoshino-trousers-compare.jpg).
+
+- **Trousers:** new optional body knob `legRs [thigh, knee, ankle]`, per-joint leg radius scales that default to 1. Hoshino uses `[1, 1, 1.30]`, so the trouser legs drop straight instead of tapering. The hem is lower (`shoeY 0.027`).
+- **Shoes:** wider and longer (`bootW 1.55`, `bootH 1.30`, `bootL 1.30`), so the trousers cover part of the shoe and the toes show, as on the sheet.
+- **Torso:** a little shorter again (`torso 0.95`), with longer legs (`leg 1.14`).
+- **Shoulder seams:** the weight-based sleeve seam followed the mesh and came out patchy and jagged on the shoulders. It is replaced by an analytic armhole: a line at `|x| ≈ shoulder.x − 0.012`, leaning out toward the armpit, running up the front, over the top and down the back. It is capped at the neck, because an uncapped first try drew across the face. A new uniform `uArm` (shoulder position, `armA`) feeds it. A first try as a ring perpendicular to the arm read as a short horizontal dash, the wrong direction.
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.
