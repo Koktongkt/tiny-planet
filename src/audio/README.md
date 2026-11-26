@@ -9,8 +9,7 @@ Self-contained and lazy. It adds **nothing to the startup chunk** except `arm.js
 | `player` (score, instruments, player) | ~7.4 KB | 3 s later (only if Music > 0) |
 | `chip` | ~1.5 KB | only with `chip: true` (the SettingsPanel replaces it in the game) |
 
-The outdoor scene loads and loops “Sunlit Valley Stroll” on demand through the same music bus as the procedural pieces.
-The procedural “Little Planet Waltz” plays outdoors if the recording fails to load. Ambience and effects are synthesised (see ASSETS.md).
+The house and outdoor scenes load and loop “Sunlit Hearthside Tales” and “Sunlit Valley Stroll,” respectively. Both recordings use the existing music bus and are level-matched to the procedural pieces they replace. “Lamplight” and “Little Planet Waltz” play if their recordings fail to load. Ambience and effects are synthesised (see ASSETS.md).
 
 ## Mount (done in `src/game/UI.jsx`)
 ```js
