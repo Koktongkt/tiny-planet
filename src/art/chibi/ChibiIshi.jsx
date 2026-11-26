@@ -75,6 +75,8 @@ const EAR = { y: -0.025, z: -0.008 }
 const MUS_R = [[0, -0.0350], [0.0060, -0.0333], [0.0100, -0.0300], [0.0140, -0.0294], [0.0185, -0.0314], [0.0225, -0.0350],
   [0.0252, -0.0395], [0.0262, -0.0430], [0.0252, -0.0452], [0.0230, -0.0460], [0.0206, -0.0450], [0.0186, -0.0466],
   [0.0160, -0.0473], [0.0134, -0.0462], [0.0112, -0.0469], [0.0085, -0.0459], [0.0055, -0.0434], [0.0025, -0.0414], [0, -0.0405]]
+// pass 9 (KT: bigger, wider, covering more of the mouth): the same shape scaled out from under the nose
+  .map(([x, y]) => [x * 1.22, y > -0.0336 ? y : -0.0336 + (y + 0.0336) * 1.32])
 function mustacheGeo() {
   // each half is a closed puff: rings shrink from the outline to a centre point; the front rings dome out from the face
   // (thickest under the nose, thinner toward the tip), the back rings sit just inside the head. Dense, so it follows
@@ -86,7 +88,7 @@ function mustacheGeo() {
       for (let k = 0; k < n; k++) ring.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]) }
     const C = [sd * 0.0125, -0.0405], K = 7, M = ring.length, pos = [], idx = []
     const at = (j, s, front) => { const [px, py] = ring[j], x = C[0] + (px - C[0]) * s, y = C[1] + (py - C[1]) * s
-      const H = 0.0078 - 0.0046 * Math.min(1, Math.abs(x) / 0.027) - 0.0012 * Math.max(0, Math.min(1, (-0.043 - y) / 0.008))
+      const H = 0.0082 - 0.0048 * Math.min(1, Math.abs(x) / 0.033) - 0.0012 * Math.max(0, Math.min(1, (-0.043 - y) / 0.008))
       const z = front ? surfZ(x, y) - 0.0006 + H * Math.sqrt(Math.max(0, 1 - s * s)) : surfZ(x, y) - 0.0028 + 0.0022 * (1 - Math.sqrt(Math.max(0, 1 - s * s)))
       pos.push(x, y, z) }
     // rings 0..K front (s = 1 - k/K), then back; the outline ring (s = 1) is shared
