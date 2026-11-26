@@ -9,7 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, cel, spec, mkOutline, coreSDF } from '../../GhibliPerson.jsx'
 import { FUKU_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { HR, MIDFACE, MID_FADE, EYE, makeFace } from './castFace.jsx'
+import { HR, MIDFACE, MID_FADE, EYE, headSDF, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
 
@@ -58,10 +58,75 @@ const EAR = { x: 0.0605, y: -0.0225, z: 0.006 }
 // bun ball slightly behind the top of the head. No locks or painted lines yet.
 const BUN_C = [0, 0.060, -0.050], BUN_R = 0.026
 const H_CAP = [[0, 0.009, -0.019], [0.0610, 0.0610, 0.0660]]
+// pass 22: the forehead hairline traced from the sheet: a rounded block (superellipse, power 4) with a flat top, straight
+// sides down the temples and rounded corners, plus a small dip at the parting. Head-frame units.
+const HL = { a: 0.0460, top: 0.040, bot: -0.072, p: 4, dip: 0.0035, dipW: 0.0075, low: -0.008 }
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+// distance from the skull centre to the skin along a direction
+function skinR(dx, dy, dz) { let lo = 0, hi = 0.12
+  for (let n = 0; n < 26; n++) { const m = (lo + hi) / 2; if (headSDF(dx * m, dy * m, dz * m, FUKU_CHEEK, FUKU_HR) < 0) lo = m; else hi = m }
+  return lo }
+// reshape the cap ball: (1) behind, pull the dome in and let its mass sit lower, so the back of the head rounds down
+// to the nape instead of bulging high; (2) in front, lay the hair just over the skin down to the temples, cut the
+// forehead opening out of the mesh along the traced line, snap the cut edge exactly onto that line and roll it down
+// onto the skin, so the hairline is clean and the ink hull draws it as a line
+function shapeCap(g) {
+  const P = g.attributes.position, [cc] = H_CAP, v = new THREE.Vector3(), n = P.count
+  const se = new Float32Array(n), fr = new Float32Array(n)
+  const winAt = (x) => { const top = HL.top - HL.dip * Math.exp(-((x / HL.dipW) ** 2)); return [(top + HL.bot) / 2, (top - HL.bot) / 2] }
+  const seOf = (x, y) => { const [cy, hb] = winAt(x); return Math.abs(x / HL.a) ** HL.p + Math.abs((y - cy) / hb) ** HL.p }
+  const onSkin = (x, y, z, off) => { v.set(x, y, z); v.normalize(); const r = skinR(v.x, v.y, v.z) + off; return [v.x * r, v.y * r, v.z * r] }
+  for (let i = 0; i < n; i++) {
+    let x = P.getX(i), y = P.getY(i), z = P.getZ(i)
+    if (z < cc[2]) { const k = Math.min(1, (cc[2] - z) / 0.066); z = cc[2] + (z - cc[2]) * 0.80; y -= 0.007 * k * k * (y < cc[1] + 0.03 ? 1 : 0.5) }
+    fr[i] = smooth(-0.005, 0.02, z); se[i] = seOf(x, y)
+    if (fr[i] > 0) {
+      v.set(x, y, z); const r = v.length(), cover = smooth(HL.low - 0.006, HL.low + 0.004, y)
+      const lip = smooth(1.2, 1.0, se[i]) * cover // roll the hair down onto the skin as it nears the hairline
+      const [sx, sy, sz] = onSkin(x, y, z, 0), sr = Math.hypot(sx, sy, sz)
+      const out = r + (Math.max(r, sr + 0.0055) - r) * cover, nr = r + ((out + (sr + 0.0035 - out) * lip) - r) * fr[i]
+      v.normalize(); x = v.x * nr; y = v.y * nr; z = v.z * nr
+    }
+    P.setXYZ(i, x, y, z)
+  }
+  // cut the opening: drop every front triangle with a corner inside the hairline; the corners those triangles share
+  // with kept ones form the rim
+  const I = g.index.array, keep = [], cut = new Uint8Array(n), used = new Uint8Array(n), edge = new Uint8Array(n)
+  for (let t = 0; t < I.length; t += 3) {
+    const tri = [I[t], I[t + 1], I[t + 2]]
+    if (tri.some(k => fr[k] > 0.5 && seOf(P.getX(k), P.getY(k)) < 1)) { tri.forEach(k => { cut[k] = 1 }); continue }
+    keep.push(...tri); tri.forEach(k => { used[k] = 1 })
+  }
+  for (let i = 0; i < n; i++) if (cut[i] && used[i] && P.getY(i) > HL.low) edge[i] = 1
+  // snap the rim onto the line (scale out from the window centre to se = 1) and seat it on the skin
+  for (let i = 0; i < n; i++) if (edge[i]) {
+    const x = P.getX(i), y = P.getY(i), [cy] = winAt(x), s0 = seOf(x, y), l = Math.pow(s0, -1 / HL.p)
+    const [px, py, pz] = onSkin(x * l, cy + (y - cy) * l, P.getZ(i), 0.0025); P.setXYZ(i, px, py, pz)
+  }
+  g.setIndex(keep); g.computeVertexNormals(); return g
+}
+// the sheet draws the hairline as a line: a thin tube along the traced line, seated on the skin
+function hairlineInk() {
+  const pts = [], winAt = (x) => { const top = HL.top - HL.dip * Math.exp(-((x / HL.dipW) ** 2)); return [(top + HL.bot) / 2, (top - HL.bot) / 2] }
+  for (let i = 0; i <= 80; i++) {
+    const th = Math.PI * (-0.5 + i / 80) // from the left side round the top to the right side, as a superellipse
+    const c = Math.cos(th), sn = Math.sin(th)
+    let x = -Math.sign(sn) * HL.a * Math.abs(sn) ** (2 / HL.p); if (Math.abs(sn) < 1e-6) x = 0
+    const [cy, hb] = winAt(x); x *= 0.985; const y = cy + hb * 0.985 * Math.abs(c) ** (2 / HL.p) // just inside the hair edge
+    if (y < HL.low) continue
+    // find the skin along a ray from the centre through (x, y) on the front
+    let lo = 0, hi = 0.12; for (let k = 0; k < 26; k++) { const m = (lo + hi) / 2; if (headSDF(x, y, m, FUKU_CHEEK, FUKU_HR) < 0) lo = m; else hi = m }
+    pts.push(new THREE.Vector3(x, y, lo + 0.0028))
+  }
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.0012, 6, false)
+  g.setAttribute('aSkin', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(0.48), 1))
+  g.deleteAttribute('uv'); return g
+}
 function fukuHair() {
-  const ball = new THREE.SphereGeometry(1, 32, 24), ballS = new THREE.SphereGeometry(1, 14, 10)
+  const ball = new THREE.SphereGeometry(1, 72, 54), ballS = new THREE.SphereGeometry(1, 14, 10)
   const parts = [
-    part(ball, ...H_CAP),
+    shapeCap(part(ball, ...H_CAP)),
+    hairlineInk(),
     part(ball, BUN_C, [BUN_R, BUN_R, BUN_R]),
     // ears as on the sheet: a big C, widest at the top and tucked in toward the jaw at the bottom (top tilted out),
     // with a darker hollow on the front face
@@ -69,8 +134,9 @@ function fukuHair() {
     ...[-1, 1].map(d => part(ballS, [d * (EAR.x + 0.0036), EAR.y + 0.0010, EAR.z + 0.0030], [0.0032, 0.0086, 0.0058], [0, d * 0.7, -d * 0.26], 2)),
   ]
   tagAW(parts[0], () => [3, 0.1])
-  tagAW(parts[1], (x, y) => [2, sm(0.04, 0.09, y)])
-  for (let k = 2; k < parts.length; k++) tagAW(parts[k], () => [3, 0])
+  tagAW(parts[1], () => [3, 0.1])
+  tagAW(parts[2], (x, y) => [2, sm(0.04, 0.09, y)])
+  for (let k = 3; k < parts.length; k++) tagAW(parts[k], () => [3, 0])
   return mergeHair(parts)
 }
 const HAIR_GEO = fukuHair()

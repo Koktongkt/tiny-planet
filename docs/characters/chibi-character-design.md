@@ -151,6 +151,11 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Bun back and lower: `BUN_C [0, 0.060, -0.050]`; about half of it shows above the dome from the front.
   - Ears moved out to clear the fuller hair (`EAR {x 0.0605, y -0.0225, z 0.006}`); glasses arms follow.
 
+**Grandma Fuku, pass 22** (KT: trace the forehead hairline as a rounded block; the back of the head is too swollen, balance it lower; check the side view): [`ref/fuku-pass22-compare.jpg`](ref/fuku-pass22-compare.jpg).
+  - Hairline traced from the sheet as a superellipse (`HL`: power 4, half-width 0.046, top 0.040 with a 0.0035 dip at the parting, sides down to y -0.008 at the ear tops). `shapeCap` reshapes the cap ball: in front it lies just over the skin (found by ray-marching `headSDF`) outside the line, every front triangle with a corner inside the line is cut away, and the rim vertices are snapped onto the line and seated on the skin, so the edge is exactly the traced curve. A thin ink tube along the line (`hairlineInk`, drawn with the hair shader's ink band, aSkin 0.48) gives the sheet's drawn hairline.
+  - Back balanced: behind the cap centre the dome is pulled in (z x 0.80) and its mass lowered (up to 0.007), so in profile it rounds down to the nape instead of bulging high.
+  - Tried: tucking the cap under the skin inside the line without cutting it (ragged edge where it grazed the faceted skin); laying the hair 1.2 mm over the skin (the skin flickered through); covering the temples down to eye level (strips of hair beside the eyes).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
