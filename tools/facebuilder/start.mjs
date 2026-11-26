@@ -10,7 +10,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const argv=process.argv.slice(2)
 const selected=argv.includes('--char')?argv[argv.indexOf('--char')+1]:'ishi'
 const wait=argv.includes('--wait')
-if(!CHARACTERS[selected]) throw new Error('Choose --char her, fuku or ishi')
+if(!CHARACTERS[selected]) throw new Error('Choose --char her, fuku, ishi or hoshino')
 const token=randomBytes(24).toString('hex')
 const hash=s=>createHash('sha256').update(s).digest('hex')
 const submissions=resolve(root,'docs/characters/facebuilder-submissions')

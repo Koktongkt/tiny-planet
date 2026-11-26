@@ -7,7 +7,7 @@
 aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}.inspector-top{padding:14px;border-bottom:1px solid var(--line)}.inspector-top h2{margin:0 0 5px;font-size:16px}.scroll{overflow:auto;padding:10px 14px;flex:1}details{border-bottom:1px solid var(--line);padding:8px 0}summary{cursor:pointer;font-weight:600;font-size:13px;padding:5px}label.row{display:grid;grid-template-columns:minmax(0,1fr) 76px 32px;gap:5px;margin:10px 0;font-size:12px;align-items:center}.row span{grid-column:1}.row input[type=range]{grid-column:1;grid-row:2;width:100%;accent-color:var(--accent)}.row input[type=number]{grid-column:2;grid-row:2;min-width:0;width:100%;background:#151c25;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:4px;font-size:11px}.row input[type=color]{grid-column:2;grid-row:1;width:60px;height:27px;background:none;border:0}.row .lock{grid-column:3;grid-row:1 / span 2;padding:4px;font-size:12px}.row .locked{color:var(--gold);border-color:var(--gold)}.row .edited{color:var(--accent)}.footer{border-top:1px solid var(--line);padding:14px;display:grid;gap:8px}textarea{background:#161c24;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical;min-height:52px;width:100%;font-size:12px}#status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:var(--muted)}#status.error{color:#ffaf9e}#status.success{color:var(--accent)}.actions{display:flex;gap:6px}.actions button{flex:1}#reference{max-width:200px;font-size:12px}.search{width:100%;background:#151c25;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px;margin-top:10px}
 @media(max-width:800px){.layout{grid-template-columns:1fr;height:auto}.stage{height:58vh;min-height:420px}aside{border-left:0;border-top:1px solid var(--line);min-height:50vh}.scroll{max-height:50vh}header{padding:10px}header small{display:none}}
 </style></head>
-<body><header><span class="pill">Dev only</span><h1>Tiny Planet · Face Builder</h1><small>Existing game renderer · local approval workspace</small><div class="grow"></div><label><small>CHARACTER</small> <select id="character"><option value="her">Main character</option><option value="fuku">Grandma Fuku</option><option value="ishi">Grandpa Ishi</option></select></label></header>
+<body><header><span class="pill">Dev only</span><h1>Tiny Planet · Face Builder</h1><small>Existing game renderer · local approval workspace</small><div class="grow"></div><label><small>CHARACTER</small> <select id="character"><option value="her">Main character</option><option value="fuku">Grandma Fuku</option><option value="ishi">Grandpa Ishi</option><option value="hoshino">Professor Hoshino</option></select></label></header>
 <div class="layout"><main class="stage">
 <div class="toolbar" id="angles"><button data-angle="front">Front</button><button data-angle=".4">Slight turn</button><button data-angle="three">¾</button><button data-angle="1.2">Deep ¾</button><button data-angle="side">Side</button><button data-angle="back">Back</button><button id="body">Full body</button><button id="down">Game angle</button><button id="baseline">Compare original</button></div>
 <div class="viewport"><iframe id="preview" title="Tiny Planet character preview"></iframe><img id="overlay" alt="" hidden><span class="badge" id="viewLabel">Draft · front</span></div>
@@ -18,7 +18,7 @@ const token='__FB_TOKEN__', $=id=>document.getElementById(id)
 const headers={'x-facebuilder-token':token,'Content-Type':'application/json'}
 let schema=null,values={},locked=new Set(),history=[],angle='front',full=false,down=false,original=false,timer=0,loading=false,overlayURL=null,screen=0
 const initial=new URLSearchParams(location.search).get('char')||'ishi'
-$('character').value=['her','fuku','ishi'].includes(initial)?initial:'ishi'
+$('character').value=['her','fuku','ishi','hoshino'].includes(initial)?initial:'ishi'
 function status(text,kind=''){const el=$('status');el.textContent=text;el.className=kind}
 function baselineValues(){return Object.fromEntries(schema.fields.map(f=>[f.id,f.value]))}
 function changed(){return schema?Object.fromEntries(schema.fields.filter(f=>values[f.id]!==f.value).map(f=>[f.id,values[f.id]])):{}}
@@ -26,7 +26,7 @@ function updateCount(){if(!schema)return;$('changeCount').textContent=Object.key
 function refresh(){
   if(!schema)return
   sessionStorage.setItem('tiny-planet-facebuilder',JSON.stringify({character:schema.character,values:original?{}:changed()}))
-  const qs=new URLSearchParams({view:'charstudio',dev:'chibi-drafts',still:'',angle,zoom:full?'1':$('zoom').value,ly:full?'.2':'.32',_fb:String(++screen)})
+  const qs=new URLSearchParams({view:'charstudio',dev:'chibi-drafts',still:'',face:'happy',angle,zoom:full?'1':$('zoom').value,ly:full?'.2':'.32',_fb:String(++screen)})
   if(schema.character!=='her')qs.set('char',schema.character)
   if(!down)qs.set('level','')
   $('preview').src='/?'+qs
