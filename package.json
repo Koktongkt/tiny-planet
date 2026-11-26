@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5190 --strictPort",
+    "facebuilder": "node tools/facebuilder/start.mjs",
     "build": "vite build",
     "preview": "vite preview --port 4190",
     "lint": "eslint .",

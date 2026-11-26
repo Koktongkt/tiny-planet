@@ -1,5 +1,7 @@
 # Cozy Chibi character design (Tiny Planet)
 
+**Optional interactive face review:** when KT requests the face builder, start `npm run facebuilder -- --char her|fuku|ishi --wait` (choose one ID), give KT the printed URL, and wait for `FACE_BUILDER_SUBMITTED`. Read the approval receipt and continue from the saved source; preserve the locked appearance. See [Face Builder workflow](facebuilder.md). The normal game build and review workflow are unchanged.
+
 In-repo design reference for Tiny Planet humans in the approved Cozy Chibi style (concept B). Taken from her (the player).
 
 Use this when designing or implementing a human in the approved "Cozy Chibi" style (concept B). Do **not** build villagers from this document until KT asks. This is the style and implementation reference taken from her (the player).

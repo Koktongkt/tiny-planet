@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tiny Planet · Face Builder</title>
+<style>
+:root{color-scheme:dark;--bg:#171c23;--panel:#222a34;--line:#35404d;--muted:#a7b4bc;--text:#f0eee7;--accent:#b9daac;--gold:#f4ca88;font-family:system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}button,input,select,textarea{font:inherit}button,select{border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:#2e3946;color:var(--text);cursor:pointer}button:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:default}.primary{background:var(--accent);color:#233226;font-weight:bold;border:none}.danger{color:var(--gold)}header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}h1{font-size:18px;margin:0}small,.muted{color:var(--muted)}.pill{font-size:11px;text-transform:uppercase;letter-spacing:.12em;background:#354739;color:var(--accent);border-radius:20px;padding:5px 10px}.grow{flex:1}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100dvh - 76px)}.stage{display:flex;flex-direction:column;min-height:0;padding:16px;gap:12px;min-width:0}.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.toolbar button.active{background:var(--accent);color:#233226}.viewport{position:relative;flex:1;min-height:280px;background:#f3e9db;border-radius:14px;overflow:hidden}.viewport iframe{width:100%;height:100%;border:0;display:block}.viewport img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}.badge{position:absolute;left:14px;top:14px;border-radius:6px;background:#17202bd9;color:white;font-size:12px;padding:6px 10px;pointer-events:none}.sub{font-size:12px;line-height:1.5;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.sub input[type=range]{width:90px}
+aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}.inspector-top{padding:14px;border-bottom:1px solid var(--line)}.inspector-top h2{margin:0 0 5px;font-size:16px}.scroll{overflow:auto;padding:10px 14px;flex:1}details{border-bottom:1px solid var(--line);padding:8px 0}summary{cursor:pointer;font-weight:600;font-size:13px;padding:5px}label.row{display:grid;grid-template-columns:minmax(0,1fr) 76px 32px;gap:5px;margin:10px 0;font-size:12px;align-items:center}.row span{grid-column:1}.row input[type=range]{grid-column:1;grid-row:2;width:100%;accent-color:var(--accent)}.row input[type=number]{grid-column:2;grid-row:2;min-width:0;width:100%;background:#151c25;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:4px;font-size:11px}.row input[type=color]{grid-column:2;grid-row:1;width:60px;height:27px;background:none;border:0}.row .lock{grid-column:3;grid-row:1 / span 2;padding:4px;font-size:12px}.row .locked{color:var(--gold);border-color:var(--gold)}.row .edited{color:var(--accent)}.footer{border-top:1px solid var(--line);padding:14px;display:grid;gap:8px}textarea{background:#161c24;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical;min-height:52px;width:100%;font-size:12px}#status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:var(--muted)}#status.error{color:#ffaf9e}#status.success{color:var(--accent)}.actions{display:flex;gap:6px}.actions button{flex:1}#reference{max-width:200px;font-size:12px}.search{width:100%;background:#151c25;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px;margin-top:10px}
+@media(max-width:800px){.layout{grid-template-columns:1fr;height:auto}.stage{height:58vh;min-height:420px}aside{border-left:0;border-top:1px solid var(--line);min-height:50vh}.scroll{max-height:50vh}header{padding:10px}header small{display:none}}
+</style></head>
+<body><header><span class="pill">Dev only</span><h1>Tiny Planet · Face Builder</h1><small>Existing game renderer · local approval workspace</small><div class="grow"></div><label><small>CHARACTER</small> <select id="character"><option value="her">Main character</option><option value="fuku">Grandma Fuku</option><option value="ishi">Grandpa Ishi</option></select></label></header>
+<div class="layout"><main class="stage">
+<div class="toolbar" id="angles"><button data-angle="front">Front</button><button data-angle=".4">Slight turn</button><button data-angle="three">¾</button><button data-angle="1.2">Deep ¾</button><button data-angle="side">Side</button><button data-angle="back">Back</button><button id="body">Full body</button><button id="down">Game angle</button><button id="baseline">Compare original</button></div>
+<div class="viewport"><iframe id="preview" title="Tiny Planet character preview"></iframe><img id="overlay" alt="" hidden><span class="badge" id="viewLabel">Draft · front</span></div>
+<div class="sub"><label>Reference image <input type="file" accept="image/*" id="reference"></label><label>Overlay opacity <input id="opacity" type="range" min="0" max="1" step=".05" value=".35"></label><label>Zoom <input id="zoom" type="range" min="1" max="5" step=".1" value="2.7"></label><span class="muted">Drag a slider or type a precise value. Geometry refreshes after a short pause.</span></div>
+</main><aside><div class="inspector-top"><h2 id="name">Face inspector</h2><small id="changeCount">Loading source values…</small><input class="search" id="search" placeholder="Filter parameters…" aria-label="Filter parameters"></div><div class="scroll" id="fields"></div><div class="footer"><div class="actions"><button id="undo" disabled>Undo</button><button id="reset">Reset draft</button></div><label><small>Notes for your agent</small><textarea id="notes" maxlength="2000" placeholder="Optional: what you approved / next task"></textarea></label><button class="primary" id="submit" disabled>Approve &amp; submit design</button><div id="status" role="status">Changes stay in the preview until you submit.</div></div></aside></div>
+<script type="module">
+const token='__FB_TOKEN__', $=id=>document.getElementById(id)
+const headers={'x-facebuilder-token':token,'Content-Type':'application/json'}
+let schema=null,values={},locked=new Set(),history=[],angle='front',full=false,down=false,original=false,timer=0,loading=false,overlayURL=null,screen=0
+const initial=new URLSearchParams(location.search).get('char')||'ishi'
+$('character').value=['her','fuku','ishi'].includes(initial)?initial:'ishi'
+function status(text,kind=''){const el=$('status');el.textContent=text;el.className=kind}
+function baselineValues(){return Object.fromEntries(schema.fields.map(f=>[f.id,f.value]))}
+function changed(){return schema?Object.fromEntries(schema.fields.filter(f=>values[f.id]!==f.value).map(f=>[f.id,values[f.id]])):{}}
+function updateCount(){if(!schema)return;$('changeCount').textContent=Object.keys(changed()).length+' changed · '+locked.size+' inspector locks · '+schema.fields.length+' controls';$('undo').disabled=!history.length||loading;$('submit').disabled=loading}
+function refresh(){
+  if(!schema)return
+  sessionStorage.setItem('tiny-planet-facebuilder',JSON.stringify({character:schema.character,values:original?{}:changed()}))
+  const qs=new URLSearchParams({view:'charstudio',dev:'chibi-drafts',still:'',angle,zoom:full?'1':$('zoom').value,ly:full?'.2':'.32',_fb:String(++screen)})
+  if(schema.character!=='her')qs.set('char',schema.character)
+  if(!down)qs.set('level','')
+  $('preview').src='/?'+qs
+  $('viewLabel').textContent=(original?'Original':'Draft')+' · '+(down?'game angle':angle)+' · '+(full?'full body':'head')
+  for(const b of document.querySelectorAll('[data-angle]'))b.classList.toggle('active',b.dataset.angle===angle)
+  $('baseline').classList.toggle('active',original);$('body').classList.toggle('active',full);$('down').classList.toggle('active',down)
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(refresh,450)}
+function snapshot(){history.push({...values});if(history.length>100)history.shift()}
+function applyValue(f,raw,checkpoint=true){
+  if(locked.has(f.id)||loading)return
+  let v=f.type==='color'?raw:Number(raw)
+  if(f.type!=='color'){if(raw===''||!Number.isFinite(v))return;v=Math.max(Math.min(f.min,f.value),Math.min(Math.max(f.max,f.value),v))}
+  if(values[f.id]===v)return
+  if(checkpoint)snapshot();values[f.id]=v;original=false;updateCount();schedule()
+}
+function render(){
+  const container=$('fields'),filter=$('search').value.toLowerCase(),open=new Set([...container.querySelectorAll('details[open]')].map(x=>x.dataset.group))
+  container.replaceChildren()
+  const byGroup=new Map()
+  for(const f of schema.fields){if(filter&&!([f.label,f.group,f.id].join(' ').toLowerCase().includes(filter)))continue;if(!byGroup.has(f.group))byGroup.set(f.group,[]);byGroup.get(f.group).push(f)}
+  for(const [group,fields] of byGroup){
+    const section=document.createElement('details');section.dataset.group=group;section.open=filter||open.size===0||open.has(group)
+    const title=document.createElement('summary');title.textContent=group;section.append(title)
+    for(const f of fields){
+      const row=document.createElement('label');row.className='row'
+      const caption=document.createElement('span');caption.textContent=f.label;caption.classList.toggle('edited',values[f.id]!==f.value);row.append(caption)
+      const lock=document.createElement('button');lock.type='button';lock.className='lock'+(locked.has(f.id)?' locked':'');lock.textContent=locked.has(f.id)?'🔒':'🔓';lock.title='Toggle edit lock for '+f.label;lock.setAttribute('aria-label',lock.title)
+      lock.addEventListener('click',e=>{e.preventDefault();locked.has(f.id)?locked.delete(f.id):locked.add(f.id);render();updateCount()});row.append(lock)
+      if(f.type==='color'){
+        const input=document.createElement('input');input.type='color';input.value=values[f.id];input.disabled=locked.has(f.id);input.setAttribute('aria-label',f.label)
+        input.addEventListener('change',()=>{applyValue(f,input.value);caption.classList.toggle('edited',values[f.id]!==f.value)});row.append(input)
+      }else{
+        const slider=document.createElement('input'),number=document.createElement('input')
+        slider.type='range';number.type='number'
+        for(const input of [slider,number]){input.min=Math.min(f.min,f.value);input.max=Math.max(f.max,f.value);input.step=f.step;input.value=values[f.id];input.disabled=locked.has(f.id);input.setAttribute('aria-label',f.label+(input===number?' numeric value':''))}
+        // Keep arbitrary existing source decimals exact in the number field.
+        number.step='any';let dragging=false
+        slider.addEventListener('pointerdown',()=>{snapshot();dragging=true})
+        slider.addEventListener('input',()=>{applyValue(f,slider.value,!dragging);number.value=values[f.id];caption.classList.toggle('edited',values[f.id]!==f.value)})
+        slider.addEventListener('change',()=>{dragging=false})
+        number.addEventListener('change',()=>{applyValue(f,number.value);slider.value=number.value=values[f.id];caption.classList.toggle('edited',values[f.id]!==f.value)})
+        row.append(slider,number)
+      }
+      section.append(row)
+    }container.append(section)
+  }
+}
+async function load(){
+  clearTimeout(timer);loading=true;$('submit').disabled=true;$('character').disabled=true
+  try{
+    const response=await fetch('/__facebuilder/schema?char='+$('character').value,{headers});const data=await response.json();if(!response.ok)throw Error(data.error)
+    schema=data;values=baselineValues();locked.clear();history=[];original=false;angle='front';full=false;down=false;$('name').textContent=schema.label+' · face inspector';$('search').value='';render();refresh();status('Draft loaded from current source. Submit writes approved values.')
+  }catch(e){status(e.message,'error')}
+  finally{loading=false;$('character').disabled=false;updateCount()}
+}
+$('character').addEventListener('change',()=>{
+  if(schema&&Object.keys(changed()).length&&!confirm('Discard unsaved changes and switch character?')){$('character').value=schema.character;return}
+  load()
+})
+$('angles').addEventListener('click',e=>{const a=e.target.dataset.angle;if(a){angle=a;refresh()}})
+$('body').addEventListener('click',()=>{full=!full;refresh()})
+$('down').addEventListener('click',()=>{down=!down;refresh()})
+$('baseline').addEventListener('click',()=>{original=!original;refresh()})
+$('zoom').addEventListener('input',schedule)
+$('search').addEventListener('input',render)
+$('reference').addEventListener('change',()=>{if(overlayURL)URL.revokeObjectURL(overlayURL);const file=$('reference').files[0];$('overlay').hidden=!file;if(file){overlayURL=URL.createObjectURL(file);$('overlay').src=overlayURL;$('overlay').style.opacity=$('opacity').value}})
+$('opacity').addEventListener('input',()=>{$('overlay').style.opacity=$('opacity').value})
+$('undo').addEventListener('click',()=>{if(history.length){const prior=history.pop();for(const f of schema.fields)if(!locked.has(f.id))values[f.id]=prior[f.id];render();updateCount();original=false;refresh()}})
+$('reset').addEventListener('click',()=>{snapshot();for(const f of schema.fields)if(!locked.has(f.id))values[f.id]=f.value;original=false;render();updateCount();refresh()})
+$('submit').addEventListener('click',async()=>{
+  if(!schema||loading)return
+  if(!confirm('Approve this character design? This writes the selected values to the local game source and creates an agent handoff receipt.'))return
+  loading=true;$('submit').disabled=true;$('character').disabled=true;status('Saving approval…')
+  try{
+    const response=await fetch('/__facebuilder/submit',{method:'POST',headers,body:JSON.stringify({character:schema.character,sourceHash:schema.sourceHash,values:changed(),locks:[...locked],notes:$('notes').value})})
+    const result=await response.json();if(!response.ok)throw Error(result.error)
+    sessionStorage.removeItem('tiny-planet-facebuilder')
+    status('APPROVED · Agent handoff ready\n'+result.receipt+'\nThe selected source values have been saved.','success')
+    $('submit').textContent='Design submitted';$('submit').disabled=true
+  }catch(e){loading=false;$('character').disabled=false;updateCount();status(e.message,'error')}
+})
+load()
+</script></body></html>
