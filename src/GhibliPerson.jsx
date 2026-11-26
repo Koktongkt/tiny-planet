@@ -549,6 +549,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       let ux = lag * swingAmt * m + 0.05 * i, uz = side * (-0.05 * i + Math.sin(t * 1.6 + side) * 0.03 * i - 0.08 * m), fx = -0.28 - Math.max(0, -lag) * 0.55 * m * (swingAmt / 0.75) - 0.1 * i
       if (h === 'umbrella') { ux = -0.35; fx = -1.15 } else if (h === 'rod') { ux = -0.4; fx = -0.8 } else if (h === 'basket') { fx = -1.1; uz -= side * 0.12 } else if (h === 'cane') { ux = -0.2 + Math.sin(p) * 0.1 * m; fx = -0.35 }
       if (idle === 'wave' && k === 'R') { uz = side * -2.3 * i + uz * m; fx = -0.5 - Math.sin(t * 8) * 0.35 * i; ux *= m }
+      if (st.carryYarn && k === 'R') { ux = -0.42 + 0.08 * lag * m; uz = 0.08; fx = -1.2 }
       up.rotation.set(ux, 0, uz)
       fo.rotation.set(spring(sp['fo' + k], fx, 40, 7, dt), 0, 0)
     }
@@ -624,7 +625,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
         {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
           : <M geo={G.kimono} mat={cel(o.top)} position={[sd * 0.004, -0.01, 0]} rotation={[0, 0, -sd * S.armA * 0.85]} />}</group>, B['up' + k])}
       {o.cuffs && createPortal(<group ref={lod(1)}><M geo={cfg.ext?.cuffGeo ?? G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
-      {k === 'R' && X.HandR && createPortal(<group position={S.hdR.clone().sub(S.elR).toArray()}><X.HandR st={st} /></group>, B.foR)}
+      {k === 'R' && X.HandR && createPortal(<group name="right-hand" position={S.hdR.clone().sub(S.elR).toArray()}><X.HandR st={st} /></group>, B.foR)}
       {hold[k] && createPortal(<group ref={lod(2)} position={S['hd' + k].clone().sub(S['el' + k]).toArray()}><Merge><Prop prop={hold[k]} sd={sd} /></Merge></group>, B['fo' + k])}
     </React.Fragment> })}
     {createPortal(<Merge>
