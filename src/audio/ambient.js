@@ -1,5 +1,5 @@
 // Tiny Planet audio runtime (lazy chunk; loaded by arm.js on the first user gesture): ambience (engine.js), the
-// procedural score (music/player.js, its own chunk, a few seconds later) and the activity SFX (sfx.js + hooks.js).
+// score (music/player.js, its own chunk, a few seconds later) and the activity SFX (sfx.js + hooks.js).
 // Contract (roadmap/stage-b-contract.md): startAudio({ getListener, getZones }) -> { setVolume, setMusic, setSfx, mute, dispose, sfx }
 // Extra: getAudioSettings() -> { volume, music, sfx, muted } (for <SettingsPanel value>), onAudioSettings(fn) -> unsubscribe.
 import { buildGraph } from './engine.js'
@@ -46,11 +46,17 @@ export function startAudio(opts = {}) {
   }
   let sus = 0
 
-  // ---- the score: procedural, its own lazy chunk; instrument samples render in small slices, current place first ----
+  // ---- the score: its own lazy chunk; recordings load when their scene is requested ----
   let M = null, loading = false
   const loadMusic = () => {
     if (M || loading || opts.music === false || !(SET.music > 0)) return
-    loading = true; import('./music/player.js').then(m => { if (!API) return; M = D.music = m.createMusic(ctx, E.music) })
+    loading = true
+    import('./music/player.js').then(m => {
+      if (!API) return
+      M = D.music = m.createMusic(ctx, E.music, { recordings: {
+        outdoor: new URL('./music/tracks/sunlit-valley-stroll.mp3', import.meta.url).href,
+      } })
+    })
   }
   const musicT = setTimeout(loadMusic, opts.musicDelay ?? MUSIC_DELAY)
 

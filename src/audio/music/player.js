@@ -1,6 +1,5 @@
-// Procedural score player (lazy chunk, loaded a few seconds after the first gesture). Works on a live AudioContext or an
-// OfflineAudioContext (previews). Nothing runs per frame: ambient.js calls setScene() + schedule() at 10 Hz and each
-// call schedules whole bars ahead on the audio clock; the audio thread does the rest.
+// Score player (lazy chunk, loaded a few seconds after the first gesture). ambient.js calls setScene() + schedule()
+// at 10 Hz. Recordings loop on the audio thread, and procedural pieces schedule whole bars ahead on the audio clock.
 //
 //   deck (one per piece; two while crossfading) ─ instrument buses (pan / tone) ─┬─► tone (lowpass: rain) ─► duck ─► out
 //                                                                               └─► send ─► reverb ───────┘
@@ -13,7 +12,7 @@ const PAN = { piano: 0, celesta: 0.28, pizz: -0.3, harpsi: -0.22, guitar: 0.32, 
 const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches
 const MAXV = TOUCH ? 48 : 72 // notes scheduled at once, all decks together (a note is ~2-5 nodes)
 
-export function createMusic(ctx, out, { staged = true, log = null } = {}) {
+export function createMusic(ctx, out, { staged = true, log = null, recordings = {} } = {}) {
   const G = (v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g }
   const F = (type, f, Q = 0.7) => { const x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = Q; return x }
   const tone = F('lowpass', 16000, 0.5), duck = G(1); tone.connect(duck); duck.connect(out)
@@ -21,6 +20,7 @@ export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   const R = rng(20261024), rand = () => 0.5 + 0.5 * R()
   const BUF = {}, Q = [], WAVE = {}, decks = [], stats = { voices: 0, peakVoices: 0, renderMs: 0, rendered: 0, skipped: 0, bars: 0 }
   const scene = { loc: 'outdoor', period: 'day', season: 'spring', rain: 0, orbit: 0 }
+  let requestedLoc = null, recording = null
   let cur = null, voices = 0, pumping = 0, disposed = false, PART = '', CPC = null // PART / CPC: what's playing + its chord (for the note log in tests)
   const nb = ctx.createBuffer(1, SR / 2, SR); { const d = nb.getChannelData(0), r = rng(3); for (let i = 0; i < d.length; i++) d[i] = r() }
 
@@ -38,9 +38,17 @@ export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   const wave = (k) => WAVE[k] || (WAVE[k] = (() => { const h = LIVE[k].h, re = new Float32Array(h.length), im = Float32Array.from(h); return ctx.createPeriodicWave(re, im) })())
 
   // ---- decks ----
-  function deck(id, t, fadeIn) {
-    const th = THEMES[id], g = G(0), send = G(th.send); g.connect(tone); g.connect(send); send.connect(verb)
+  function deck(id, t, fadeIn, buffer) {
+    const g = G(0); g.connect(tone)
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + fadeIn)
+    if (buffer) {
+      const source = ctx.createBufferSource()
+      source.buffer = buffer; source.loop = true
+      source.connect(g); source.start(t)
+      const d = { id, g, source, end: Infinity }
+      decks.push(d); return d
+    }
+    const th = THEMES[id], send = G(th.send); g.connect(send); send.connect(verb)
     const d = { id, th, g, send, buses: {}, bar: 0, cycle: 0, t, end: Infinity, arr: null }
     // pre-render this piece's instruments for every arrangement it may use
     need(instsFor(id), true)
@@ -49,6 +57,27 @@ export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   function fadeOut(d, t) {
     const p = d.g.gain; if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t); else { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t) }
     p.linearRampToValueAtTime(0, t + XF); d.end = t + XF + 0.05
+    d.source?.stop(d.end)
+  }
+  function disconnect(d) {
+    d.source?.disconnect()
+    d.g.disconnect()
+    d.send?.disconnect()
+  }
+
+  // Keep only the requested load and the buffers used by the active or fading decks.
+  function loadRecording(url) {
+    recording?.controller.abort()
+    recording = null
+    if (!url) return
+    const controller = new AbortController()
+    const request = recording = { controller, buffer: null, failed: false }
+    fetch(url, { signal: controller.signal }).then(res => {
+      if (!res.ok) throw new Error(`Music request failed (${res.status})`)
+      return res.arrayBuffer()
+    }).then(data => ctx.decodeAudioData(data)).then(buffer => {
+      if (recording === request) request.buffer = buffer
+    }).catch(() => { if (recording === request) request.failed = true })
   }
   function bus(d, k) {
     if (d.buses[k]) return d.buses[k]
@@ -134,22 +163,44 @@ export function createMusic(ctx, out, { staged = true, log = null } = {}) {
   /** where she is + how the world sounds: { loc: outdoor|house|museum|train, period: day|evening|night, season, rain 0..1, orbit 0|1 } */
   function setScene(s, now = ctx.currentTime) {
     Object.assign(scene, s); const id = THEMES[scene.loc] ? scene.loc : 'outdoor'
-    if (!cur) { need(instsFor(id), true); if (staged && !ready(id)) return; cur = deck(id, now + 0.25, 3.5) } // first piece waits for its samples
-    else if (cur.id !== id) { fadeOut(cur, now); cur = deck(id, now + 0.35, XF) }
+    if (requestedLoc !== id) {
+      requestedLoc = id
+      loadRecording(cur?.id === id ? null : recordings[id])
+    }
+    if (cur?.id !== id) {
+      const buffer = recording?.buffer
+      if (recording && !buffer && !recording.failed) return
+      if (!cur && !buffer) { need(instsFor(id), true); if (staged && !ready(id)) return }
+      if (cur) { fadeOut(cur, now); cur = deck(id, now + 0.35, XF, buffer) }
+      else cur = deck(id, now + 0.25, 3.5, buffer)
+    }
     const out = id === 'outdoor', wet = out ? scene.rain || 0 : 0
     tone.frequency.setTargetAtTime(16000 - 12500 * wet, now, 0.8)
     duck.gain.setTargetAtTime((1 - 0.32 * wet) * (scene.orbit ? 0.75 : 1), now, 0.8)
   }
   function schedule(until) {
-    for (const d of decks) { if (d.t < ctx.currentTime - 0.5) d.t = ctx.currentTime + 0.1 } // music was off / paused: rejoin, don't catch up
-    for (const d of decks) while (d.t < until && d.t < d.end) { d.t += playBar(d); if (++d.bar >= d.th.bars.length) { d.bar = 0; d.cycle++ } }
     const now = ctx.currentTime
-    for (let i = decks.length - 1; i >= 0; i--) { const d = decks[i]; if (now > d.end + 4) { decks.splice(i, 1); try { d.g.disconnect(); d.send.disconnect() } catch (e) {} } }
+    for (const d of decks) {
+      if (d.source) continue
+      if (d.t < now - 0.5) d.t = now + 0.1 // music was off / paused: rejoin, don't catch up
+      while (d.t < until && d.t < d.end) { d.t += playBar(d); if (++d.bar >= d.th.bars.length) { d.bar = 0; d.cycle++ } }
+    }
+    for (let i = decks.length - 1; i >= 0; i--) {
+      const d = decks[i]
+      if (now > d.end + (d.source ? 0 : 4)) { decks.splice(i, 1); disconnect(d) }
+    }
     stats.voices = voices; stats.decks = decks.length
   }
   // warm every instrument in the background once the current piece is ready (so a door never waits on a render)
   const all = Object.keys(SAMPLED); setTimeout(() => need(all), staged ? 2500 : 0)
-  function dispose() { disposed = true; for (const d of decks) try { d.g.disconnect() } catch (e) {} decks.length = 0; try { duck.disconnect() } catch (e) {} }
+  function dispose() {
+    disposed = true
+    recording?.controller.abort()
+    recording = null
+    for (const d of decks) { d.source?.stop(); disconnect(d) }
+    decks.length = 0
+    duck.disconnect()
+  }
   return { setScene, schedule, dispose, stats, scene, get deck() { return cur && cur.id }, get pending() { return Q.length } }
 }
 
