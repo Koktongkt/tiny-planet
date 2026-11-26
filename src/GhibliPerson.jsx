@@ -154,12 +154,17 @@ const PAINT = `
     // arms
     vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
-    if (ty == 8) { // armhole seam: runs up the front of the shoulder, over the top and down the back, at the sleeve's edge
-      float sx = uArm.x + .007 + max(0., uArm.y - y)*.08;            // where the sleeve shows past the body, leaning out toward the armpit
-      armSeam = aa(.0013 - abs(ax - sx)) * aa(y - (uArm.y - .040)) * aa(uY.y - .004 - y) * (1. - neck);
-      float under = 1. - smoothstep(.10, .22, abs(vReg.x - .5));     // soft line where the sleeve meets the body, below the armpit
-      armSeam = max(armSeam, under * aa(uArm.y - .040 - y) * .85);
-      armSeam = max(armSeam, aa(fwidth(vReg.x)*1.6 + 1e-4 - abs(vReg.x - .5)) * aa(uArm.y - .030 - y)); } // crisp line on the sharp sleeve/body crease (armK)
+    if (ty == 8) { // sleeve seams painted from the arm's own shape (rest pose), so they run unbroken from the shoulder to the cuff:
+      // one down the inner front of each sleeve (its contour seen from the front) and one down the inner back
+      float sd = x < 0. ? -1. : 1.; vec3 dir = vec3(sd*sin(uArm.w), -cos(uArm.w), 0.), q = vO - vec3(sd*uArm.x, uArm.y, uArm.z);
+      float al = dot(q, dir); vec3 rv = q - al*dir; float rr = max(length(rv), 1e-5), u = clamp(al/uArm2.x, 0., 1.), R = mix(uArm2.y, uArm2.z, u);
+      // the join: where the surface sits just past the sleeve's own radius (only happens where the sleeve meets the body)
+      float on = aa(al + .010) * aa(.030 - al) * (1. - neck);                // shoulder only: below it the sleeve hangs clear and the ink hull outlines it
+      float sdv = abs(rr - R*1.16), sw = min(.0013, fwidth(rr)*1.7); // screen-sized so a gently sloping join stays a thin stroke
+      armSeam = on * (1. - smoothstep(sw*.45, sw, sdv));
+      float cw = fwidth(vReg.x)*1.5 + 1e-4;                                // below the shoulder: the crisp sleeve/body crease (armK [soft, crisp])
+      armSeam = max(armSeam, (1. - smoothstep(cw*.5, cw, abs(vReg.x - .5))) * aa(al - .020) * aa(uArm2.x + .004 - al));
+    }
     if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
       float cy = uO.w - .0135; float cb = aa(.0050 - abs(y - cy)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - cy - .0058))); } // cuff at the flared sleeve's open end
     // legs
@@ -170,7 +175,7 @@ const PAINT = `
     if (ty == 8) hand *= aa(uO.w - .0185 - y); // flared sleeve covers the top of the hand: skin only below the cuff
     c = mix(c, uSkin, max(hand, neck * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
-    c = mix(c, uAcc*.45, armSeam);
+    c = mix(c, uAcc*.36, armSeam);
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
       c = mix(c, uShoe*.42, boot * aa(.0098 - y));
@@ -182,7 +187,7 @@ const PAINT = `
 // a warm band where light turns to shadow on skin; sky fill from above and grass bounce from below (local up, so it
 // works anywhere on the planet); fine cloth / fur grain; and a strand texture + sheen ring on hair (aKind = 1).
 const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
-  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uArm;
+  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uArm, uArm2;
   varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   ${PAINT}
   float h3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
@@ -220,9 +225,6 @@ const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
     float fr = 1. - max(dot(N,V),0.); float rim = smoothstep(.62,.92,fr)*(.25+.55*lit);
     c += uRim*rim*.26;
     #ifdef BODY
-      if (int(uO.x + .5) == 8) { // open jacket: ink the sleeve's own contour where it hangs in front of the body (the hull only draws against the background)
-        float am = smoothstep(.42, .58, vReg.x), ndv = dot(N, V);
-        c = mix(c, vec3(.22,.14,.10)*uLight, am*(1. - smoothstep(.16, .27, ndv))); }
     #endif
     gl_FragColor = vec4(c,1.);
     #include <tonemapping_fragment>
@@ -263,7 +265,8 @@ function bodyMat(cfg, S) {
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uArm: { value: new THREE.Vector4(S.shR.x, S.shR.y, S.shR.z, S.armA) }, // openJacket armhole seam
+    uArm: { value: new THREE.Vector4(S.shR.x, S.shR.y, S.shR.z, S.armA) }, // openJacket sleeve seams: shoulder joint, arm angle
+    uArm2: { value: new THREE.Vector4(S.shR.distanceTo(S.wrR), S.ar[0], S.ar[2], 0) }, // arm length to the wrist, radius at shoulder and wrist
     uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.type === 'openJacket' ? S.wrR.y : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
@@ -358,12 +361,14 @@ function legD(S, p, k) {
   if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
   return smin(l, f, 0.012)
 }
-function sdf(S, p) { const c = core(S, p), ak = S.b.armK ?? 0.014; return Math.min(smin(c, armD(S, p, 'L'), ak), smin(c, armD(S, p, 'R'), ak), /* armK: optional arm-to-body blend */ smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
+const armKAt = (S, p) => { const k = S.b.armK ?? 0.014; if (!Array.isArray(k)) return k // armK: optional arm-to-body blend; [shoulder, below] softens only the shoulder
+  const t = Math.min(1, Math.max(0, (S.shR.y - 0.012 - p.y) / 0.03)); return k[0] + (k[1] - k[0]) * t * t * (3 - 2 * t) }
+function sdf(S, p) { const c = core(S, p), ak = armKAt(S, p); return Math.min(smin(c, armD(S, p, 'L'), ak), smin(c, armD(S, p, 'R'), ak), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
   let d = sdf(S, p)
   d = Math.min(d, ell(p, S.headC.clone().add(V3(0, 0.015, -0.02)), S.headR.clone().multiplyScalar(1.09)))
   d = Math.min(d, torus(p, V3(0, S.neckY + 0.01, 0.004), 0.03, 0.009))
-  for (const k of ['L', 'R']) { d = Math.min(d, ell(p, S['sh' + k].clone().lerp(S['el' + k], 0.45), V3(0.028, 0.03, 0.028))); d = Math.min(d, torus(p, V3(S['an' + k].x, S.anY + 0.012, S['an' + k].z), 0.021, 0.007)) }
+  for (const k of ['L', 'R']) { if (S.b.armOcc !== false) d = Math.min(d, ell(p, S['sh' + k].clone().lerp(S['el' + k], 0.45), V3(0.028, 0.03, 0.028))); /* armOcc: false drops the upper-arm AO blob */ d = Math.min(d, torus(p, V3(S['an' + k].x, S.anY + 0.012, S['an' + k].z), 0.021, 0.007)) }
   return d
 }
 function bonesOf(S) {

@@ -307,6 +307,23 @@ Before and after, with upper-body close-ups: [`ref/hoshino-upperbody-compare.jpg
 - **Forearm bend:** new optional walk knob `walk.fore`, the resting forearm bend (default `-0.28` keeps every other character). Hoshino uses `-0.06`, so his arms hang straight in side view.
 - **Tried on the way:** a narrow chest with low arms (`chestW 0.80`, `shX 1.15`) brought back the shoulder bumps. Arms rooted at `shX 1.00` with no drop still left rounded square corners.
 
+### Professor Hoshino (draft): shoulder colour, dent and continuous sleeve lines
+
+Before and after: [`ref/hoshino-sleeve-lines-compare.jpg`](ref/hoshino-sleeve-lines-compare.jpg).
+
+- **Different colour and pushed-in look:**
+  - The AO pass adds a hidden occluder blob round each upper arm (`sdfOcc`). With arms this close it shaded the chest and shoulder beside them darker, which read as a dent. New optional knob `armOcc: false` drops that blob.
+  - The sharp `armK 0.006` join also left a notch at the armpit.
+- **Arm blend per height:** `armK` can now be `[shoulder, below]`, blending from soft to crisp over the 0.03 below the shoulder joint. Hoshino uses `[0.016, 0.003]`, `armA 0.38`: a smooth, even-coloured shoulder, then a crisp sleeve/body crease.
+- **Sleeve lines, unbroken shoulder to cuff:**
+  - Round the shoulder: a line where the surface sits at `1.16×` the sleeve radius from the arm axis (uniform `uArm2` = arm length, shoulder and wrist radius). That traces the soft join over the shoulder. Its width comes from `fwidth(rr)`, so gentle slopes stay a thin stroke instead of smearing into blobs.
+  - Below the shoulder: a screen-width line on the crisp crease where the arm weight crosses 0.5.
+  - The two meet near the armpit and run on to the cuff.
+- **Removed:**
+  - The view-dependent sleeve contour and the soft weight-band line (patchy).
+  - The fixed-`x` armhole line (it drew down the chest).
+  - Tried on the way: a seam at a fixed angle round the sleeve. The sleeve's inner side is buried in the body, so that line was invisible.
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.
