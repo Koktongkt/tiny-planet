@@ -78,34 +78,36 @@ const MUS_R = [[0, -0.0350], [0.0060, -0.0333], [0.0100, -0.0300], [0.0140, -0.0
 // pass 9 (KT: bigger, wider, covering more of the mouth): the same shape scaled out from under the nose
   .map(([x, y]) => [x * 1.22, y > -0.0336 ? y : -0.0336 + (y + 0.0336) * 1.32])
 function mustacheGeo() {
-  // each half is a closed puff: rings shrink from the outline to a centre point; the front rings dome out from the face
-  // (thickest under the nose, thinner toward the tip), the back rings sit just inside the head. Dense, so it follows
-  // the curve of the face everywhere (a flat extrude let the cheeks poke through).
-  const halves = []
-  for (const sd of [1, -1]) {
-    const poly = [...MUS_R, [-0.0012, -0.0414], [-0.0012, -0.0352]].map(([x, y]) => [sd * x, y]), ring = []
-    for (let i = 0; i < poly.length; i++) { const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 0.0012))
-      for (let k = 0; k < n; k++) ring.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]) }
-    const C = [sd * 0.0125, -0.0405], K = 7, M = ring.length, pos = [], idx = []
-    const at = (j, s, front) => { const [px, py] = ring[j], x = C[0] + (px - C[0]) * s, y = C[1] + (py - C[1]) * s
-      const H = 0.0082 - 0.0048 * Math.min(1, Math.abs(x) / 0.033) - 0.0012 * Math.max(0, Math.min(1, (-0.043 - y) / 0.008))
-      const z = front ? surfZ(x, y) - 0.0006 + H * Math.sqrt(Math.max(0, 1 - s * s)) : surfZ(x, y) - 0.0028 + 0.0022 * (1 - Math.sqrt(Math.max(0, 1 - s * s)))
-      pos.push(x, y, z) }
-    // rings 0..K front (s = 1 - k/K), then back; the outline ring (s = 1) is shared
-    for (let k = 0; k < K; k++) for (let j = 0; j < M; j++) at(j, 1 - k / K, true)
-    const fc = pos.length / 3; at(0, 0, true)
-    for (let k = 1; k < K; k++) for (let j = 0; j < M; j++) at(j, 1 - k / K, false)
-    const bc = pos.length / 3; at(0, 0, false)
-    const F = (k, j) => k * M + (j % M), Bk = (k, j) => k === 0 ? j % M : fc + 1 + (k - 1) * M + (j % M)
-    for (let k = 0; k < K - 1; k++) for (let j = 0; j < M; j++) { idx.push(F(k, j), F(k, j + 1), F(k + 1, j + 1), F(k, j), F(k + 1, j + 1), F(k + 1, j))
-      idx.push(Bk(k, j), Bk(k + 1, j + 1), Bk(k, j + 1), Bk(k, j), Bk(k + 1, j), Bk(k + 1, j + 1)) }
-    for (let j = 0; j < M; j++) { idx.push(F(K - 1, j), F(K - 1, j + 1), fc); idx.push(Bk(K - 1, j), bc, Bk(K - 1, j + 1)) }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals()
-    // the outline direction differs per half: make the front face point out of the face
-    const N = g.attributes.normal; if (N.getZ(fc) < 0) { const I = g.index.array; for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t } g.computeVertexNormals() }
-    halves.push(g) }
-  const g = mergeGeometries(halves); g.computeVertexNormals()
-  g.setAttribute('aSkin', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count), 1))
+  // one closed puff over the whole outline (both halves): the outline is triangulated, subdivided until fine, and each
+  // point is raised off the face by its distance from the edge (a rounded rim and a soft dome, thickest under the nose).
+  // The back is the same mesh just inside the face; a wall joins them at the outline. It follows the curve of the face
+  // everywhere, and there is no centre point for the shape to fold round (the old ring build folded once the outline
+  // got scalloped and showed dark lines).
+  const outline = [...MUS_R, ...MUS_R.slice(1, -1).reverse().map(([x, y]) => [-x, y])]
+  const pts = outline.map(([x, y]) => new THREE.Vector2(x, y))
+  let tris = THREE.ShapeUtils.triangulateShape(pts, []).map(t => t.slice())
+  let V = pts.map(p => [p.x, p.y])
+  const mid = new Map(), midOf = (a, b) => { const k = a < b ? a + ',' + b : b + ',' + a; if (!mid.has(k)) { mid.set(k, V.length); V.push([(V[a][0] + V[b][0]) / 2, (V[a][1] + V[b][1]) / 2]) } return mid.get(k) }
+  for (let it = 0; it < 4; it++) { const nt = []; mid.clear()
+    for (const [a, b, c] of tris) { const ab = midOf(a, b), bc = midOf(b, c), ca = midOf(c, a); nt.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]) }
+    tris = nt }
+  const segs = outline.map((p, i) => [p, outline[(i + 1) % outline.length]])
+  const dEdge = (x, y) => { let d = 1; for (const [[ax, ay], [bx, by]] of segs) { const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); d = Math.min(d, Math.hypot(x - ax - dx * t, y - ay - dy * t)) } return d }
+  const N = V.length, pos = [], idx = [], grey = []
+  for (const front of [true, false]) for (let i = 0; i < N; i++) { const [x, y] = V[i], d = dEdge(x, y), rim = d < 1e-5 ? 0 : 1 - (1 - Math.min(1, d / 0.0045)) ** 2
+    const H = 0.0082 - 0.0048 * Math.min(1, Math.abs(x) / 0.033) - 0.0010 * Math.max(0, Math.min(1, (-0.045 - y) / 0.008))
+    pos.push(x, y, front ? surfZ(x, y) - 0.0006 + H * rim : surfZ(x, y) - 0.0028 + 0.0020 * (1 - rim))
+    grey.push(0.36 * (1 - Math.min(1, d / 0.0016)) ** 1.5) } // a soft grey edge (hair shader: aSkin 0.1..0.38 darkens), the sheet's outline
+  for (const [a, b, c] of tris) { idx.push(a, b, c); idx.push(N + a, N + c, N + b) }
+  // the wall round the outline: walk the boundary edges of the subdivided mesh (edges used by one triangle)
+  const use = new Map(); for (const [a, b, c] of tris) for (const [u, v] of [[a, b], [b, c], [c, a]]) { const k = u < v ? u + ',' + v : v + ',' + u; use.set(k, (use.get(k) || 0) + 1) }
+  for (const [a, b, c] of tris) for (const [u, v] of [[a, b], [b, c], [c, a]]) { const k = u < v ? u + ',' + v : v + ',' + u; if (use.get(k) === 1) idx.push(u, N + u, v, v, N + u, N + v) }
+  let g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals()
+  // the triangulation's winding depends on the outline's direction: make the front face point out of the face
+  { let nz = 0; const P = g.attributes.position; for (let i = 0; i < 6 * tris.length; i += 6) { const [a, b, c] = [idx[i], idx[i + 1], idx[i + 2]] // front triangles only (front and back alternate)
+      nz += (P.getX(b) - P.getX(a)) * (P.getY(c) - P.getY(a)) - (P.getY(b) - P.getY(a)) * (P.getX(c) - P.getX(a)) }
+    if (nz < 0) { const I = g.index.array; for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t } g.computeVertexNormals() } }
+  g.setAttribute('aSkin', new THREE.Float32BufferAttribute(grey, 1))
   return g
 }
 
@@ -163,7 +165,7 @@ function ishiHair() {
     parts.push(onFace(ballS, sd * x, y, -0.0004 - 0.0004 * t, [r * 1.5, r, r * 0.95], [0, 0, sd * slope])) }
   const ink = parts.map((_, k) => (k < nKnot ? 1 : 0.38)) // ink weight per piece: face pieces take a fine line
   const add = (g, w) => { parts.push(g); ink.push(w) }
-  add(mustacheGeo(), 0.32)
+  add(mustacheGeo(), 0.3) // a fine hull for the silhouette; the soft grey rim carries the outline on the face
   // round nose (skin)
   add(onFace(ball, 0, -0.0284, 0.0042, [0.0114, 0.0080, 0.0094], [0, 0, 0], 1), 0.55)
   for (const sd of [-1, 1]) for (const [g, w] of earParts(sd)) add(g, w)
