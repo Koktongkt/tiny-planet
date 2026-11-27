@@ -25,7 +25,7 @@ const NEWCHAR = !q.has('oldchar')
 const CHIBI = NEWCHAR && !SPRITE && q.get('chibi') !== '0'
 const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
-import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint, BootMark } from './boot.js'
+import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint, BootMark, holdStartupVillagers } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
@@ -820,11 +820,13 @@ function Boot({ onLive, player = true }) {
     if (!live.current || first.current) return
     first.current = true
     requestAnimationFrame(async () => {
+      const startingInside = player && HOME.inside
+      if (startingInside) holdStartupVillagers()
       bootStage('frame', 1)
-      // The first frame triggers deferred terrain/zone/villager baking and game/HUD setup.
-      // For a house start, finish those jobs behind the opaque title, not during the reveal.
-      if (player && HOME.inside) {
-        const stages = ['villagers', 'edgeveg', ...(!OLD_WORLD ? ['ground', 'shore'] : []), ...(GAMEON ? ['game', 'talk'] : [])]
+      // Finish critical terrain and game setup behind the opaque title; distant villagers
+      // bake individually in idle slots after the reveal, so they don't block house startup.
+      if (startingInside) {
+        const stages = ['criticalIdle', 'edgeveg', ...(!OLD_WORLD ? ['ground', 'shore'] : []), ...(GAMEON ? ['game', 'talk'] : [])]
         await Promise.all(stages.map(name => new Promise(r => onBoot(name, r))))
       }
       await nextPaint(); await nextPaint()

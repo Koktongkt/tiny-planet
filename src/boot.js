@@ -26,11 +26,24 @@ export function afterReveal(f, w = window) {
 export function BootMark({ name }) { useEffect(() => { bootStage(name, 1) }, [name]); return null }
 export const nextPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)))
 // Villagers bake one at a time in idle slots after the first frame (lowest prio first).
-const Q = []; let running = false
+const Q = []; let running = false, holdVillagers = false
+// Negative priorities are startup terrain/zone work. Distant villagers can wait until the house is revealed.
+export function holdStartupVillagers() {
+  holdVillagers = true
+  afterReveal(() => setTimeout(() => { holdVillagers = false; pump() }, 1500))
+}
 const idle = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 250 }) : setTimeout(f, 16))
 function pump() {
   if (running || !BOOT.done.frame) return; running = true
-  const step = () => { const j = Q.shift(); if (!j) { running = false; bootStage('villagers', 1); return } j.go(); requestAnimationFrame(() => idle(step)) }
+  const step = () => {
+    if (!Q.length || Q[0].prio >= 0) bootStage('criticalIdle', 1)
+    if (!Q.length || (holdVillagers && Q[0].prio >= 0)) {
+      running = false
+      if (!Q.length) bootStage('villagers', 1)
+      return
+    }
+    Q.shift().go(); requestAnimationFrame(() => idle(step))
+  }
   idle(step)
 }
 onBoot('frame', pump)

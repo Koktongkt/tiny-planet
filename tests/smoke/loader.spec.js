@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { watchErrors } from './helpers.js'
 
-test('the start button waits for house and deferred startup work before revealing the room', async ({ page }) => {
+test('the start button waits for house and critical startup work before revealing the room', async ({ page }) => {
   const errors = watchErrors(page)
   await page.goto('?nosave&t=day')
   await page.waitForSelector('#go.on', { timeout: 200_000 })
@@ -10,10 +10,11 @@ test('the start button waits for house and deferred startup work before revealin
   expect(state.camera).toBe(1 << 5)
   expect(state.ground).toBe(true)
   expect(state.shore).toBe(true)
-  for (const stage of ['baked', 'cat', 'activities', 'frame', 'villagers', 'edgeveg', 'ground', 'shore', 'game', 'talk']) {
+  for (const stage of ['baked', 'cat', 'activities', 'frame', 'criticalIdle', 'edgeveg', 'ground', 'shore', 'game', 'talk']) {
     expect(state.marks[stage], stage).toBeDefined()
     expect(state.marks[stage]).toBeLessThanOrEqual(state.marks.ready)
   }
+  expect(state.marks.villagers).toBeUndefined() // distant villagers are held until after reveal
   await page.locator('#go').click()
   await expect(page.locator('#ld')).toHaveCount(0)
   expect(await page.evaluate(() => window.__home.inside)).toBe(true)
