@@ -38,11 +38,11 @@
 .tk-key{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;font:600 13px/1 Fredoka,sans-serif;
   background:radial-gradient(circle at 50% 30%,#fffaf0,#efd69a);border:1px solid var(--gold-lo);box-shadow:inset 0 -2px 0 rgba(120,70,20,.3);color:#3a2412;text-shadow:none}
 .tk-chevron{font-size:15px}
-@keyframes tk-in{from{opacity:0;scale:.94}}
+@keyframes tk-in{from{opacity:0;translate:0 4px}}
 @keyframes tk-line{from{opacity:0;translate:0 3px}}
 html.tp-touch .tk-box{width:340px;padding:9px 11px 8px}
 html.tp-touch .tk-box p{font-size:16px;margin:7px 0 4px}
 html.tp-touch .tk-box button{min-height:calc(44px / var(--tpts,1));min-width:calc(44px / var(--tpts,1))}
 html.tp-touch .tk-box .tk-x{width:calc(44px / var(--tpts,1))}
 html.tp-touch .tk-key{display:none}
-@media (prefers-reduced-motion:reduce){.tk-bubble,.tk-box,.tk-box p span{animation:none;transition:none}}
+@media (prefers-reduced-motion:reduce){.tk-bubble,.tk-box.g-glass,.tk-box p span{animation:none;transition:none}}
