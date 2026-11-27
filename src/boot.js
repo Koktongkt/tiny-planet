@@ -1,5 +1,5 @@
 // Boot sequencing + progress reporting to the inline loader in index.html (window.__loader).
-// Stages: js -> fonts -> world -> bake -> shaders -> frame. Each is reported when it really completes.
+// Stages: js -> fonts -> world -> bake -> shaders -> frame -> ready. Each is reported when it really completes.
 import { useEffect, useState } from 'react'
 export const BOOT = { done: {}, bakePlayer: false, marks: {} }
 const subs = {}
@@ -16,6 +16,14 @@ export function onBoot(name, f) {
   if (BOOT.done[name]) { f(); return () => {} }
   const l = (subs[name] = subs[name] || []); l.push(f); return () => { const k = l.indexOf(f); if (k >= 0) l.splice(k, 1) }
 }
+// A loader can be absent in tools/tests. Never require an extra gesture to resume background work.
+export function afterReveal(f, w = window) {
+  if (!w.document?.getElementById('ld')) { f(); return () => {} }
+  w.addEventListener('tp:revealed', f, { once: true })
+  return () => w.removeEventListener('tp:revealed', f)
+}
+// React commits the actual lazy subtree before signaling readiness (not just its Suspense fallback).
+export function BootMark({ name }) { useEffect(() => { bootStage(name, 1) }, [name]); return null }
 export const nextPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)))
 // Villagers bake one at a time in idle slots after the first frame (lowest prio first).
 const Q = []; let running = false
