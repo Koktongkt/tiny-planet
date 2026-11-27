@@ -1,5 +1,5 @@
-// Villager chat: a '…' bubble over the nearest villager when she's close, Action (E / touch Action) opens a
-// storybook dialogue box (parchment, ink border, Cormorant italic, name plate). E / tap / Enter advances, Esc or ✕ closes.
+// Villager chat: the shared Glass & Gold action bubble expands into a compact in-world conversation.
+// E / tap / Enter advances, Esc or ✕ closes; gifting retains its existing G shortcut.
 // While it's open her movement keys are swallowed, the touch stick is unmounted and the villager stops and faces her.
 import * as THREE from 'three'
 import React, { useEffect, useRef, useState } from 'react'
@@ -7,16 +7,17 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { VIEW } from '../common.jsx'
 import { G, subscribe } from '../game/store.js'
 import { HOME } from '../home/state.js'
-import { setHideStick } from '../touch.jsx'
+import { TOUCH, setHideStick } from '../touch.jsx'
 import { NPCS, TALK, weatherFor, noteActivity, recentActivity, periodAt, talkWins } from './state.js'
 import { Bubble } from '../game/prompt/WorldPrompt.jsx'
 import { placeBubble } from '../game/prompt/logic.js'
+import { placeDialogue } from './placement.js'
+import { Icon } from '../game/icons.jsx'
 import { buildLines, PROFILES } from './profiles.js'
 import { HeartsBadge } from '../ui/gifts/Hearts.jsx'
 import './talk.css'
-const HoshinoPortrait = React.lazy(() => import('../art/museum/portrait.jsx').then(m => ({ default: m.HoshinoPortrait }))) // Stage C (Studio)
 
-const NEAR = 0.62, _w = new THREE.Vector3(), _h = new THREE.Vector3(), _up = new THREE.Vector3()
+const NEAR = 0.62, _w = new THREE.Vector3(), _h = new THREE.Vector3(), _up = new THREE.Vector3(), _q = new THREE.Quaternion()
 const modal = () => !!(G.ui.panel || G.ui.place || G.ui.fish || G.ui.crafting)
 function close() { if (!TALK.open) return; TALK.open.w.talking = false; TALK.open = null; TALK.lines = null; setHideStick(false); bump() }
 function open(npc) {
@@ -43,6 +44,10 @@ export function Talk({ P }) {
   useEffect(() => {
     const key = (e) => {
       if (TALK.open) {
+        // Keep keyboard access to the card without leaking Space to the game's jump handler.
+        if (e.code === 'Tab') return
+        const button = ['Enter', 'Space'].includes(e.code) && e.target?.closest?.('.tk-box button')
+        if (button) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) button.click(); return }
         if (e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); advance(); return }
         if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); return }
         if (e.code === 'KeyG') { e.preventDefault(); e.stopImmediatePropagation(); gift(TALK.open); return }
@@ -72,32 +77,72 @@ export function Talk({ P }) {
     TALK.nearD = bd; if (best !== TALK.near) { TALK.near = best; bump() }
     place()
   })
-  const place = () => { const el = BUBBLE.el, who = TALK.open || TALK.near; if (!el) return
-    if (!!window.__sb !== BUBBLE.sb) { BUBBLE.sb = !!window.__sb; bump() } // the gift bubble appears once Stage B is up
-    if (!who || !who.obj || TALK.open || !talkWins(G.near)) { el.style.opacity = 0; return }
-    who.obj.getWorldPosition(_h); _up.set(0, 1, 0).applyQuaternion(who.obj.getWorldQuaternion(new THREE.Quaternion())); _h.addScaledVector(_up, who.h || 0.92).project(camera)
-    if (!BUBBLE.box) { if (!el.offsetWidth) return; BUBBLE.box = { bw: el.offsetWidth, bh: el.offsetHeight + 10 } }
-    const p = placeBubble({ x: (_h.x + 1) / 2 * size.width, y: (1 - _h.y) / 2 * size.height, behind: _h.z > 1 }, { w: size.width, h: size.height }, BUBBLE.box)
-    el.style.opacity = 1; el.style.transform = `translate(${p.left.toFixed(1)}px, ${p.top.toFixed(1)}px)`; el.style.setProperty('--tail', p.tail.toFixed(1) + 'px') }
+  const place = () => {
+    const el = BUBBLE.el, who = TALK.open || TALK.near, chatting = !!TALK.open
+    if (!el) return
+    if (!!window.__sb !== BUBBLE.sb) { BUBBLE.sb = !!window.__sb; bump() }
+    if (!who || !who.obj || (!chatting && !talkWins(G.near))) {
+      el.style.opacity = 0; el.style.visibility = 'hidden'; return
+    }
+    who.obj.getWorldPosition(_h)
+    _up.set(0, 1, 0).applyQuaternion(who.obj.getWorldQuaternion(_q))
+    _h.addScaledVector(_up, who.h || 0.92).project(camera)
+    const pt = { x: (_h.x + 1) / 2 * size.width, y: (1 - _h.y) / 2 * size.height, behind: _h.z > 1 }
+    if (!BUBBLE.box) {
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height) return
+      BUBBLE.box = { bw: r.width, bh: r.height }
+    }
+    const viewport = { w: size.width, h: size.height }
+    const p = chatting
+      ? placeDialogue(pt, viewport, BUBBLE.box, { touch: TOUCH })
+      : placeBubble(pt, viewport, { ...BUBBLE.box, bh: BUBBLE.box.bh + 10 })
+    const tf = `translate(${Math.round(p.left)}px, ${Math.round(p.top)}px)`
+    if (el.style.transform !== tf) el.style.transform = tf
+    el.style.setProperty('--tail', Math.round(p.tail) + 'px')
+    el.dataset.tail = chatting ? p.side : pt.behind ? 'none' : 'down'
+    el.style.visibility = 'visible'; el.style.opacity = 1
+  }
   return null
 }
 const BUBBLE = { el: null, box: null, sb: false }
-// DOM overlay: bubble + dialogue box
+
+// The same unscaled wrapper anchors both states; the card (not the wrapper) respects HUD zoom.
 export function TalkOverlay() {
   useTalk()
-  const L = TALK.lines, pg = TALK.page
-  return <>
-    <div className="tp-ui tk-host"><div className="tk-bubble" ref={el => { BUBBLE.el = el; BUBBLE.box = null }}>
-      {TALK.near && !TALK.open && <Bubble key={TALK.near.key + (BUBBLE.sb ? '+g' : '')} icon="hand" verb="Talk to" name={(PROFILES[TALK.near.key] || {}).name || 'Villager'}
+  const anchor = useRef(null)
+  const L = TALK.lines, pg = TALK.page, chatting = !!L && !!TALK.open
+  useEffect(() => {
+    const el = anchor.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => { BUBBLE.box = null })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const last = chatting && pg === L.pages.length - 1
+  const friend = chatting && window.__sb && window.__sb.friend(TALK.open.key)
+  const action = fn => e => { e.stopPropagation(); fn() }
+  return <div className={'tp-ui tk-host' + (chatting ? ' tk-talking' : '')}>
+    <div className={'tk-bubble' + (chatting ? ' tk-dialogue' : '')} ref={el => { anchor.current = BUBBLE.el = el; BUBBLE.box = null }}>
+      {chatting ? <div className="tk-box g-glass" role="dialog" aria-label={`Talking with ${L.name}`}
+        onPointerDown={e => e.stopPropagation()} onClick={action(advance)}>
+        <header className="tk-head">
+          <div className="tk-identity"><b>{L.name}</b><div className="tk-meta"><span>{L.role}</span>{friend && <HeartsBadge hearts={friend.hearts} size={12} className="tk-hearts" />}</div></div>
+          {friend && <button type="button" className="tk-gift" aria-label="Give a gift" title={TOUCH ? 'Give a gift' : 'Give a gift (G)'} onClick={action(() => gift(TALK.open))}><Icon id="heart" size={19} /><span>Gift</span></button>}
+          <button type="button" className="tk-x" aria-label="Close" title="Close (Esc)" onClick={action(close)}>×</button>
+        </header>
+        <p aria-live="polite"><span key={pg}>{L.pages[pg]}</span></p>
+        <footer className="tk-footer">
+          <div className="tk-progress" role="img" aria-label={`Page ${pg + 1} of ${L.pages.length}`}>
+            {L.pages.map((_, i) => <span key={i} className={i === pg ? 'active' : i < pg ? 'done' : ''} />)}
+          </div>
+          <button type="button" className="tk-more" onClick={action(advance)}>
+            {!TOUCH && <span className="tk-key" aria-hidden="true">E</span>}
+            <span>{last ? 'Goodbye' : 'Continue'}</span><span className="tk-chevron" aria-hidden="true">▸</span>
+          </button>
+        </footer>
+      </div> : TALK.near && <Bubble key={TALK.near.key + (BUBBLE.sb ? '+g' : '')} icon="hand" verb="Talk to" name={(PROFILES[TALK.near.key] || {}).name || 'Villager'}
         alt={BUBBLE.sb ? { key: 'G', icon: 'heart', verb: 'Give a gift' } : null} onAct={() => open(TALK.near)} onAlt={() => gift(TALK.near)} />}
-    </div></div>
-    {L && <div className="tk-box" role="dialog" aria-label={`Talking with ${L.name}`} onPointerDown={e => { e.stopPropagation(); e.preventDefault(); advance() }}>
-      <div className="tk-plate">{TALK.open && TALK.open.key === 'scholar' && <React.Suspense fallback={null}><HoshinoPortrait size={44} className="tk-portrait" /></React.Suspense>}<b>{L.name}</b><i>{L.role}</i>{window.__sb && TALK.open && <HeartsBadge hearts={window.__sb.friend(TALK.open.key).hearts} size={18} className="tk-hearts" />}</div>
-      {window.__sb && TALK.open && <button className="tk-gift" aria-label="Give a gift" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); gift(TALK.open) }}>♥ Gift{TOUCHY ? '' : ' (G)'}</button>}
-      <button className="tk-x" aria-label="Close" onPointerDown={e => { e.stopPropagation(); e.preventDefault(); close() }}>✕</button>
-      <p key={pg}>{L.pages[pg]}</p>
-      <div className="tk-more">{pg < L.pages.length - 1 ? <>{'❧'} <small>{TOUCHY ? 'tap' : 'E'} to continue</small></> : <small>{TOUCHY ? 'tap' : 'E'} to say goodbye</small>}</div>
-    </div>}
-  </>
+    </div>
+  </div>
 }
-const TOUCHY = typeof document !== 'undefined' && document.documentElement.classList.contains('tp-touch')
