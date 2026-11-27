@@ -1,29 +1,48 @@
-/* '…' bubble + storybook dialogue box (parchment, brush-ink border, Cormorant italic like the loader) */
-.tk-bubble{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s;will-change:transform}
-.tk-host{z-index:4}
-/* the villager's bubble is the shared in-world head bubble (src/game/prompt/prompt.css): Talk to + Give a gift */
-@keyframes tk-bob{50%{transform:translateY(-3px)}}
-.tk-box{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);z-index:6;width:min(640px,calc(100vw - 28px));box-sizing:border-box;
-  padding:26px 30px 16px;color:#3b2f22;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;animation:tk-in .32s cubic-bezier(.2,.9,.3,1.2);
-  background:radial-gradient(40% 50% at 85% 85%,#d9c49a40,transparent 70%),radial-gradient(60% 70% at 15% 10%,#fffaf0,transparent 70%),linear-gradient(#f6eddb,#efe2c4);
-  border-radius:16px 22px 18px 24px/22px 16px 24px 18px;
-  box-shadow:inset 0 0 0 2.2px #3b2f22,inset 1px -1.2px 0 3.4px #3b2f2233,inset 0 0 26px #a88a5a30,0 10px 30px #2a1e1440}
-.tk-plate{position:absolute;left:22px;top:-17px;display:flex;align-items:baseline;gap:9px;padding:5px 15px 6px;border-radius:10px 14px 12px 9px;
-  background:linear-gradient(#e7f0d8,#cfe0b6);box-shadow:inset 0 0 0 2px #3b2f22,0 3px 6px #2a1e1430;font-family:TPSerif,"Cormorant Garamond",Georgia,serif}
-.tk-plate b{font:italic 600 20px/1 TPSerif,"Cormorant Garamond",Georgia,serif}
-.tk-plate i{font-size:14px;opacity:.7}
-.tk-plate .tk-portrait{align-self:center;margin:-16px -2px -12px -10px;flex:none}
-.tk-box p{margin:4px 0 6px;font:italic 500 23px/1.38 TPSerif,"Cormorant Garamond",Georgia,serif;animation:tk-ink .45s ease-out}
-.tk-more{text-align:right;font:italic 500 18px/1 TPSerif,"Cormorant Garamond",Georgia,serif;color:#5f8a4d}
-.tk-more small{font-size:14px;color:#3b2f22;opacity:.6;letter-spacing:.04em}
-.tk-x{position:absolute;right:10px;top:8px;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:#3b2f22;font-size:16px;cursor:pointer;opacity:.6}
-.tk-x:hover{opacity:1}
-@keyframes tk-in{from{opacity:0;transform:translate(-50%,14px) scale(.97)}}
-@keyframes tk-ink{from{opacity:0;filter:blur(1.5px)}}
-html.tp-touch .tk-box{bottom:calc(env(safe-area-inset-bottom,0px) + 14px);padding:24px 20px 12px}
-html.tp-touch .tk-box p{font-size:20px}
-@media (prefers-reduced-motion:reduce){.tk-bubble span,.tk-box,.tk-box p{animation:none}}
-/* Stage B: hearts on the name plate + gift button */
-.tk-hearts{margin-left:10px;vertical-align:middle}
-.tk-gift{position:absolute;right:48px;top:8px;height:32px;padding:0 14px;border:2px solid #3b2f22;border-radius:16px 18px 15px 19px;background:#fde8ea;color:#3b2f22;font:italic 600 16px/1 TPSerif,"Cormorant Garamond",Georgia,serif;cursor:pointer;pointer-events:auto}
-.tk-gift:hover{background:#fbd4da}
+/* Both the action prompt and the dialogue are projected from the villager's head. */
+.tk-bubble{position:fixed;left:0;top:0;z-index:3;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s;will-change:transform}
+.tp-ui.tk-host{z-index:4}
+.tp-ui.tk-host.tk-talking{z-index:7}
+.tk-bubble[data-tail="none"] .tp-bubble-in::after{display:none}
+
+/* A slightly denser version of the Glass & Gold action bubble for reading outdoors. */
+.tk-box.g-glass{position:relative;box-sizing:border-box;width:378px;max-width:calc((100vw - 24px) / var(--tpts,1));
+  padding:12px 14px 10px;border-radius:20px;pointer-events:auto;cursor:pointer;touch-action:manipulation;
+  background:linear-gradient(180deg,rgba(62,54,62,.92),rgba(34,30,38,.94));color:var(--t1);
+  font-family:Fredoka,sans-serif;font-weight:400;animation:tk-in .2s ease-out;isolation:isolate}
+.tk-box::after{content:'';position:absolute;pointer-events:none;z-index:-1;width:14px;height:14px;
+  background:rgba(38,33,42,.96);border:1.5px solid var(--g-rim);transform:rotate(45deg);border-radius:2px}
+.tk-dialogue[data-tail="down"] .tk-box::after{left:calc(var(--tail,50%) / var(--tpts,1));bottom:-8px;transform:translateX(-50%) rotate(45deg);border-top:0;border-left:0}
+.tk-dialogue[data-tail="left"] .tk-box::after{left:-8px;top:calc(var(--tail,50%) / var(--tpts,1));transform:translateY(-50%) rotate(45deg);border-right:0;border-top:0}
+.tk-dialogue[data-tail="right"] .tk-box::after{right:-8px;top:calc(var(--tail,50%) / var(--tpts,1));transform:translateY(-50%) rotate(45deg);border-bottom:0;border-left:0}
+.tk-dialogue[data-tail="none"] .tk-box::after{display:none}
+.tk-head{display:flex;align-items:center;gap:6px}
+.tk-identity{flex:1;min-width:0}
+.tk-identity b{display:block;color:var(--t-gold);font-size:17px;font-weight:600;line-height:1.15;overflow-wrap:anywhere}
+.tk-meta{display:flex;align-items:center;flex-wrap:wrap;gap:3px 7px;margin-top:2px;font-size:12px;line-height:1.2;color:var(--t2)}
+.tk-meta>span:first-child{text-transform:capitalize}
+.tk-hearts{flex:none}
+.tk-box p{margin:10px 0 8px;font-size:18px;line-height:1.28;font-weight:400;color:var(--t1);overflow-wrap:anywhere}
+.tk-box p span{display:inline-block;animation:tk-line .2s ease-out}
+.tk-box button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:30px;padding:4px 9px;
+  border:1px solid transparent;border-radius:10px;background:rgba(255,250,240,.08);font:500 13px/1.15 Fredoka,sans-serif;color:var(--t1);text-shadow:var(--g-ts)}
+.tk-box button:hover,.tk-box button:focus-visible{border-color:var(--g-rim);background:rgba(255,250,240,.15)}
+.tk-box button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tk-box .tk-gift{flex:none}
+.tk-box .tk-x{flex:none;padding:0;width:30px;font-size:22px;color:var(--t2)}
+.tk-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}
+.tk-progress{display:flex;align-items:center;gap:5px}
+.tk-progress span{height:5px;width:5px;border-radius:999px;background:var(--g-rim-soft)}
+.tk-progress .done{background:var(--g-rim)}
+.tk-progress .active{width:13px;background:var(--gold)}
+.tk-box .tk-more{color:var(--t-gold);background:transparent;font-weight:600;padding:2px 1px 2px 5px}
+.tk-key{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;font:600 13px/1 Fredoka,sans-serif;
+  background:radial-gradient(circle at 50% 30%,#fffaf0,#efd69a);border:1px solid var(--gold-lo);box-shadow:inset 0 -2px 0 rgba(120,70,20,.3);color:#3a2412;text-shadow:none}
+.tk-chevron{font-size:15px}
+@keyframes tk-in{from{opacity:0;scale:.94}}
+@keyframes tk-line{from{opacity:0;translate:0 3px}}
+html.tp-touch .tk-box{width:340px;padding:9px 11px 8px}
+html.tp-touch .tk-box p{font-size:16px;margin:7px 0 4px}
+html.tp-touch .tk-box button{min-height:calc(44px / var(--tpts,1));min-width:calc(44px / var(--tpts,1))}
+html.tp-touch .tk-box .tk-x{width:calc(44px / var(--tpts,1))}
+html.tp-touch .tk-key{display:none}
+@media (prefers-reduced-motion:reduce){.tk-bubble,.tk-box,.tk-box p span{animation:none;transition:none}}
