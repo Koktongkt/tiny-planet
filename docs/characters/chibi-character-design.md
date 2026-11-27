@@ -325,3 +325,16 @@ Before/after: [`ref/ishi-pass10-mustache.jpg`](ref/ishi-pass10-mustache.jpg).
 
 KT locked Ishi's look at pass 10 for the game. His motion now builds on it (see `chibi-animation-guide.md`, "Grandpa Ishi").
 Note for the motion pass: the arms are now the rig's real arms (`body.arm 0.92`, `armR [0.8, 0.75, 0.7]`, `hand 1.15`) so the sleeves, cane and pipe move with every pose; the rest pose was tuned to match the locked still. The clothes are still measured against the body without arms.
+
+### Hana — first character-studio draft (awaiting KT review)
+
+Hana is the existing `basket girl` / flower picker. Studio URL:
+`?view=charstudio&dev=chibi-drafts&char=hana`. The shipped villager remains
+unchanged. Reference: KT's six-angle Hana turnaround (pink pigtails, straw
+sunhat with coral band, flower-pattern pinafore, cream blouse/socks, brown Mary
+Janes and a rear bow). The draft uses the locked jaw and MIDFACE, shared eye
+shader (eyeS 1.07, blush .93), shared bone rig, and a kid-scale motion profile.
+Head 1.45, H .79, torso 1.04, leg .91; no held prop in the review model.
+Hair, hat and the floral skirt are merged geometry, with printed petals conforming
+to the curved skirt. Pinafore painter is opt-in; previous outfit paths remain unchanged.
+No aesthetic approval claimed yet: confirm the silhouette and proportions before shipping.

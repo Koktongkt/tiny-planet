@@ -30,7 +30,8 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF) {
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
   const fuku = kind === 'fuku', ishi = kind === 'ishi' // ishi: 3D brows, nose and mustache (hair mesh); paint lines only
-  const BROW = fuku ? '#6a6660' : '#1a1614'
+  const hana = kind === 'hana'
+  const BROW = fuku ? '#6a6660' : hana ? '#a85b59' : '#1a1614'
   ;['happy', 'focus', 'sleepy', 'excited'].forEach((name, k) => {
     const ox = (k % 2) * W, oy = Math.floor(k / 2) * H, X = (x) => ox + (x / FX * 0.5 + 0.5) * W, Y = (y) => oy + (1 - (y - FY0) / (FY1 - FY0)) * H
     g.save(); g.beginPath(); g.rect(ox, oy, W, H); g.clip(); g.lineCap = g.lineJoin = 'round'
@@ -51,7 +52,7 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF) {
         mouth(); g.strokeStyle = '#6a2420'; g.lineWidth = 0.0010 * s; g.stroke() }
       g.restore(); return
     }
-    g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0056) * s
+    g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : hana ? 0.0040 : 0.0056) * s
     for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0010)); g.stroke() }
     if (fuku) { // soft grey-brown smile lines at the eye corners
       g.strokeStyle = 'rgba(120,100,90,0.62)'; g.lineWidth = 0.0011 * s
@@ -63,7 +64,7 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF) {
     }
     g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10), 0.0017 * s, 0.0011 * s); g.fill()
     const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10
-    if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
+    if (name === 'excited' || (hana && name === 'happy')) { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
     else { g.strokeStyle = fuku ? '#c45a48' : '#b05040'; g.lineWidth = (fuku ? 0.0020 : 0.0018) * s; g.beginPath()

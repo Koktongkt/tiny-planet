@@ -52,3 +52,12 @@ test('the play path does not load the draft villager chunk', () => {
   assert.match(src('debug/Studio.jsx'), /chibi-drafts/)
   assert.match(src('art/chibi/ChibiVillagers.jsx'), /DRAFT/)
 })
+
+test('Hana is a studio-only draft and maps to the existing flower picker', () => {
+  assert.equal(chibiDraftName('basket girl', ''), null)
+  assert.equal(chibiDraftName('hana', '?view=charstudio'), null)
+  assert.equal(chibiDraftName('basket girl', '?dev=chibi-drafts'), 'hana')
+  assert.equal(chibiDraftName('hana', '?view=charstudio&dev=chibi-drafts'), 'hana')
+  assert.equal(VILLAGERS.find(v => v.name === 'basket girl').outfit.type, 'apron')
+  assert.equal(src('App.jsx').includes('ChibiHana'), false)
+})

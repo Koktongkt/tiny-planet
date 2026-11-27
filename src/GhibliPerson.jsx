@@ -102,6 +102,13 @@ const PAINT = `
     } else if (ty == 7) { // shirt: small V neckline
       float v = front * aa((y - uY.y + .022) - ax * 1.3);
       torso = mix(torso, uSkin, v * (1. - neck));
+    } else if (ty == 9) { // opt-in pinafore: square bib, parallel shoulder straps and a lower back
+      float bibTop = uZ.x - .002;
+      float bib = front * aa(uO.w - ax) * aa(bibTop - y);
+      float backBib = back * aa(uZ.x - .016 - y);
+      float straps = aa(.0085 - abs(ax - uO.w + .008)) * aa(y - uY.x);
+      float side = aa(uZ.x - .025 - y);
+      torso = mix(uTop, uBottom, max(max(waist, side), max(max(bib, backBib), straps)));
     } else if (ty == 8) { // open jacket: lapelled open front shows vest/shirt (uTop), hem at uY.x, pockets
       float open = front * aa(.014 + (uY.y - y) * .18 - ax);
       torso = mix(uAcc, torso, open * aa(y - uY.x + .02) + waist);
@@ -197,7 +204,7 @@ const bodyMatCache = new Map()
 function bodyMat(cfg, S) {
   const o = cfg.outfit, key = JSON.stringify(o) + S.key; if (bodyMatCache.has(key)) return bodyMatCache.get(key)
   const u = mkU(); for (const [k, f] of [['uSkin', 'skin'], ['uTop', 'top'], ['uBottom', 'bottom'], ['uShoe', 'shoe'], ['uAcc', 'acc'], ['uAcc2', 'acc2']]) if (o[f]) u[k].value.set(o[f])
-  const TY = { overalls: 0, dress: 1, apron: 2, yukata: 3, sailor: 4, cardigan: 5, jacket: 6, shirt: 7, openJacket: 8 }
+  const TY = { overalls: 0, dress: 1, apron: 2, yukata: 3, sailor: 4, cardigan: 5, jacket: 6, shirt: 7, openJacket: 8, pinafore: 9 }
   const dressy = o.skirt
   const waist = dressy ? S.hemY - 0.01 : o.type === 'jacket' || o.type === 'openJacket' ? S.hipY + 0.012 : o.type === 'overalls' ? S.bellyY + 0.022 + (o.waistUp ?? 0) : S.bellyY + 0.008
   // hemY is opt-in: unset keeps the historical default for every existing type (pixel-identical).
@@ -207,7 +214,7 @@ function bodyMat(cfg, S) {
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) },
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, (o.type === 'overalls' || o.type === 'pinafore') ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) },
     uJC: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(0, 3) : [0, 0, 0]), 0) }, uJR: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(3, 6) : [1, 1, 1]), o.skinEll ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS }) // skinEll [cx, cy, cz, rx, ry, rz] (opt-in)
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
@@ -633,7 +640,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
         <group position={[X.knot?.[0] ?? 0.012, S.neckY + 0.008 - chestY + (X.knot?.[1] ?? 0), 0.036 + 0.02 * S.hc + (X.knot?.[2] ?? 0)]} scale={X.knot?.[3] ?? 1}><M geo={G.scarfKnot} mat={cel(cfg.scarf)} />
           <group ref={set('scarf')}>{(X.tails ?? [-0.4, 0.35]).map(a => <M key={a} geo={X.tailGeo ?? G.scarfTail} mat={cel(cfg.scarf)} rotation={[X.tailX ?? 0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}
       {o.type === 'sailor' && <group position={[0, S.neckY - 0.03 - chestY, S.chest[1].z * 0.95]}><M geo={G.scarfKnot} mat={cel(o.acc ?? '#d9455b')} scale={0.6} /><group ref={set('scarf')}>{[-0.3, 0.3].map(a => <M key={a} geo={G.scarfTail} mat={cel(o.acc ?? '#d9455b')} rotation={[0.15, 0, a]} scale={0.7} />)}</group></group>}
-      {o.type === 'overalls' && [-1, 1].map(x => <M key={x} geo={G.tiny} mat={cel('#f2d27a')} position={[x * (o.bibW ?? 0.031), S.chestY + 0.012 - chestY, S.chest[1].z * 0.93 + S.chest[0].z]} outline={false} />)}
+      {(o.type === 'overalls' || o.type === 'pinafore') && [-1, 1].map(x => <M key={x} geo={G.tiny} mat={cel('#f2d27a')} position={[x * ((o.bibW ?? 0.031) - (o.type === 'pinafore' ? 0.008 : 0)), S.chestY + (o.type === 'pinafore' ? 0.002 : 0.012) - chestY, S.chest[1].z * 0.93 + S.chest[0].z]} outline={false} />)}
       {cfg.satchel && !X.strap && <mesh position={[0, S.chestY - 0.01 - chestY, -0.002]} rotation={[0.05, 0, -0.72]} material={cel('#8a5a3c')}><torusGeometry args={[S.chest[1].x * 1.26, 0.0035, 6, 40]} /></mesh>}
       {cfg.satchel && X.strap && <group position={[X.strap[5] ?? 0, S.chestY - 0.01 - chestY + X.strap[2], X.strap[4] ?? 0]} rotation={[0, 0, X.strap[0]]}>{/* ext.strap [tilt, radius, y, depth, z, x]: a cross-body loop over the shoulder down to the bag */}
         <mesh rotation={[0, Math.PI / 2, 0]} scale={[X.strap[3], 1, X.strap[6] ?? 1]} material={cel(X.strapC ?? '#8a5a3c')}><torusGeometry args={[X.strap[1], 0.0045, 6, 40]} /></mesh></group>}
