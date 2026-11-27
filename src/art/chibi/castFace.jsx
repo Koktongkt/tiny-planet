@@ -51,6 +51,17 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF) {
         mouth(); g.strokeStyle = '#6a2420'; g.lineWidth = 0.0010 * s; g.stroke() }
       g.restore(); return
     }
+    if (kind === 'gonta') {
+      g.fillStyle = 'rgba(104,72,49,.58)'
+      for (let i = -22; i <= 22; i++) {
+        const x = i * 0.0021, jaw = -0.048 + 0.019 * (i / 22) ** 2
+        for (let row = 0; row < 2; row++) {
+          g.beginPath()
+          el(X(x + row * 0.0007), Y(jaw + row * 0.0022 + Math.cos(i * 5) * 0.0006), s * 0.0007, s * 0.0011)
+          g.fill()
+        }
+      }
+    }
     g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0056) * s
     for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx)), Y(by + arc), X(sd * (0.0328 - bx)), Y(by - 0.0010)); g.stroke() }
     if (fuku) { // soft grey-brown smile lines at the eye corners

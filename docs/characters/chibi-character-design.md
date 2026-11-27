@@ -325,3 +325,13 @@ Before/after: [`ref/ishi-pass10-mustache.jpg`](ref/ishi-pass10-mustache.jpg).
 
 KT locked Ishi's look at pass 10 for the game. His motion now builds on it (see `chibi-animation-guide.md`, "Grandpa Ishi").
 Note for the motion pass: the arms are now the rig's real arms (`body.arm 0.92`, `armR [0.8, 0.75, 0.7]`, `hand 1.15`) so the sleeves, cane and pipe move with every pose; the rest pose was tuned to match the locked still. The clothes are still measured against the body without arms.
+
+## Gonta (fisherman draft)
+
+Open `?view=charstudio&dev=chibi-drafts&char=gonta&still` for the turnaround.
+Use `&angle=side` for his profile or `&pose=walk` to check the raincoat in motion.
+The draft lineup also recognises his existing villager ID, `fisherman`.
+
+![Gonta draft turnaround](ref/gonta-draft-turnaround.jpg)
+
+![Gonta draft face angles](ref/gonta-draft-face.jpg)

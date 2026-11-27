@@ -625,10 +625,13 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
         {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
           : <M geo={G.kimono} mat={cel(o.top)} position={[sd * 0.004, -0.01, 0]} rotation={[0, 0, -sd * S.armA * 0.85]} />}</group>, B['up' + k])}
       {o.cuffs && createPortal(<group ref={lod(1)}><M geo={cfg.ext?.cuffGeo ?? G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
+      {X.Boot && createPortal(<Merge><X.Boot /></Merge>, B['ft' + k])}
+      {X.Wrist && createPortal(<group position={S['wr' + k].clone().sub(S['el' + k]).toArray()} rotation={[0, 0, sd * S.armA]}><X.Wrist /></group>, B['fo' + k])}
       {k === 'R' && X.HandR && createPortal(<group name="right-hand" position={S.hdR.clone().sub(S.elR).toArray()}><X.HandR st={st} /></group>, B.foR)}
       {hold[k] && createPortal(<group ref={lod(2)} position={S['hd' + k].clone().sub(S['el' + k]).toArray()}><Merge><Prop prop={hold[k]} sd={sd} /></Merge></group>, B['fo' + k])}
     </React.Fragment> })}
     {createPortal(<Merge>
+      {X.Coat && <X.Coat />}
       {cfg.scarf && <><M geo={G.scarfRing} mat={cel(cfg.scarf)} position={[0, S.neckY + 0.01 - chestY, 0.004 + 0.02 * S.hc]} rotation={[0.12, 0, 0]} scale={X.ring ?? 1} />
         <group position={[X.knot?.[0] ?? 0.012, S.neckY + 0.008 - chestY + (X.knot?.[1] ?? 0), 0.036 + 0.02 * S.hc + (X.knot?.[2] ?? 0)]} scale={X.knot?.[3] ?? 1}><M geo={G.scarfKnot} mat={cel(cfg.scarf)} />
           <group ref={set('scarf')}>{(X.tails ?? [-0.4, 0.35]).map(a => <M key={a} geo={X.tailGeo ?? G.scarfTail} mat={cel(cfg.scarf)} rotation={[X.tailX ?? 0.2, 0, a]} position={[0, -0.004, 0.004]} />)}</group></group></>}

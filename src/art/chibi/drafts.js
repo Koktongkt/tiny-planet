@@ -8,7 +8,7 @@
 
 export const CHIBI_DRAFT_DEV = 'chibi-drafts'
 
-const DRAFT_OF = { grandma: 'fuku', fuku: 'fuku', scholar: 'hoshino', hoshino: 'hoshino', grandpa: 'ishi', ishi: 'ishi' }
+const DRAFT_OF = { fisherman: 'gonta', gonta: 'gonta', grandma: 'fuku', fuku: 'fuku', scholar: 'hoshino', hoshino: 'hoshino', grandpa: 'ishi', ishi: 'ishi' }
 
 export function draftsEnabled(search = '') {
   return new URLSearchParams(search).get('dev') === CHIBI_DRAFT_DEV
