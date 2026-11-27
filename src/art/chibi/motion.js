@@ -129,3 +129,11 @@ export const ISHI_MOTION = motionProfile(HER_MOTION, {
   yawnUp: 1.0,
   restActs: ['sit', 'chat'],
 })
+
+// Kiko: cheerful baker, short grounded steps and hands-first idle gestures.
+export const KIKO_MOTION = motionProfile(HER_MOTION, {
+  name: 'kiko', lively: 0.87,
+  sets: { day: ['look', 'hum', 'hands', 'rock'], rain: ['look', 'hands'], night: ['yawn', 'hum', 'look'],
+    seated: ['look', 'hum'], hungry: ['tummy', 'look'], indoor: ['hum', 'hands', 'look'], stove: ['hum', 'hands', 'look'] },
+  can: { skip: false, skid: false, sit: false, lie: false }, lieChance: 0,
+})

@@ -378,7 +378,9 @@ function rig(S, mat, res) {
   for (const [name, parent, head] of BONES) { const b = new THREE.Bone(); b.name = name; const ph = parent ? BONES.find(x => x[0] === parent)[2] : V3(0, 0, 0); b.position.copy(head).sub(ph); b.userData.rest = head; if (parent) bones[parent].add(b); bones[name] = b; list.push(b) }
   const mesh = new THREE.SkinnedMesh(geo, mat); mesh.add(bones.root); bones.root.updateMatrixWorld(true)
   const skel = new THREE.Skeleton(list); mesh.bind(skel)
-  const line = new THREE.SkinnedMesh(geo, outlineBody); line.bind(skel, mesh.bindMatrix)
+  const ink = S.b.ink == null ? outlineBody : mkOutline(true)
+  if (S.b.ink != null) ink.uniforms.uT.value = S.b.ink
+  const line = new THREE.SkinnedMesh(geo, ink); line.bind(skel, mesh.bindMatrix)
   mesh.frustumCulled = line.frustumCulled = false
   return { mesh, line, bones }
 }
@@ -622,7 +624,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     <group ref={set('shadow')}><mesh geometry={SHADOW.geo} material={SHADOW.mat} scale={[0.15 * (cfg.body.girth ?? 1), 1, 0.12]} position={[0, 0, 0.006]} renderOrder={1} /></group>
     {['L', 'R'].map(k => { const sd = k === 'L' ? -1 : 1; return <React.Fragment key={k}>
       {o.sleeve !== 'none' && createPortal(<group ref={lod(2)} rotation={[0, 0, sd * S.armA]}>
-        {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
+        {X.Sleeve ? <group position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85}><X.Sleeve /></group> : sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
           : <M geo={G.kimono} mat={cel(o.top)} position={[sd * 0.004, -0.01, 0]} rotation={[0, 0, -sd * S.armA * 0.85]} />}</group>, B['up' + k])}
       {o.cuffs && createPortal(<group ref={lod(1)}><M geo={cfg.ext?.cuffGeo ?? G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
       {k === 'R' && X.HandR && createPortal(<group name="right-hand" position={S.hdR.clone().sub(S.elR).toArray()}><X.HandR st={st} /></group>, B.foR)}

@@ -325,3 +325,15 @@ Before/after: [`ref/ishi-pass10-mustache.jpg`](ref/ishi-pass10-mustache.jpg).
 
 KT locked Ishi's look at pass 10 for the game. His motion now builds on it (see `chibi-animation-guide.md`, "Grandpa Ishi").
 Note for the motion pass: the arms are now the rig's real arms (`body.arm 0.92`, `armR [0.8, 0.75, 0.7]`, `hand 1.15`) so the sleeves, cane and pipe move with every pose; the rest pose was tuned to match the locked still. The clothes are still measured against the body without arms.
+
+## Kiko (baker) — draft pass 1
+
+Reference: KT's supplied Kiko character turnaround (not published here). Studio: `?view=charstudio&dev=chibi-drafts&char=kiko&still&face=happy`; `char=baker` is an alias. This is a review draft, not a replacement for the shipped baker yet.
+
+- Shared rig and face painter, with a broad rounded jaw (`[0, -0.027, 0.012, 0.053, 0.031, 0.037, 0.020]`), open happy mouth, 1.08 eye scale, peach skin, blush, warm dark swept fringe and low curled hair on both sides.
+- Body: `H 0.89, head 1.39, torso 1.12, leg 0.83, girth 1.34`; short thick legs, small dark flat-soled boots, relaxed arms, rounded tan sleeves with lighter folded cuffs. No handheld prop.
+- Cream kerchief is a curved shell, not a hat sphere; its gathered back, knot and fabric tails are real geometry. The tan A-line dress, front bib and apron panel, waist sash and rear tied bow are geometry on the shared chest/hips rig. The apron has a pocket seam and subtle folds. Cloth and hair are merged into a small number of draw calls.
+- Kiko has a grounded walk and the shared life layer, without her player's skipping, skidding or lying idle. A thinner body ink and custom sleeve are opt-in hooks; other character configs retain their original appearance.
+- Kiko remains gated behind the draft studio/lineup flags pending KT's visual approval.
+
+- Visual checks: front, 3/4, deep 3/4, side, back and a frozen walk pose. Studio: 20 draw calls, ~73.6k triangles at res 72. Production build and 397 unit tests pass. Review at the studio only; the live follow camera still shows the shipped baker.
