@@ -15,7 +15,11 @@ export function armAudio(o, w = window) {
       const AC = w.AudioContext || w.webkitAudioContext; if (!AC) return
       try { const s = w.navigator && w.navigator.audioSession; if (s && s.type !== AUDIO_SESSION_TYPE) s.type = AUDIO_SESSION_TYPE } catch (e) {}
       try { ctx = new AC() } catch (e) { return }
-      ;(o.load || (() => import('./ambient.js')))().then(m => m.startAudio({ ...o, ctx }))
+      ;(o.load || (() => import('./ambient.js')))().then(m => {
+        const start = () => m.startAudio({ ...o, ctx })
+        if (w.document?.getElementById('ld')) w.addEventListener('tp:revealed', start, { once: true })
+        else start()
+      })
     }
     if (ctx.state !== 'running' && ctx.state !== 'closed' && (!w.__tpAudioWant || w.__tpAudioWant())) {
       try { ctx.resume().catch(() => {}); const b = ctx.createBufferSource(); b.buffer = ctx.createBuffer(1, 1, 22050); b.connect(ctx.destination); b.start(0) } catch (e) {}

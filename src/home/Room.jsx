@@ -17,6 +17,7 @@ import { PAD, CAM, onTap } from '../touch.jsx'
 import { moveIntent, screenYaw, turnStep, walkFactor, clampInYaw, ZMIN } from '../camInput.js'
 import { G, emit, toast } from '../game/store.js'
 import { CAT } from '../pets/catState.js'
+import { BootMark } from '../boot.js'
 const Cat = React.lazy(() => import('../pets/Cat.jsx').then(m => ({ default: m.Cat })))
 // round7: home activities (sleep, cook, bath, tea, read, water plants, feed the pets) + the refined interior clutter: own chunk
 const Activities = React.lazy(() => import('./Activities.jsx'))
@@ -27,7 +28,7 @@ const LAYER = 5
 export { W, Box }
 
 // ---------- transitions ----------
-let snapFrames = 0
+let snapFrames = HOME.inside ? 3 : 0
 // rAF paints the iris; the timer finishes it on wall-clock time so a stalled frame cannot hold the door lock.
 function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); let done = false; const step = () => { if (done) return; const k = Math.min(1, (performance.now() - t0) / ms); if (k < 1) { HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); requestAnimationFrame(step); return } done = true; HOME.fade = v; res() }; setTimeout(step, ms); step() }) }
 const fading = () => HOME.fade > 0.02
@@ -174,8 +175,8 @@ export function Room() {
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
     <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><WindowLight /><Lamp /><NightGlow />
     <Merge><Shell /></Merge><Alcove /><BathWalls />
-    <React.Suspense fallback={null}><Activities /></React.Suspense>
+    <React.Suspense fallback={null}><Activities /><BootMark name="activities" /></React.Suspense>
     <InsideDecor />
-    <React.Suspense fallback={null}><Cat /></React.Suspense>
+    <React.Suspense fallback={null}><Cat /><BootMark name="cat" /></React.Suspense>
   </group>
 }

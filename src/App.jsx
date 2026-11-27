@@ -25,7 +25,7 @@ const NEWCHAR = !q.has('oldchar')
 const CHIBI = NEWCHAR && !SPRITE && q.get('chibi') !== '0'
 const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
-import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
+import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint, BootMark, holdStartupVillagers } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
@@ -111,7 +111,7 @@ function ShapedGround() {
   const L = useLook(), idle = useIdleSlot(-2)
   const coarse = useMemo(() => L && L.buildGround({ fine: false, paint: groundPaint(L.grassColour), isRock: rockAt, rockPaint: rockify }), [L])
   const fine = useMemo(() => L && SHORE_FINE && idle ? L.buildGround({ fine: true, paint: groundPaint(L.grassColour), isRock: rockAt, rockPaint: rockify }) : null, [L, idle])
-  useEffect(() => { if (fine) coarse.dispose(); if (L && (fine || !SHORE_FINE)) window.__groundReady = true }, [L, fine])
+  useEffect(() => { if (fine) coarse.dispose(); if (L && (fine || !SHORE_FINE)) { window.__groundReady = true; bootStage('ground', 1) } }, [L, fine])
   const mat = useMemo(() => inkRim(paint(new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: WARM_RAMP }), 0.06, true, 1.6)), [])
   return coarse ? <mesh geometry={fine || coarse} material={mat} /> : null
 }
@@ -312,7 +312,7 @@ function Vegetation() {
 const _ev = new THREE.Vector3()
 const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && streamDist(n) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
 const EdgeVegLazy = lazy(() => import('./edgeveg.jsx'))
-function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /></Suspense> : null }
+function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /><BootMark name="edgeveg" /></Suspense> : null }
 // warm window light spilling onto the grass around each cottage at night: one additive decal per house, no real light
 const SPILL = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 18, 64, 64, 64)
   g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128)
@@ -549,7 +549,7 @@ function faceInside(dt, obj) { const hp = HOME.hp; if (!hp) return
   HOME.faceYaw = FI.yaw; obj.quaternion.setFromAxisAngle(_Y, FI.yaw) }
 function Traveller() {
   const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), [])
-  const [gw, setGw] = useState(!!GM.W); useEffect(() => onBoot('game', () => setGw(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake]) // gw: re-render once the game chunk is in, so the lantern and bike mount even if it lands after her bake
+  const [gw, setGw] = useState(!!GM.W); useEffect(() => onBoot('game', () => setGw(true)), []) // gw: re-render once the game chunk is in, so the lantern and bike mount even if it lands after her bake
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); HOME.playerObj = ref.current
     if (HOME.inside) { HOME.stepInside(dt, KEYS, P, ref.current); faceInside(dt, ref.current) } // inside her house
@@ -564,7 +564,7 @@ function Traveller() {
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
-  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
+  return <group ref={ref}>{bake && <Suspense fallback={null}>{SPRITE ? <SpritePerson st={PST} /> : CHIBI ? <ChibiHer st={PST} /> : NEWCHAR ? <GhibliPerson st={PST} /> : <PersonLazy cfg={PEOPLE[0]} st={PST} />}<BootMark name="baked" /></Suspense>}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
 }
 // ?view=zone&z=<key> camera targets (dev / screenshots: shoot.mjs, the README). ?world=old keeps the frozen layout's set.
 const OLD_VIEWS = (() => { const HB_LOOK = around(Zc.harbour, 0.29, 2.3); return {
@@ -668,7 +668,7 @@ window.__player = P
 function DeferredZones() { return useIdleSlot(-1) ? <Zones /> : null }
 // look A shore kit (grass lip, foam beads, ink waterline): new world only, after the first frame
 const ShoreKitLazy = lazy(() => import('./world/ShoreKit.jsx'))
-function DeferredShore() { return useIdleSlot(-1) ? <Suspense fallback={null}><ShoreKitLazy /></Suspense> : null }
+function DeferredShore() { return useIdleSlot(-1) ? <Suspense fallback={null}><ShoreKitLazy /><BootMark name="shore" /></Suspense> : null }
 // The world mounts in a few slices (one per task) so the loader keeps animating while React builds ~3k objects.
 // Same tree, same order: later slices just appear a few frames later, all before shaders compile and the first frame.
 const SLICES = 4
@@ -771,7 +771,8 @@ function Boot({ onLive, player = true }) {
   useEffect(() => { let dead = false; (async () => {
     if (player) { await new Promise(r => onBoot('mounted', r)); if (dead) return }
     bootStage('world', 1); await nextPaint()
-    if (player) { bootStage('bakePlayer', 1); await new Promise(r => onBoot('baked', r)) }
+    if (player) { bootStage('bakePlayer', 1); await new Promise(r => onBoot('baked', r)); if (HOME.inside) await Promise.all(['activities', 'cat'].map(name => new Promise(r => onBoot(name, r)))) }
+    if (dead) return
     bootStage('bake', 1); await nextPaint()
     // one representative object per distinct program (material + skinning/instancing/vertex colours)
     const seen = new Set(), reps = []
@@ -814,7 +815,24 @@ function Boot({ onLive, player = true }) {
     if (q.get('bootpause') === 'shaders') return // screenshot aid: hold the real loader state before the first frame
     live.current = true; onLive()
   })(); return () => { dead = true } }, [])
-  useFrame(() => { if (live.current && !BOOT.done.frame) requestAnimationFrame(() => bootStage('frame', 1)) }, 100)
+  const first = useRef(false)
+  useFrame(() => {
+    if (!live.current || first.current) return
+    first.current = true
+    requestAnimationFrame(async () => {
+      const startingInside = player && HOME.inside
+      if (startingInside) holdStartupVillagers()
+      bootStage('frame', 1)
+      // Finish critical terrain and game setup behind the opaque title; distant villagers
+      // bake individually in idle slots after the reveal, so they don't block house startup.
+      if (startingInside) {
+        const stages = ['criticalIdle', 'edgeveg', ...(!OLD_WORLD ? ['ground', 'shore'] : []), ...(GAMEON ? ['game', 'talk'] : [])]
+        await Promise.all(stages.map(name => new Promise(r => onBoot(name, r))))
+      }
+      await nextPaint(); await nextPaint()
+      bootStage('ready', 1)
+    })
+  }, 100)
   return null
 }
 const COMPOSER = { current: null }
