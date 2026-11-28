@@ -255,7 +255,7 @@ export function spec(b = {}) {
   S.neck = [V3(0, S.shY + 0.005, -0.002 + 0.03 * hc), V3(0, S.shY + 0.055, 0.004 + 0.045 * hc), 0.021 * (0.9 + 0.1 * gw), 0.019]
   const hS = b.headS ?? [1, 1, 1]; S.headR = V3(0.068 * hd * hS[0], 0.0584 * hd * hS[1], 0.0648 * hd * hS[2]) // headS: optional skull radii scale (default = old)
   S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc + (b.headUp ?? 0), 0.008 + 0.055 * hc) // headUp: optional lift of the head off the shoulders (default 0)
-  if (b.cheek) { const [x, y, z, rx, ry, rz, k] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s]) } // round mochi cheeks (head-frame units)
+  if (b.cheek) { const [x, y, z, rx, ry, rz, k, jh] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s, jh == null ? null : jh * s]) } // round mochi cheeks (head-frame units); optional 8th value jh: the jaw stretched up by jh (straight sides, elliptical bottom)
   S.cr = [b.cranium, b.chin, ...(b.lumps ?? [])].filter(Boolean).map(([y, z, rx, ry, rz, k]) => { const s = 1.17 * hd; return [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] }) // optional head lumps blended into the skull (head-frame units, shaded with it): cranium (a broader, taller crown), chin (a fuller lower face), lumps (any more)
   if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
@@ -271,20 +271,23 @@ export function spec(b = {}) {
   }
   S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
   S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn, 0.012 * fs * S.hn)
-  if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirt === 'long' ? 1.12 : 1.3)] }
+  if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * (b.skirtTop ?? 0.96), b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirtFlare ?? (b.skirt === 'long' ? 1.12 : 1.3))] } // skirtFlare / skirtTop: optional hem / waist radius (x belly width)
   S.hemY = S.skirt ? S.skirt[2] : S.knY
   S.top = S.headC.y + S.headR.y
   specCache.set(key, S); return S
 }
+const _jp = new THREE.Vector3()
 function core(S, p) {
   let d = smin(ell(p, ...S.belly), ell(p, ...S.chest), 0.03)
   d = smin(d, cap(p, S.neck[0], S.neck[1], S.neck[2], S.neck[3]), 0.02)
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
-  let h = ell(p, S.headC, S.headR); for (const [c, r, k] of S.cr) h = smin(h, ell(p, c, r), k); if (S.ck) h = smin(h, Math.min(ell(p, S.ck[0], S.ck[2]), ell(p, S.ck[1], S.ck[2])), S.ck[3])
+  let h = ell(p, S.headC, S.headR); for (const [c, r, k] of S.cr) h = smin(h, ell(p, c, r), k); if (S.ck) { const jaw = (c) => S.ck[4] == null ? ell(p, c, S.ck[2]) : ell(_jp.set(p.x, p.y - Math.min(Math.max(p.y - c.y, 0), S.ck[4]), p.z), c, S.ck[2]); h = smin(h, Math.min(jaw(S.ck[0]), jaw(S.ck[1])), S.ck[3]) }
   if (S.mf) { const fade = S.mfFade * (p.x - S.headC.x) ** 2; for (const [c, r, k, rr] of S.mf) h = smin(h, (rr == null ? ell(p, c, r) : ocol(p, c, r, rr)) + fade, k) } // midfaceFade: recede away from the centre line (profile unchanged)
   return smin(d, h, 0.012)
 }
+// torso/skirt/head distance (no arms or legs), for props that must sit on the body surface (e.g. a hem or an apron)
+export const coreSDF = (S, x, y, z) => core(S, V3(x, y, z))
 function armD(S, p, k) {
   const sd = k === 'L' ? -1 : 1
   const a = smin(cap(p, S['sh' + k], S['el' + k], S.ar[0], S.ar[1]), cap(p, S['el' + k], S['wr' + k], S.ar[1], S.ar[2]), 0.008)

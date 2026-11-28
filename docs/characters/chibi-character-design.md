@@ -72,6 +72,128 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 - Approved in-game eye and bun shots: [`ref/pass8-eye-closeup.jpg`](ref/pass8-eye-closeup.jpg), [`ref/pass9-front-compare.jpg`](ref/pass9-front-compare.jpg).
 - Cast and villager concept sheets (per-character hair, colours, age, outfit — not a licence to start them): [`ref/chibi-sheet-main-cast.jpg`](ref/chibi-sheet-main-cast.jpg) (Her, Grandma Fuku, Professor Hoshino, Grandpa Ishi) and [`ref/chibi-sheet-villagers.jpg`](ref/chibi-sheet-villagers.jpg) (Kiko, Gonta, Mr. Tanabe, Momo, Hana, Daikichi). Ishi's sheet has a stray bun glitch; do not copy it.
 
+**Grandma Fuku, pass 8** (draft, dev-only: `?view=charstudio&dev=chibi-drafts&char=fuku`): polished against her turnaround sheet. Sheet / before / after: [`ref/fuku-pass8-compare.jpg`](ref/fuku-pass8-compare.jpg).
+  - Pose: the teacup is gone; hands clasped at the waist as on the sheet, in every pose (still, idle, walk). Sleeves are chest-parented meshes (round shoulder, sleeve, elbow, forearm, cuff, two mitten hands) with their own ink hull; the tiny skinned arms are collapsed (`hideRigHands`) so no skin stub shows.
+  - Skirt: the SDF long skirt (`body.skirt 'long'`) replaces the lathe skirt and the painted leg gap. Two new optional body knobs in `spec()`: `skirtFlare` (hem radius, default 1.12 / 1.3) and `skirtTop` (waist radius, default 0.96); Fuku uses 1.34 / 0.86 (the narrower top removes the waist crease). Skirt `#88618f`, cardigan `#9a73a0`.
+  - Cardigan: a thin flared hem flap at knee height with a darker lip (open at the front under the apron); the painted cardigan line sits under it. Props sit on the real body surface via the new `coreSDF` export.
+  - Apron: waist to just above the hem, wrapped on the body surface, five scallops; bigger pincushion (three pins, as on the sheet). Cream V collar enlarged; glasses `#6e4a2e`.
+  - Hair: bigger dome, two broad waves at the parting instead of the curls, temple volume, low swept ridges, larger bun with a wrap ring, and full cover down to the nape (the back no longer shows bare skin).
+  - Cost: one merged cel mesh + one ink hull per bone (hips, chest) replaces nine prop meshes; studio draw calls 20 -> 15.
+  - Open for KT: shoulder roundness, cardigan hem height, hair wave lines (the sheet's swirl lines are not modelled), glasses rim weight (shared with Hoshino).
+
+**Grandma Fuku, pass 9** (KT feedback on pass 8): sheet / pass 8 / pass 9, body and face: [`ref/fuku-pass9-compare.jpg`](ref/fuku-pass9-compare.jpg).
+  - Face: her own jaw `FUKU_CHEEK = [0, -0.029, 0.010, 0.057, 0.027, 0.037, 0.018]` (shared `CHEEK` is `[0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]`): wider and fuller lower, so the bottom half is broad and round and the cheeks sit down toward the chin; the chin bottom is unchanged. Blush moved down and out (`blushAt { dx 0.0016, dy -0.003, dr 1.12 }`).
+  - `castFace.jsx`: `makeFace` takes optional `cheek`, `blushAt` and `glassesGeo`; the face decal is built per cheek shape (`faceGeoFor`, cached) so it stays on the skin. Defaults unchanged: Hoshino renders pixel-identical.
+  - Glasses: her own frames (`fukuGlasses`): round rims R 0.014, tube 0.0017 (shared 0.0128 / 0.0011), a low curved bridge, arms back to the ears, `#5a3a24`.
+  - Hair: the front shape stands a little proud of the forehead (`H_FRONT`), so the hairline is a clean edge above the brows instead of a jagged cut through the skin; bigger bun (0.0285) and wrap ring. Tried and dropped: a rolled tube along the computed hairline (covered the brows, scribbly ink), and swirl locks on the back (stuck out like horns).
+  - Arms: no shoulder puff; a tapering tube from the neck base to the shoulder gives a smooth slope. Sleeves thicker (upper 0.021, forearm 0.020-0.0212, cuff 0.0225), hands a touch further forward.
+  - Apron shorter (hem at `anY + 0.045`, was `+ 0.030`); pincushion moved up with it.
+
+**Grandma Fuku, pass 10** (KT feedback on pass 9): sheet / pass 9 / pass 10, body and face: [`ref/fuku-pass10-compare.jpg`](ref/fuku-pass10-compare.jpg).
+  - Face, a rounded block: narrower head (new optional body knob `headW`, x radius only; Fuku 0.92) and a fuller jaw nearly as wide as the skull, blended broadly so the sides run straight down: `FUKU_CHEEK = [0, -0.030, 0.011, 0.050, 0.026, 0.040, 0.022]`. `makeFace` / `faceGeoFor` / `headSDF` take optional skull radii `hr` to match. Ears and glasses arms moved in with the head.
+  - Hair: the sheet's swirl is painted in the hair shader (optional `makeHairMat(..., { lines })` in `castHair.js`): 9 broad locks flowing up and round the head into the bun (`twist 0.45`, a slight wave), each shaded darker on one side, thin grey-brown line between locks, and a 2-arm spiral on the bun. Fades out at the hairline and on the ears. The geometric ridges are gone. First try (15 locks, twist 0.85, darker lines) read as barber-pole stripes. Cap and temples slightly narrower to follow the head.
+  - Shoulders slope down more: body top narrower (`shoulder 0.96`, `chestW 1.04`), sleeve joint 0.014 lower, a long tapering tube from the neck base down to it. Tried and dropped: moving the hidden rig's shoulder bones into the torso (stretched the body into spikes); the shoulder ball is instead tall enough to cover the collapsed rig stub.
+  - Arms thicker from the side: oval sleeves (`ovalTube`): upper arm 1.22x deeper front-to-back, forearm and cuff 1.18x / 1.14x taller.
+  - Hoshino and Her are unchanged (all new options default off; Hoshino's render matched to within run-to-run noise).
+
+**Grandma Fuku, pass 11** (KT feedback on pass 10): sheet / pass 10 / pass 11, body and face: [`ref/fuku-pass11-compare.jpg`](ref/fuku-pass11-compare.jpg).
+  - Jaw: full to the bottom, no visible chin, an almost straight bottom line. The cheek shape takes an optional 8th value (edge radius): the jaw is then a flat-bottomed oval puck (`ocol`, half height = ry) instead of an ellipsoid, in both the body bake (`spec` / `core`) and `headSDF`. Fuku: `FUKU_CHEEK = [0, -0.033, 0.011, 0.040, 0.013, 0.032, 0.020, 0.010]` (puck as wide as the skull, bottom at -0.056).
+  - Face narrower again: `headW` 0.92 -> 0.86; ears, glasses arms, hair cap, temples and nape follow.
+  - Features lower: new optional `makeFace({ featDy })` moves brows, eyes, nose, mouth and blush down together (shifts the decal sampling); Fuku 0.003, and her glasses apply the same offset.
+  - Ears taller: radii `[0.0066, 0.0150, 0.0074]` (were `[0.0062, 0.0115, 0.0070]`).
+  - Shoulders: a clearer slope. The sleeve shoulder is 0.024 below the rig shoulder line, with a long tapering tube from high at the neck base. The rig's own shoulder is pulled in (`shX 0.90`, `shoulder 0.90`) and its stub shrunk (`armR 0.06`, `hand 0.002`); sleeves use their own `SH_X 0.060`. A flattened cardigan yoke per side closes the gap where the body's skin paint showed through (found by tinting the body skin green).
+  - Puffy sleeves: `ovalTube(..., puff)` bulges the middle of each segment (upper arm 0.22, forearm 0.24) on top of the oval cross-sections.
+
+**Grandma Fuku, pass 12** (KT: jaw ends too sharp, top half of the head should be slightly less wide than the face): [`ref/fuku-pass12-compare.jpg`](ref/fuku-pass12-compare.jpg).
+  - Jaw puck edge radius 0.010 -> 0.016 with the core shrunk to keep the size (`FUKU_CHEEK = [0, -0.033, 0.011, 0.036, 0.007, 0.028, 0.020, 0.016]`): the corners round inward, bottom still almost straight.
+  - Skull narrower than the jaw: `headW` 0.86 -> 0.80 (skull half-width ~0.0465 vs jaw ~0.052); hair cap 0.0575 wide and temples pulled in to match, so the top half reads slightly narrower.
+  - Ears moved out and up (`EAR {x 0.059, y -0.009, z 0.004}`) so they show beside the wider jaw from the front; glasses arms follow.
+
+**Grandma Fuku, pass 13** (KT: trace the golden face contour): [`ref/fuku-pass13-compare.jpg`](ref/fuku-pass13-compare.jpg).
+  - Traced the sheet's front face row by row (scan from the centre to the outline). With A = face half-width: straight sides from the temples to just below the eyes, then a half-ellipse bottom about 0.5A tall (no flat part, no corners; the pass 11-12 puck read as sharp); chin 0.84A below the eye line, mouth 0.43A, nose 0.17A; eyes about 0.5A apart; forehead nearly as wide as the cheeks (about 2% narrower); hairline about 1A above the eyes; big ears centred about 0.19A below the eye line, outer edge about 1.3A; hair about 1.3A wide at the temples.
+  - The jaw's optional 8th value is now `h`: the jaw ellipsoid is stretched up by h (straight sides above its centre, elliptical bottom) in `spec` / `core` and `headSDF`, replacing the puck. Fuku: `FUKU_CHEEK = [0, -0.0387, 0.012, 0.0425, 0.016, 0.036, 0.012, 0.033]`, `headW 0.77`. Fitted to the sheet at the same eye spacing: widths within about 5-8% down the jaw, chin level matched.
+  - Mouth and nose lower: new optional `makeFace({ featOff: { mouth, nose } })` (Fuku 0.0045 / 0.002) on top of `featDy`.
+  - Hairline raised (cap moved back, front shapes up); temple hair moved out past the face edge and above the ears; ears big and low (`EAR {x 0.053, y -0.025}`, radii `[0.0072, 0.0140, 0.0098]`).
+
+**Grandma Fuku, pass 14** (KT: face too thin, ears too lobe-like): [`ref/fuku-pass14-compare.jpg`](ref/fuku-pass14-compare.jpg).
+  - Face about 6% wider: jaw rx 0.0425 -> 0.0452 (rz 0.0365), `headW` 0.77 -> 0.82; ears, glasses arms and temple hair moved out with it.
+  - Ears rounder and a little higher, not hanging lobes: ry 0.0140 -> 0.0115, `EAR {x 0.0558, y -0.0225}`.
+
+**Grandma Fuku, pass 15** (KT: ears should be reversed; bottom cheeks a little fuller): [`ref/fuku-pass15-compare.jpg`](ref/fuku-pass15-compare.jpg).
+  - Ears: the sheet's ear is a big C, widest at the top and tucked in toward the jaw at the bottom; ours showed its bulk at the bottom (a lobe). The tilt is reversed (top out, `rz -d*0.26`, was `+d*0.08`), ears a little bigger (`[0.0074, 0.0130, 0.0102]`, `EAR y -0.0215`), and a darker hollow on the front face: hair-material `aSkin 2` = skin darkened 20% (new in `castHair.js`; ears with aSkin 1 unchanged). Tried and dropped: reversing the turn (`rotY -d*0.7`), which showed the ear edge-on from the front.
+  - Lower cheeks fuller: the jaw's bottom ellipse is flatter and lower (ry 0.016 -> 0.0145, centre -0.0387 -> -0.0402, stretch h 0.0345) so the full width carries further down; a touch wider and deeper (rx 0.0462, rz 0.038). Chin level unchanged.
+
+**Grandma Fuku, pass 16** (KT: jaw fuller and rounded upward, bottom half of the face wider than the top; half-rim glasses): [`ref/fuku-pass16-compare.jpg`](ref/fuku-pass16-compare.jpg).
+  - Pear-shaped face: narrower skull (`headW` 0.82 -> 0.76) over a wider, fuller jaw set low with only a short straight section and a softer blend, so the face widens toward the bottom and the jaw's lower corners round upward: `FUKU_CHEEK = [0, -0.0405, 0.012, 0.0505, 0.015, 0.039, 0.018, 0.012]`.
+  - Glasses are half-rim: each rim is the bottom half of the torus (`TorusGeometry(..., Math.PI)` turned down); the bridge and the arms meet the rims at the lens centre line.
+
+**Grandma Fuku, pass 17** (KT: brows the colour of her hair and thicker; fix the hair details): [`ref/fuku-pass17-compare.jpg`](ref/fuku-pass17-compare.jpg).
+  - Brows: thick soft hair-grey (`#c9c2ba`, width 0.0056, was a thin `#6a6660` 0.0032 line) with a thin darker rim (`#9d948c`), as on the sheet. New optional `featOff.brow { color, edge, width }` in `castFace.jsx`.
+  - Hair locks mirror left / right (new `lines.mirror`, `round`): a parting in front and rounded U-scallops curving up into the bun behind, instead of one-way barber-pole twists. 8 locks, `twist 1.35` so the lines arc like the sheet's sweeping curves; darker, crisper lines (`#7a6c63`, alpha 0.6). Tried: plain `abs` mirror (sharp V chevrons behind, `round 0.12` softens them); `twist 0.55` (straight melon stripes).
+  - Cleaner hairline: a small depth bias on the hair material (`polygonOffset -1/-2`) lets the hair's smooth edge win over the faceted skin; the front shape sits further back so the dome no longer shows a ledge.
+
+**Grandma Fuku, pass 18** (KT: glasses lower with space under the eyes and slightly bigger; hair totally off, rebuild it): [`ref/fuku-pass18-compare.jpg`](ref/fuku-pass18-compare.jpg).
+  - Glasses: rims R 0.0140 -> 0.0146 and the whole frame 0.0026 lower, so the half rim sits clear below the eyes.
+  - Hair rebuilt from scratch: ONE big smooth dome (`H_CAP [[0, 0.018, -0.020], [0.066, 0.058, 0.064]]`), wider than the face and set back, so the hairline is a high round arch and the sides stop just above the ears; a nape volume; a round ball bun (`BUN_R 0.030`) raised to sit on top of the dome with a wrap ring at its base. The old front, lobe and temple shapes are gone (they made a visor ledge, side buns and creases).
+  - Painted locks are now rings round the bun pushed out into petals (new `lines.rings / petals / amp`): 1.8 rings per radian, 6 petals, so the back shows two rows of scalloped locks and the front and sides show sweeping scalloped lock lines; each lock shaded darker at both edges (`petal`); the base sheen band toned down (`band 0.35`). Tried: locks running to the bun (from the front they converged like garlic segments); 2.6 rings / 8 petals (fish scales).
+
+**Grandma Fuku, pass 19** (KT: the painted lines look wrong, try another method; the hair covers far too much head, the sheet's hair is much thinner from the front): [`ref/fuku-pass19-compare.jpg`](ref/fuku-pass19-compare.jpg).
+  - No painted lines: the `lines` option is no longer used by Fuku (it stays in `castHair.js`, off by default).
+  - Sculpted locks: a thin cap hugs the skull (`H_CAP [[0, 0.012, -0.015], [0.048, 0.052, 0.058]]`) and 16 lock strands (8 per side, `lockGeo`) lie on it, built along the skull-or-cap surface (`shellR`): each starts at the hairline with a blunt rounded tip, rises first and then sweeps round and up into the bun, flattened (width 0.015-0.017, 0.0066-0.0074 proud of the shell) and overlapping its neighbours. Lock lines come from the hair shader's existing dark band at `aSkin` ~0.47-0.5, written per vertex along each lock's side edges and tip (`lockLines`), so every lock has a drawn edge from every angle; the bun's wrap ring is inked the same way.
+  - Hairline `hairlineY(az)`: a high round arch in front (0.037), just above the ears at the sides, the nape behind. The dome is now only a few mm proud of the skull: much thinner from the front, as on the sheet. Bun a round ball (`BUN_R 0.0255`) with a spiral wrap.
+  - Tried: geometry-only overlaps relying on the ink hull (it draws only the silhouette, so the locks merged into one smooth cap); wider, thicker locks (the dome read as a helmet again).
+
+**Grandma Fuku, pass 20** (KT: start simple, one ball wrapping the head round the forehead, another ball slightly behind the head): [`ref/fuku-pass20-compare.jpg`](ref/fuku-pass20-compare.jpg).
+  - Hair is now only two balls: a cap `H_CAP [[0, 0.006, -0.0135], [0.0505, 0.059, 0.0615]]` whose front edge is the hairline across the forehead and which covers the back down to the nape, and a bun `BUN_C [0, 0.066, -0.030]`, `BUN_R 0.026`, slightly behind the top. The pass 19 locks and the nape volume are removed. Detail (locks, parting, bun wrap) to be added on this base step by step.
+  - Tried: cap moved back and down to cover the nape (`[0, 0.004, -0.018]`) bared the top of the forehead; the final values split the difference.
+
+**Grandma Fuku, pass 21** (KT: hair puffier and fuller; forehead / top of head too narrow, closer to the jaw width but still visibly smaller; bun further back, half or less of it visible from the front): [`ref/fuku-pass21-compare.jpg`](ref/fuku-pass21-compare.jpg).
+  - Skull wider: `headW` 0.76 -> 0.86 (skull half-width ~0.050 against the jaw's ~0.0505 rx, still visibly narrower at the forehead).
+  - Fuller cap: `H_CAP [[0, 0.009, -0.019], [0.061, 0.061, 0.066]]`, set back so the forehead edge stays put.
+  - Bun back and lower: `BUN_C [0, 0.060, -0.050]`; about half of it shows above the dome from the front.
+  - Ears moved out to clear the fuller hair (`EAR {x 0.0605, y -0.0225, z 0.006}`); glasses arms follow.
+
+**Grandma Fuku, pass 22** (KT: trace the forehead hairline as a rounded block; the back of the head is too swollen, balance it lower; check the side view): [`ref/fuku-pass22-compare.jpg`](ref/fuku-pass22-compare.jpg).
+  - Hairline traced from the sheet as a superellipse (`HL`: power 4, half-width 0.046, top 0.040 with a 0.0035 dip at the parting, sides down to y -0.008 at the ear tops). `shapeCap` reshapes the cap ball: in front it lies just over the skin (found by ray-marching `headSDF`) outside the line, every front triangle with a corner inside the line is cut away, and the rim vertices are snapped onto the line and seated on the skin, so the edge is exactly the traced curve. A thin ink tube along the line (`hairlineInk`, drawn with the hair shader's ink band, aSkin 0.48) gives the sheet's drawn hairline.
+  - Back balanced: behind the cap centre the dome is pulled in (z x 0.80) and its mass lowered (up to 0.007), so in profile it rounds down to the nape instead of bulging high.
+  - Tried: tucking the cap under the skin inside the line without cutting it (ragged edge where it grazed the faceted skin); laying the hair 1.2 mm over the skin (the skin flickered through); covering the temples down to eye level (strips of hair beside the eyes).
+
+**Grandma Fuku, pass 23** (KT: hair a little puffier so it doesn't look wrapped round the head; brows, eyes, nose, glasses and mouth slightly higher): [`ref/fuku-pass23-compare.jpg`](ref/fuku-pass23-compare.jpg).
+  - Puffier hair: cap `[[0, 0.010, -0.019], [0.065, 0.064, 0.069]]`; in front it stands 0.010 off the skin (was 0.0055) and rolls down to the hairline over a wider band (`lip = smooth(1.45, 1.0, se)^1.6`), so the edge reads as a soft rolled lip instead of a skin-tight wrap. Bun raised to `[0, 0.068, -0.050]` so about half still shows from the front; hairline ink moved slightly inside the edge and lifted (0.972 / 0.975, skin + 0.0042) so the fuller lip doesn't hide it.
+  - Features higher: `FEAT_DY` 0.003 -> 0.0012 (brows, eyes, nose, mouth, blush and glasses move together).
+
+**Grandma Fuku, pass 24** (KT: brows, eyes, nose and mouth slightly higher again): [`ref/fuku-pass24-compare.jpg`](ref/fuku-pass24-compare.jpg). `FEAT_DY` 0.0012 -> -0.0006 (the same step again; negative moves the features up from the shared layout). Glasses and blush move with them.
+
+**Grandma Fuku, pass 25** (KT picked option D from [`ref/fuku-features-ladder.jpg`](ref/fuku-features-ladder.jpg)): `FEAT_DY` -0.0033. Next, the forehead width at the hairline: ladder [`ref/fuku-forehead-ladder.jpg`](ref/fuku-forehead-ladder.jpg) widens the hairline opening and the skull together (`HL.a` / `headW`: A 0.046 / 0.86 now, B 0.0485 / 0.89, C 0.051 / 0.92, D 0.0535 / 0.95; forehead 159 / 167 / 176 / 185 px at the same eye size). The cheeks widen a little with the skull.
+
+**Grandma Fuku, pass 26** (KT picked forehead option D; eyes bigger at the same spacing; hair puffier at both sides): [`ref/fuku-pass26-compare.jpg`](ref/fuku-pass26-compare.jpg).
+  - Forehead D: `headW` 0.95, `HL.a` 0.0535.
+  - Eyes 14% bigger with the same centres: new optional `featOff.eyeScale` in `castFace.jsx` scales the eye radii only (default 1; Hoshino unchanged). Glasses rims grow with them (R 0.0146 -> 0.016).
+  - Hair wider at the sides: cap x radius 0.065 -> 0.0735; ears (`EAR.x` 0.067) and glasses arms moved out to stay clear.
+
+**Grandma Fuku, eye spacing ladder** (KT: eyes and brows further apart): new optional `featOff.eyeDx` in `castFace.jsx` moves the eyes, brows and eye-corner lines out by dx per side (default 0); Fuku's glasses follow via `EYE_DX`. Ladder [`ref/fuku-eyespacing-ladder.jpg`](ref/fuku-eyespacing-ladder.jpg): A 0 (now), B 0.0015, C 0.0030, D 0.0045.
+
+**Grandma Fuku, pass 28** (KT picked eye spacing C and jaw 3 from [`ref/fuku-jaw-ladder.jpg`](ref/fuku-jaw-ladder.jpg)): `EYE_DX` 0.003, `FUKU_CHEEK = [0, -0.036, 0.012, 0.052, 0.0195, 0.042, 0.018, 0.012]`. Then a rounder chin ladder [`ref/fuku-chin-ladder.jpg`](ref/fuku-chin-ladder.jpg), same width and chin height: A jaw 3 (now); B `[0, -0.033, 0.006, 0.057, 0.0225, 0.044, 0.022, 0.012]`; C `[0, -0.0275, 0, 0.062, 0.028, 0.046, 0.024, 0.006]`; D `[0, -0.0235, 0, 0.063, 0.032, 0.047, 0.024, 0.003]`. The sharp look came from a bottom curve that was too flat for its width (straight diagonals into a flat chin), not the seam between the two halves: merging them (B) barely changes it; a taller bottom curve (C, D) gives one soft U.
+
+**Grandma Fuku, pass 30** (KT locked F1 from [`ref/fuku-jowl-ladder.jpg`](ref/fuku-jowl-ladder.jpg); hair detail as slightly darker drawn lines; bun slightly wider): [`ref/fuku-pass30-compare.jpg`](ref/fuku-pass30-compare.jpg).
+  - Jaw F1 (fullness lower, below the ears): `FUKU_CHEEK = [0, -0.039, 0.012, 0.0535, 0.0165, 0.042, 0.018, 0.010]`.
+  - Bun 22% wider, 8% deeper (`BUN_S [1.22, 1, 1.08]`).
+  - Hair lines (`hairLinesGeo`): thin tapered tubes laid on the shaped cap (curves in azimuth / elevation round the cap centre, projected by ray casting against the cap mesh) and a swirl on the bun facing up and back. A separate mesh with the hair material and no ink hull, aSkin 0.37 (~28% darker than the hair), polygon offset so it sits on the cap. Lines: a short centre parting; per side, two front locks curving out from the parting and round the sides, two side locks from above the ears, one from the nape, all running round the head first and rising into the bun at the back. +1 draw call.
+  - Tried: lines climbing straight to the crown (read as melon stripes); a bun spiral round the vertical axis (seen only edge-on from the back).
+
+**Grandma Fuku, pass 31** (KT: front pattern wrong, start again from the centre parting): the front lock lines are removed; the front now has only the parting, two lines rising up and outward from the hairline dip in a soft V (`PART { az, el, bow }`). Ladder [`ref/fuku-parting-ladder.jpg`](ref/fuku-parting-ladder.jpg): A narrow 0.25 / 1.05 / 0.06, B medium 0.45 / 1.00 / 0.10 (in code), C wide 0.70 / 0.90 / 0.14. Side and back lines unchanged.
+
+**Grandma Fuku, pass 32** (KT: C wide enough, curve it more and continue it down; then: curve outward, not inward): [`ref/fuku-parting-curve.jpg`](ref/fuku-parting-curve.jpg). Each parting line is a smooth curve through `PART` control points (azimuth, elevation), smoothed in angle space (centripetal Catmull-Rom) and projected onto the cap. It leaves the hairline dip heading outward, bows outward as it sweeps up and round, and carries on down the side of the head toward the ear, outlining the big front lock: `[[0.015, 0.40], [0.22, 0.50], [0.52, 0.66], [0.86, 0.74], [1.15, 0.62], [1.38, 0.38], [1.50, 0.14]]`. First try rose steeply from the dip then bent out (KT: curving inward).
+
+**Grandma Fuku, pass 33** (KT drew the parting): [`ref/fuku-parting-traced.jpg`](ref/fuku-parting-traced.jpg) (drawing, then front / 3/4 / side). Seen from the front it is a U-bottomed V: from the hairline dip each line rises diagonally outward, then curves round to run straight up toward the top of the head (no longer running down the sides). Traced as front-view `(x, y)` points in the head frame (`PART`, ends at x 0.027, y 0.0705) and projected straight back onto the cap (`fromFront`), so the front view matches the drawing exactly.
+
+**Grandma Fuku, pass 34** (KT: more curved lines like that down both sides): [`ref/fuku-front-locks.jpg`](ref/fuku-front-locks.jpg). Three more lines per side of the same traced shape (`NEST`), each starting further along the hairline (x 0.0135 / 0.0255 / 0.0365, on the hairline curve `hlY`) and a little larger (x1.08 / 1.16 / 1.24), so they nest outward down both sides like the sheet's locks. Side and back lines unchanged.
+  - More spacing (KT): `NEST` starts at x 0.0175 / 0.0335 / 0.0475, scale x1.10 / 1.20 / 1.30 ([`ref/fuku-front-locks-spaced.jpg`](ref/fuku-front-locks-spaced.jpg)).
+  - Spaced out to the ears (KT): four lines per side, starting evenly along the hairline (arc fractions 0.25 / 0.5 / 0.75 / 1.0) from the parting down to the temple just above the top of the ear; outer lines narrower and taller (width x1.10 / 1.00 / 0.80 / 0.55, height x1.15 / 1.30 / 1.45 / 1.60) so they rise up the side of the head. Laid on the cap radially (`radial`, through a sphere round the cap centre) so the side lines wrap round the head instead of falling off its edge.
+  - Fewer lines (KT): two per side besides the parting, `NEST = [[0.45, 1.05, 1.25], [1.00, 0.55, 1.60]]` (halfway along the hairline, and just above the ear).
+
+**Grandma Fuku, pass 35** (KT: add the back lines, following the flow of the front): [`ref/fuku-hair-flow.jpg`](ref/fuku-hair-flow.jpg) (sheet top row; Fuku below). Every line now flows into the bun. Targets sit on a ring round the bun's base (`ring(phi)`, angular radius 0.40 round the bun direction); each line is continued from its last point to its target by a great-circle slerp of directions, projected onto the cap (`toBun`). Front parting and the two front locks continue over the top of the head into the crown side of the ring (delta 0.35 / 0.85 / 1.35); one side lock sweeps back from above the ear; two back locks rise from the nape (azimuth 1.95 / 2.55) into the underside of the bun (delta 2.05 / 2.55).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
@@ -229,6 +351,8 @@ Concept: [`ref/pets-chibi-concept.jpg`](ref/pets-chibi-concept.jpg) (top row Pip
 **Pitfalls.** Never let a pattern edge reach zero width (it leaves a hairline; guard with a minimum width). Never write `smoothstep` with reversed edges (undefined in GLSL). When splicing GLSL into the shared shader, end the splice on a fresh line. Ear-aimed rays must blend their start points continuously, or the head cracks or folds between the ears.
 
 **Perf.** Fewer draw calls than the old sphere-built pets (dog sitting 379 -> 290, cat petting 258 -> 172); startup entry unchanged. Dev studio: `/petstudio.html?pet=pip|mochi` with `&head`, `&prof`, `&one&yaw=`, `&pose=sit|lie`.
+
+**Grandma Fuku in the game (pass 41).** The game's grandma walker now renders `ChibiFuku` (App.jsx, its own lazy chunk) whenever the chibi look is on (`CHIBI`; `?chibi=0` / `?oldchar` keep the old villager). She renders at scale 1, as Her does (villagers use 0.8): in the studio cast view at scale 1 they measure 243 px (Her) vs 241 px (Fuku), so they stand the same height. Her walker's phase rate is 6.0 (`villagers.js`, the shuffle), and her NPC height for look-at / bubbles is scaled 1.2x. Professor Hoshino is still a dev-only draft (`?dev=chibi-drafts`).
 
 ## 7. Grandpa Ishi (draft, pass 1)
 
