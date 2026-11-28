@@ -8,6 +8,7 @@ test('Ishi picks a gesture that fits the line', () => {
   assert.equal(ishiGesture('Did I tell you about the spirit in the giant camphor? No? Sit.'), 'point')
   assert.equal(ishiGesture('This planet is small, but it never ends. Funny, that.'), 'laugh')
   assert.equal(ishiGesture('Good evening.'), 'nod')
+  assert.equal(ishiGesture('Oh! For me? I love this!'), 'chuckle')
 })
 test('Ishi does not repeat the same gesture twice in a row unless only one fits', () => {
   assert.equal(ishiGesture('Good evening.', 'nod'), 'ponder')

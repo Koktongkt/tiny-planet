@@ -1,8 +1,10 @@
 // Grandpa Ishi's talking gestures (pure, unit-tested): which of his animations fits a line of dialogue.
 // laugh: a joke or a cheeky line; thump: a grumble ("Hmph", the young these days); point: telling a story (jabs the pipe);
-// ponder: a question or a musing (strokes his mustache); smoke: anything about his pipe; nod: everything else (mm-hm).
-export const ISHI_GESTURES = ['laugh', 'thump', 'point', 'ponder', 'smoke', 'nod']
+// ponder: a question or a musing (strokes his mustache); smoke: anything about his pipe; nod: everything else (mm-hm);
+// chuckle: thanking you for a gift he loves (pats his belly).
+export const ISHI_GESTURES = ['chuckle', 'laugh', 'thump', 'point', 'ponder', 'smoke', 'nod']
 const RULES = [
+  ['chuckle', /love this|for me\?|how thoughtful/i], // a gift he loves: a happy belly-pat chuckle
   ['smoke', /\bpipe\b|smok|tobacco/i],
   ['thump', /\bhmph\b|harrumph|\byoung\b|too fast|so fast|nonsense|back in my day|shouting|creak/i],
   ['laugh', /\bha\b|haha|ho ho|funny|joke|pretend|decorative|orders|soft that way|\bpride\b/i],

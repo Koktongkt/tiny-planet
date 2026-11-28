@@ -267,3 +267,11 @@ Clips: [`ref/ishi-anim-pass2.jpg`](ref/ishi-anim-pass2.jpg).
   - `point` (2.6 s): telling a story: the arm reaches out in front, the stem aimed at you (pipe tip -1.1), jabbing on each beat, leaning in, brows down.
   - `thump` (2.2 s): "Hmph!": lifts the cane and thumps it down twice with a jolt, chin up, eyes shut, head turned away, brows down.
 - **Talking**: `src/art/chibi/ishiTalk.js` (pure, tested in `tests/unit/ishi-talk.test.mjs`) maps a line to a gesture: his pipe -> smoke; "Hmph", the young, too fast -> thump; jokes, "funny", "orders" -> laugh; stories, tales, "sit", "listen" -> point; a question or a musing -> ponder; anything else -> nod. Never the same gesture twice in a row unless only one fits. `talkGestures` starts it each time the dialogue page changes while `TALK.open` is the grandpa. Studio: `window.__ishiSay(line)`.
+
+### Ishi motion pass 3 (KT: the gift chuckle; dozing off now and then, also when he sits, sometimes by day)
+
+Clips: [`ref/ishi-anim-pass3.jpg`](ref/ishi-anim-pass3.jpg).
+
+- **Chuckle** (2.6 s): a gift he loves ("I love this!", "For me?", "How thoughtful" -> `ishiGesture` 'chuckle'): pats his belly with the pipe fist, shoulders shaking, eyes ^ ^, cheeks pink, the mustache jiggling.
+- **Doze**: rolled once per idle spell after `dozeAfter` (10 s) of idle time (fidgets do not reset it): standing at night 40%, seated at night 75%, seated by day 35% (`ISHI_MOTION.doze`), never standing by day. Standing he leans on his cane; his head sinks over ~5.5 s, catches itself, sinks again (6.5 s cycle); slow deep breaths; eyes shut, the pipe hand drops. Fidgets stop while he dozes. Talking to him wakes him with a start (a jolt, wide eyes, brows up, a blush) and that idle spell does not roll again. Studio: `window.__ishiDoze = 1` forces the roll.
+- Seated is the game's bench `sit` act; the studio's `act=sit` preview does not bend his legs, so check the seated doze on the bench once he is in the game.

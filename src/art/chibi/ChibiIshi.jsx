@@ -12,6 +12,7 @@ import { ISHI_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
 import { envelope, triggerBlink } from './lifeCore.js'
 import { TALK } from '../../talk/state.js'
+import { T } from '../../common.jsx'
 import { ishiGesture } from './ishiTalk.js'
 import { MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
 import { part, tagAW, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
@@ -511,11 +512,35 @@ function ishiActs(L, B, st, dt) {
     B.chest.rotation.y -= 0.2 * e; B.chest.rotation.x += 0.08 * e + 0.03 * jab; B.head.rotation.x += 0.06 * e + 0.05 * jab; B.head.rotation.y -= 0.08 * e; B.root.rotation.x += 0.03 * e
     L.pipeTip = -1.1 * e; L.squint = Math.max(L.squint, 0.35 * e); brow = -0.0012 * e }
   // thump: "Hmph!" lifts the cane and thumps it down twice, a little jolt each time, chin up, eyes shut
+  // chuckle: a gift he loves: pats his belly with the pipe fist, shoulders shaking, eyes ^ ^, cheeks pink
+  if (L.fid === 'chuckle' && idleOk) { const d = FID.chuckle, k = L.fu / d, e = envelope(L.fu, d, 0.3), pat = Math.max(0, Math.sin(L.fu * 11)) * sst(0.15, 0.25, k) * (1 - sst(0.8, 0.9, k)) * e, sh = Math.sin(L.fu * 15) * e
+    B.upR.rotation.x += (-0.05 - B.upR.rotation.x) * e; B.upR.rotation.z += (0.05 - B.upR.rotation.z) * e; B.foR.rotation.x += (-1.35 - 0.2 * pat - B.foR.rotation.x) * e; B.foR.rotation.y += (-0.55 - B.foR.rotation.y) * e
+    B.chest.rotation.x -= 0.08 * e; B.chest.scale.y *= 1 + 0.02 * Math.abs(sh); B.head.rotation.x -= 0.08 * e; B.head.rotation.z += 0.1 * e + 0.015 * sh; B.root.position.y += 0.0015 * Math.abs(sh)
+    L.arc = sst(0.05, 0.35, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0008 * Math.abs(sh); brow = 0.0018 * e }
   if (L.fid === 'thump' && idleOk) { const d = FID.thump, k = L.fu / d, e = envelope(L.fu, d, 0.25), ph = Math.min(1, Math.max(0, (k - 0.15) / 0.6)) * 2
     const up = Math.sin(Math.PI * (ph % 1)) ** 2 * (ph < 2 ? 1 : 0) * e, since = ph >= 2 ? (k - 0.75) * 3 : ph % 1, hit = ph >= 1 ? Math.exp(-9 * since) * e : 0 // contacts at ph = 1 and 2
     B.upL.rotation.x -= 0.28 * up; B.foL.rotation.x -= 0.22 * up; B.chest.rotation.z -= 0.04 * up
     B.root.position.y -= 0.003 * hit; B.head.rotation.x -= 0.1 * e - 0.05 * hit; B.head.rotation.y += 0.15 * e; B.chest.rotation.x -= 0.03 * e
     L.open = Math.min(L.open, 1 - 0.9 * e); brow = -0.0016 * e }
+  // ---- dozing: roll once per idle spell; standing he leans on his cane and nods off, seated his head sinks to his chest.
+  // A slow deep breath, a droop that now and then catches itself. Talking to him snaps him awake with a start.
+  const seated = st.act === 'sit' && (st.actW ?? 1) > 0.5, talking = !!(TALK.open && TALK.open.key === 'grandpa')
+  L.dozeT = talking ? 0 : L.idle // idle time (fidgets do not reset it)
+  if (L.dozeT < 1) L.dozeRoll = -1
+  if (L.dozeT > L.P.dozeAfter && L.dozeRoll < 0) { const night = T.night > 0.6, pz = L.P.doze, p = seated ? (night ? pz.sitNight : pz.sitDay) : night ? pz.standNight : 0
+    L.dozeRoll = (typeof window !== 'undefined' && window.__ishiDoze) || L.rnd() < p ? 1 : 0 }
+  const was = L.doze || 0, dozeWant = L.dozeRoll === 1 && L.dozeT > L.P.dozeAfter && !talking
+  L.doze = was + ((dozeWant ? 1 : 0) - was) * Math.min(1, dt * (dozeWant ? 0.5 : 6))
+  if (was > 0.5 && !dozeWant && talking) { L.wakeU = 0; L.dozeRoll = 0 } // talked to: a start
+  if (L.doze > 0.01) { const z = L.doze * L.doze * (3 - 2 * L.doze), tt = L.dozeT, cyc = (tt % 6.5) / 6.5, sink = sst(0, 0.85, cyc), cat = sst(0.85, 0.9, cyc) * (1 - sst(0.9, 1, cyc)), br = Math.sin(tt * 1.3)
+    if (L.fid) { L.fid = null } L.fidN = 3
+    B.head.rotation.x += (0.22 + 0.12 * sink - 0.18 * cat) * z; B.head.rotation.z += 0.06 * z; B.chest.rotation.x += (seated ? 0.12 : 0.07) * z; B.chest.scale.y *= 1 + 0.02 * br * z
+    if (!seated) { B.root.rotation.x += 0.04 * z; B.upL.rotation.x -= 0.12 * z; B.foL.rotation.x -= 0.1 * z } // leans on the cane
+    B.foR.rotation.x += 0.35 * z; B.upR.rotation.x += 0.08 * z // the pipe hand drops into his lap
+    L.open = Math.min(L.open, 1 - z); L.mood = 'sleepy'; brow = -0.0006 * z; lift = 0.0005 * br * z }
+  L.wakeU = (L.wakeU ?? 9) + dt; const wk = L.wakeU < 1.1 ? envelope(L.wakeU, 1.1, 0.06) : 0
+  if (wk > 0) { const j = Math.exp(-L.wakeU * 6); B.head.rotation.x -= 0.14 * wk + 0.1 * j; B.chest.rotation.x -= 0.05 * wk; B.root.position.y += 0.004 * j; B.upR.rotation.z -= 0.15 * j
+    L.mood = 'excited'; L.squint = 0; brow = 0.003 * wk; L.blush = Math.max(L.blush, 0.6 * wk) }
   // hair groups: 0 = the mustache (lifts when he laughs), 3 = the brows (raise); the knot (2) keeps the life layer's spring
   const OFF = L.hairOff; OFF[0] = 0; OFF[1] = lift; OFF[2] = lift * 0.35; OFF[9] = 0; OFF[10] = brow; OFF[11] = 0
 }
