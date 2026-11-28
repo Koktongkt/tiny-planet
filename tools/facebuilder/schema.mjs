@@ -89,7 +89,7 @@ const hoshino = [
     n('hair.cloud.x','Cloud sideways shift',-.008,.008,.0002),n('hair.cloud.y','Cloud height',-.004,.020,.0002),n('hair.cloud.z','Cloud forward / back',-.022,.002,.0002)
   ]),
   custom('hairSize','Hair cloud',/const DOME = \{ c: \[[^\]]+\], r: (\[[^\]]+\])/,[
-    n('hair.cloud.width','Cloud width',.052,.072,.0002),n('hair.cloud.height','Cloud height radius',.042,.062,.0002),n('hair.cloud.depth','Cloud depth',.052,.072,.0002)
+    n('hair.cloud.width','Cloud width',.048,.072,.0002),n('hair.cloud.height','Cloud height radius',.042,.062,.0002),n('hair.cloud.depth','Cloud depth',.052,.072,.0002)
   ]),
   scalar('specR','Glasses','const SPEC = \\{ r:\\s*',n('glasses.size','Lens size',.011,.019,.0002)),
   hex('specWire','Glasses wire colour',"const SPEC = \\{ r: "+N+", wire:\\s*"),

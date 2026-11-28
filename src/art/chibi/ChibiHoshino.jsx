@@ -26,7 +26,7 @@ const TROUSER = '#66653f'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
 // thin gold wire specs, larger than the eyes (golden sheet); arms meet the low ears
 const SPEC = { r: 0.0152, wire: "#000000", ink: "#000000" } // wire glasses: lens radius, wire and rim-ink colours
-const HOSHINO_HEAD_S = [1, 1, 1.05]
+const HOSHINO_HEAD_S = [0.90, 1.07, 1.05]
 const HOSHINO_CHEEK = [0, -0.032, 0.0125, 0.053, 0.023, 0.0295, 0.0125]
 const HOSHINO_MIDFACE = [[-0.0278, 0.0434, 0.02, 0.0055, 0.013, 0.0026, 0.0017], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]
 const HOSHINO_MID_FADE = 0
@@ -38,7 +38,7 @@ const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
 // the fringe rolls from his right to left. Ears sit low (eye-to-mouth line), tucked under the cloud.
 const EAR = { x: 0.0625, y: -0.018, z: 0.002 }
-const DOME = { c: [0, 0.009, -0.011], r: [0.0605, 0.0505, 0.0605] }
+const DOME = { c: [0, 0.011, -0.011], r: [0.049, 0.054, 0.0605] }
 const _m = new THREE.Matrix4(), _n = new THREE.Vector3(), _t = new THREE.Vector3(), _b = new THREE.Vector3()
 // one wave lock on the dome: az 0 = front (+z), +pi/2 = +x; el up from the equator. len along the
 // wave direction, wid across it, thk out from the head; roll turns the wave toward the crown.
