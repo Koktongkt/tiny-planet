@@ -1,5 +1,6 @@
 // node --test tests/unit — the shore kit: grass lip, soil ribbon (fallback), foam beads, ink waterline; sector chunks
 import test from 'node:test'; import assert from 'node:assert/strict'
+import { budget } from './timing.mjs'
 import * as THREE from 'three'
 import { R, ZONES, zv, around, onBridgeDeck, JUMPS } from '../../src/world.js'
 import { PIERS, LAKE_DOCK_B } from '../../src/world/zoneLayout.js'
@@ -45,5 +46,5 @@ test('chunks: one body and one outline per sector, all triangles kept', () => {
 
 test('build time', () => {
   const t0 = performance.now(); chunkKit(buildShoreKit({ fine: true })); const ms = performance.now() - t0
-  assert.ok(ms < 300, `${ms.toFixed(0)} ms`)
+  assert.ok(ms < budget(300), `${ms.toFixed(0)} ms`)
 })
