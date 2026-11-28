@@ -1,5 +1,5 @@
-// DRAFT — Grandma Fuku and Professor Hoshino chibi looks. The game does not render this chunk.
-// Dev preview only, and only with ?dev=chibi-drafts (see src/art/chibi/drafts.js).
+// DRAFT — studio / lineup previews of the chibi cast. The game does not render this chunk: Grandma Fuku ships through
+// App.jsx (ChibiFuku); Professor Hoshino is still a draft, dev preview only with ?dev=chibi-drafts (see drafts.js).
 import React from 'react'
 import { ChibiFuku } from './ChibiFuku.jsx'
 import { ChibiHoshino } from './ChibiHoshino.jsx'

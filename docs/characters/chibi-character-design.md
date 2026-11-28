@@ -349,3 +349,6 @@ Concept: [`ref/pets-chibi-concept.jpg`](ref/pets-chibi-concept.jpg) (top row Pip
 **Pitfalls.** Never let a pattern edge reach zero width (it leaves a hairline; guard with a minimum width). Never write `smoothstep` with reversed edges (undefined in GLSL). When splicing GLSL into the shared shader, end the splice on a fresh line. Ear-aimed rays must blend their start points continuously, or the head cracks or folds between the ears.
 
 **Perf.** Fewer draw calls than the old sphere-built pets (dog sitting 379 -> 290, cat petting 258 -> 172); startup entry unchanged. Dev studio: `/petstudio.html?pet=pip|mochi` with `&head`, `&prof`, `&one&yaw=`, `&pose=sit|lie`.
+
+**Grandma Fuku in the game (pass 41).** The game's grandma walker now renders `ChibiFuku` (App.jsx, its own lazy chunk) whenever the chibi look is on (`CHIBI`; `?chibi=0` / `?oldchar` keep the old villager). She renders at scale 1, as Her does (villagers use 0.8): in the studio cast view at scale 1 they measure 243 px (Her) vs 241 px (Fuku), so they stand the same height. Her walker's phase rate is 6.0 (`villagers.js`, the shuffle), and her NPC height for look-at / bubbles is scaled 1.2x. Professor Hoshino is still a dev-only draft (`?dev=chibi-drafts`).
+

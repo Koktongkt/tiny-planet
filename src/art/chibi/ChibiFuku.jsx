@@ -1,4 +1,4 @@
-// DRAFT Grandma Fuku — not used in the game. Preview: ?view=charstudio&dev=chibi-drafts&char=fuku
+// Grandma Fuku: the game's grandma in the chibi look (App.jsx, lazy chunk). Studio: ?view=charstudio&dev=chibi-drafts&char=fuku
 // A lazy chibi on the shared pipeline (~2.5 heads), matched to the turnaround sheet
 // (docs/characters/ref/fuku-pass8-compare.jpg). Open round eyes behind wire glasses, a big grey dome with a top bun,
 // a purple wrap cardigan with a cream V collar and a hem flap over a deeper purple A-line skirt to the ankle,

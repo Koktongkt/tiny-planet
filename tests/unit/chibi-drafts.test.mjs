@@ -1,5 +1,5 @@
-// Draft chibi Fuku / Hoshino must not be what the game renders. The villager
-// list stays on the shipped looks, and the draft chunk is off unless ?dev=chibi-drafts.
+// Chibi Fuku ships in the game (App.jsx, her own lazy chunk); Hoshino is still a draft. The villager list keeps the
+// shipped configs (the fallback look), and the draft preview chunk is off unless ?dev=chibi-drafts.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -36,12 +36,13 @@ test('default game villagers do not use the draft Fuku or Hoshino looks', () => 
   assert.equal(chibiDraftName('hoshino', '?dev=chibi-drafts'), 'hoshino')
 })
 
-test('the play path does not load the draft villager chunk', () => {
+test('the play path renders chibi Fuku for grandma but not the draft chunk or Hoshino', () => {
   const app = src('App.jsx')
   assert.equal(app.includes('ChibiVillagers'), false)
-  assert.equal(app.includes('ChibiVillager'), false)
-  assert.equal(app.includes('ChibiFuku'), false)
+  assert.equal(app.includes('ChibiVillager '), false)
   assert.equal(app.includes('ChibiHoshino'), false)
+  assert.match(app, /import\('\.\/art\/chibi\/ChibiFuku\.jsx'\)/)
+  assert.match(app, /chibiGrandma\(w\) \? <Suspense fallback=\{null\}><ChibiFuku st=\{st\} scale=\{1\}/)
   assert.match(app, /NEWCHAR \? <Character cfg=\{w\.cfg\}/)
   const lineup = src('debug/Lineup.jsx')
   assert.match(lineup, /chibi-drafts/)

@@ -1,5 +1,5 @@
-// DRAFT chibi villagers (Grandma Fuku, Professor Hoshino). The game never selects these.
-// They render only in dev views when ?dev=chibi-drafts is set (off by default):
+// Chibi villager previews in the dev views (Grandma Fuku, Professor Hoshino), only when ?dev=chibi-drafts is set.
+// Fuku also ships in the game (App.jsx renders ChibiFuku for the grandma walker); Hoshino is still a draft:
 //   ?view=charstudio&dev=chibi-drafts&char=fuku
 //   ?view=charstudio&dev=chibi-drafts&char=hoshino
 //   ?view=charstudio&dev=chibi-drafts&cast

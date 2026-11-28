@@ -25,6 +25,9 @@ const NEWCHAR = !q.has('oldchar')
 const CHIBI = NEWCHAR && !SPRITE && q.get('chibi') !== '0'
 const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
+// Grandma Fuku in the chibi look (lazy chunk, fetched when her walker mounts); rendered at her scale so she stands as tall as her
+const ChibiFuku = lazy(() => import('./art/chibi/ChibiFuku.jsx').then(m => ({ default: m.ChibiFuku })))
+const chibiGrandma = (w) => CHIBI && w.cfg.name === 'grandma'
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
@@ -338,7 +341,7 @@ function Walker({ w, i }) {
   const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0, act: null, actW: 0, talkSeed: i * 1.3 }), [])
   const camera = useThree(s => s.camera)
   const L = useMemo(() => ({ clk: 0, pc: 0, cur: null, curF: new THREE.Vector3(), face: new THREE.Vector3() }), [])
-  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.4 * (w.cfg.body?.H ?? 1) }; NPCS.push(c); return c }, [])
+  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.4 * (w.cfg.body?.H ?? 1) * (chibiGrandma(w) ? 1.2 : 1) }; NPCS.push(c); return c }, [])
   useEffect(() => () => { const k = NPCS.indexOf(npc); if (k >= 0) NPCS.splice(k, 1) }, [])
   useFrame((_, rawDt) => {
     // touch: past SLEEP_DIST, skip this whole step and replay the gap on wake (see npc/sleep.js)
@@ -397,7 +400,7 @@ function Walker({ w, i }) {
     }
     L.placed = true
   })
-  return <group ref={ref}>{!ready ? null : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : chibiGrandma(w) ? <Suspense fallback={null}><ChibiFuku st={st} scale={1} res={TOUCH ? 40 : 52} /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 // the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
 function Bench() {
