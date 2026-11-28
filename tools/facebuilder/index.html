@@ -3,20 +3,21 @@
 <style>
 :root{color-scheme:dark;--bg:#171c23;--panel:#222a34;--line:#35404d;--muted:#a7b4bc;--text:#f0eee7;--accent:#b9daac;--gold:#f4ca88;font-family:system-ui,sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}button,input,select,textarea{font:inherit}button,select{border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:#2e3946;color:var(--text);cursor:pointer}button:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:default}.primary{background:var(--accent);color:#233226;font-weight:bold;border:none}.danger{color:var(--gold)}header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}h1{font-size:18px;margin:0}small,.muted{color:var(--muted)}.pill{font-size:11px;text-transform:uppercase;letter-spacing:.12em;background:#354739;color:var(--accent);border-radius:20px;padding:5px 10px}.grow{flex:1}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100dvh - 76px)}.stage{display:flex;flex-direction:column;min-height:0;padding:16px;gap:12px;min-width:0}.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.toolbar button.active{background:var(--accent);color:#233226}.viewport{position:relative;flex:1;min-height:280px;background:#f3e9db;border-radius:14px;overflow:hidden}.viewport iframe{width:100%;height:100%;border:0;display:block}.viewport img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}.badge{position:absolute;left:14px;top:14px;border-radius:6px;background:#17202bd9;color:white;font-size:12px;padding:6px 10px;pointer-events:none}.sub{font-size:12px;line-height:1.5;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.sub input[type=range]{width:90px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100dvh - 76px)}.stage{display:flex;flex-direction:column;min-height:0;padding:16px;gap:12px;min-width:0}.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.toolbar button.active{background:var(--accent);color:#233226}.viewport{position:relative;flex:1;min-height:280px;background:#f3e9db;border-radius:14px;overflow:hidden}.viewport iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}.viewport iframe.pending{opacity:0;pointer-events:none}.viewport img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}.badge{position:absolute;left:14px;top:14px;border-radius:6px;background:#17202bd9;color:white;font-size:12px;padding:6px 10px;pointer-events:none}.sub{font-size:12px;line-height:1.5;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.sub input[type=range]{width:90px}
 aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}.inspector-top{padding:14px;border-bottom:1px solid var(--line)}.inspector-top h2{margin:0 0 5px;font-size:16px}.scroll{overflow:auto;padding:10px 14px;flex:1}details{border-bottom:1px solid var(--line);padding:8px 0}summary{cursor:pointer;font-weight:600;font-size:13px;padding:5px}label.row{display:grid;grid-template-columns:minmax(0,1fr) 76px 32px;gap:5px;margin:10px 0;font-size:12px;align-items:center}.row span{grid-column:1}.row input[type=range]{grid-column:1;grid-row:2;width:100%;accent-color:var(--accent)}.row input[type=number]{grid-column:2;grid-row:2;min-width:0;width:100%;background:#151c25;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:4px;font-size:11px}.row input[type=color]{grid-column:2;grid-row:1;width:60px;height:27px;background:none;border:0}.row .lock{grid-column:3;grid-row:1 / span 2;padding:4px;font-size:12px}.row .locked{color:var(--gold);border-color:var(--gold)}.row .edited{color:var(--accent)}.footer{border-top:1px solid var(--line);padding:14px;display:grid;gap:8px}textarea{background:#161c24;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical;min-height:52px;width:100%;font-size:12px}#status{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:var(--muted)}#status.error{color:#ffaf9e}#status.success{color:var(--accent)}.actions{display:flex;gap:6px}.actions button{flex:1}#reference{max-width:200px;font-size:12px}.search{width:100%;background:#151c25;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px;margin-top:10px}
 @media(max-width:800px){.layout{grid-template-columns:1fr;height:auto}.stage{height:58vh;min-height:420px}aside{border-left:0;border-top:1px solid var(--line);min-height:50vh}.scroll{max-height:50vh}header{padding:10px}header small{display:none}}
 </style></head>
 <body><header><span class="pill">Dev only</span><h1>Tiny Planet · Face Builder</h1><small>Existing game renderer · local approval workspace</small><div class="grow"></div><label><small>CHARACTER</small> <select id="character"><option value="her">Main character</option><option value="fuku">Grandma Fuku</option><option value="ishi">Grandpa Ishi</option><option value="hoshino">Professor Hoshino</option></select></label></header>
 <div class="layout"><main class="stage">
 <div class="toolbar" id="angles"><button data-angle="front">Front</button><button data-angle=".4">Slight turn</button><button data-angle="three">¾</button><button data-angle="1.2">Deep ¾</button><button data-angle="side">Side</button><button data-angle="back">Back</button><button id="body">Full body</button><button id="down">Game angle</button><button id="baseline">Compare original</button></div>
-<div class="viewport"><iframe id="preview" title="Tiny Planet character preview"></iframe><img id="overlay" alt="" hidden><span class="badge" id="viewLabel">Draft · front</span></div>
+<div class="viewport"><img id="overlay" alt="" hidden><span class="badge" id="viewLabel">Loading preview…</span></div>
 <div class="sub"><label>Reference image <input type="file" accept="image/*" id="reference"></label><label>Overlay opacity <input id="opacity" type="range" min="0" max="1" step=".05" value=".35"></label><label>Zoom <input id="zoom" type="range" min="1" max="5" step=".1" value="2.7"></label><span class="muted">Drag a slider or type a precise value. Geometry refreshes after a short pause.</span></div>
 </main><aside><div class="inspector-top"><h2 id="name">Face inspector</h2><small id="changeCount">Loading source values…</small><input class="search" id="search" placeholder="Filter parameters…" aria-label="Filter parameters"></div><div class="scroll" id="fields"></div><div class="footer"><div class="actions"><button id="undo" disabled>Undo</button><button id="reset">Reset draft</button></div><label><small>Notes for your agent</small><textarea id="notes" maxlength="2000" placeholder="Optional: what you approved / next task"></textarea></label><button class="primary" id="submit" disabled>Approve &amp; submit design</button><div id="status" role="status">Changes stay in the preview until you submit.</div></div></aside></div>
 <script type="module">
 const token='__FB_TOKEN__', $=id=>document.getElementById(id)
 const headers={'x-facebuilder-token':token,'Content-Type':'application/json'}
 let schema=null,values={},locked=new Set(),history=[],angle='front',full=false,down=false,original=false,timer=0,loading=false,overlayURL=null,screen=0
+let visiblePreview=null,pendingPreview=null,requestedPreview=null
 const initial=new URLSearchParams(location.search).get('char')||'ishi'
 $('character').value=['her','fuku','ishi','hoshino'].includes(initial)?initial:'ishi'
 function status(text,kind=''){const el=$('status');el.textContent=text;el.className=kind}
@@ -25,15 +26,52 @@ function changed(){return schema?Object.fromEntries(schema.fields.filter(f=>valu
 function updateCount(){if(!schema)return;$('changeCount').textContent=Object.keys(changed()).length+' changed · '+locked.size+' inspector locks · '+schema.fields.length+' controls';$('undo').disabled=!history.length||loading;$('submit').disabled=loading}
 function refresh(){
   if(!schema)return
-  sessionStorage.setItem('tiny-planet-facebuilder',JSON.stringify({character:schema.character,values:original?{}:changed()}))
-  const qs=new URLSearchParams({view:'charstudio',dev:'chibi-drafts',still:'',face:'happy',angle,zoom:full?'1':$('zoom').value,ly:full?'.2':'.32',_fb:String(++screen)})
+  clearTimeout(timer)
+  const draft=JSON.stringify({character:schema.character,values:original?{}:changed()})
+  const qs=new URLSearchParams({view:'charstudio',dev:'chibi-drafts',still:'',face:'happy',enter:'',angle,zoom:full?'1':$('zoom').value,ly:full?'.2':'.32'})
   if(schema.character!=='her')qs.set('char',schema.character)
   if(!down)qs.set('level','')
-  $('preview').src='/?'+qs
-  $('viewLabel').textContent=(original?'Original':'Draft')+' · '+(down?'game angle':angle)+' · '+(full?'full body':'head')
+  const label=(original?'Original':'Draft')+' · '+(down?'game angle':angle)+' · '+(full?'full body':'head')
+  requestedPreview={draft,qs,label,key:qs+'|'+draft}
+  loadPreview()
   for(const b of document.querySelectorAll('[data-angle]'))b.classList.toggle('active',b.dataset.angle===angle)
   $('baseline').classList.toggle('active',original);$('body').classList.toggle('active',full);$('down').classList.toggle('active',down)
 }
+function loadPreview(){
+  if(pendingPreview||!requestedPreview)return
+  const request=requestedPreview
+  requestedPreview=null
+  if(visiblePreview?.key===request.key){$('viewLabel').textContent=request.label;return}
+  const frame=document.createElement('iframe'),id=String(++screen)
+  frame.className='pending';frame.title='Tiny Planet character preview'
+  frame.inert=true;frame.setAttribute('aria-hidden','true')
+  sessionStorage.setItem('tiny-planet-facebuilder',request.draft)
+  request.qs.set('_fb',id)
+  frame.src='/?'+request.qs
+  const timeout=setTimeout(()=>{
+    frame.remove();pendingPreview=null
+    $('viewLabel').textContent='Preview timed out'
+    loadPreview()
+  },30000)
+  pendingPreview={...request,frame,id,timeout}
+  $('overlay').before(frame)
+}
+window.addEventListener('message',event=>{
+  const preview=pendingPreview
+  if(!preview||event.origin!==location.origin||event.source!==preview.frame.contentWindow||
+    event.data?.type!=='tiny-planet-facebuilder-ready'||event.data.id!==preview.id)return
+  clearTimeout(preview.timeout);pendingPreview=null
+  if(requestedPreview&&requestedPreview.key!==preview.key){
+    preview.frame.remove()
+  }else{
+    preview.frame.classList.remove('pending')
+    preview.frame.inert=false;preview.frame.removeAttribute('aria-hidden')
+    visiblePreview?.frame.remove()
+    visiblePreview=preview
+    $('viewLabel').textContent=preview.label
+  }
+  loadPreview()
+})
 function schedule(){clearTimeout(timer);timer=setTimeout(refresh,450)}
 function snapshot(){history.push({...values});if(history.length>100)history.shift()}
 function applyValue(f,raw,checkpoint=true){

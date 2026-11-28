@@ -41,6 +41,12 @@ const plugin={
       if(path.endsWith('/'+cfg.file)) return {code:apply(char,code,{},{preview:true}),map:null}
     }
   },
+  transformIndexHtml(_html, {originalUrl}){
+    const query=new URL(originalUrl || '/','http://127.0.0.1:5191').searchParams
+    if(query.get('view')==='charstudio' && query.has('_fb')){
+      return [{tag:'style',children:'#ld{display:none}',injectTo:'head'}]
+    }
+  },
   configureServer(vite){
     vite.middlewares.use(async(req,res,next)=>{
       const u=new URL(req.url,'http://127.0.0.1:5191')

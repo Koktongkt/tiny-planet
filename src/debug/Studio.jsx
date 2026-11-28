@@ -26,6 +26,17 @@ const CAST = DRAFTS && q.has('cast') // her + draft Fuku, Hoshino and Ishi
 const SEQ = q.get('seq'), seqT = { t: 0, yaw: 0 }
 if (typeof window !== 'undefined') window.__seqT = seqT
 const ANGLES = { front: 0, three: 0.75, side: Math.PI / 2, back: Math.PI }
+const faceBuilderPreviewId = import.meta.env.DEV && q.get('_fb')
+function FaceBuilderReady() {
+  const sent = React.useRef(false)
+  useFrame(() => {
+    if (sent.current) return
+    sent.current = true
+    // R3F draws after useFrame callbacks. Signal on the following frame so the old preview stays up through that draw.
+    requestAnimationFrame(() => window.parent.postMessage({ type: 'tiny-planet-facebuilder-ready', id: faceBuilderPreviewId }, location.origin))
+  })
+  return null
+}
 function Studio() {
   const camera = useThree(s => s.camera), scene = useThree(s => s.scene)
   const gl = useThree(s => s.gl)
@@ -65,7 +76,7 @@ function Studio() {
     <mesh rotation={[-Math.PI / 2, 0, 0]} material={useMemo(() => toon('#efe6d2'), [])}><circleGeometry args={[1.6, 48]} /></mesh>
     {!CAST && (compare ? (SPRITE ? [[-0.25, 'new'], [0.25, 'sprite']] : [[-0.25, 'old'], [0.25, 'new']]) : [[0, q.has('old') ? 'old' : SPRITE ? 'sprite' : 'new']]).map(([x, k]) => <group key={k} position={[x, 0.001, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}><circleGeometry args={[0.09, 32]} /><meshBasicMaterial color="#000" transparent opacity={0.12} depthWrite={false} /></mesh>
-      {k === 'old' && CHIBI ? <GhibliPerson st={stOld} /> : k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : CHIBI && draftId ? <Suspense fallback={null}><ChibiVillagerDraft name={draftId} st={stNew} scale={1} res={72} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={stNew} /></Suspense> : <GhibliPerson st={stNew} />}
+      {k === 'old' && CHIBI ? <GhibliPerson st={stOld} /> : k === 'old' ? (NEWCHAR ? <Suspense fallback={null}><GhibliPersonV1 st={stOld} /></Suspense> : <Person cfg={PEOPLE[0]} st={stOld} />) : k === 'sprite' ? <Suspense fallback={null}><SpritePerson st={stNew} /></Suspense> : CHIBI && draftId ? <Suspense fallback={null}><ChibiVillagerDraft name={draftId} st={stNew} scale={1} res={72} />{faceBuilderPreviewId && <FaceBuilderReady />}</Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={stNew} />{faceBuilderPreviewId && <FaceBuilderReady />}</Suspense> : <GhibliPerson st={stNew} />}
     </group>)}
     {CAST && <group>
       {[['her', -0.57], ['fuku', -0.19], ['hoshino', 0.19], ['ishi', 0.57]].map(([name, x]) => <group key={name} position={[x, 0.001, 0]}>
