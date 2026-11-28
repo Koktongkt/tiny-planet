@@ -1,13 +1,15 @@
 // node --test tests/unit  — save format migrations (no browser)
 import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'
 import { migrate, fresh, SAVE_VERSION, dayFromPhase, TAU, START_PHASE } from '../../src/save/schema.js'
+import { moveDecor } from '../../src/save/homeMove.js'
 const v1 = JSON.parse(fs.readFileSync(new URL('./fixtures/save-v1.json', import.meta.url)))
 
 test('v1 save migrates to the current version and keeps progress', () => {
   const s = migrate(v1)
   assert.equal(s.v, SAVE_VERSION)
   assert.deepEqual(s.inv, v1.inv); assert.deepEqual(s.tools, v1.tools); assert.deepEqual(s.taken, v1.taken)
-  assert.deepEqual(s.placed, v1.placed); assert.equal(s.crafted, v1.crafted); assert.equal(s.unlocked.bridge, true)
+  assert.deepEqual(s.placed, moveDecor(v1.placed)); // v8 moves outdoor decor with her house
+  assert.equal(s.crafted, v1.crafted); assert.equal(s.unlocked.bridge, true)
   assert.deepEqual(s.watered, v1.watered) // unknown/extra fields survive
   assert.equal(s.day, 3)
 })

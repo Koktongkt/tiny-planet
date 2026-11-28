@@ -6,7 +6,7 @@ import { Canvas, useFrame, useThree, advance, _roots } from '@react-three/fiber'
 import { Outlines, PerformanceMonitor } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, Noise, HueSaturation, BrightnessContrast } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
-import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, RIVER_HALF, JUMP_HALF, streamDist } from './world.js'
+import { R, K, WS, DENS, height, rnd, dir, place, randDir, pathDir, streamDir, distToCurve, toonRamp, wind, windify, ZONES, zv, around, LAKE_W, BRIDGES, BL, bridgeLift, onBridge, onBridgeDeck, JUMPS, streamNear, streamHalf, waterAt, seaDepth, RIVER_HALF, JUMP_HALF, streamDist, underWater } from './world.js'
 import { PEOPLE } from './peopleData.js'
 const PersonLazy = lazy(() => import('./people.jsx').then(m => ({ default: m.Person })))
 const Person = (p) => <Suspense fallback={null}><PersonLazy {...p} /></Suspense>
@@ -25,25 +25,32 @@ const NEWCHAR = !q.has('oldchar')
 const CHIBI = NEWCHAR && !SPRITE && q.get('chibi') !== '0'
 const chibiMod = CHIBI ? import('./art/chibi/ChibiHer.jsx') : null
 const ChibiHer = lazy(() => chibiMod.then(m => ({ default: m.ChibiHer })))
+const ChibiIshi = lazy(() => import('./art/chibi/ChibiIshi.jsx').then(m => ({ default: m.ChibiIshi }))) // Grandpa Ishi (Cozy Chibi, lazy; ?chibi=0 keeps the old grandpa)
 // Grandma Fuku in the chibi look (lazy chunk, fetched when her walker mounts); rendered at her scale so she stands as tall as her
 const ChibiFuku = lazy(() => import('./art/chibi/ChibiFuku.jsx').then(m => ({ default: m.ChibiFuku })))
 const chibiGrandma = (w) => CHIBI && w.cfg.name === 'grandma'
-import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint } from './boot.js'
+import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint, BootMark, holdStartupVillagers } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
 import { HOME, HomeLayer, HomeOverlay, setupHome } from './home/index.jsx'
+import { CAT } from './pets/catState.js'
 // Gather & Craft is fetched after the first frame; until then these are inert stubs.
 let ropeLift = () => 0, ropePass = () => false, gameBlocksKeys = () => false
 const GM = { W: null, U: null }
 import { newDay, G, toast } from './game/store.js'
-import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, HARBOUR_HOUSES, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
+import { railDir, TRESTLE } from './world/railway.js'
+import { Zones, zoneBusy, zoneWet, ZONE_COLLIDERS, zoneColour, rockify, rockAt, HARBOUR_HOUSES, HARBOUR_SPINS, MILL_FIELD, Zc, LAKE_DOCK_B, Cull } from './zones.jsx'
 import { inkRim, INK_K, INK, T, ss, C, CC, toon, glowMats, glow, MAT, VIEW, setViewMode, subscribeView, OCC, occ, RC, planetRef, Instanced, HCL, PU, NOISE_GLSL, paint, Basis, Surface, q } from './common.jsx'
 import { dayFromPhase } from './save/schema.js'
 import { PRESET, fixed, rot, ROT_A0, DAY_SEC } from './time/clock.js'
 import { fxPasses, nightFromPhase } from './fx.js'
 import { paceFrame, stampActive } from './framePace.js'
 import { butterflyAngle, butterflyFrame } from './butterflies.js'
-import { VILLAGE, MILLS, HOUSES, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs } from './world/village.js'
+import { VILLAGE, MILLS, HOUSES, LAMPS, SPAWN, B0, bl, HB, onHouse, SPOTS, EXTRA_BUSY, gardenBedNs, STAIR } from './world/village.js'
+import { OLD_WORLD } from './world/flag.js'
+import { useLook } from './world/useLook.js'
+import { SHORE_FINE } from './world/shoreSetting.js'
+import { region } from './world/regions.js'
 import { YARD, CHIMNEY_TOP, yardColliders } from './home/yard.js'
 const HomeExteriorLazy = lazy(() => import('./home/Exterior.jsx')) // her chibi cottage + yard + crop garden (one baked mesh)
 import { Sky, Lights, Clouds, Birds, Fireflies } from './world/sky.jsx'
@@ -86,7 +93,33 @@ function wornAt(v) {
   return w
 }
 const _wv = new THREE.Vector3(), _wv2 = new THREE.Vector3()
-function Ground() {
+// look A (2026-11-25 spec): one welded mesh, smooth on grass and faceted on rock, warm greens from her yard, shaded with
+// the props' warm ramp (same bytes as RAMP in props/kit.js, copied so kit.js stays out of the startup chunk)
+const WARM_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([196, 150, 140, 255, 236, 212, 196, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t })()
+function groundPaint(grassColour) {
+  const sand = C('#d9bf86'), bank = C('#6aa95a'), worn = C('#c7cf86'), soil = C('#c08552'), bed = C('#4e7f7a')
+  return (v, tmp, h) => {
+    grassColour(v, tmp, h)
+    const sn = streamNear(v), gap = sn.d - sn.half
+    if (gap < 0.3) { if (gap < 0) tmp.copy(bed); else if (gap < 0.07) tmp.lerp(soil, 0.85); else tmp.lerp(bank, 0.5 * (1 - (gap - 0.07) / 0.23)) }
+    const dp = distToCurve(v, pathDir, 300); if (dp < 0.05 * K) tmp.lerp(sand, 0.8 * (1 - dp / (0.05 * K)))
+    if (dp < 0.1 * K && dp >= 0.05 * K) tmp.lerp(worn, 0.35 * (1 - (dp - 0.05 * K) / (0.05 * K)) * (0.6 + 0.4 * Math.sin(v.x * 90 + v.z * 70)))
+    { const wd = wornAt(v); if (wd > 0) tmp.lerp(wd > 0.55 ? sand : worn, Math.min(0.75, wd)) }
+    zoneColour(v, tmp)
+  }
+}
+function Ground() { return OLD_WORLD ? <LegacyGround /> : <ShapedGround /> }
+function ShapedGround() {
+  // look A's builder loads in its own chunk right after startup; then the plain ground draws, and with carved banks on
+  // the finer band is built in an idle slot (~0.75 s of work in node) and swapped in, ideally under the title card
+  const L = useLook(), idle = useIdleSlot(-2)
+  const coarse = useMemo(() => L && L.buildGround({ fine: false, paint: groundPaint(L.grassColour), isRock: rockAt, rockPaint: rockify }), [L])
+  const fine = useMemo(() => L && SHORE_FINE && idle ? L.buildGround({ fine: true, paint: groundPaint(L.grassColour), isRock: rockAt, rockPaint: rockify }) : null, [L, idle])
+  useEffect(() => { if (fine) coarse.dispose(); if (L && (fine || !SHORE_FINE)) { window.__groundReady = true; bootStage('ground', 1) } }, [L, fine])
+  const mat = useMemo(() => inkRim(paint(new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: WARM_RAMP }), 0.06, true, 1.6)), [])
+  return coarse ? <mesh geometry={fine || coarse} material={mat} /> : null
+}
+function LegacyGround() {
   const geo = useMemo(() => {
     const g = new THREE.IcosahedronGeometry(R, 64); const p = g.attributes.position, v = new THREE.Vector3(), cols = []
     const a = C('#9fd17a'), b = C('#7fbf6a'), c = C('#c8e08a'), sand = C('#d9bf86'), bank = C('#5f9a5e'), worn = C('#c7cf86'), mud = C('#8f7d5c'), bed = C('#4e7f7a'), tmp = new THREE.Color()
@@ -242,7 +275,7 @@ function Vegetation() {
       const c = randDir(); if (busy(c)) continue
       const k = 6 + Math.floor(rnd() * 14), sp = (0.03 + rnd() * 0.05) * K, col = g1.clone().lerp(g2, rnd())
       for (let j = 0; j < k; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp * 2)).normalize(); if (streamDist(n) < 0.05 * K || distToCurve(n, pathDir, 90) < 0.045 * K || zoneWet(n)) continue; grass.push({ ...place(n, -0.01, rnd() * 6), s: (0.7 + rnd() * 0.8) * (TOUCH ? 1.22 : 1.12), c: col.clone().multiplyScalar(0.92 + rnd() * 0.16) }) }
-      if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
+      if (rnd() < 0.45) { const fcol = fc[i % 4]; for (let j = 0; j < 4 + rnd() * 6; j++) { const n = c.clone().add(_t.set(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(sp)).normalize(); if (underWater(n)) continue; flowers.push({ ...place(n, 0.045), s: 0.6 + rnd() * 0.5, c: fcol }) } }
     }
     // stage-b: no lawn tufts / flowers under the garden beds (hidden there anyway; filtered after generation so the seeded layout elsewhere is unchanged)
     const beds = gardenBedNs(HOUSES[0], height), clear = (it) => { _t.copy(it.pos).normalize(); return !beds.some(b => b.angleTo(_t) < 0.2 / R) }
@@ -283,16 +316,16 @@ function Vegetation() {
 const _ev = new THREE.Vector3()
 const vergeOK = (n) => !zoneWet(n) && !onBridge(n) && !HOUSES.some(h => h.distanceTo(n) < 0.075 * K) && !MILLS.some(m => m.distanceTo(n) < 0.07 * K) && distToCurve(n, pathDir, 140) > 0.028 * K && streamDist(n) > 0.045 * K && !zoneBusy(n) && !EXTRA_BUSY.some(e => e.distanceTo(n) < 0.05 * K)
 const EdgeVegLazy = lazy(() => import('./edgeveg.jsx'))
-function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /></Suspense> : null }
+function EdgeVeg() { const ok = useIdleSlot(-1); return ok ? <Suspense fallback={null}><EdgeVegLazy W={{ TREES, FIRS, HOUSES, onHouse, vergeOK, busy, DENS, TOUCH }} /><BootMark name="edgeveg" /></Suspense> : null }
 // warm window light spilling onto the grass around each cottage at night: one additive decal per house, no real light
 const SPILL = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 18, 64, 64, 64)
   g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128)
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
   return new THREE.MeshBasicMaterial({ map: t, color: '#ffb35c', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 }) })()
 const SPILL_GEO = new THREE.PlaneGeometry(1.5, 1.5).rotateX(-Math.PI / 2)
-function House({ n, i }) {
+function House({ n, i, spin = i * 1.3 }) {
   const hg = houseVariant(i)
-  return <Surface n={n} lift={HOUSE_LIFT} spin={i * 1.3}>
+  return <Surface n={n} lift={HOUSE_LIFT} spin={spin}>
     <mesh geometry={hg.shell} material={HM.shell} ref={occ}><Outlines thickness={0.02} color={INK} /></mesh>
     <mesh geometry={hg.detail} material={HM.detail} />
     <mesh geometry={hg.glass} material={MAT.win} />
@@ -400,7 +433,7 @@ function Walker({ w, i }) {
     }
     L.placed = true
   })
-  return <group ref={ref}>{!ready ? null : chibiGrandma(w) ? <Suspense fallback={null}><ChibiFuku st={st} scale={1} res={TOUCH ? 40 : 52} /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : chibiGrandma(w) ? <Suspense fallback={null}><ChibiFuku st={st} scale={1} res={TOUCH ? 40 : 52} /></Suspense> : CHIBI && npc.key === 'grandpa' ? <Suspense fallback={null}><ChibiIshi st={st} res={TOUCH ? 36 : 44} scale={0.995} /* her height (head top 0.434, KT): chibi villagers are not drawn at the old 0.8 */ /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 // the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
 function Bench() {
@@ -416,7 +449,7 @@ const BENCH_Y = 0.104
 const LineupLazy = lazy(() => import('./debug/Lineup.jsx'))
 
 // ---------- traveller ----------
-const P = { n: dir(0.95, 0.12).normalize(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
+const P = { n: SPAWN.clone(), fwd: new THREE.Vector3(), h: 0, vy: 0, target: null, move: 0, phase: 0, wUp: new THREE.Vector3(), face: new THREE.Vector3(), wFwd: new THREE.Vector3(), wPos: new THREE.Vector3() }
 { const t = new THREE.Vector3(0, 1, 0); P.fwd.copy(t.sub(P.n.clone().multiplyScalar(P.n.dot(t)))).normalize().negate() }
 const KEYS = {}
 window.__keys = KEYS
@@ -483,9 +516,9 @@ function stepPlayer(dt) {
   // round6: the river, lake and harbour are impassable on foot. Airborne (a jump) she may cross; landing in water
   // puts her back on the bank she jumped from. On foot, slide along the bank instead of stepping in.
   const air = P.h - floorLift(P.n) > 0.012
-  if (!air && !NOWATER && waterAt(P.n)) { const step = _mv.copy(P.n).sub(_prevN), len = step.length(); P.n.copy(_prevN)
+  if (!air && !NOWATER && waterAt(P.n)) { const deepSea = seaDepth(P.n) > 0.12, step = _mv.copy(P.n).sub(_prevN), len = step.length(); P.n.copy(_prevN)
     if (len > 1e-7) for (const a of [0.6, -0.6, 1.1, -1.1]) { _mv2.copy(step).applyAxisAngle(_prevN, a).multiplyScalar(Math.cos(a)); _mv3.copy(_prevN).add(_mv2).normalize(); if (!waterAt(_mv3)) { P.n.copy(_mv3); break } }
-    if (waterAt(P.n)) { P.n.copy(LAST_DRY.n.lengthSq() ? LAST_DRY.n : _prevN); if (performance.now() - LAST_DRY.toast > 6000 && LAST_DRY.landed) { LAST_DRY.toast = performance.now(); toast('Too wide to jump here. Look for a bridge or the marked stepping stones.', 'leaf', 3000) } }
+    if (waterAt(P.n)) { P.n.copy(LAST_DRY.n.lengthSq() ? LAST_DRY.n : _prevN); if (performance.now() - LAST_DRY.toast > 6000 && LAST_DRY.landed) { LAST_DRY.toast = performance.now(); toast(deepSea ? 'Too deep to wade out further.' : 'Too wide to jump here. Look for a bridge or the marked stepping stones.', 'leaf', 3000) } }
     if (P.target) P.target = null }
   if (!air && !waterAt(P.n)) LAST_DRY.n.copy(P.n)
   LAST_DRY.landed = air
@@ -520,7 +553,7 @@ function faceInside(dt, obj) { const hp = HOME.hp; if (!hp) return
   HOME.faceYaw = FI.yaw; obj.quaternion.setFromAxisAngle(_Y, FI.yaw) }
 function Traveller() {
   const ref = useRef(), [bake, setBake] = useState(BOOT.bakePlayer); useEffect(() => onBoot('bakePlayer', () => setBake(true)), [])
-  const [gw, setGw] = useState(!!GM.W); useEffect(() => onBoot('game', () => setGw(true)), []); useEffect(() => { if (bake) bootStage('baked', 1) }, [bake]) // gw: re-render once the game chunk is in, so the lantern and bike mount even if it lands after her bake
+  const [gw, setGw] = useState(!!GM.W); useEffect(() => onBoot('game', () => setGw(true)), []) // gw: re-render once the game chunk is in, so the lantern and bike mount even if it lands after her bake
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05); HOME.playerObj = ref.current
     if (HOME.inside) { HOME.stepInside(dt, KEYS, P, ref.current); faceInside(dt, ref.current) } // inside her house
@@ -531,13 +564,14 @@ function Traveller() {
     ref.current.position.copy(P.n).multiplyScalar(R + height(P.n) + 0.005 + P.h) }
     PST.air = HOME.inside || HOME.alt ? 0 : Math.max(0, P.h - floorLift(P.n)) // lets her contact shadow stay on the ground mid-jump
     tickAct(PST); PST.phase = P.phase; PST.move = P.move; PST.t = wind.time.value
+    PST.carryYarn = HOME.inside && CAT.ball.held
     if (_pp.lengthSq() > 0) PST.dist += Math.min(_pp.distanceTo(ref.current.position), 0.2); _pp.copy(ref.current.position)
     if (_pf.lengthSq() > 0) { const a = Math.atan2(_wy.copy(_pf).cross(HOME.inside ? P.fwd : P.face).dot(P.n), _pf.dot(HOME.inside ? P.fwd : P.face)); PST.turn += (a / Math.max(dt, 1e-3) - PST.turn) * Math.min(1, dt * 10) } _pf.copy(HOME.inside ? P.fwd : P.face)
   })
-  return <group ref={ref}>{!bake ? null : SPRITE ? <Suspense fallback={null}><SpritePerson st={PST} /></Suspense> : CHIBI ? <Suspense fallback={null}><ChibiHer st={PST} /></Suspense> : NEWCHAR ? <GhibliPerson st={PST} /> : <Person cfg={PEOPLE[0]} st={PST} />}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
+  return <group ref={ref}>{bake && <Suspense fallback={null}>{SPRITE ? <SpritePerson st={PST} /> : CHIBI ? <ChibiHer st={PST} /> : NEWCHAR ? <GhibliPerson st={PST} /> : <PersonLazy cfg={PEOPLE[0]} st={PST} />}<BootMark name="baked" /></Suspense>}{gw && <GM.W.PlayerLantern />}{gw && <GM.W.PlayerBike st={PST} />}</group>
 }
-const HB_LOOK = around(Zc.harbour, 0.29, 2.3)
-const ZVIEWS = {
+// ?view=zone&z=<key> camera targets (dev / screenshots: shoot.mjs, the README). ?world=old keeps the frozen layout's set.
+const OLD_VIEWS = (() => { const HB_LOOK = around(Zc.harbour, 0.29, 2.3); return {
   'square': { cam: around(VILLAGE, 1.3 / R, 0.4), ch: 0.6, look: VILLAGE, lh: 0.2 },
   'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 },
   'lake-waterfall': { cam: around(Zc.lake, 0.42, 3.9), ch: 2.4, look: Zc.lake.clone().lerp(Zc.cliff, 0.55), lh: 0.2 },
@@ -545,10 +579,29 @@ const ZVIEWS = {
   'harbour-ruins': { cam: dir(-0.1, 3.7), ch: 3.4, look: Zc.harbour.clone().lerp(Zc.ruins, 0.45), lh: 0.0 },
   'forest-giant': { cam: around(Zc.giant, 0.78, 4.6), ch: 3.6, look: Zc.giant, lh: 2.0 },
   'meadow-mills': { cam: Zc.meadow.clone().lerp(Zc.mills, 0.15), ch: 2.4, look: Zc.mills, lh: 0.5 },
+} })()
+// the reworked layout: each view frames its region from the registry (bearings: around()'s, 0 east / pi/2 north)
+const NEW_VIEWS = () => { const rg = (id) => zv(region(id)), HB_LOOK = around(rg('harbour'), 0.27, 1.75), ST = STAIR.steps, TR_C = TRESTLE && railDir(TRESTLE.lonC), POOL = zv(region('cliff')).lerp(rg('terraces'), 0.45), HR_CAM = dir(-0.62, 1.45)
+  return {
+    'square': { cam: around(VILLAGE, 2.4 / R, 0.1), ch: 1.3, look: VILLAGE, lh: 0.2 }, // from over the river by the bridge, her home beyond
+    'harbour-people': { cam: around(HB_LOOK, 1.7 / R, 0.2), ch: 0.75, look: HB_LOOK, lh: 0.2 }, // the bay's north shore (pier walkers)
+    'lake-waterfall': { cam: around(rg('lake'), 0.36, 4.4), ch: 3.2, look: rg('lake').lerp(rg('cliff'), 0.62), lh: 0.4 }, // up the river from below the lake to the falls
+    'terraces-train': { cam: around(rg('terraces'), 0.36, -1.0), ch: 2.8, look: rg('terraces').lerp(POOL, 0.5), lh: 0.5 }, // (key kept for shoot.mjs / the README) the terraces stepping down under the waterfall, where the water mill will go
+    ...(TR_C ? { 'train-trestle': { cam: around(TR_C, 2.6 / R, -1.2), ch: 1.4, look: TR_C, lh: 0.2 } } : {}), // the train on the river trestle (park it there with &trainAt=1.5)
+    'harbour-ruins': { cam: HR_CAM, ch: 11, look: rg('harbour').lerp(rg('ruins'), 0.42), lh: 0.0 }, // from high over the bay's north shore: the harbour and trestle below, the river up to the lake and its drowned ruins
+    'forest-giant': { cam: around(rg('giant'), 0.78, 4.6), ch: 3.6, look: rg('giant'), lh: 2.0 },
+    'meadow-mills': { cam: rg('meadow').lerp(rg('mills'), 0.15), ch: 2.4, look: rg('mills'), lh: 0.5 },
+    peak: { cam: around(ST[0].n, 0.9 / R, 4.0), ch: 1.4, look: ST[Math.floor(ST.length * 0.6)].n, lh: 0.4 }, // up the stair to the shrine
+    'lake-museum': { cam: around(rg('lake'), 0.2, 3.6), ch: 2.4, look: rg('museum'), lh: 0.3 }, // across the lake to the museum shore
+  } }
+const ZVIEWS = {
+  ...(OLD_WORLD ? OLD_VIEWS : NEW_VIEWS()),
   home: { cam: onHouse(0, 0.6, 3.1), ch: 1.5, look: onHouse(0, -0.25, 0.2), lh: 0.55 }, // her cottage + yard
   'home-garden': { cam: onHouse(0, 0.3, 3.0), ch: 2.0, look: onHouse(0, -1.25, 0.6), lh: 0.1 },
   'home-yard': { cam: onHouse(0, -0.3, 4.2), ch: 3.4, look: onHouse(0, -0.3, 0.3), lh: 0 }, // the whole fenced yard from above
 }
+// ?view=detail: the first bridge and its set pieces (along / side from the bridge centre, as world/village.js bl())
+const DETAIL = OLD_WORLD ? { look: [-0.3, 0.45], cam: [-2.3, 1.7] } : { look: [-0.6, -0.5], cam: [1.4, -2.4] }
 const CAMD = q.has('camd') ? +q.get('camd') : 1
 function Rig() {
   const camera = useThree(s => s.camera)
@@ -586,7 +639,7 @@ function Rig() {
       const camL = zv_.cam.clone().normalize().multiplyScalar(R + Math.max(height(zv_.cam), -0.1) + zv_.ch), lookL = zv_.look.clone().normalize().multiplyScalar(R + height(zv_.look) + zv_.lh)
       camera.position.copy(camL.applyMatrix4(g.matrixWorld)); camera.up.copy(zv_.cam.clone().normalize().transformDirection(g.matrixWorld)); look.copy(lookL.applyMatrix4(g.matrixWorld)); camera.lookAt(look)
     } else if (VIEW.mode === 'detail') {
-      const c = B0.c.clone(); const lookL = bl(B0, -0.3, 0.45).multiplyScalar(R + 0.15), camL = bl(B0, -2.3, 1.7).multiplyScalar(R + 1.25)
+      const c = B0.c.clone(); const lookL = bl(B0, DETAIL.look[0], DETAIL.look[1]).multiplyScalar(R + 0.15), camL = bl(B0, DETAIL.cam[0], DETAIL.cam[1]).multiplyScalar(R + 1.25)
       goal.copy(camL).applyMatrix4(g.matrixWorld); camera.position.lerp(goal, k); camera.up.lerp(_u.copy(c).transformDirection(g.matrixWorld), k).normalize(); look.lerp(lookL.applyMatrix4(g.matrixWorld), k); camera.lookAt(look)
     } else {
       camera.position.lerp(goal.set(0, 5.8 * WS, 30 * WS).multiplyScalar(CAM.zoom), k); camera.up.lerp(_u.set(0, 1, 0), k).normalize(); look.lerp(_v.set(0, 1, 0), k); camera.lookAt(look)
@@ -617,6 +670,9 @@ function GameSlot({ ui }) { const [, f] = useState(0); useEffect(() => onBoot('g
 window.__player = P
 // far zones (lake, harbour, cliff, terraces, ruins…) mount in the first idle slot after the first frame
 function DeferredZones() { return useIdleSlot(-1) ? <Zones /> : null }
+// look A shore kit (grass lip, foam beads, ink waterline): new world only, after the first frame
+const ShoreKitLazy = lazy(() => import('./world/ShoreKit.jsx'))
+function DeferredShore() { return useIdleSlot(-1) ? <Suspense fallback={null}><ShoreKitLazy /><BootMark name="shore" /></Suspense> : null }
 // The world mounts in a few slices (one per task) so the loader keeps animating while React builds ~3k objects.
 // Same tree, same order: later slices just appear a few frames later, all before shaders compile and the first frame.
 const SLICES = 4
@@ -632,12 +688,12 @@ function Planet() {
     <Ground /><Suspense fallback={null}><PathLazy /><StreamLazy /></Suspense>{k >= 2 && <Vegetation />}
     {k >= 2 && HOUSES.map((n, i) => i === 0 ? <HomeHouse key={i} n={n} /> : <House key={i} n={n} i={i} />)}
     {k >= 2 && MILLS.map((n, i) => <Windmill key={i} n={n} i={i} />)}
-    {k >= 2 && [dir(1.05, 0.05), dir(0.95, 0.3), dir(0.75, 0.0), dir(1.22, 0.25), dir(0.35, 1.55), dir(0.15, -0.4), dir(0.62, 2.4), dir(0.8, 2.45), dir(0.45, 2.42), dir(0.6, 2.75)].map((n, i) => <Lamp key={i} n={n} i={i} />)}
+    {k >= 2 && LAMPS.map((n, i) => <Lamp key={i} n={n} i={i} />)}
     {k >= 3 && !q.has('novill') && (NEWCHAR ? NEW_WALKERS : WALKERS).map((w, i) => <Walker key={i} w={w} i={i} />)}
     {k >= 3 && NEWCHAR && <Bench />}
     {VIEW.mode === 'lineup' && <Suspense fallback={null}><LineupLazy /></Suspense>}
-    <DeferredZones />
-    {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} /></Cull>)}
+    <DeferredZones />{!OLD_WORLD && <DeferredShore />}
+    {k >= 3 && HARBOUR_HOUSES.map((n, i) => <Cull key={'hh' + i} n={n} d={16}><House n={n} i={i + 3} spin={HARBOUR_SPINS[i]} /></Cull>)}
     {k >= 3 && MILL_FIELD.map((n, i) => <Windmill key={'mf' + i} n={n} i={i + 2} />)}
     <Traveller /><HomeLayer />{k >= 4 && <Details />}
     {k >= 4 && <Fireflies />}{k >= 4 && <Suspense fallback={null}><RiverStonesLazy colliders={COLLIDERS} houses={HOUSES} touch={TOUCH} /></Suspense>}
@@ -719,7 +775,8 @@ function Boot({ onLive, player = true }) {
   useEffect(() => { let dead = false; (async () => {
     if (player) { await new Promise(r => onBoot('mounted', r)); if (dead) return }
     bootStage('world', 1); await nextPaint()
-    if (player) { bootStage('bakePlayer', 1); await new Promise(r => onBoot('baked', r)) }
+    if (player) { bootStage('bakePlayer', 1); await new Promise(r => onBoot('baked', r)); if (HOME.inside) await Promise.all(['activities', 'cat'].map(name => new Promise(r => onBoot(name, r)))) }
+    if (dead) return
     bootStage('bake', 1); await nextPaint()
     // one representative object per distinct program (material + skinning/instancing/vertex colours)
     const seen = new Set(), reps = []
@@ -762,7 +819,24 @@ function Boot({ onLive, player = true }) {
     if (q.get('bootpause') === 'shaders') return // screenshot aid: hold the real loader state before the first frame
     live.current = true; onLive()
   })(); return () => { dead = true } }, [])
-  useFrame(() => { if (live.current && !BOOT.done.frame) requestAnimationFrame(() => bootStage('frame', 1)) }, 100)
+  const first = useRef(false)
+  useFrame(() => {
+    if (!live.current || first.current) return
+    first.current = true
+    requestAnimationFrame(async () => {
+      const startingInside = player && HOME.inside
+      if (startingInside) holdStartupVillagers()
+      bootStage('frame', 1)
+      // Finish critical terrain and game setup behind the opaque title; distant villagers
+      // bake individually in idle slots after the reveal, so they don't block house startup.
+      if (startingInside) {
+        const stages = ['criticalIdle', 'edgeveg', ...(!OLD_WORLD ? ['ground', 'shore'] : []), ...(GAMEON ? ['game', 'talk'] : [])]
+        await Promise.all(stages.map(name => new Promise(r => onBoot(name, r))))
+      }
+      await nextPaint(); await nextPaint()
+      bootStage('ready', 1)
+    })
+  }, 100)
   return null
 }
 const COMPOSER = { current: null }

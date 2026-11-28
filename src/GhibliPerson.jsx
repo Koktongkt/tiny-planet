@@ -118,7 +118,8 @@ const PAINT = `
     vec3 legC = mix(uBottom, uSkin, uO.z * aa(uY.w - y));
     vec3 c = mix(torso, legC, leg);
     c = mix(c, armC, arm);
-    c = mix(c, uSkin, max(hand, neck * (1. - arm)));
+    vec3 hq = (vO - uJC.xyz)/max(uJR.xyz, vec3(1e-4)); float headSk = uJR.w > .5 ? aa(1. - length(hq)) : 0.; // outfit.skinEll: the jaw stays skin where it dips below the neck line
+    c = mix(c, uSkin, max(hand, max(neck, headSk) * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
@@ -131,7 +132,7 @@ const PAINT = `
 // a warm band where light turns to shadow on skin; sky fill from above and grass bounce from below (local up, so it
 // works anywhere on the planet); fine cloth / fur grain; and a strand texture + sheen ring on hair (aKind = 1).
 const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
-  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ;
+  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uJC, uJR;
   varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   ${PAINT}
   float h3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
@@ -206,7 +207,8 @@ function bodyMat(cfg, S) {
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS })
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) },
+    uJC: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(0, 3) : [0, 0, 0]), 0) }, uJR: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(3, 6) : [1, 1, 1]), o.skinEll ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS }) // skinEll [cx, cy, cz, rx, ry, rz] (opt-in)
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
   bodyMatCache.set(key, m); return m
@@ -251,9 +253,10 @@ export function spec(b = {}) {
   const cg = 0.5 + 0.5 * gw
   S.chest = [V3(0, S.chestY, -0.004 + 0.022 * hc), V3(0.054 * shw * cg * (b.chestW ?? 1), 0.05 * Math.min(tl, 1.25), 0.046 * cg)]
   S.neck = [V3(0, S.shY + 0.005, -0.002 + 0.03 * hc), V3(0, S.shY + 0.055, 0.004 + 0.045 * hc), 0.021 * (0.9 + 0.1 * gw), 0.019]
-  S.headR = V3(0.068 * hd * (b.headW ?? 1), 0.0584 * hd, 0.0648 * hd) // headW: optional head width (x only)
-  S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc, 0.008 + 0.055 * hc)
-  if (b.cheek) { const [x, y, z, rx, ry, rz, k, r] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]) } // round mochi cheeks (head-frame units); optional 8th value h: the jaw ellipsoid is stretched up by h (straight sides above its centre, elliptical bottom)
+  const hS = b.headS ?? [1, 1, 1]; S.headR = V3(0.068 * hd * hS[0], 0.0584 * hd * hS[1], 0.0648 * hd * hS[2]) // headS: optional skull radii scale (default = old)
+  S.headC = V3(0, S.shY + 0.042 + S.headR.y - 0.014 * hc + (b.headUp ?? 0), 0.008 + 0.055 * hc) // headUp: optional lift of the head off the shoulders (default 0)
+  if (b.cheek) { const [x, y, z, rx, ry, rz, k, jh] = b.cheek, s = 1.17 * hd; S.ck = [-1, 1].map(d => S.headC.clone().add(V3(d * x * s, y * s, z * s))).concat([V3(rx * s, ry * s, rz * s), k * s, jh == null ? null : jh * s]) } // round mochi cheeks (head-frame units); optional 8th value jh: the jaw stretched up by jh (straight sides, elliptical bottom)
+  S.cr = [b.cranium, b.chin, ...(b.lumps ?? [])].filter(Boolean).map(([y, z, rx, ry, rz, k]) => { const s = 1.17 * hd; return [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s] }) // optional head lumps blended into the skull (head-frame units, shaded with it): cranium (a broader, taller crown), chin (a fuller lower face), lumps (any more)
   if (b.midface) { const s = 1.17 * hd; S.mf = b.midface.map(([y, z, rx, ry, rz, k, r]) => [S.headC.clone().add(V3(0, y * s, z * s)), V3(rx * s, ry * s, rz * s), k * s, r == null ? null : r * s]); S.mfFade = (b.midfaceFade ?? 0) / s } // optional mid-face shapes (head-frame units): ellipsoids, or oval columns when an edge radius r is given; the nose in profile
   S.armA = b.armA ?? 0.6 + 0.3 * Math.max(0, gw - 1)
   const ar = 0.85 + 0.15 * gw
@@ -279,7 +282,7 @@ function core(S, p) {
   d = smin(d, cap(p, S.neck[0], S.neck[1], S.neck[2], S.neck[3]), 0.02)
   if (S.skirt) { const [y0, r0, y1, r1] = S.skirt, q = Math.hypot(p.x, p.z / 0.86), h = Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0))), r = r0 + (r1 - r0) * h
     const sk = Math.max(q - r, y1 - p.y, p.y - y0 - 0.02) ; d = smin(d, sk, 0.025) }
-  let h = ell(p, S.headC, S.headR); if (S.ck) { const jaw = (c) => S.ck[4] == null ? ell(p, c, S.ck[2]) : ell(_jp.set(p.x, p.y - Math.min(Math.max(p.y - c.y, 0), S.ck[4]), p.z), c, S.ck[2]); h = smin(h, Math.min(jaw(S.ck[0]), jaw(S.ck[1])), S.ck[3]) }
+  let h = ell(p, S.headC, S.headR); for (const [c, r, k] of S.cr) h = smin(h, ell(p, c, r), k); if (S.ck) { const jaw = (c) => S.ck[4] == null ? ell(p, c, S.ck[2]) : ell(_jp.set(p.x, p.y - Math.min(Math.max(p.y - c.y, 0), S.ck[4]), p.z), c, S.ck[2]); h = smin(h, Math.min(jaw(S.ck[0]), jaw(S.ck[1])), S.ck[3]) }
   if (S.mf) { const fade = S.mfFade * (p.x - S.headC.x) ** 2; for (const [c, r, k, rr] of S.mf) h = smin(h, (rr == null ? ell(p, c, r) : ocol(p, c, r, rr)) + fade, k) } // midfaceFade: recede away from the centre line (profile unchanged)
   return smin(d, h, 0.012)
 }
@@ -301,10 +304,10 @@ function legD(S, p, k) {
   if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
   return smin(l, f, 0.012)
 }
-function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
+export function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
   let d = sdf(S, p)
-  d = Math.min(d, ell(p, S.headC.clone().add(V3(0, 0.015, -0.02)), S.headR.clone().multiplyScalar(1.09)))
+  if (!S.b.bald) d = Math.min(d, ell(p, S.headC.clone().add(V3(0, 0.015, -0.02)), S.headR.clone().multiplyScalar(1.09))) // the hair helmet shades the scalp; bald: true (opt-in) leaves the scalp lit
   d = Math.min(d, torus(p, V3(0, S.neckY + 0.01, 0.004), 0.03, 0.009))
   for (const k of ['L', 'R']) { d = Math.min(d, ell(p, S['sh' + k].clone().lerp(S['el' + k], 0.45), V3(0.028, 0.03, 0.028))); d = Math.min(d, torus(p, V3(S['an' + k].x, S.anY + 0.012, S['an' + k].z), 0.021, 0.007)) }
   return d
@@ -355,6 +358,9 @@ function bake(S, RES = 72) {
     ao[i] = Math.max(0, Math.min(1, 1 - o * 1.4))
     const hipsF = THREE.MathUtils.smoothstep(p.y, S.hipY - 0.023, S.hipY + 0.025)
     let ws = wb.map(([bi, b]) => [bi, (b[0] === 'hips' ? hipsF : 1) / (Math.pow(segD(p, b[3][0], b[3][1]) / b[4], 6) + 1e-4), b[0]])
+    // armStrict (opt-in): a vertex that clearly belongs to an arm (nearer the arm's surface than the torso's) follows only the
+    // arm bones, so a forearm bent far from the body takes its hand along (by default the hips' wide falloff holds the hand back)
+    if (S.b.armStrict) { const dL = armD(S, p, 'L'), dR = armD(S, p, 'R'), dc = core(S, p); if (Math.min(dL, dR) < dc - 0.003) { const k = dL < dR ? 'L' : 'R'; ws = ws.filter(w => w[2] === 'up' + k || w[2] === 'fo' + k) } }
     // skirt surface follows the hips more than the legs
     if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004) ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
     ws.sort((a, b) => b[1] - a[1]); ws = ws.slice(0, 4)
@@ -546,6 +552,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
       let ux = lag * swingAmt * m + 0.05 * i, uz = side * (-0.05 * i + Math.sin(t * 1.6 + side) * 0.03 * i - 0.08 * m), fx = -0.28 - Math.max(0, -lag) * 0.55 * m * (swingAmt / 0.75) - 0.1 * i
       if (h === 'umbrella') { ux = -0.35; fx = -1.15 } else if (h === 'rod') { ux = -0.4; fx = -0.8 } else if (h === 'basket') { fx = -1.1; uz -= side * 0.12 } else if (h === 'cane') { ux = -0.2 + Math.sin(p) * 0.1 * m; fx = -0.35 }
       if (idle === 'wave' && k === 'R') { uz = side * -2.3 * i + uz * m; fx = -0.5 - Math.sin(t * 8) * 0.35 * i; ux *= m }
+      if (st.carryYarn && k === 'R') { ux = -0.42 + 0.08 * lag * m; uz = 0.08; fx = -1.2 }
       up.rotation.set(ux, 0, uz)
       fo.rotation.set(spring(sp['fo' + k], fx, 40, 7, dt), 0, 0)
     }
@@ -621,7 +628,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
         {sleeveGeo ? <M geo={sleeveGeo} mat={cel(sleeveC)} position={[0, -0.006, 0]} scale={(cfg.body.girth ?? 1) * 0.15 + 0.85} />
           : <M geo={G.kimono} mat={cel(o.top)} position={[sd * 0.004, -0.01, 0]} rotation={[0, 0, -sd * S.armA * 0.85]} />}</group>, B['up' + k])}
       {o.cuffs && createPortal(<group ref={lod(1)}><M geo={cfg.ext?.cuffGeo ?? G.cuff} mat={cel(o.cuffs)} position={[S['an' + k].x - S['kn' + k].x, S.anY + 0.012 - S.knY, S['an' + k].z - S['kn' + k].z + 0.001]} scale={[(S.lr[1] / 0.022), 1, S.lr[1] / 0.022]} /></group>, B['sh' + k + 'n'])}
-      {k === 'R' && X.HandR && createPortal(<group position={S.hdR.clone().sub(S.elR).toArray()}><X.HandR st={st} /></group>, B.foR)}
+      {k === 'R' && X.HandR && createPortal(<group name="right-hand" position={S.hdR.clone().sub(S.elR).toArray()}><X.HandR st={st} /></group>, B.foR)}
       {hold[k] && createPortal(<group ref={lod(2)} position={S['hd' + k].clone().sub(S['el' + k]).toArray()}><Merge><Prop prop={hold[k]} sd={sd} /></Merge></group>, B['fo' + k])}
     </React.Fragment> })}
     {createPortal(<Merge>

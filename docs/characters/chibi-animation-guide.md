@@ -258,3 +258,46 @@ Review: [`ref/fuku-animations-pass40.mp4`](ref/fuku-animations-pass40.mp4), stil
 - Debug: `window.__fukuDo = 'wave' | 'delight'` starts a reaction; `window.__fukuLife` is her life state (the clip tool waits on `__herLife`; a copy that waits on `__fukuLife` films her alone).
 - Cost: the moving sleeves are 8 extra draw calls (studio ~24).
 
+## Grandpa Ishi (motion pass 1)
+
+Vibe (KT): slow-moving, chill and loud. Clips: [`ref/ishi-anim-pass1.jpg`](ref/ishi-anim-pass1.jpg). Code: `ISHI_MOTION` in `motion.js`; his own poses in `src/art/chibi/ChibiIshi.jsx` (`restArms`, `ishiActs`, `smokeStep`), on top of the shared life layer (which times them as fidgets).
+
+- **Arms on the rig.** Until now the drafts hid the rig's arms and drew fixed chest-parented sleeves, so nothing could move. Ishi has real arms; the wide haori sleeves (upper arm + forearm with the mouth and hanging bag), the cane and the pipe ride the arm bones. `REST` is his rest pose (right fist on the cane, left fist holding the pipe at the belly), blended in under game actions; the cane arm steps along when he walks.
+- New opt-in body knob `armStrict`: a vertex nearer an arm's surface than the torso's follows only that arm's bones. Without it the hips' wide skin falloff held the hand back at the waist whenever the forearm bent away from the body (a stretched hand floating off the fist).
+- **Walk**: slow and chill: `rate 5.8`, `stride 0.36`, `bounce 0.005`, `sway 0.09`, `arm 0.2`, a slight stoop (`lean 0.14`).
+- **Profile**: `lively 0.6`; idle every 4-9 s after 3 s still; picks between `smoke` (6.5 s) and `laugh` (3 s) with the odd look round; no sitting on the grass, no skip, skid, lie or dodge.
+- **Smoke** (6.5 s): raises the pipe to his lips, a slow draw (eyes shut, chest swells), lowers it, tips his head back and lets the smoke out (squinting, content). His arms are too short to reach his mouth, so the pose is solved once (`solveDraw`, a small coordinate search): upper arm, forearm (the elbow bends forward only), a nod of up to 0.32 and the pipe tipping up to 1.4 rad in his fist; error 0.002 unit. The bowl smoulders with a thin wisp, faster while he draws; the exhale is a stream from under the mustache. Smoke is one InstancedMesh in the scene (22 puffs, 1 draw while alive).
+- **Laugh** (3 s): a big loud "ho ho ho": leans way back (root -0.09, chest -0.26, head -0.2), the belly bounces at 9 Hz, his free hand on his belly, blush up. Face: a new `laugh` mood (the excited atlas cell with an open laughing mouth under the mustache) and `uArc` in the face shader, which flips the closed-eye lash into a squeezed happy ^. The mustache lifts off the mouth and the brows rise through hair groups 0 and 3 (`aW`), so no extra draws.
+- Face decal can reach lower per character (`makeFace({ fy0 })`) for the mouth under his mustache.
+- Pitfall: `hips.position.z` is not reset by the base rig; adding to it slid him across the floor every frame. Use root y and rotations only.
+- Not done yet: a loud laugh triggered by talking to him or by events (it is an idle fidget for now), smoking while seated on the bench, the in-game follow camera check (he is still a dev-only draft).
+
+### Ishi motion pass 2 (KT: no mouth in the laugh, it hides under the mustache; more animations, used when talking to him)
+
+Clips: [`ref/ishi-anim-pass2.jpg`](ref/ishi-anim-pass2.jpg).
+
+- **Laugh**: no mouth any more (the excited cell is blank for `kind: 'ishi'`); the mustache bounces with each "ho" (lift 0.0010 + 0.0014 per beat) instead of lifting off a mouth.
+- **New gestures** (poses in `ishiActs`, durations in `ISHI_MOTION.fidgets`; some also join his idle sets):
+  - `nod` (2.2 s): a slow "mm-hm", three soft nods, eyes half closed, brows up a touch.
+  - `ponder` (3.4 s): strokes his mustache with the pipe hand (the solved pipe pose at 82%, the forearm rocking), eyes up and to the side, head tilted, brows raised, a blink midway.
+  - `point` (2.6 s): telling a story: the arm reaches out in front, the stem aimed at you (pipe tip -1.1), jabbing on each beat, leaning in, brows down.
+  - `thump` (2.2 s): "Hmph!": lifts the cane and thumps it down twice with a jolt, chin up, eyes shut, head turned away, brows down.
+- **Talking**: `src/art/chibi/ishiTalk.js` (pure, tested in `tests/unit/ishi-talk.test.mjs`) maps a line to a gesture: his pipe -> smoke; "Hmph", the young, too fast -> thump; jokes, "funny", "orders" -> laugh; stories, tales, "sit", "listen" -> point; a question or a musing -> ponder; anything else -> nod. Never the same gesture twice in a row unless only one fits. `talkGestures` starts it each time the dialogue page changes while `TALK.open` is the grandpa. Studio: `window.__ishiSay(line)`.
+
+### Ishi motion pass 3 (KT: the gift chuckle; dozing off now and then, also when he sits, sometimes by day)
+
+Clips: [`ref/ishi-anim-pass3.jpg`](ref/ishi-anim-pass3.jpg).
+
+- **Chuckle** (2.6 s): a gift he loves ("I love this!", "For me?", "How thoughtful" -> `ishiGesture` 'chuckle'): pats his belly with the pipe fist, shoulders shaking, eyes ^ ^, cheeks pink, the mustache jiggling.
+- **Doze**: rolled once per idle spell after `dozeAfter` (10 s) of idle time (fidgets do not reset it): standing at night 40%, seated at night 75%, seated by day 35% (`ISHI_MOTION.doze`), never standing by day. Standing he leans on his cane; his head sinks over ~5.5 s, catches itself, sinks again (6.5 s cycle); slow deep breaths; eyes shut, the pipe hand drops. Fidgets stop while he dozes. Talking to him wakes him with a start (a jolt, wide eyes, brows up, a blush) and that idle spell does not roll again. Studio: `window.__ishiDoze = 1` forces the roll.
+- Seated is the game's bench `sit` act; the studio's `act=sit` preview does not bend his legs, so check the seated doze on the bench once he is in the game.
+
+### Ishi in the game (KT: put him in the real game)
+
+Shots: [`ref/ishi-in-game.jpg`](ref/ishi-in-game.jpg).
+
+- `App.jsx` renders `ChibiIshi` (lazy chunk) in the grandpa walker's slot when `CHIBI` is on (`?chibi=0` keeps the old grandpa). He keeps grandpa's routine: morning stretch, chatting at the square by day, the bench with Fuku in the evening and at night (`sit` act), and dialogue (`TALK.open.key === 'grandpa'`) drives his talk gestures. Startup entry 98.3 -> 98.4 KB gz.
+- Fix in the shared life layer: a chibi villager is in `NPCS` too, so the look-at scan skips its own entry (it looked at, and waved at, itself).
+- The wide trouser legs now ride the thigh and shin bones (`trouserLegGeos`), so they fold over his knees when he sits; the seat piece stays on the hips.
+- Fuku and Hoshino stay dev-only drafts.
+- Size (KT: he looked small next to her): villager slots draw at scale 0.8 (sized for the old long-legged villagers), so Ishi stood 0.349 tall to her 0.434 (80%). KT: the same height as her: he is drawn at 0.995 (head top 0.434, the same as hers). `st.seatDrop = 0.035` keeps his seat on the bench where the old grandpa sat.

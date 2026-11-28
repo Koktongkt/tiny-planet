@@ -2,13 +2,21 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { HOME } from './state.js'
 import { Room } from './Room.jsx'
+import { afterReveal } from '../boot.js'
 // Pip the dog lives outdoors and the game starts inside the house, so his code (AI, fetch, dig, critters) is a separate
-// chunk fetched after the first frame. It mounts while she's still indoors, and compiles its own materials on mount.
+// chunk fetched after the title reveal. It mounts while she's still indoors, and compiles its own materials on mount.
 const loadDog = () => import('../pets/Dog.jsx')
 const Dog = lazy(() => loadDog().then(m => ({ default: m.Dog })))
 function LateDog() {
   const [on, setOn] = useState(!HOME.inside) // starting outdoors (?out / debug spots): no reason to wait
-  useEffect(() => { if (on) return; const go = () => setOn(true); const t = setTimeout(() => (window.requestIdleCallback || setTimeout)(go, { timeout: 1500 }), 1200); HOME.needDog = go; return () => clearTimeout(t) }, [on])
+  useEffect(() => {
+    if (on) return
+    let t, idle, dead = false
+    const go = () => { if (!dead) setOn(true) }
+    const off = afterReveal(() => { t = setTimeout(() => { if (window.requestIdleCallback) idle = requestIdleCallback(go, { timeout: 1500 }); else go() }, 1200) })
+    HOME.needDog = go // exiting early still requests Pip immediately
+    return () => { dead = true; off(); clearTimeout(t); if (idle != null) cancelIdleCallback(idle); if (HOME.needDog === go) HOME.needDog = null }
+  }, [on])
   return on ? <Suspense fallback={null}><Dog /></Suspense> : null
 }
 export { HOME }

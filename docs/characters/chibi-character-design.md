@@ -1,5 +1,7 @@
 # Cozy Chibi character design (Tiny Planet)
 
+**Optional interactive face review:** when KT requests the face builder, start `npm run facebuilder -- --char her|fuku|ishi|hoshino --wait` (choose one ID), give KT the printed URL, and wait for `FACE_BUILDER_SUBMITTED`. Read the approval receipt and continue from the saved source; preserve the locked appearance. See [Face Builder workflow](facebuilder.md). The normal game build and review workflow are unchanged.
+
 In-repo design reference for Tiny Planet humans in the approved Cozy Chibi style (concept B). Taken from her (the player).
 
 Use this when designing or implementing a human in the approved "Cozy Chibi" style (concept B). Do **not** build villagers from this document until KT asks. This is the style and implementation reference taken from her (the player).
@@ -352,3 +354,98 @@ Concept: [`ref/pets-chibi-concept.jpg`](ref/pets-chibi-concept.jpg) (top row Pip
 
 **Grandma Fuku in the game (pass 41).** The game's grandma walker now renders `ChibiFuku` (App.jsx, its own lazy chunk) whenever the chibi look is on (`CHIBI`; `?chibi=0` / `?oldchar` keep the old villager). She renders at scale 1, as Her does (villagers use 0.8): in the studio cast view at scale 1 they measure 243 px (Her) vs 241 px (Fuku), so they stand the same height. Her walker's phase rate is 6.0 (`villagers.js`, the shuffle), and her NPC height for look-at / bubbles is scaled 1.2x. Professor Hoshino is still a dev-only draft (`?dev=chibi-drafts`).
 
+## 7. Grandpa Ishi (draft, pass 1)
+
+Concept: [`ref/ishi-character-sheet.png`](ref/ishi-character-sheet.png). Pass 1 vs the sheet: [`ref/ishi-pass1-compare.jpg`](ref/ishi-pass1-compare.jpg).
+Dev only, like Fuku and Hoshino: `?view=charstudio&dev=chibi-drafts&char=ishi&still` (`&cast` shows all four). The game still renders the old grandpa.
+
+- Code: `src/art/chibi/ChibiIshi.jsx`, on the shared pipeline (`castFace.jsx` kind `ishi`, `castHair.js`). Motion profile `ISHI_MOTION` in `motion.js` is a placeholder; no animation pass yet (still pose only, like the other drafts).
+- Head: bald (the body bake's skin), white top knot with a wrap ring. Brows (4 puffs each), round nose and broad mustache (4 lobes each side) are 3D lumps placed on the face surface (`surfZ` marches `headSDF`), merged with the knot and big forward-turned ears into one hair mesh + one ink hull. A per-vertex `aInk` thins the hull on the face pieces (0.38) so the mustache does not grow a heavy black underside.
+- Face atlas (`kind: 'ishi'`): no painted brows, nose or mouth; three soft forehead lines and eye-corner crinkles; the excited cell paints a small open mouth under the mustache.
+- Outfit: `openJacket` painter (navy haori `#2d3548` to the thigh, cream robe `#efe2c8`, brown trousers `#4a3e34`), `bare` legs below mid-shin, `shoe` = skin. 3D: crossed robe collar, a brown sash across the opening, sandals on the foot bones (soles under the raised `footY`/`soleY`).
+- Still pose: chest-parented wide haori sleeves with a dark sleeve mouth; gnarled cane in his right hand standing by the foot; pipe in his left in front of the belly.
+- Cost: studio 20 draw calls / ~46k tris.
+- Open items for KT: haori is painted on (tight, not the sheet's loose boxy drape); shoulders show small stubs from the hidden skinned arms (same as the other drafts); no animation.
+
+### Ishi pass 2 (KT: face first; scalp vs face contrast; follow the head and face shape)
+
+Before/after: [`ref/ishi-pass2-face-compare.jpg`](ref/ishi-pass2-face-compare.jpg).
+
+- **Scalp colour.** The shading bake's AO adds a hidden hair-helmet ellipsoid over the skull, so a bald scalp was baked as if under hair and came out dark orange. New opt-in body knob `bald: true` leaves it out (default unchanged for everyone else). The scalp now shades like the face.
+- **Head shape**, measured off the sheet's front and side views with the eye size as the scale (eyes, brows and mustache as fractions of head height: brows 0.375, eyes 0.615, nose 0.71, mustache 0.75-0.92; height : width ≈ 1.0):
+  - New opt-in knobs in `spec()`: `headS` (skull radii scale) and `cranium` (an extra dome ellipsoid blended into the skull, head-frame units). Ishi: `headS [0.965, 0.98, 1.07]`, `cranium [0.014, -0.004, 0.048, 0.038, 0.054, 0.012]` (a broad round crown; stretching the skull instead made the top an egg point), jaw `[0, -0.029, 0.010, 0.046, 0.032, 0.034, 0.022]` (broad, round lower face).
+  - `castFace.jsx`: `makeHeadSDF({ headS, cranium, cheek })` and `makeFaceGeo(sdf)`; `makeFace({ shape })` projects the decal onto that head. Defaults are the old constants, so Fuku and Hoshino are unchanged.
+- **Face pieces** rebuilt as chains of overlapping lumps along a curve so the outlines are smooth: brows are thick crescents set high and wide (x 0.0175-0.044), the outer end drooping; the mustache is two full lobes (11 lumps each) from under the nose out to small flicked tips; the nose is a wider ball with a fine outline. Ears are bigger, lower (nose height) and further back, with an inner lump whose fine ink reads as the fold. The top knot moved back a little.
+- Cost: still 13 calls in the face close-up; tris ~43k -> ~57k (similar to her face close-up).
+- Not changed: the body's ink hull is thicker under the jaw than the sheet's thin outline (shared by every character).
+
+### Ishi pass 3 (KT: follow the mustache closely; the ears are wrong)
+
+Before/after: [`ref/ishi-pass3-compare.jpg`](ref/ishi-pass3-compare.jpg).
+
+- **Mustache**: traced off the sheet (`MUS_R` in `ChibiIshi.jsx`, head frame): one bell-shaped piece whose top edge hugs the sides of the nose and slopes down to pointed outer tips, a feathery underside of strand points and a V notch in the middle. Each half is a closed puff of rings shrinking from the outline to a centre, domed up to 0.0088 under the nose (the sheet's side view: it stands out nearly as far as the nose), thinner toward the tips. A flat extrude did not work: its few big cap triangles let the rounded face poke through.
+- **White hair shading**: the shared hair shader shaded everything with a warm brown, so the white mustache's underside came out peach and looked like skin showing through. `makeHairMat(..., shade)` takes an optional shadow tint (default unchanged); Ishi uses a light cool grey `[0.80, 0.80, 0.85]`, as on the sheet.
+- **Ears**: a flat C lying against the side of the head at nose height, set well back (`EAR` y -0.025, z -0.008), standing 0.0068 off the head and turned forward 0.62 so the bowl shows from the front: a flat disc, a thick rim curling round the back and top (opening toward the face), a small inner curl, and a darker warm bowl. The bowl uses a new hair-shader skin shade: `aSkin` 0.5-0.9 is a darker skin (1 stays plain skin, so Fuku's and Hoshino's ears are unchanged).
+- Face pieces are now placed on the real baked surface (`sdf` from `GhibliPerson.jsx` is exported for this); it matches the head SDF on the face, so nothing moved.
+- Cost: face close-up 13 calls / ~53k tris.
+
+### Ishi pass 4 (KT: mouth to chin fuller with a curved contour, not slanting in right after the nose; ears point up)
+
+Compare: [`ref/ishi-pass4-compare.jpg`](ref/ishi-pass4-compare.jpg).
+
+- **Chin**: new opt-in body knob `chin` (same form as `cranium`: `[y, z, rx, ry, rz, k]` in the head frame, blended into the skull and shaded with it; `makeHeadSDF` takes it too). Ishi: `CHIN [-0.049, 0.030, 0.027, 0.015, 0.021, 0.012]`, and the jaw moved forward (`JAW` z 0.010 -> 0.019, rz 0.034 -> 0.040). In profile the face now drops nearly straight from the nose base to a full round chin, then curves back under to the neck, as in the sheet's side view (before, the line ran diagonally from the nose to the throat). The jaw ellipsoid alone cannot do this: its front-bottom is always a rounded slope.
+- **Ears**: egg-shaped with the broad end up (wider at the top, narrowing to the lobe), the top flaring out from the head and the lobe tucked in (`rotateZ -0.27` in the ear frame), standing nearly upright (`rotateX -0.10`). Before, they stood out most at the bottom and read as drooping.
+
+### Ishi pass 5 (KT: fuller cheeks, slightly round at the sides; forehead lines higher, curving upward, fainter)
+
+Compare: [`ref/ishi-pass5-compare.jpg`](ref/ishi-pass5-compare.jpg).
+
+- **Cheeks**: jaw wider and rounder (`JAW [0, -0.030, 0.017, 0.053, 0.033, 0.041, 0.026]`, was rx 0.046, k 0.022), so the lower sides of the face bulge gently (about 0.9 W across at the mustache, as on the sheet).
+- **Forehead lines**: the face decal can now reach higher per character (`makeFace({ fy1 })`, default 0.019 unchanged; Ishi 0.034, the grid rows scale with it). Two lines at y 0.029 / 0.025 (sheet: ~0.2 H below the top), arched upward with a soft wave in the middle, `rgba(184,124,98,0.30)` at width 0.0009 (was 0.55 alpha, 0.0011, just above the brows).
+
+### Ishi pass 6 (KT: bigger eyes; forehead lines bend gently upward; clothes detail; colour bleeding from chin to clothes)
+
+Compare: [`ref/ishi-pass6-compare.jpg`](ref/ishi-pass6-compare.jpg).
+
+- **Eyes**: `makeFace({ eyeS })` scales the eye (default 1, the template); Ishi 1.12.
+- **Forehead lines**: two faint lines (alpha 0.30) at y 0.028 / 0.0244 whose ends lift gently (a shallow U), not an arch.
+- **Chin to clothes**: the outfit painter switches to clothing below one fixed neck height, and Ishi's lowered chin dipped below it, so its underside was painted haori navy and robe cream. Two opt-in knobs fix it: `outfit.skinEll [cx, cy, cz, rx, ry, rz]` (always skin inside this ellipsoid; Ishi: his jaw, inflated) and `body.headUp` (lift the head off the shoulders; Ishi 0.012) so the chin sits just above the collar, as on the sheet. Both default to the old look.
+- **Collars**: 3D bands laid on the baked body surface (found with the exported `sdf`): the haori's darker collar band (eri) runs up one front edge, stands round the back of the neck (taller at the back) and down the other edge; the cream robe collar crosses left over right into a V under the chin. One mesh + one ink hull.
+- **Loose clothes** (one mesh + one ink hull on the hips): the haori's lower body is a thick, flared, open-fronted shell from under the arms to mid-thigh (measured against the body, flare 0.006 -> 0.021, darker lining, the eri running down its edges); a tall sash (0.040) wrapped right round the waist on top of the trousers, two dark stripes, a soft knot with a loop each side and a short end; wide trouser legs to mid-calf with a darker hem and a seat piece joining them; wider, boxier sleeves.
+- Cost: turnaround 22 draw calls / ~65k tris.
+- Still open: the sheet's haori is boxier at the shoulders, with sleeves hanging straight from wide shoulders; the back collar band reads thin behind the head.
+
+### Ishi pass 7 (KT: face sides at the ears pushed in slightly; fuller, rounder lower back of the head in profile; wider, puffier, oversized jacket)
+
+Compare: [`ref/ishi-pass7-compare.jpg`](ref/ishi-pass7-compare.jpg).
+
+- **Face at the ears**: skull a touch narrower (`headS` x 0.965 -> 0.95) and the jaw's widest point moved down below the ears (`JAW` y -0.030 -> -0.035, rx 0.053 -> 0.052, ry 0.033 -> 0.031), so the sides pull in at ear level and the lower cheeks stay full.
+- **Back of the head**: new opt-in `body.lumps` (a list of head lumps, same form as `cranium` / `chin`; `makeHeadSDF` takes `lumps` too). Ishi: `OCCIPUT [-0.018, -0.024, 0.042, 0.030, 0.039, 0.016]`, so the skull rounds right down to the nape in profile.
+- **Oversized haori**: the shell now starts at the neck and covers the shoulders in a soft round slope (from a collar 0.013 off the neck out to the shoulder line), stands 0.012 off the body and flares to 0.036 at the hem; its front opening follows the lapel line row by row (`haoriEdge`), and the eri runs along that edge. The standing back collar sits on top of it. Sleeves are bigger (upper arm 0.0215, mouth 0.030) and hang from shoulders moved out 0.010.
+- Cost: turnaround 22 calls / ~68k tris.
+
+### Ishi pass 8 (KT: shorter, cuter brows; cuter mustache; darker sandals; less full mouth and chin in profile)
+
+Compare: [`ref/ishi-pass8-compare.jpg`](ref/ishi-pass8-compare.jpg).
+
+- **Brows**: a short plump arch over each eye (6 lumps, x 0.0175 to 0.036, was to 0.044), round at both ends, no long outer droop.
+- **Mustache**: smaller and rounder (`MUS_R` half-width 0.026, was 0.031): a soft round tip and two gentle scallops underneath instead of strand points; a little less puff (0.0078 under the nose).
+- **Mouth and chin**: pulled back in profile (`CHIN` z 0.030 -> 0.026, rz 0.021 -> 0.019; `JAW` z 0.017 -> 0.014).
+- **Sandals**: darker (straps `#563220`, soles `#3c2216`) and chunkier: each strap arches from the sole over the foot's real cross-section at that point (they were buried inside the foot), with a thick band (tube 0.26); the sole is a touch thicker.
+
+### Ishi pass 9 (KT: bigger mustache, wider, covering more of the mouth)
+
+Compare: [`ref/ishi-pass9-compare.jpg`](ref/ishi-pass9-compare.jpg). The pass-8 outline scaled out from under the nose: x 1.22 (half-width 0.032), everything below y -0.0336 stretched down 1.32 (bottom about -0.051); the puff scales with the width (0.0082 under the nose).
+
+### Ishi pass 10 (KT: why are there black lines inside the mustache?)
+
+Before/after: [`ref/ishi-pass10-mustache.jpg`](ref/ishi-pass10-mustache.jpg).
+
+- **Cause**: each half was built as rings shrinking to one centre point, which only works when every point of the outline can see that centre in a straight line. Pass 9 scaled the outline but not the centres, and with the scalloped underside the rings folded over themselves; the folded strips faced the wrong way, so the ink hull and shadow showed through as dark diagonal lines.
+- **Fix**: `mustacheGeo` no longer has a centre. The whole outline is triangulated (`ShapeUtils.triangulateShape`), subdivided 4 times, and every point is raised off the face by its distance from the edge (a rounded rim within 0.0045, then a soft dome; thickest under the nose). The back is the same mesh just inside the face, joined by a wall along the outline's boundary edges. Any outline works without folding.
+- **Outline**: a soft grey edge painted through the hair shader (`aSkin` 0.36 at the rim fading over 0.0016; values 0.1..0.38 darken hair), as on the sheet, plus a fine hull (ink 0.3) for the silhouette. A heavier hull left jagged black slivers under the scallops.
+
+### Ishi: design locked (KT), pass 10
+
+KT locked Ishi's look at pass 10 for the game. His motion now builds on it (see `chibi-animation-guide.md`, "Grandpa Ishi").
+Note for the motion pass: the arms are now the rig's real arms (`body.arm 0.92`, `armR [0.8, 0.75, 0.7]`, `hand 1.15`) so the sleeves, cane and pipe move with every pose; the rest pose was tuned to match the locked still. The clothes are still measured against the body without arms.

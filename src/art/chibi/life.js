@@ -224,7 +224,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
   L.scanT -= dt
   if (L.scanT <= 0) { L.scanT = 0.33; let best = 0, bd = 1e9
     B.root.getWorldPosition(_r); const hh = Math.max(0.02, _p.distanceTo(_r)), far = hh * 7
-    for (let i = 0; i < NPCS.length; i++) { const o = NPCS[i].obj; if (!o) continue; o.getWorldPosition(_t); const d = _t.distanceTo(_p); if (d < far && d < bd) { bd = d; best = 1; L.tgt.copy(_t).add(_v.copy(_p).sub(_r).multiplyScalar(0.8)) } }
+    for (let i = 0; i < NPCS.length; i++) { const o = NPCS[i].obj; if (!o || NPCS[i].st === st) continue; /* a chibi villager is in NPCS too: never look at (or wave at) itself */ o.getWorldPosition(_t); const d = _t.distanceTo(_p); if (d < far && d < bd) { bd = d; best = 1; L.tgt.copy(_t).add(_v.copy(_p).sub(_r).multiplyScalar(0.8)) } }
     const dog = typeof window !== 'undefined' && window.__dog; if (dog && dog.n && _r.lengthSq() > 0) { _t.copy(dog.n).multiplyScalar(_r.length()); const d = _t.distanceTo(_p); if (d < far * 0.8 && d < bd) { bd = d; best = 2; L.tgt.copy(_t) } }
     L.near = best ? clamp(1 - bd / (hh * 4.5), 0, 1) : 0
     // indoors: Mochi up to something, the window by day, the fire in the evening (her house supplies the point)

@@ -10,7 +10,7 @@ import { Character, cel, spec, mkOutline, coreSDF } from '../../GhibliPerson.jsx
 import { FUKU_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
 import { envelope, approach } from './lifeCore.js'
-import { HR, MIDFACE, MID_FADE, EYE, headSDF, makeFace } from './castFace.jsx'
+import { MIDFACE, MID_FADE, EYE, makeHeadSDF, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
 
@@ -34,7 +34,7 @@ const FUKU_CHEEK = [0, -0.0390, 0.0120, 0.0535, 0.0165, 0.0420, 0.0180, 0.0100]
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
 const EYE_DX = 0.0030 // eyes and brows this much further apart (each side), glasses follow
 const FEAT_DY = -0.0033 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
-const HEAD_W = 0.95, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
+const HEAD_W = 0.95, FUKU_HEAD = { headS: [HEAD_W, 1, 1], cheek: FUKU_CHEEK }, fukuHeadSDF = makeHeadSDF(FUKU_HEAD)
 
 
 // her own glasses: round, heavier dark rims, a low curved bridge and arms that run back to the ears
@@ -52,7 +52,7 @@ function fukuGlasses() {
   }
   const g = mergeGeometries(parts.map(p => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('uv'); return p })); g.computeVertexNormals(); return g
 }
-const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, cheek: FUKU_CHEEK, hr: FUKU_HR, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020, eyeScale: 1.14, eyeDx: EYE_DX, brow: { color: '#c9c2ba', edge: '#9d948c', width: 0.0056 } }, glassesGeo: fukuGlasses })
+const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush: 0.72, shape: FUKU_HEAD, blushAt: { dx: 0.0012, dy: -0.0012, dr: 0.98 }, eyeS: 1.14, featDy: FEAT_DY, featOff: { mouth: 0.0045, nose: 0.0020, eyeDx: EYE_DX, brow: { color: '#c9c2ba', edge: '#9d948c', width: 0.0056 } }, glassesGeo: fukuGlasses })
 
 // skull HR is ~[0.058, 0.050, 0.055]; the sheet cap sits ~10–15% wider than the face, ears out
 const EAR = { x: 0.0670, y: -0.0225, z: 0.006 }
@@ -66,7 +66,7 @@ const HL = { a: 0.0535, top: 0.040, bot: -0.072, p: 4, dip: 0.0035, dipW: 0.0075
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 // distance from the skull centre to the skin along a direction
 function skinR(dx, dy, dz) { let lo = 0, hi = 0.12
-  for (let n = 0; n < 26; n++) { const m = (lo + hi) / 2; if (headSDF(dx * m, dy * m, dz * m, FUKU_CHEEK, FUKU_HR) < 0) lo = m; else hi = m }
+  for (let n = 0; n < 26; n++) { const m = (lo + hi) / 2; if (fukuHeadSDF(dx * m, dy * m, dz * m) < 0) lo = m; else hi = m }
   return lo }
 // reshape the cap ball: (1) behind, pull the dome in and let its mass sit lower, so the back of the head rounds down
 // to the nape instead of bulging high; (2) in front, lay the hair just over the skin down to the temples, cut the
@@ -117,7 +117,7 @@ function hairlineInk() {
     const [cy, hb] = winAt(x); x *= 0.972; const y = cy + hb * 0.975 * Math.abs(c) ** (2 / HL.p) // just inside the hair edge
     if (y < HL.low) continue
     // find the skin along a ray from the centre through (x, y) on the front
-    let lo = 0, hi = 0.12; for (let k = 0; k < 26; k++) { const m = (lo + hi) / 2; if (headSDF(x, y, m, FUKU_CHEEK, FUKU_HR) < 0) lo = m; else hi = m }
+    let lo = 0, hi = 0.12; for (let k = 0; k < 26; k++) { const m = (lo + hi) / 2; if (fukuHeadSDF(x, y, m) < 0) lo = m; else hi = m }
     pts.push(new THREE.Vector3(x, y, lo + 0.0042))
   }
   const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.0012, 6, false)
@@ -475,7 +475,7 @@ export const FUKU = {
   name: 'grandma', age: 'elder', motion: FUKU_MOTION,
   // SDF long A-line skirt (the sheet's one solid purple skirt to the ankle). The arms are custom chest-parented
   // sleeves with clasped hands (attachLook); body.arm / hand stay tiny so the skinned rig stays hidden.
-  body: { skirt: 'long', skirtFlare: 1.34, skirtTop: 0.86, headW: HEAD_W, H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.02, girth: 1.26, shoulder: 0.90, chestW: 1.04, bellyZ: 0.96, shX: 0.90, armA: 0.52,
+  body: { skirt: 'long', skirtFlare: 1.34, skirtTop: 0.86, headS: [HEAD_W, 1, 1], H: 0.88, head: 1.48, leg: 0.90, torso: 1.14, arm: 0.02, girth: 1.26, shoulder: 0.90, chestW: 1.04, bellyZ: 0.96, shX: 0.90, armA: 0.52,
     armR: [0.06, 0.06, 0.06], legR: 1.24, legX: 1.06, foot: 1.18, bootW: 1.20, bootH: 1.05, bootL: 0.92, hand: 0.002,
     cheek: FUKU_CHEEK, midface: MIDFACE, midfaceFade: MID_FADE, hunch: 0.20,
     anY: 0.036, footY: 0.014, soleY: 0.0012 },

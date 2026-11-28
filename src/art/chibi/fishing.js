@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { planetRef } from '../../common.jsx'
 import { R, LAKE_W, HARB_W } from '../../world.js'
+import { WATER_DROP } from '../../world/shoreSetting.js' // water is drawn this much below its gameplay level
 
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 const lerp = (a, b, k) => a + (b - a) * k
@@ -101,7 +102,7 @@ export function fishPost(FS, B, F, L, t, dt, root) {
   root.getWorldPosition(_b); _up.set(0, 1, 0).applyQuaternion(root.getWorldQuaternion(_q)); _f.set(0, 0, 1).applyQuaternion(_q)
   const sp = typeof window !== 'undefined' && window.__game?.G?.ui?.fish && window.__layout?.spots?.find(s => s.id === window.__game.G.ui.fish.spot)
   if (sp && sp.n && planetRef.current) { const wl = sp.zone === 'harbour' ? HARB_W : sp.zone === 'lake' ? LAKE_W : null // float on the water surface (the spot itself sits under it)
-    FS.tgt.copy(sp.n).multiplyScalar(wl != null ? R + wl + 0.004 : sp.pos.length()).applyMatrix4(planetRef.current.matrixWorld) }
+    FS.tgt.copy(sp.n).multiplyScalar(wl != null ? R + wl - WATER_DROP + 0.004 : sp.pos.length()).applyMatrix4(planetRef.current.matrixWorld) }
   else if (!FS.has || !sp) FS.tgt.copy(_b).addScaledVector(_f, 0.62)
   FS.has = true
   const P = F ? F.phase : 'wait', k = F?.k ?? 1, bp = _v

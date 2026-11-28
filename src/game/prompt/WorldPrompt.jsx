@@ -11,7 +11,7 @@ import { NEEDS_TOOL } from '../recipes.js'
 import { Icon } from '../icons.jsx'
 import { placeBubble } from './logic.js'
 import { chipShows } from './hints.js'
-import { talkWins } from '../../talk/state.js'
+import { TALK, talkWins } from '../../talk/state.js'
 import { STILL } from './still.js'
 import './prompt.css'
 
@@ -68,7 +68,7 @@ export function placePrompt(camera, dt, playerObj) {
     PROMPT.idleMs = !n || moved || PROMPT.id !== n.id ? 0 : PROMPT.idleMs + dt * 1000 }
   PROMPT.id = n ? n.id : null
   if (!el || !n) return
-  const tw = talkWins(n); if (el.classList.contains('tp-hidden') !== tw) el.classList.toggle('tp-hidden', tw) // a villager has E
+  const tw = !!TALK.open || talkWins(n); if (el.classList.contains('tp-hidden') !== tw) el.classList.toggle('tp-hidden', tw) // the villager / conversation owns E
   if (typeof n.at !== 'function') return
   if (n.weight === 'light') {
     const show = chipShows(G.s.hints || {}, el.dataset.item, G.s.day, PROMPT.idleMs)

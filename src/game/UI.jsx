@@ -17,6 +17,7 @@ import { weatherFor } from '../talk/state.js'
 import { BagSatchel, useSatchelFits, preloadBag } from '../ui/bag/BagSatchel.jsx'
 import { QuestTracker, Hotbar, fireHot, HOT_N } from '../ui/glass/HudExtras.jsx'
 import { armAudio } from '../audio/arm.js'
+import { afterReveal } from '../boot.js'
 import { rideShows } from '../ui/ridePlace.js'
 import { newReel, fishStep, reelDt, REEL } from '../systems/fish.js'
 // Stage B: garden / gifts / errands / buffs / settings. The rules + state wiring (systems/live.js) and the panels load as
@@ -29,13 +30,13 @@ idle(() => import('../systems/live.js').then(m => { SBM.m = m; window.__sbReady 
   import('../systems/liveE.js').then(e => { SEM.m = e; window.__seReady = true; emit() })
   // Stage C (fishing species, train, photo mode, journal + museum, seasons/weather hooks, tutorial): one more lazy step
   // waits for the first scene frame + 4 s so it never competes with the boot on slow phones
-  const afterFrame = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit()
-    // the journal book (code, leather art, handwriting font) loads quietly once Stage C is up, so J opens it instantly
-    idle(() => import('../ui/journal/book/preload.js').then(j => j.preloadJournal()), 4000) }), 3000), 4000) : setTimeout(afterFrame, 250))
-  afterFrame()
-  // the satchel art (225-410 KB) loads + decodes quietly a few seconds after the first frame, so opening the bag is instant
-  const bagArt = () => (window.__loadMarks && window.__loadMarks.frame ? setTimeout(() => idle(preloadBag, 4000), 2500) : setTimeout(bagArt, 300))
-  bagArt()
+  afterReveal(() => {
+    setTimeout(() => idle(() => import('../systems/liveC.js').then(c => { SCM.m = c; window.__scReady = true; emit()
+      // the journal book loads quietly once Stage C is up, so J opens it instantly
+      idle(() => import('../ui/journal/book/preload.js').then(j => j.preloadJournal()), 4000) }), 3000), 4000)
+    // Satchel art decodes after the reveal, never competing with the opening animation.
+    setTimeout(() => idle(preloadBag, 4000), 2500)
+  })
 }))
 const SCM = { m: null }
 const StageCPanels = lazy(() => import('../systems/PanelsC.jsx'))

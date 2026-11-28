@@ -24,9 +24,9 @@ test('comes back after a day away from that item', () => {
   assert.equal(chipShows(h, 'berries', 3, 0), true)
 })
 test('save v7 carries hints', () => {
-  assert.equal(SAVE_VERSION, 7)
+  assert.equal(SAVE_VERSION, 8)
   const s = migrate({ v: 6, day: 1, inv: {}, clock: { a: 7 } })
-  assert.equal(s.v, 7); assert.deepEqual(s.hints, {})
+  assert.equal(s.v, 8); assert.deepEqual(s.hints, {})
   assert.deepEqual(migrate({ v: 7, hints: 5 }).hints, {})
   assert.deepEqual(migrate({ v: 7, hints: { berries: { n: 2, day: 0 } } }).hints, { berries: { n: 2, day: 0 } })
 })

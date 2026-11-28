@@ -6,14 +6,15 @@ import * as THREE from 'three'
 import React, { useMemo, useRef, useEffect, useLayoutEffect, useReducer, useState, lazy, Suspense } from 'react'
 const StageBWorld = lazy(() => import('../systems/World3D.jsx')) // Stage B garden + errands board (lazy)
 import { useFrame, useThree } from '@react-three/fiber'
-import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H } from '../world.js'
+import { R, height, place, around, ZONES, LAKE_W, HARB_W, CLIFF_H, seaDepth } from '../world.js'
 import { T, C, toon, glow, planetRef } from '../common.jsx'
 import { G, emit, subscribe, add, markTaken, available, toast, count, take } from './store.js'
 import { watchReady } from '../signals.js'
 import { YARD } from '../home/yard.js'
 import { ITEMS, DECOR } from './items.js'
 import { GESTURE_DUR, gestureOf } from './actItems.js'
-import { SPAWNS, NEEDS_TOOL } from './recipes.js'
+import { NEEDS_TOOL } from './recipes.js'
+import { placeSpots, toward } from './spotLayout.js'
 import { FORAGE, forageSpawns } from './forageTable.js'
 import { bakePropMeshes } from './propBake.js'
 import { openRecipes } from '../ui/journal/book/openRecipes.js'
@@ -34,40 +35,18 @@ const CANDS = []
 const ForageProp = lazy(() => import('../art/forage/MergedForage.jsx')) // Stage C seasonal forage props (Studio's, merged to 2 calls each)
 
 const q = new URLSearchParams(location.search)
-let seed = 4242; const rr = () => (seed = (seed * 16807) % 2147483647) / 2147483647
-const toward = (c, t, a) => { c = c.clone().normalize(); const d = t.clone().addScaledVector(c, -c.dot(t)).normalize(); return c.multiplyScalar(Math.cos(a)).addScaledVector(d, Math.sin(a)).normalize() }
 const UPV = new THREE.Vector3(0, 1, 0)
 export const GAME = { P: null, blocked: () => false, village: null, Zc: null, home: null, actions: {} }
 const posOf = (n, lift = 0) => n.clone().normalize().multiplyScalar(R + height(n) + lift)
 
 // ---------- layout (deterministic, so saved respawn state keeps matching) ----------
 let LAYOUT = null
-export function layout(Zc, village, homeN, blocked) {
+export function layout(Zc, village, homeN, blocked0) {
   if (LAYOUT) return LAYOUT
+  const blocked = (n) => blocked0(n) || seaDepth(n) > 0 // nothing laid out in the sea (seaDepth is 0 under ?world=old)
   GAME.Zc = Zc; GAME.village = village; GAME.blocked = blocked
-  const spots = [], zc = (z) => z === 'village' ? village : Zc[z], zr = (z) => z === 'village' ? 0.06 : ZONES[z].r
-  for (const [zone, item, n, mode] of SPAWNS) {
-    for (let i = 0, tries = 0; i < n && tries < 400; tries++) {
-      const c = zc(zone), r = zr(zone); let pn, stand, lift = 0
-      const wetZ = zone === 'lake' || zone === 'harbour'
-      if (mode === 'shore' || (wetZ && mode !== 'water')) pn = around(c, r * (1.03 + rr() * 0.11), rr() * 6.283)
-      else if (mode === 'water') { const b = rr() * 6.283; pn = around(c, r * 0.86, b); stand = around(c, r * 1.04, b) }
-      else if (mode === 'edge') pn = around(c, r * (0.88 + rr() * 0.12), rr() * 6.283)
-      else if (mode === 'base') pn = toward(c, Zc.lake, r + 0.03 + rr() * 0.05).applyAxisAngle(c, (rr() - 0.5) * 2.2)
-      else if (mode === 'spring') pn = toward(c, Zc.lake, r + 0.05)
-      else pn = around(c, Math.sqrt(rr()) * r * (zone === 'forest' ? 0.8 : 0.85), rr() * 6.283)
-      if (mode !== 'water' && blocked(pn) && tries < 300) continue
-      const id = `${item}-${zone}-${i}`
-      const water = mode === 'water'
-      const level = zone === 'lake' ? LAKE_W : HARB_W
-      const pos = water ? pn.clone().multiplyScalar(R + level + 0.01) : posOf(pn, lift)
-      spots.push({ id, item, zone, n: pn, stand: stand || pn, pos, standPos: stand ? posOf(stand) : pos, night: mode === 'night', water, spin: rr() * 6.28, s: 1.35 + rr() * 0.35 })
-      i++
-    }
-  }
-  // showcase cluster in the forest (for the gather screenshot / first-time players)
-  const fc = toward(Zc.forest, GAME.P ? GAME.P.n : Zc.meadow, ZONES.forest.r * 1.2)
-  ;[['mushroom', 0, 0], ['wood', 0.04, 0.9], ['moss', 0.035, -1.0], ['acorn', 0.05, 2.4], ['pinecone', 0.06, -2.2]].forEach(([item, d, b], k) => { const pn = around(fc, d, b); spots.push({ id: `${item}-show-${k}`, item, zone: 'forest', n: pn, stand: pn, pos: posOf(pn), standPos: posOf(pn), spin: k * 1.7, s: 1.5 }) })
+  // gatherables (spotLayout.js: pure, so the unit tests run the same layout)
+  const spots = placeSpots(Zc, village, blocked, GAME.P ? GAME.P.n : Zc.meadow)
   // home bench
   const hp = place(homeN, 0, 0)
   const benchN = posOf(homeN).add(new THREE.Vector3(YARD.bench[0], 0, YARD.bench[1]).applyQuaternion(hp.q)).normalize()
@@ -77,12 +56,6 @@ export function layout(Zc, village, homeN, blocked) {
   const dirAway = cc.clone().sub(toward(cc, Zc.lake, 0.05)).normalize()
   const A = toward(cc, cc.clone().add(dirAway), cr + 0.24), B = toward(cc, cc.clone().add(dirAway), cr - 0.03)
   const top = toward(cc, cc.clone().add(dirAway), cr * 0.35)
-  // Stage C seasonal forage: laid out for every season with their own seed (the main rr() sequence stays as before),
-  // up to the rain-boosted count; which ones show follows forageSpawns(T.season, T.wet) (see FORAGE_N)
-  { let fs = 9173; const fr = () => (fs = (fs * 16807) % 2147483647) / 2147483647
-    for (const f of FORAGE) { const max = Math.ceil(f.n * (f.rain || 1)), c = zc(f.zone), r = zr(f.zone)
-      for (let i = 0, tries = 0; i < max && tries < 200; tries++) { const pn = f.zone === 'village' ? around(c, r * (1.6 + fr() * 0.8), fr() * 6.283) : around(c, Math.sqrt(fr()) * r * 0.85, fr() * 6.283) // village: the outskirts, clear of the board / stalls / villagers; if (blocked(pn) && tries < 150) continue
-        const pos = posOf(pn); spots.push({ id: `${f.id}-${f.zone}-${i}`, item: f.id, zone: f.zone, n: pn, stand: pn, pos, standPos: pos, forage: i, spin: fr() * 6.28, s: 1.35 + fr() * 0.35 }); i++ } } }
   G.benchPos = posOf(benchN); LAYOUT = window.__layout = { spots, bench: { n: benchN, pos: posOf(benchN), q: place(benchN, 0, 0).q }, homeN, homePos: posOf(homeN), bridge: { A, B, hA: height(A) + 0.03, hB: height(B) + 0.012, top, chest: toward(top, B, 0.022).applyAxisAngle(top, 1.3).normalize() } }
   void out
   if (q.get('decor') === 'demo') { const hpos = posOf(homeN); G.s.placed = [['wreath', 0.3, 0.55, 0], ['basket', 0.62, 0.2, 0.6], ['mosslamp', 0.18, 0.72, 0], ['chime', 0.75, -0.15, 0.3]].map(([item, x, z, rot], i) => ({ uid: 'demo' + i, item, rot, n: hpos.clone().add(new THREE.Vector3(x, 0, z).applyQuaternion(hp.q)).normalize().toArray() })) }
