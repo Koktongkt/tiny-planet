@@ -398,7 +398,7 @@ function Walker({ w, i }) {
     }
     L.placed = true
   })
-  return <group ref={ref}>{!ready ? null : CHIBI && npc.key === 'grandpa' ? <Suspense fallback={null}><ChibiIshi st={st} res={TOUCH ? 36 : 44} scale={0.95} /* about her height (the cast sheet): chibi villagers are not drawn at the old 0.8 */ /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : CHIBI && npc.key === 'grandpa' ? <Suspense fallback={null}><ChibiIshi st={st} res={TOUCH ? 36 : 44} scale={0.995} /* her height (head top 0.434, KT): chibi villagers are not drawn at the old 0.8 */ /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 // the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
 function Bench() {
