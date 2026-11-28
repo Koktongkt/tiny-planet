@@ -35,9 +35,9 @@ test('Fuku custom jaw stays local and feeds both mesh and face decal',()=>{
 
 test('Hoshino has private face and skull values wired to both mesh and face decal',()=>{
   const src=read(CHARACTERS.hoshino), result=apply('hoshino',src,{'jaw.width':.051,'head.width':1.01,'nose.z':.0403})
-  assert.match(result,/const HOSHINO_CHEEK = \[/)
-  assert.match(result,/shape: \{ headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE \}/)
-  assert.match(result,/headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE/)
+  assert.match(result,/const HOSHINO_JAW = \[\.\.\.HOSHINO_CHEEK, /)
+  assert.match(result,/shape: \{ headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE, chin: HOSHINO_CHIN \}/)
+  assert.match(result,/headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE/)
 })
 test('face builder accepts Windows (CRLF) checkouts and keeps their line endings',()=>{
   for(const [id,cfg] of Object.entries(CHARACTERS)){

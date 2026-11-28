@@ -24,18 +24,21 @@ const VEST = '#3d4630'
 const SHIRT = '#f4eee6'
 const TROUSER = '#66653f'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
-// thin gold wire specs, larger than the eyes (golden sheet); arms meet the low ears
-const SPEC = { r: 0.0152, wire: "#000000", ink: "#000000" } // wire glasses: lens radius, wire and rim-ink colours
-const HOSHINO_HEAD_S = [1, 1, 1.05]
+// Thin black lower half-rims. The arms meet the upper edge of the ears.
+const SPEC = { r: 0.0152, wire: '#000000', ink: '#000000' } // wire glasses: lens radius, wire and rim-ink colours
+const HOSHINO_HEAD_S = [0.96, 1.01, 0.99]
 const HOSHINO_CHEEK = [0, -0.0255, 0.0125, 0.047, 0.0295, 0.0295, 0.0185]
+const HOSHINO_JAW = [...HOSHINO_CHEEK, 0.012] // a short straight section above the rounded jaw
+// A shallow, wide chin keeps the lower contour full in front and brings it forward in profile.
+const HOSHINO_CHIN = [-0.0445, 0.022, 0.0315, 0.013, 0.023, 0.010]
 const HOSHINO_MIDFACE = [[-0.0278, 0.0434, 0.02, 0.0055, 0.013, 0.0026, 0.0017], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]
 const HOSHINO_MID_FADE = 0
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
+const EAR = { x: 0.0625, y: -0.018, z: 0.002 }
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [EAR.x - 0.003, EAR.y, EAR.z + 0.002] }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE, chin: HOSHINO_CHIN }, eyeS: 1.08 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
 // the fringe rolls from his right to left. Ears sit low (eye-to-mouth line), tucked under the cloud.
-const EAR = { x: 0.0625, y: -0.018, z: 0.002 }
 const DOME = { c: [0, 0.009, -0.011], r: [0.0605, 0.0505, 0.0605] }
 const _m = new THREE.Matrix4(), _n = new THREE.Vector3(), _t = new THREE.Vector3(), _b = new THREE.Vector3()
 // one wave lock on the dome: az 0 = front (+z), +pi/2 = +x; el up from the equator. len along the
@@ -118,7 +121,7 @@ export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
   body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.08, girth: 1.05, shoulder: 1.00, chestW: 0.85, bellyZ: 0.96, shX: 0.90, armA: 0.38, shDrop: 0.012, armK: [0.016, 0.003], armOcc: false, handL: 1.18,
     armR: [1.25, 1.30, 1.40], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
-    headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
+    headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE, chin: HOSHINO_CHIN, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
   face: { glasses: GLASS },

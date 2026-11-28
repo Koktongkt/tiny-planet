@@ -76,6 +76,17 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
         g.strokeStyle = 'rgba(140,90,80,0.45)'; g.lineWidth = 0.00095 * s
         for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0078), Y(my + 0.0006)); g.quadraticCurveTo(X(sd * 0.0104), Y(my - 0.0004), X(sd * 0.0096), Y(my - 0.0026)); g.stroke() }
       } }
+    if (kind === 'hoshino') {
+      const corner = name === 'excited' ? 0.0109 : name === 'happy' ? 0.0094 : 0.0081
+      const y = my + (name === 'excited' ? 0.0026 : 0.0008)
+      g.strokeStyle = 'rgba(150,88,65,0.39)'; g.lineWidth = 0.00065 * s
+      for (const side of [-1, 1]) {
+        g.beginPath()
+        g.moveTo(X(side * corner), Y(y))
+        g.quadraticCurveTo(X(side * (corner + 0.0024)), Y(y - 0.0009), X(side * (corner + 0.0027)), Y(y - 0.0035))
+        g.stroke()
+      }
+    }
     g.restore()
   })
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t
@@ -167,33 +178,40 @@ function glassesGeo() {
 let GLASSES = null
 const glasses = () => GLASSES || (GLASSES = glassesGeo())
 
-// Thin round wire spectacles (Hoshino's sheet): lenses ~1.35x the eye, a warm gold wire inked by a dark
-// rim just behind it, a small arched bridge and arms running back to the ears. One vertex-coloured mesh.
+// Lower half-rim spectacles with an arched bridge, merged with the temple arms.
 const tint = (g, hex) => { const c = new THREE.Color(hex), src = g.index ? g.toNonIndexed() : g, a = new Float32Array(src.attributes.position.count * 3)
   for (let i = 0; i < a.length; i += 3) { a[i] = c.r; a[i + 1] = c.g; a[i + 2] = c.b } src.setAttribute('color', new THREE.BufferAttribute(a, 3)); return src }
-function bar(a, b, r, hex) {
-  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), g = new THREE.CylinderGeometry(r, r, A.distanceTo(B), 6, 1)
-  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()))
-  const m = A.add(B).multiplyScalar(0.5); g.translate(m.x, m.y, m.z); return tint(g, hex)
-}
-export function wireGlassesGeo({ r = 0.0152, wire = '#b5843e', ink = '#4a2e1c', ear = [0.0555, -0.017, 0.006], tilt = 0.32 } = {}) {
-  const parts = [], cy = EYE.y + 0.0006, z = 0.0548
-  for (const sd of [-1, 1]) {
-    for (const [tube, hex, dz] of [[0.00125, ink, -0.0004], [0.00072, wire, 0.0003]]) {
-      const g = new THREE.TorusGeometry(r, tube, 6, 28); g.rotateY(sd * tilt); g.translate(sd * EYE.x, cy, z + dz); parts.push(tint(g, hex))
-    }
-    // arm: from the outer rim edge straight back to the ear
-    const ox = sd * (EYE.x + r * Math.cos(tilt)), oz = z - r * Math.sin(tilt)
-    parts.push(bar([ox, cy + 0.0035, oz], [sd * ear[0], ear[1] + 0.009, ear[2]], 0.00085, ink))
+export function wireGlassesGeo({ r = 0.0152, wire = '#000000', ink = '#000000', ear = [0.0555, -0.017, 0.006], tilt = 0.32 } = {}) {
+  const parts = [], cy = EYE.y + 0.0006, z = 0.0538
+  const overlap = Math.PI * 0.06 // the lower 56% of each rim, ending just above its horizontal centre
+  const endX = r * Math.cos(overlap) * Math.cos(tilt)
+  const endY = cy + r * Math.sin(overlap)
+  const endZ = r * Math.cos(overlap) * Math.sin(tilt)
+  for (const side of [-1, 1]) {
+    const rim = new THREE.TorusGeometry(r, 0.00098, 8, 28, Math.PI + 2 * overlap)
+    rim.rotateZ(-Math.PI - overlap)
+    rim.rotateY(side * tilt)
+    rim.translate(side * EYE.x, cy, z)
+    parts.push(tint(rim, ink))
+    const hinge = new THREE.Vector3(side * (EYE.x + endX), endY, z - endZ)
+    const tip = new THREE.Vector3(side * ear[0], ear[1] + 0.009, ear[2])
+    // Bow the temple outward just enough to clear the widest part of the cheek.
+    const bend = hinge.clone().lerp(tip, 0.5)
+    bend.x += side * 0.014
+    const arm = new THREE.QuadraticBezierCurve3(hinge, bend, tip)
+    parts.push(tint(new THREE.TubeGeometry(arm, 12, 0.00077, 6), wire))
   }
-  // arched bridge between the inner rim edges, sitting a little high on the nose
-  const ix = EYE.x - r * Math.cos(tilt), iz = z + r * Math.sin(tilt) + 0.0004, N = 6, pts = []
-  for (let i = 0; i <= N; i++) { const u = i / N, x = -ix + 2 * ix * u; pts.push([x, cy + 0.0030 + 0.0026 * Math.sin(Math.PI * u), iz + 0.0010 * Math.sin(Math.PI * u)]) }
-  for (let i = 0; i < N; i++) { parts.push(bar(pts[i], pts[i + 1], 0.00100, ink)); parts.push(bar([pts[i][0], pts[i][1], pts[i][2] + 0.0004], [pts[i + 1][0], pts[i + 1][1], pts[i + 1][2] + 0.0004], 0.00060, wire)) }
+  const innerX = EYE.x - endX, innerZ = z + endZ
+  const bridge = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(-innerX, endY, innerZ),
+    new THREE.Vector3(0, endY + 0.0052, innerZ + 0.002),
+    new THREE.Vector3(innerX, endY, innerZ),
+  )
+  parts.push(tint(new THREE.TubeGeometry(bridge, 12, 0.00082, 8), wire))
   const g = mergeGeometries(parts.map(p => { for (const k of Object.keys(p.attributes)) if (!['position', 'normal', 'color'].includes(k)) p.deleteAttribute(k); return p }))
   g.computeVertexNormals(); return g
 }
-const wireMat = () => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; return m }
+const wireMat = new THREE.MeshBasicMaterial({ vertexColors: true })
 
 const atlases = {}
 const faceMat = (kind, fy1, fy0, bl, dy, off) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
@@ -211,7 +229,7 @@ export function makeFace({ kind, glasses: glassC, wire = null, defaultSquint = 0
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
   let gGeo = null
   const geo = shape || fy1 || fy0 ? makeFaceGeo(makeHeadSDF(shape), fy1, fy0) : faceGeo
-  const wireG = wire ? wireGlassesGeo(wire) : null, wireM = wire ? wireMat() : null
+  const wireG = wire ? wireGlassesGeo(wire) : null
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind, fy1, fy0, bl, featDy, featOff), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
@@ -238,7 +256,7 @@ export function makeFace({ kind, glasses: glassC, wire = null, defaultSquint = 0
       U.uCellA.value = o.A; U.uCellB.value = o.B; U.uMix.value = o.mix; U.uOpen.value = open; U.uLash.value = o.lash; U.uBig.value = o.big * eyeS; U.uArc.value = arc
       U.uGaze.value.set(gx, gy); U.uSquint.value = squint; U.uBlush.value = blushU })
     return <group ref={lod(2)}><mesh geometry={geo} material={mat} renderOrder={2} />
-      {wireG ? <mesh geometry={wireG} material={wireM} /> : glassC && <mesh geometry={ownGlasses ? (gGeo || (gGeo = ownGlasses())) : glasses()} material={cel(glassC)} />}</group>
+      {wireG ? <mesh geometry={wireG} material={wireMat} /> : glassC && <mesh geometry={ownGlasses ? (gGeo || (gGeo = ownGlasses())) : glasses()} material={cel(glassC)} />}</group>
   }
   return Face
 }
