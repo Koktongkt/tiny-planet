@@ -10,7 +10,9 @@ import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferG
 import { Character, cel, spec, sdf, mkOutline } from '../../GhibliPerson.jsx'
 import { ISHI_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { envelope } from './lifeCore.js'
+import { envelope, triggerBlink } from './lifeCore.js'
+import { TALK } from '../../talk/state.js'
+import { ishiGesture } from './ishiTalk.js'
 import { MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
 import { part, tagAW, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
@@ -491,9 +493,40 @@ function ishiActs(L, B, st, dt) {
     B.chest.scale.y *= 1 + 0.04 * ho; B.chest.scale.x *= 1 + 0.015 * ho; B.root.position.y += 0.004 * ho
     B.upR.rotation.x -= 0.1 * e; B.upR.rotation.z -= 0.3 * e; B.foR.rotation.x -= 0.25 * e + 0.2 * ho // the free hand on his belly
     B.upL.rotation.z += 0.04 * e; B.foL.rotation.x -= 0.06 * e
-    L.arc = sst(0.05, 0.4, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0042 * e + 0.0009 * ho; brow = 0.0024 * e }
+    L.arc = sst(0.05, 0.4, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0010 * e + 0.0014 * ho; brow = 0.0024 * e }
+  // nod: a slow "mm-hm", two or three soft nods with the eyes half closed, a little lean in
+  if (L.fid === 'nod' && idleOk) { const d = FID.nod, k = L.fu / d, e = envelope(L.fu, d, 0.35), n = Math.sin(k * Math.PI * 3) ** 2 * e
+    B.head.rotation.x += 0.05 * e + 0.13 * n; B.chest.rotation.x += 0.03 * e; B.root.position.y -= 0.0015 * n
+    L.squint = Math.max(L.squint, 0.5 * e); L.open = Math.min(L.open, 1 - 0.35 * e); brow = 0.0006 * e }
+  // ponder: "hmm...", strokes his mustache with the pipe hand (the pipe pose, short of the mouth), eyes up, head tilted
+  if (L.fid === 'ponder' && idleOk) { const d = FID.ponder, k = L.fu / d, e = envelope(L.fu, d, 0.5), a = sst(0.05, 0.25, k) * (1 - sst(0.78, 0.95, k)) * e
+    if (DRAW) { const [u, f] = DRAW, w = 0.82 * a; B.upR.rotation.x += (u[0] - B.upR.rotation.x) * w; B.upR.rotation.z += (u[2] - B.upR.rotation.z) * w; B.foR.rotation.x += (f[0] - B.foR.rotation.x) * w; B.foR.rotation.y += (f[1] - B.foR.rotation.y) * w }
+    B.foR.rotation.z += Math.sin(L.fu * 4.2) * 0.16 * a; B.head.rotation.x -= 0.1 * e; B.head.rotation.z += 0.1 * e; B.chest.rotation.x -= 0.03 * e
+    L.gy = 0.75 * e + L.gy * (1 - e); L.gx = 0.35 * e + L.gx * (1 - e); L.squint = Math.max(L.squint, 0.2 * e); brow = 0.0016 * e; lift = 0.0004 * Math.sin(L.fu * 4.2) * a
+    if (L.fu - dt < d * 0.5 && L.fu >= d * 0.5) triggerBlink(L.blink) }
+  // point: telling the story, he jabs the pipe toward you to make his point, leaning in, brows down
+  if (L.fid === 'point' && idleOk) { const d = FID.point, k = L.fu / d, e = envelope(L.fu, d, 0.35), jab = Math.abs(Math.sin(L.fu * 6.5)) * sst(0.25, 0.35, k) * (1 - sst(0.75, 0.85, k)) * e
+    // the arm reaches out in front (upper arm forward, the elbow opening), the stem aimed at you, jabbing on each beat
+    B.upR.rotation.x -= 1.15 * e + 0.12 * jab; B.upR.rotation.z -= 0.25 * e; B.foR.rotation.x += 0.55 * e - 0.15 * jab; B.foR.rotation.y += 0.45 * e
+    B.chest.rotation.y -= 0.2 * e; B.chest.rotation.x += 0.08 * e + 0.03 * jab; B.head.rotation.x += 0.06 * e + 0.05 * jab; B.head.rotation.y -= 0.08 * e; B.root.rotation.x += 0.03 * e
+    L.pipeTip = -1.1 * e; L.squint = Math.max(L.squint, 0.35 * e); brow = -0.0012 * e }
+  // thump: "Hmph!" lifts the cane and thumps it down twice, a little jolt each time, chin up, eyes shut
+  if (L.fid === 'thump' && idleOk) { const d = FID.thump, k = L.fu / d, e = envelope(L.fu, d, 0.25), ph = Math.min(1, Math.max(0, (k - 0.15) / 0.6)) * 2
+    const up = Math.sin(Math.PI * (ph % 1)) ** 2 * (ph < 2 ? 1 : 0) * e, since = ph >= 2 ? (k - 0.75) * 3 : ph % 1, hit = ph >= 1 ? Math.exp(-9 * since) * e : 0 // contacts at ph = 1 and 2
+    B.upL.rotation.x -= 0.28 * up; B.foL.rotation.x -= 0.22 * up; B.chest.rotation.z -= 0.04 * up
+    B.root.position.y -= 0.003 * hit; B.head.rotation.x -= 0.1 * e - 0.05 * hit; B.head.rotation.y += 0.15 * e; B.chest.rotation.x -= 0.03 * e
+    L.open = Math.min(L.open, 1 - 0.9 * e); brow = -0.0016 * e }
   // hair groups: 0 = the mustache (lifts when he laughs), 3 = the brows (raise); the knot (2) keeps the life layer's spring
   const OFF = L.hairOff; OFF[0] = 0; OFF[1] = lift; OFF[2] = lift * 0.35; OFF[9] = 0; OFF[10] = brow; OFF[11] = 0
+}
+// talking to him: each dialogue page he says starts the gesture that fits the line (ishiTalk.js). Studio: window.__ishiSay(line)
+function startGesture(L, g) { L.fid = g; L.fu = 0; L.fidPrev = g; L.fidN = L.P.fidgetEvery[0] + 2; L.lastG = g }
+function talkGestures(L, st) {
+  const o = TALK.open, mine = o && o.key === 'grandpa' && TALK.lines && (!st.npcKey || st.npcKey === o.key)
+  if (mine) { const line = TALK.lines.pages[TALK.page] || '', key = TALK.page + '|' + line
+    if (key !== L.talkKey) { L.talkKey = key; startGesture(L, ishiGesture(line, L.lastG)) } }
+  else L.talkKey = null
+  if (typeof window !== 'undefined' && !window.__ishiSay && q.get('char') === 'ishi') window.__ishiSay = (line) => startGesture(L, ishiGesture(line, L.lastG))
 }
 const _w = new THREE.Vector3(), _u = new THREE.Vector3(), _sd = new THREE.Vector3(), _hq = new THREE.Quaternion(), _sc = new THREE.Vector3()
 function smokeStep(L, st, dt) {
@@ -580,6 +613,7 @@ export const ISHI = {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, ISHI_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = ISHI_HAIR_OFF
       if (typeof window !== 'undefined' && q.get('char') === 'ishi') window.__herLife = L // studio captures (tools/chibi-clip.mjs) drive the life layer through this
       const aw = st.act ? Math.min(1, st.actW ?? 1) : 0; restArms(B, st, 1 - aw)
+      talkGestures(L, st)
       if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); ishiActs(L, B, st, dt) } },
     post: (R_, st, dt, t) => { if (!LIFE_OFF) { lifePost(st.life, R_, st, dt, t); smokeStep(st.life, st, dt) } },
     Face, Hair: IshiHair,

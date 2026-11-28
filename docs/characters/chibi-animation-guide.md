@@ -255,3 +255,15 @@ Vibe (KT): slow-moving, chill and loud. Clips: [`ref/ishi-anim-pass1.jpg`](ref/i
 - Face decal can reach lower per character (`makeFace({ fy0 })`) for the mouth under his mustache.
 - Pitfall: `hips.position.z` is not reset by the base rig; adding to it slid him across the floor every frame. Use root y and rotations only.
 - Not done yet: a loud laugh triggered by talking to him or by events (it is an idle fidget for now), smoking while seated on the bench, the in-game follow camera check (he is still a dev-only draft).
+
+### Ishi motion pass 2 (KT: no mouth in the laugh, it hides under the mustache; more animations, used when talking to him)
+
+Clips: [`ref/ishi-anim-pass2.jpg`](ref/ishi-anim-pass2.jpg).
+
+- **Laugh**: no mouth any more (the excited cell is blank for `kind: 'ishi'`); the mustache bounces with each "ho" (lift 0.0010 + 0.0014 per beat) instead of lifting off a mouth.
+- **New gestures** (poses in `ishiActs`, durations in `ISHI_MOTION.fidgets`; some also join his idle sets):
+  - `nod` (2.2 s): a slow "mm-hm", three soft nods, eyes half closed, brows up a touch.
+  - `ponder` (3.4 s): strokes his mustache with the pipe hand (the solved pipe pose at 82%, the forearm rocking), eyes up and to the side, head tilted, brows raised, a blink midway.
+  - `point` (2.6 s): telling a story: the arm reaches out in front, the stem aimed at you (pipe tip -1.1), jabbing on each beat, leaning in, brows down.
+  - `thump` (2.2 s): "Hmph!": lifts the cane and thumps it down twice with a jolt, chin up, eyes shut, head turned away, brows down.
+- **Talking**: `src/art/chibi/ishiTalk.js` (pure, tested in `tests/unit/ishi-talk.test.mjs`) maps a line to a gesture: his pipe -> smoke; "Hmph", the young, too fast -> thump; jokes, "funny", "orders" -> laugh; stories, tales, "sit", "listen" -> point; a question or a musing -> ponder; anything else -> nod. Never the same gesture twice in a row unless only one fits. `talkGestures` starts it each time the dialogue page changes while `TALK.open` is the grandpa. Studio: `window.__ishiSay(line)`.

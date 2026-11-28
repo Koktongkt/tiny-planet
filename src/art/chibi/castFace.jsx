@@ -45,10 +45,7 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF) {
       for (const sd of [-1, 1]) { const ex = sd * (EYE.x + EYE.rx * 1.08), ey = EYE.y + 0.0004
         g.beginPath(); g.moveTo(X(ex), Y(ey + 0.0006)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0030)); g.stroke()
         g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0016)); g.lineTo(X(ex + sd * 0.0044), Y(ey - 0.0010)); g.stroke() }
-      if (name === 'excited') { // a big open laughing mouth under the mustache (the mustache lifts off it when he laughs)
-        const my = -0.0500, mw = 0.0105, mh = 0.0088, mouth = () => { g.beginPath(); g.moveTo(X(-mw), Y(my)); g.lineTo(X(mw), Y(my)); g.bezierCurveTo(X(mw * 0.95), Y(my - mh * 0.95), X(-mw * 0.95), Y(my - mh * 0.95), X(-mw), Y(my)); g.closePath() }
-        mouth(); g.fillStyle = '#8f3530'; g.fill(); g.save(); g.clip(); g.fillStyle = '#e8786e'; g.beginPath(); el(X(0), Y(my - mh * 0.78), 0.0068 * s, 0.0036 * s); g.fill(); g.restore()
-        mouth(); g.strokeStyle = '#6a2420'; g.lineWidth = 0.0010 * s; g.stroke() }
+      // (no mouth: it hides under his mustache; the laugh is in the body, the eyes and the mustache bounce, KT)
       g.restore(); return
     }
     g.strokeStyle = BROW; g.lineWidth = (fuku ? 0.0032 : 0.0056) * s
