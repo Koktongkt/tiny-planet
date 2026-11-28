@@ -91,7 +91,7 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke()
       if (kind === 'hoshino') { g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
-        for (const sd of [-1, 1]) { const cx = sd * 0.0109 * mW, y = my + 0.0026; g.beginPath(); g.moveTo(X(cx), Y(y)); g.quadraticCurveTo(X(cx + sd * 0.0024), Y(y - 0.0009), X(cx + sd * 0.0027), Y(y - 0.0035)); g.stroke() } } }
+        for (const sd of [-1, 1]) { const cx = sd * (0.0088 * mW + 0.0021), y = my + 0.0026; g.beginPath(); g.moveTo(X(cx), Y(y)); g.quadraticCurveTo(X(cx + sd * 0.0024), Y(y - 0.0009), X(cx + sd * 0.0027), Y(y - 0.0035)); g.stroke() } } }
     else { g.strokeStyle = fuku ? '#c45a48' : '#b05040'; g.lineWidth = (fuku ? 0.0020 : 0.0018) * s; g.beginPath()
       if (name === 'sleepy') { g.moveTo(X(-0.0042), Y(my - 0.0012)); g.quadraticCurveTo(X(0), Y(my + 0.0026), X(0.0042), Y(my - 0.0012)) }
       else if (name === 'focus') { g.moveTo(X(-0.0054), Y(my + 0.0004)); g.quadraticCurveTo(X(0), Y(my - 0.0018), X(0.0054), Y(my + 0.0004)) }
@@ -99,7 +99,7 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
       else { g.moveTo(X(-0.0074 * mW), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074 * mW), Y(my + 0.0012)) }
       g.stroke()
       if (kind === 'hoshino' && name !== 'sleepy') { // gentle cheek lines curving down beside the mouth corners (golden sheet)
-        const corner = (name === 'happy' ? 0.0094 : 0.0081) * mW, y = my + 0.0008
+        const corner = name === 'happy' ? 0.0074 * mW + 0.0020 : 0.0054 + 0.0027, y = my + 0.0008 // just outside the mouth corner, whatever its width
         g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
         for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * corner), Y(y + 0.0006)); g.quadraticCurveTo(X(sd * (corner + 0.0026)), Y(y - 0.0006), X(sd * (corner + 0.0028)), Y(y - 0.0036)); g.stroke() }
       }
