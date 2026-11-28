@@ -131,7 +131,10 @@ function locate(source, group) {
   if (tokens.length !== group.fields.length) throw new Error('Face Builder anchor shape changed: '+group.id)
   return {offset,tokens}
 }
+// Windows checkouts may have CRLF line endings: match on LF and write the file back in its own line endings.
+const lf = s => s.replace(/\r\n/g, '\n')
 export function inspect(id, raw) {
+  raw = lf(raw)
   if (!CHARACTERS[id]) throw new Error('Unknown character')
   const source=prepare(id,raw)
   return groups[id].flatMap(g=>locate(source,g).tokens.flatMap((t,i)=>{
@@ -155,7 +158,8 @@ export function validate(id,raw,values) {
 export function apply(id,raw,values,{preview=false}={}) {
   const changes=preview?{}:validate(id,raw,values)
   if (!preview && !Object.keys(changes).length) return raw
-  let source=prepare(id,raw)
+  const crlf=raw.includes('\r\n')
+  let source=prepare(id,lf(raw))
   const edits=[]
   for (const g of groups[id]) {
     const {offset,tokens}=locate(source,g)
@@ -167,6 +171,7 @@ export function apply(id,raw,values,{preview=false}={}) {
   }
   edits.sort((a,b)=>b.start-a.start)
   for(const e of edits) source=source.slice(0,e.start)+e.value+source.slice(e.end)
+  if(crlf) source=source.replace(/\n/g,'\r\n')
   if(preview) source='const __fbDraft = (() => { try { const d=JSON.parse(sessionStorage.getItem("tiny-planet-facebuilder")||"null"); return d?.character === '+JSON.stringify(id)+' ? d.values : null } catch { return null } })();\nconst __fbValue = (key, fallback) => __fbDraft?.[key] ?? fallback;\n'+source
   return source
 }

@@ -38,3 +38,13 @@ test('Hoshino has private face and skull values wired to both mesh and face deca
   assert.match(result,/shape: \{ headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE \}/)
   assert.match(result,/headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE/)
 })
+test('face builder accepts Windows (CRLF) checkouts and keeps their line endings',()=>{
+  for(const [id,cfg] of Object.entries(CHARACTERS)){
+    const crlf=read(cfg).replace(/\r?\n/g,'\r\n'), fields=inspect(id,crlf)
+    assert.ok(fields.length>=15,id)
+    const f=fields.find(x=>x.type!=='color'), v=Number((f.value+(f.value+f.step<=f.max?f.step:-f.step)).toFixed(8))
+    const out=apply(id,crlf,{[f.id]:v})
+    assert.ok(!/[^\r]\n/.test(out),id+' keeps CRLF')
+    assert.equal(inspect(id,out).find(x=>x.id===f.id).value,v)
+  }
+})
