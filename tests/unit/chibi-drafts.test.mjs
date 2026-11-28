@@ -56,5 +56,6 @@ test('Grandpa Ishi ships in the game as a lazy chunk (not through the drafts)', 
   const app = src('App.jsx')
   assert.match(app, /lazy\(\(\) => import\('\.\/art\/chibi\/ChibiIshi\.jsx'\)/)
   assert.match(app, /CHIBI && npc\.key === 'grandpa' \?/)
+  assert.match(app, /<ChibiIshi st=\{st\}[^>]*scale=\{0\.95\}/) // about her height, not the old villagers' 0.8
   assert.equal(/^import .*ChibiIshi/m.test(app), false) // never a static import (startup chunk)
 })

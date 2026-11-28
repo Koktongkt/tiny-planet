@@ -649,6 +649,7 @@ export const ISHI = {
   ext: {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, ISHI_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = ISHI_HAIR_OFF
       if (typeof window !== 'undefined' && q.get('char') === 'ishi') window.__herLife = L // studio captures (tools/chibi-clip.mjs) drive the life layer through this
+      st.seatDrop = 0.03 // in the game he is drawn at 0.95: this puts his seat on the bench where the old grandpa sat
       const aw = st.act ? Math.min(1, st.actW ?? 1) : 0; restArms(B, st, 1 - aw)
       talkGestures(L, st)
       if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); ishiActs(L, B, st, dt) } },

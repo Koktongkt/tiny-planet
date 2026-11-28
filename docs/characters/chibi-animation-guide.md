@@ -284,3 +284,4 @@ Shots: [`ref/ishi-in-game.jpg`](ref/ishi-in-game.jpg).
 - Fix in the shared life layer: a chibi villager is in `NPCS` too, so the look-at scan skips its own entry (it looked at, and waved at, itself).
 - The wide trouser legs now ride the thigh and shin bones (`trouserLegGeos`), so they fold over his knees when he sits; the seat piece stays on the hips.
 - Fuku and Hoshino stay dev-only drafts.
+- Size (KT: he looked small next to her): villager slots draw at scale 0.8 (sized for the old long-legged villagers), so Ishi stood 0.349 tall to her 0.434 (80%). He is drawn at 0.95 (0.414, about 95% of her: a stooped elder, as on the cast sheet). `st.seatDrop = 0.03` keeps his seat on the bench where the old grandpa sat.
