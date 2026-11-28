@@ -16,7 +16,7 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f0c7a4'
 const HAIR_C = '#493B31'
-const HAIR_GREY = '#8A8177'
+const HAIR_GREY = '#978E84'
 const HAIR_BAND = '#6B5848'
 const GLASS = '#2e2420'
 const JACKET = '#c09a66'
@@ -32,7 +32,7 @@ const HOSHINO_MIDFACE = [[-0.0278, 0.044, 0.0095, 0.0022, 0.009, 0.0036, 0.0054]
 const HOSHINO_MID_FADE = 0
 // Carry cheek width below the temples before rounding the jaw into the chin.
 const HOSHINO_JAW = [...HOSHINO_CHEEK, 0.020]
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, halfRim: true, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, halfRim: true, rim: [0.00095, 0.0006], ear: [0.0575, -0.021, 0.004] }, featOff: { mouth: 0.0025 }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
@@ -125,17 +125,19 @@ function hoshinoHair() {
   return mergeHair(parts)
 }
 function hoshinoGrey() {
-  const parts = [-1,1].flatMap(side => [0,1,2].map(row => wave(
-    [[side*(0.76+row*0.07),0.39-row*0.17],[side*(1.00+row*0.04),0.22-row*0.16,0.004],
-     [side*(1.38+row*0.04),0.03-row*0.14,0.007],[side*(1.77-row*0.10),-0.03-row*0.17,0.009]],
-    0.0085-row*0.0007,0.005-row*0.0005,0.0035)))
+  // Golden sheet: silver at the temples only, in front of and over the ear, tucked under the dark side waves.
+  // Four staggered strands per side sweep back and down; the darker band colour picks out the grooves between them.
+  const parts = [-1,1].flatMap(side => [0,1,2,3].map(row => wave(
+    [[side*(0.90+row*0.03),0.30-row*0.11],[side*(1.12+row*0.02),0.16-row*0.11,0.004],
+     [side*1.42,0.02-row*0.10,0.007],[side*(1.76+row*0.05),-0.12-row*0.09,0.005]],
+    0.0070-row*0.0004,0.0062-row*0.0004,0.0035)))
   for (const g of parts) tagAW(g, () => [2, 0.4])
   return mergeHair(parts)
 }
 const HAIR_GEO = hoshinoHair()
 const GREY_GEO = hoshinoGrey()
 const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, HOSHINO_HAIR_OFF, undefined, true)
-const greyMat = makeHairMat(SKIN, HAIR_GREY, '#9a948c', HOSHINO_HAIR_OFF, undefined, true)
+const greyMat = makeHairMat(SKIN, HAIR_GREY, '#6f675e', HOSHINO_HAIR_OFF, undefined, true)
 const hairInk = makeHairInk(HOSHINO_HAIR_OFF)
 function HoshinoHair({ set }) {
   return <group ref={set('hair')}>
@@ -148,7 +150,7 @@ export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
   body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.08, girth: 1.05, shoulder: 1.00, chestW: 0.85, bellyZ: 0.96, shX: 0.90, armA: 0.38, shDrop: 0.012, armK: [0.016, 0.003], armOcc: false, handL: 1.18,
     armR: [1.25, 1.30, 1.40], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
-    headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE, hunch: 0.16, skirt: 'jacket', jacket: [0.013, 0.98],
+    headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE, hunch: 0.16, headUp: -0.011, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
   hair: { style: 'chibi', c: HAIR_C },
   face: { glasses: GLASS },

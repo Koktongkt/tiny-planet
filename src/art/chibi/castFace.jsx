@@ -89,13 +89,20 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
     const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10 - mDy
     if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
-      mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
+      mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke()
+      if (kind === 'hoshino') { g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
+        for (const sd of [-1, 1]) { const cx = sd * 0.0109, y = my + 0.0026; g.beginPath(); g.moveTo(X(cx), Y(y)); g.quadraticCurveTo(X(cx + sd * 0.0024), Y(y - 0.0009), X(cx + sd * 0.0027), Y(y - 0.0035)); g.stroke() } } }
     else { g.strokeStyle = fuku ? '#c45a48' : '#b05040'; g.lineWidth = (fuku ? 0.0020 : 0.0018) * s; g.beginPath()
       if (name === 'sleepy') { g.moveTo(X(-0.0042), Y(my - 0.0012)); g.quadraticCurveTo(X(0), Y(my + 0.0026), X(0.0042), Y(my - 0.0012)) }
       else if (name === 'focus') { g.moveTo(X(-0.0054), Y(my + 0.0004)); g.quadraticCurveTo(X(0), Y(my - 0.0018), X(0.0054), Y(my + 0.0004)) }
       else if (fuku) { g.moveTo(X(-0.0080), Y(my + 0.0014)); g.quadraticCurveTo(X(0), Y(my - 0.0034), X(0.0080), Y(my + 0.0014)) }
       else { g.moveTo(X(-0.0074), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074), Y(my + 0.0012)) }
       g.stroke()
+      if (kind === 'hoshino' && name !== 'sleepy') { // gentle cheek lines curving down beside the mouth corners (golden sheet)
+        const corner = name === 'happy' ? 0.0094 : 0.0081, y = my + 0.0008
+        g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
+        for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * corner), Y(y + 0.0006)); g.quadraticCurveTo(X(sd * (corner + 0.0026)), Y(y - 0.0006), X(sd * (corner + 0.0028)), Y(y - 0.0036)); g.stroke() }
+      }
       if (fuku && name === 'happy') {
         g.strokeStyle = 'rgba(140,90,80,0.45)'; g.lineWidth = 0.00095 * s
         for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0078), Y(my + 0.0006)); g.quadraticCurveTo(X(sd * 0.0104), Y(my - 0.0004), X(sd * 0.0096), Y(my - 0.0026)); g.stroke() }
@@ -200,15 +207,22 @@ function bar(a, b, r, hex) {
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()))
   const m = A.add(B).multiplyScalar(0.5); g.translate(m.x, m.y, m.z); return tint(g, hex)
 }
-export function wireGlassesGeo({ r = 0.0152, wire = '#b5843e', ink = '#4a2e1c', ear = [0.0555, -0.017, 0.006], tilt = 0.32, halfRim = false } = {}) {
+export function wireGlassesGeo({ r = 0.0152, wire = '#b5843e', ink = '#4a2e1c', ear = [0.0555, -0.017, 0.006], tilt = 0.32, halfRim = false, sdf = null, rim = [0.00125, 0.00072] } = {}) {
   const parts = [], cy = EYE.y + 0.0006, z = 0.0548
   for (const sd of [-1, 1]) {
-    for (const [tube, hex, dz] of [[0.00125, ink, -0.0004], [0.00072, wire, 0.0003]]) {
+    for (const [tube, hex, dz] of [[rim[0], ink, -0.0004], [rim[1], wire, 0.0003]]) {
       const g = new THREE.TorusGeometry(r, tube, 6, 32, halfRim ? Math.PI : Math.PI * 2); if (halfRim) g.rotateZ(Math.PI); g.rotateY(sd * tilt); g.translate(sd * EYE.x, cy, z + dz); parts.push(tint(g, hex))
     }
     // arm: from the outer rim edge straight back to the ear
     const ox = sd * (EYE.x + r * Math.cos(tilt)), oz = z - r * Math.sin(tilt)
-    parts.push(bar([ox, cy + (halfRim ? 0 : 0.0035), oz], [sd * ear[0], ear[1] + 0.009, ear[2]], 0.00085, ink))
+    const A = [ox, cy + (halfRim ? 0 : 0.0035), oz], B = [sd * ear[0], ear[1] + 0.009, ear[2]]
+    if (!sdf) parts.push(bar(A, B, 0.00085, ink))
+    else { // follow the cheek: each point pushed out sideways until it clears the head, so the arm never dips in and out of the face
+      const N = 10, pts = []
+      for (let i = 0; i <= N; i++) { const u = i / N, p = A.map((a, k) => a + (B[k] - a) * u)
+        for (let n = 0; n < 40 && sdf(p[0], p[1], p[2]) < 0.0016; n++) p[0] += sd * 0.0004
+        pts.push(p) }
+      for (let i = 0; i < N; i++) parts.push(bar(pts[i], pts[i + 1], 0.00085, ink)) }
   }
   // arched bridge between the inner rim edges, sitting a little high on the nose
   const ix = EYE.x - r * Math.cos(tilt), iz = z + r * Math.sin(tilt) + 0.0004, N = 6, pts = []
@@ -235,7 +249,7 @@ export function makeFace({ kind, glasses: glassC, wire = null, defaultSquint = 0
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
   let gGeo = null
   const geo = shape || fy1 || fy0 ? makeFaceGeo(makeHeadSDF(shape), fy1, fy0) : faceGeo
-  const wireG = wire ? wireGlassesGeo(wire) : null, wireM = wire ? wireMat() : null
+  const wireG = wire ? wireGlassesGeo({ sdf: makeHeadSDF(shape), ...wire }) : null, wireM = wire ? wireMat() : null
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind, fy1, fy0, bl, featDy, featOff), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
