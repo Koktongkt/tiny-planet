@@ -183,6 +183,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 
 **Grandma Fuku, pass 32** (KT: C wide enough, curve it more and continue it down; then: curve outward, not inward): [`ref/fuku-parting-curve.jpg`](ref/fuku-parting-curve.jpg). Each parting line is a smooth curve through `PART` control points (azimuth, elevation), smoothed in angle space (centripetal Catmull-Rom) and projected onto the cap. It leaves the hairline dip heading outward, bows outward as it sweeps up and round, and carries on down the side of the head toward the ear, outlining the big front lock: `[[0.015, 0.40], [0.22, 0.50], [0.52, 0.66], [0.86, 0.74], [1.15, 0.62], [1.38, 0.38], [1.50, 0.14]]`. First try rose steeply from the dip then bent out (KT: curving inward).
 
+**Grandma Fuku, pass 33** (KT drew the parting): [`ref/fuku-parting-traced.jpg`](ref/fuku-parting-traced.jpg) (drawing, then front / 3/4 / side). Seen from the front it is a U-bottomed V: from the hairline dip each line rises diagonally outward, then curves round to run straight up toward the top of the head (no longer running down the sides). Traced as front-view `(x, y)` points in the head frame (`PART`, ends at x 0.027, y 0.0705) and projected straight back onto the cap (`fromFront`), so the front view matches the drawing exactly.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

@@ -172,12 +172,14 @@ function hairLinesGeo() {
       const p = onCap(a, e); if (p) pts.push(p) }
     tube(pts, 0.0008) }
   const BUN_EL = 0.98
-  // centre parting (pass 32): from the dip in the hairline each line heads outward first, bowing outward as it sweeps up, and
-  // carries on round and down the side of the head toward the ear, outlining the big front lock. Control points are
-  // (azimuth, elevation) round the cap centre, smoothed in angle space and then projected onto the cap.
-  const PART = [[0.015, 0.40], [0.22, 0.50], [0.52, 0.66], [0.86, 0.74], [1.15, 0.62], [1.38, 0.38], [1.50, 0.14]]
-  const along = (ctrl, d, n = 48) => { const c = new THREE.CatmullRomCurve3(ctrl.map(([a, e]) => new THREE.Vector3(d * a, e, 0)), false, 'centripetal'), pts = []
-    for (let i = 0; i <= n; i++) { const q = c.getPoint(i / n), p = onCap(q.x, q.y); if (p) pts.push(p) } return pts }
+  // centre parting (pass 33, traced from KT's drawing): seen from the front, a U-bottomed V. From the dip in the
+  // hairline each line rises diagonally outward, then curves round to run straight up toward the top of the head.
+  // Points are front-view (x, y) in the head frame, projected straight back onto the cap.
+  const PART = [[0.0015, 0.0368], [0.008, 0.0412], [0.0155, 0.0470], [0.0215, 0.0530], [0.0252, 0.0590], [0.0268, 0.0650], [0.0272, 0.0705]]
+  const fromFront = (x, y) => { ray.set(new THREE.Vector3(x, y, 0.3), new THREE.Vector3(0, 0, -1)); const h = ray.intersectObject(cap)[0]
+    return h && h.point.z > 0 ? h.point.add(new THREE.Vector3(0, 0, 0.0002)) : null }
+  const along = (ctrl, d, n = 40) => { const c = new THREE.CatmullRomCurve3(ctrl.map(([x, y]) => new THREE.Vector3(d * x, y, 0)), false, 'centripetal'), pts = []
+    for (let i = 0; i <= n; i++) { const q = c.getPoint(i / n), p = fromFront(q.x, q.y); if (p) pts.push(p) } return pts }
   for (const d of [-1, 1]) {
     tube(along(PART, d), 0.0008)
     // sides: locks from above the ears sweeping back and up into the bun
