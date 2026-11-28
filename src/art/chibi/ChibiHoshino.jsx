@@ -28,11 +28,11 @@ const HOSHINO_HAIR_OFF = new Float32Array(12)
 const SPEC = { r: 0.0152, wire: "#000000", ink: "#000000" } // wire glasses: lens radius, wire and rim-ink colours
 const HOSHINO_HEAD_S = [0.90, 1.07, 1.05]
 const HOSHINO_CHEEK = [0, -0.032, 0.0125, 0.053, 0.023, 0.0295, 0.0125]
-const HOSHINO_MIDFACE = [[-0.0278, 0.0434, 0.02, 0.0055, 0.013, 0.0026, 0.0017], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]
+const HOSHINO_MIDFACE = [[-0.0278, 0.044, 0.0095, 0.0022, 0.009, 0.0036, 0.0054], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]
 const HOSHINO_MID_FADE = 0
 // Carry cheek width below the temples before rounding the jaw into the chin.
 const HOSHINO_JAW = [...HOSHINO_CHEEK, 0.020]
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, halfRim: true, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
@@ -104,21 +104,15 @@ function hoshinoHair() {
     // Nest the roots at the part; the broad left crest falls and turns up above the temple.
     wave([[0.25,0.59,-0.008],[0.12,0.85,0.006],[-0.28,0.89,0.010],[-0.64,0.57,0.008],[-0.94,0.30,0.010],[-1.15,0.27,0.015],[-1.30,0.39,0.022]],0.020,0.010),
     wave([[0.29,0.65,-0.005],[0.29,1.03,0.008],[-0.23,1.31,0.009],[-1.06,1.20,0.008],[-1.51,0.90,0.007],[-1.78,0.98,0.004]],0.020,0.0085),
-    wave([[0.32,0.55],[0.57,0.75,0.004],[0.85,0.61,0.006],[1.15,0.32,0.008],[1.38,0.16,0.011],[1.55,0.24,0.015]],0.016,0.008),
+    wave([[0.32,0.55],[0.57,0.75,0.004],[0.81,0.65,0.008],[1.10,0.31,0.011],[1.36,0.17,0.014],[1.64,0.34,0.016]],0.016,0.008),
     wave([[0.46,0.85],[0.87,0.92,0.004],[1.31,0.67,0.006],[1.67,0.43,0.006],[1.93,0.51]],0.015,0.007),
     whorl(0.1,1.68,1.64,0.019,0.009),
     whorl(1.23,1.42,1.49,0.018,0.008),
     whorl(2.39,1.52,1.68,0.014,0.006),
     whorl(3.56,1.56,1.72,0.014,0.0065),
     whorl(4.76,1.69,1.43,0.019,0.008),
-    // A second crest emerges below Hoshino's right forelock, then folds behind the ear.
-    wave([[-0.48,0.69,-0.003],[-0.63,0.47,0.007],[-0.86,0.27,0.014],
-      [-1.09,0.17,0.017],[-1.34,0.25,0.021],[-1.58,0.40,0.014]],0.014,0.0085),
-    // The right side rolls lower; the shorter opposite wave lifts away from the temple.
-    wave([[-0.96,0.32,0.003],[-1.18,0.08,0.011],[-1.45,-0.02,0.019],
-      [-1.77,0.08,0.019],[-2.08,0.11,0.014],[-2.38,-0.21,0.004]],0.015,0.009),
-    wave([[0.96,0.36,0.002],[1.19,0.17,0.012],[1.43,0.07,0.018],
-      [1.73,0.15,0.017],[1.97,0.21,0.012],[2.31,-0.12,0.004]],0.016,0.009),
+    ...[-1,1].map(side => wave([[side*0.91,0.40],[side*1.23,0.19,0.007],
+      [side*1.70,0.03,0.009],[side*2.02,-0.25,0.007],[side*2.49,-0.49]],0.014,0.007)),
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0060, 0.0128, 0.0080], [0, d * 0.55, d * 0.08], 1)),
     // inner ear curl: a C of ink on the outer face (aSkin 0.47 draws as ink in the hair shader)
     ...[-1, 1].map(d => part(curl, [d * (EAR.x + 0.0042), EAR.y + 0.0004, EAR.z + 0.0006], [1, 1, 1], [0, d * (Math.PI / 2 + 0.55), 0], 0.47)),

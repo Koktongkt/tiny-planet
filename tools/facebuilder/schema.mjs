@@ -74,7 +74,7 @@ const hoshino = [
   array('skull','Skull','HOSHINO_HEAD_S',[n('head.width','Skull width',.89,1.13,.01),n('head.height','Skull height',.89,1.13,.01),n('head.depth','Skull depth',.89,1.13,.01)]),
   jaw('HOSHINO_CHEEK'),
   custom('profile','Nose / chin profile',/const HOSHINO_MIDFACE = (\[\[[^\n]+\]\])/,[
-    n('nose.y','Nose height',-.037,-.017),n('nose.z','Nose projection',.026,.048,.0006),n('nose.width','Nose width',.020,.038),n('nose.height','Nose vertical extent',.003,.013),n('nose.depth','Nose depth',.008,.020),n('nose.blend','Nose blend',.0008,.008,.0002),n('nose.edge','Nose edge rounding',.0005,.003,.0002),
+    n('nose.y','Nose height',-.037,-.017),n('nose.z','Nose projection',.026,.048,.0006),n('nose.width','Nose width',.008,.038),n('nose.height','Nose vertical extent',.002,.013),n('nose.depth','Nose depth',.008,.020),n('nose.blend','Nose blend',.0008,.008,.0002),n('nose.edge','Nose edge rounding',.0005,.006,.0002),
     n('chin.y','Chin height',-.045,-.025),n('chin.z','Chin projection',.019,.040,.0006),n('chin.width','Chin width',.020,.044),n('chin.height','Chin height radius',.011,.023),n('chin.depth','Chin depth',.016,.034),n('chin.blend','Chin blend',.003,.012)
   ]),
   scalar('fade','Nose / chin profile','const HOSHINO_MID_FADE =\\s*',n('profile.fade','Side blending',0,28,.5)),
