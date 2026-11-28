@@ -173,6 +173,12 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 
 **Grandma Fuku, pass 28** (KT picked eye spacing C and jaw 3 from [`ref/fuku-jaw-ladder.jpg`](ref/fuku-jaw-ladder.jpg)): `EYE_DX` 0.003, `FUKU_CHEEK = [0, -0.036, 0.012, 0.052, 0.0195, 0.042, 0.018, 0.012]`. Then a rounder chin ladder [`ref/fuku-chin-ladder.jpg`](ref/fuku-chin-ladder.jpg), same width and chin height: A jaw 3 (now); B `[0, -0.033, 0.006, 0.057, 0.0225, 0.044, 0.022, 0.012]`; C `[0, -0.0275, 0, 0.062, 0.028, 0.046, 0.024, 0.006]`; D `[0, -0.0235, 0, 0.063, 0.032, 0.047, 0.024, 0.003]`. The sharp look came from a bottom curve that was too flat for its width (straight diagonals into a flat chin), not the seam between the two halves: merging them (B) barely changes it; a taller bottom curve (C, D) gives one soft U.
 
+**Grandma Fuku, pass 30** (KT locked F1 from [`ref/fuku-jowl-ladder.jpg`](ref/fuku-jowl-ladder.jpg); hair detail as slightly darker drawn lines; bun slightly wider): [`ref/fuku-pass30-compare.jpg`](ref/fuku-pass30-compare.jpg).
+  - Jaw F1 (fullness lower, below the ears): `FUKU_CHEEK = [0, -0.039, 0.012, 0.0535, 0.0165, 0.042, 0.018, 0.010]`.
+  - Bun 22% wider, 8% deeper (`BUN_S [1.22, 1, 1.08]`).
+  - Hair lines (`hairLinesGeo`): thin tapered tubes laid on the shaped cap (curves in azimuth / elevation round the cap centre, projected by ray casting against the cap mesh) and a swirl on the bun facing up and back. A separate mesh with the hair material and no ink hull, aSkin 0.37 (~28% darker than the hair), polygon offset so it sits on the cap. Lines: a short centre parting; per side, two front locks curving out from the parting and round the sides, two side locks from above the ears, one from the nape, all running round the head first and rising into the bun at the back. +1 draw call.
+  - Tried: lines climbing straight to the crown (read as melon stripes); a bun spiral round the vertical axis (seen only edge-on from the back).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

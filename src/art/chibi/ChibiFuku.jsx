@@ -27,7 +27,7 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0360, 0.0120, 0.0520, 0.0195, 0.0420, 0.0180, 0.0120]
+const FUKU_CHEEK = [0, -0.0390, 0.0120, 0.0535, 0.0165, 0.0420, 0.0180, 0.0100]
 // pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
@@ -57,7 +57,7 @@ const Face = makeFace({ kind: 'fuku', glasses: GLASS, defaultSquint: 0.1, blush:
 const EAR = { x: 0.0670, y: -0.0225, z: 0.006 }
 // pass 20 (KT: start simple): one ball wrapping the head, its front edge the hairline across the forehead, and one
 // bun ball slightly behind the top of the head. No locks or painted lines yet.
-const BUN_C = [0, 0.068, -0.050], BUN_R = 0.026
+const BUN_C = [0, 0.068, -0.050], BUN_R = 0.026, BUN_S = [1.22, 1, 1.08] // bun a little wider than tall
 const H_CAP = [[0, 0.010, -0.019], [0.0735, 0.0640, 0.0690]]
 // pass 22: the forehead hairline traced from the sheet: a rounded block (superellipse, power 4) with a flat top, straight
 // sides down the temples and rounded corners, plus a small dip at the parting. Head-frame units.
@@ -123,12 +123,13 @@ function hairlineInk() {
   g.setAttribute('aSkin', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(0.48), 1))
   g.deleteAttribute('uv'); return g
 }
+let CAP_GEO = null
 function fukuHair() {
   const ball = new THREE.SphereGeometry(1, 72, 54), ballS = new THREE.SphereGeometry(1, 14, 10)
   const parts = [
-    shapeCap(part(ball, ...H_CAP)),
+    (CAP_GEO = shapeCap(part(ball, ...H_CAP))),
     hairlineInk(),
-    part(ball, BUN_C, [BUN_R, BUN_R, BUN_R]),
+    part(ball, BUN_C, BUN_S.map(k => BUN_R * k)),
     // ears as on the sheet: a big C, widest at the top and tucked in toward the jaw at the bottom (top tilted out),
     // with a darker hollow on the front face
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0074, 0.0130, 0.0102], [0, d * 0.7, -d * 0.26], 1)),
@@ -145,8 +146,60 @@ const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF)
 // a small depth bias so the hair's own smooth edge wins where it meets the faceted skin at the hairline (no ragged cut)
 hairMat.polygonOffset = true; hairMat.polygonOffsetFactor = -1; hairMat.polygonOffsetUnits = -2
 const hairInk = makeHairInk(FUKU_HAIR_OFF)
+
+// pass 30: hair detail as drawn lines a little darker than the hair (hair shader aSkin ~0.34 = ~27% darker), laid on
+// the cap and the bun. A separate mesh with the hair material and no ink hull, so the lines stay soft grey, not black.
+// Lines are curves in (azimuth, elevation) round the cap centre, projected onto the shaped cap by ray casting.
+const LINE_SHADE = 0.37
+function hairLinesGeo() {
+  const cc = new THREE.Vector3(...H_CAP[0]), cap = new THREE.Mesh(CAP_GEO, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))
+  CAP_GEO.computeBoundingSphere(); cap.updateMatrixWorld()
+  const ray = new THREE.Raycaster(), dir = new THREE.Vector3()
+  const onCap = (az, el) => { dir.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el))
+    ray.set(cc.clone().addScaledVector(dir, 0.2), dir.clone().negate()); const h = ray.intersectObject(cap)[0]
+    if (!h || h.point.distanceTo(cc) < 0.045) return null
+    return h.point.addScaledVector(dir, 0.0002) }
+  const tubes = []
+  const tube = (pts, r) => { if (pts.length < 4) return
+    const curve = new THREE.CatmullRomCurve3(pts), N = Math.max(12, pts.length * 3), R = 6, g = new THREE.TubeGeometry(curve, N, r, R, false)
+    const P = g.attributes.position // taper both ends to a point
+    for (let i = 0; i <= N; i++) { const t = i / N, k = Math.min(1, Math.min(t, 1 - t) / 0.18) ** 0.7, c = curve.getPointAt(t)
+      for (let j = 0; j <= R; j++) { const v = i * (R + 1) + j; P.setXYZ(v, c.x + (P.getX(v) - c.x) * k, c.y + (P.getY(v) - c.y) * k, c.z + (P.getZ(v) - c.z) * k) } }
+    g.deleteAttribute('uv'); g.deleteAttribute('normal'); g.computeVertexNormals(); tubes.push(g) }
+  // a lock line: runs round the head at about its starting height first, then rises into the bun at the back
+  const sweep = (az0, el0, az1, el1, rise = 2.2, sag = 0) => { const pts = []
+    for (let i = 0; i <= 32; i++) { const t = i / 32, a = az0 + (az1 - az0) * t, e = el0 + (el1 - el0) * Math.pow(t, rise) - sag * Math.sin(Math.PI * t)
+      const p = onCap(a, e); if (p) pts.push(p) }
+    tube(pts, 0.0008) }
+  const BUN_EL = 0.98
+  // centre parting: a short line up from the hairline dip
+  sweep(0, 0.40, 0, 0.80, 1)
+  for (const d of [-1, 1]) {
+    // front: the two big locks either side of the parting curve out and down, then back round the sides
+    sweep(d * 0.04, 0.50, d * 2.75, BUN_EL, 2.6, 0.10)
+    sweep(d * 0.35, 0.40, d * 2.85, BUN_EL - 0.05, 2.4, 0.08)
+    // sides: locks from above the ears sweeping back and up into the bun
+    sweep(d * 0.95, 0.18, d * 2.95, BUN_EL - 0.12, 2.0)
+    sweep(d * 1.45, -0.02, d * 3.02, BUN_EL - 0.18, 1.8)
+    // back: scallops curving up from the nape into the bun
+    sweep(d * 2.05, -0.28, d * 3.08, BUN_EL - 0.26, 1.4)
+  }
+  // bun: a swirl facing up and back (as the sheet draws it), winding in from the rim to the centre
+  { const A = new THREE.Vector3(0, 0.62, -0.78).normalize(), U = new THREE.Vector3(1, 0, 0), V = new THREE.Vector3().crossVectors(A, U)
+    const pts = []
+    for (let i = 0; i <= 70; i++) { const t = i / 70, u = 0.3 + t * Math.PI * 3.2, ph = 1.35 * (1 - t) + 0.12
+      const d = A.clone().multiplyScalar(Math.cos(ph)).addScaledVector(U, Math.sin(ph) * Math.cos(u)).addScaledVector(V, Math.sin(ph) * Math.sin(u))
+      const r = BUN_R * 1.012; pts.push(new THREE.Vector3(BUN_C[0] + d.x * r * BUN_S[0], BUN_C[1] + d.y * r * BUN_S[1], BUN_C[2] + d.z * r * BUN_S[2])) }
+    tube(pts, 0.0008) }
+  const g = mergeGeometries(tubes); const n = g.attributes.position.count
+  g.setAttribute('aSkin', new THREE.BufferAttribute(new Float32Array(n).fill(LINE_SHADE), 1))
+  tagAW(g, (x, y) => [3, 0.1]); return g
+}
+const LINES_GEO = hairLinesGeo()
+const linesMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, FUKU_HAIR_OFF)
+linesMat.polygonOffset = true; linesMat.polygonOffsetFactor = -2; linesMat.polygonOffsetUnits = -4
 function FukuHair({ set }) {
-  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={hairMat} /><mesh geometry={HAIR_GEO} material={hairInk} /></group>
+  return <group ref={set('hair')}><mesh geometry={HAIR_GEO} material={hairMat} /><mesh geometry={HAIR_GEO} material={hairInk} /><mesh geometry={LINES_GEO} material={linesMat} /></group>
 }
 
 const paint = (g, hex) => {
