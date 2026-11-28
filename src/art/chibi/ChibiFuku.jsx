@@ -184,11 +184,24 @@ function hairLinesGeo() {
   // curves up the same way (a little larger each time)
   const hlY = (x) => { const top = HL.top - HL.dip * Math.exp(-((x / HL.dipW) ** 2)), cy = (top + HL.bot) / 2, hb = (top - HL.bot) / 2
     return cy + hb * Math.max(0, 1 - Math.abs(x / HL.a) ** HL.p) ** (1 / HL.p) }
-  const NEST = [[0.0175, 1.10], [0.0335, 1.20], [0.0475, 1.30]]
-  const nested = NEST.map(([x0, k]) => PART.map(([x, y]) => [x0 + (x - PART[0][0]) * k, hlY(x0) + 0.0012 + (y - PART[0][1]) * k]))
+  // starting points spaced evenly along the hairline, from the parting down to just above the top of the ear
+  const hl = []; for (let i = 0; i <= 400; i++) { const t = i / 400, x = 0.0532 * Math.sin(t * Math.PI / 2) ** (2 / HL.p) , y = Math.min(hlY(x), 0.0365 + 0.04 * (1 - t))
+    hl.push([x, Math.max(y, -0.004)]) }
+  const len = [0]; for (let i = 1; i < hl.length; i++) len.push(len[i - 1] + Math.hypot(hl[i][0] - hl[i - 1][0], hl[i][1] - hl[i - 1][1]))
+  const atArc = (f) => { const L = f * len[len.length - 1]; let i = len.findIndex(v => v >= L); return hl[Math.max(0, i)] }
+  // [fraction along the hairline, width scale, height scale]: outer lines rise more steeply so they stay on the head
+  const NEST = [[0.25, 1.10, 1.15], [0.50, 1.00, 1.30], [0.75, 0.80, 1.45], [1.00, 0.55, 1.60]]
+  const nested = NEST.map(([f, kx, ky]) => { const [x0, y0] = atArc(f); return PART.map(([x, y]) => [x0 + (x - PART[0][0]) * kx, y0 + 0.0012 + (y - PART[0][1]) * ky]) })
+  // lay a front-view point onto the cap radially (through a sphere round the cap centre), so lines near the sides
+  // wrap round the head instead of falling off its edge
+  const radial = (x, y) => { const dy = y - cc.y, R = 0.08, zz = Math.sqrt(Math.max(R * R - x * x - dy * dy, 1e-6))
+    dir.set(x, dy, zz).normalize(); ray.set(cc.clone().addScaledVector(dir, 0.2), dir.clone().negate()); const h = ray.intersectObject(cap)[0]
+    return h && h.point.distanceTo(cc) > 0.045 ? h.point.addScaledVector(dir, 0.0002) : null }
+  const alongR = (ctrl, d, n = 40) => { const c = new THREE.CatmullRomCurve3(ctrl.map(([x, y]) => new THREE.Vector3(d * x, y, 0)), false, 'centripetal'), pts = []
+    for (let i = 0; i <= n; i++) { const q = c.getPoint(i / n), p = radial(q.x, q.y); if (p) pts.push(p) } return pts }
   for (const d of [-1, 1]) {
     tube(along(PART, d), 0.0008)
-    for (const c of nested) tube(along(c, d), 0.0008)
+    for (const c of nested) tube(alongR(c, d), 0.0008)
     // sides: locks from above the ears sweeping back and up into the bun
     sweep(d * 0.95, 0.18, d * 2.95, BUN_EL - 0.12, 2.0)
     sweep(d * 1.45, -0.02, d * 3.02, BUN_EL - 0.18, 1.8)
