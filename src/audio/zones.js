@@ -1,12 +1,15 @@
 // Where is she, acoustically? Reads existing world data (src/world.js) + globals the game already exposes
 // (window.__player, window.__home, T/VIEW from common.jsx, VILLAGE_POS from world/village.js).
-import { ZONES, R, height, streamNear } from '../world.js'
+import { ZONES, R, height, streamNear, SEA_LAT } from '../world.js'
+import { region } from '../world/regions.js'
+import { OLD_WORLD } from '../world/flag.js'
 import { T, VIEW } from '../common.jsx'
 import { VILLAGE_POS as VILLAGE, TRAIN } from '../world/village.js'
 const c = (x) => x < 0 ? 0 : x > 1 ? 1 : x
 const ang = (n, z) => Math.acos(Math.max(-1, Math.min(1, n.x * z.x + n.y * z.y + n.z * z.z)))
 const near = (n, z, r, fall) => c(1 - Math.max(0, ang(n, z) - r) * R / fall) // 1 inside the zone, fading over `fall` world units
 const _n = { x: 0, y: 1, z: 0 }
+const PEAK = OLD_WORLD ? null : region('peak') // (reworked planet only: Keepers' Peak and the southern sea)
 export function defaultListener() {
   const P = window.__player, H = window.__home, M = window.__museum, R = window.__scRide, L = window.__layout
   let n = P && P.n ? P.n : _n
@@ -15,7 +18,8 @@ export function defaultListener() {
   const house = !!(H && H.inside), museum = !!(M && M.inside), loc = house ? 'house' : museum ? 'museum' : R && R.riding ? 'train' : 'outdoor'
   return { n, mode: VIEW.mode, inside: house || museum, loc, night: T.night, season: T.season }
 }
-/** zone weights 0..1: river, lake (lake + harbour sea), forest, village, meadow, hill, night */
+/** zone weights 0..1: river, lake (lake + harbour sea), forest, village, meadow, hill, peak (Keepers' Peak), sea (the
+ *  southern shore), night */
 export function zonesAt(L) {
   const n = L.n, len = Math.hypot(n.x, n.y, n.z) || 1, u = { x: n.x / len, y: n.y / len, z: n.z / len }
   const s = streamNear(u), bank = Math.max(0, s.d - s.half)
@@ -24,11 +28,14 @@ export function zonesAt(L) {
   const forest = Math.max(near(u, ZONES.forest, ZONES.forest.r, 2.5), near(u, ZONES.giant, ZONES.giant.r, 2))
   const village = near(u, VILLAGE, 0.1, 3), meadow = Math.max(near(u, ZONES.meadow, ZONES.meadow.r, 2.5), 0.7 * near(u, ZONES.terraces, ZONES.terraces.r, 2))
   const hill = c((height(u) - 0.12) / 0.7)
+  // reworked planet: the Peak's summit (wind + birds) and the sea shore (surf), fading over 3 units; 0 under ?world=old
+  const peak = PEAK ? near(u, PEAK, PEAK.r, 3) : 0
+  const sea = OLD_WORLD ? 0 : c(1 - Math.max(0, Math.asin(Math.max(-1, Math.min(1, u.y))) - SEA_LAT) * R / 3) ** 1.5
   // Stage C: rain 0..1 from the weather hooks (__T.kind / __T.rain; Codor), read defensively
   const rain = L.rain ?? (typeof T.rain === 'number' ? T.rain : T.kind === 'rain' ? 1 : 0)
   // Stage C train: distance to the nearest car (TRAIN.cars, zones.jsx), speed from liveC's TS, riding from liveC's RIDE
   const tr = trainNear(u, L)
-  return { river, lake, forest, village, meadow, hill, night: c(L.night ?? T.night), rain: c(rain), ...tr }
+  return { river, lake, forest, village, meadow, hill, peak, sea, night: c(L.night ?? T.night), rain: c(rain), ...tr }
 }
 /** {train 0..1 (1 within ~0.6 units, fading over 4), trainSpeed 0..1, riding} — L.train / L.trainSpeed / L.riding override */
 export function trainNear(u, L = {}) {

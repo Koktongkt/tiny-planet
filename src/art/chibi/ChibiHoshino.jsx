@@ -25,7 +25,8 @@ const SHIRT = '#f4eee6'
 const TROUSER = '#66653f'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
 // thin gold wire specs, larger than the eyes (golden sheet); arms meet the low ears
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55 })
+const SPEC = { r: 0.0152, wire: '#b5843e', ink: '#4a2e1c' } // wire glasses: lens radius, wire and rim-ink colours
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;

@@ -8,7 +8,7 @@ import { Outlines } from '@react-three/drei'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { R, WS, rnd, dir, randDir, wind } from '../world.js'
 import { T, ss, C, CC, toon, VIEW } from '../common.jsx'
-import { VILLAGE } from './village.js'
+import { VILLAGE, HAMLET } from './village.js'
 import { HOME } from '../home/state.js'
 const MOON_OFF = new THREE.Vector3(6, 0, 8)
 // Colours are authored in sRGB and linearised at the end: written raw they were brightened a second time by the
@@ -82,7 +82,7 @@ export function Birds() {
 }
 export function Fireflies() {
   const { geo, mat } = useMemo(() => {
-    const HAM = dir(0.6, 2.45); const N = 520, p = [], s = []; for (let i = 0; i < N; i++) { const n = i < 90 ? VILLAGE.clone().add(randDir().multiplyScalar(0.4)).normalize() : i < 200 ? HAM.clone().add(randDir().multiplyScalar(0.4)).normalize() : randDir(); p.push(...n.multiplyScalar(R + 0.15 + rnd() * 0.6).toArray()); s.push(rnd() * 6) }
+    const HAM = HAMLET; const N = 520, p = [], s = []; for (let i = 0; i < N; i++) { const n = i < 90 ? VILLAGE.clone().add(randDir().multiplyScalar(0.4)).normalize() : i < 200 ? HAM.clone().add(randDir().multiplyScalar(0.4)).normalize() : randDir(); p.push(...n.multiplyScalar(R + 0.15 + rnd() * 0.6).toArray()); s.push(rnd() * 6) }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); geo.setAttribute('seed', new THREE.Float32BufferAttribute(s, 1))
     const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, uniforms: { uTime: wind.time, uN: { value: 0 } },
       vertexShader: `attribute float seed; uniform float uTime; varying float vA; void main(){ vec3 p = position + vec3(sin(uTime*.7+seed*3.),cos(uTime*.9+seed*5.),sin(uTime*.5+seed))*.12; vA = .5+.5*sin(uTime*2.5+seed*7.); vec4 mv = modelViewMatrix*vec4(p,1.); gl_PointSize = 150./-mv.z; gl_Position = projectionMatrix*mv; }`,

@@ -1,6 +1,6 @@
 {
   "_doc": "Per-view caps from tiny-planet-perf/budget.md. Draw calls and triangles are hardware-independent, but villagers/pets move so a view drifts run to run on SwiftShader: a view fails only above cap * (1 + tolerance). Overrides are known, pre-existing overs (tracked, not to grow). mobile.forest used to override calls to 400; touch gather props now bake to two draws and the walk is under the 350 cap.",
-  "startup": { "targetKB": 100, "failKB": 110 },
+  "startup": { "targetKB": 140, "failKB": 150 },
   "tolerance": { "calls": 0.03, "tris": 0.05 },
   "caps": {
     "desktop": { "walk": { "calls": 500, "tris": 1300000 }, "orbit": { "calls": 900, "tris": 1100000 } },

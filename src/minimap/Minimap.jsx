@@ -6,9 +6,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { R, height, ZONES, pathDir, streamDir, waterAt, BRIDGES, dir } from '../world.js'
 import './minimap.css'
 import { GL } from '../ui/glass/glyphs.js'
+import { OLD_WORLD } from '../world/flag.js'
 
 const TOUCH = typeof window !== 'undefined' && (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window)
-const LAT0 = -1.25, LAT1 = 1.35 // the band that has anything on it (poles are empty meadow)
+const LAT0 = OLD_WORLD ? -1.25 : -1.5, LAT1 = OLD_WORLD ? 1.35 : 1.5 // the band that has anything on it (old world: poles are empty meadow; now the Peak and the sea reach them)
 const ll = (n) => [Math.atan2(n.x, n.z), Math.asin(Math.max(-1, Math.min(1, n.y / Math.hypot(n.x, n.y, n.z))))]
 const INK = '#4a3a35', PAPER = '#f1e4c6'
 function rng(s) { return () => (s = (s * 16807) % 2147483647) / 2147483647 }
@@ -47,6 +48,9 @@ function paintBase(W, H, dpr, globe = false) {
   for (const k of ['forest', 'giant']) { const z = ZONES[k]; for (let i = 0; i < (k === 'forest' ? 22 : 6); i++) { const a = r() * 6.28, d = Math.sqrt(r()) * z.r; const lat = z.lat + Math.sin(a) * d, lon = z.lon + Math.cos(a) * d / Math.max(0.3, Math.cos(z.lat)); const n = dir(lat, lon); if (waterAt(n, -0.05)) continue; const [lo, la] = ll(n); tree(X(lo), Y(la), 2.6 + r()) } }
   // bridges
   for (const b of BRIDGES) { const [lo, la] = ll(b.c); g.save(); g.translate(X(lo), Y(la)); const [l2, a2] = ll(b.c.clone().add(b.tan.clone().multiplyScalar(0.01)).normalize()); g.rotate(Math.atan2(Y(a2) - Y(la), X(l2) - X(lo))); g.fillStyle = '#b07a4f'; g.strokeStyle = INK; g.lineWidth = 0.7; g.fillRect(-4, -1.6, 8, 3.2); g.strokeRect(-4, -1.6, 8, 3.2); g.restore() }
+  // Keepers' Peak (north pole): an ink mountain with a snowy cap, and the sea label
+  if (!OLD_WORLD) { const pk = ZONES.peak, px = X(pk.lon), py = Y(Math.min(pk.lat, LAT1 - 0.04)); g.fillStyle = '#c9bca5'; g.strokeStyle = INK; g.lineWidth = 0.8; g.beginPath(); g.moveTo(px - 7, py + 4); g.lineTo(px - 2, py - 5); g.lineTo(px + 1.5, py - 1); g.lineTo(px + 4, py - 6); g.lineTo(px + 9, py + 4); g.closePath(); g.fill(); g.stroke()
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(px - 3.5, py - 2); g.lineTo(px - 2, py - 5); g.lineTo(px - 0.3, py - 2.6); g.closePath(); g.fill() }
   // village + home + mills: house glyphs
   const house = (x, y, s, col) => { g.fillStyle = '#f6ecd8'; g.strokeStyle = INK; g.lineWidth = 0.7; g.fillRect(x - s, y - s * 0.4, s * 2, s * 1.3); g.strokeRect(x - s, y - s * 0.4, s * 2, s * 1.3); g.fillStyle = col; g.beginPath(); g.moveTo(x - s * 1.3, y - s * 0.4); g.lineTo(x, y - s * 1.5); g.lineTo(x + s * 1.3, y - s * 0.4); g.closePath(); g.fill(); g.stroke() }
   const V = [1.05, 0.2]; for (const [dx, dy] of [[-5, 1], [4, -1], [0, -4], [-1, 4]]) house(X(V[1]) + dx, Y(V[0]) + dy, 2.4, '#c9574b')
@@ -56,6 +60,7 @@ function paintBase(W, H, dpr, globe = false) {
   g.fillStyle = 'rgba(74,58,53,0.85)'; g.font = `italic ${Math.max(7, W / 34)}px "Cormorant Garamond", Georgia, serif`; g.textAlign = 'center'
   const lab = (t, la, lo, dy = -7) => g.fillText(t, X(lo), Y(la) + dy)
   lab('Lake', ZONES.lake.lat, ZONES.lake.lon, 3); lab('Harbour', ZONES.harbour.lat, ZONES.harbour.lon, 3); lab('Forest', ZONES.forest.lat - 0.18, ZONES.forest.lon, 0); lab('Village', V[0], V[1], -8); lab('Mills', 0.35, 1.58, -8); lab('Meadow', ZONES.meadow.lat, ZONES.meadow.lon, 0)
+  if (!OLD_WORLD) { lab('Keepers\' Peak', LAT1 - 0.13, ZONES.peak.lon, 0); g.fillStyle = 'rgba(40,80,120,0.75)'; lab('The Sea', -1.15, 0.6, 0) }
   if (globe) return { c, X, Y }
   // compass rose + hand-inked double border
   g.strokeStyle = INK; g.lineWidth = 0.8; const cx = W - 12, cy = H - 13; g.beginPath(); g.moveTo(cx, cy - 7); g.lineTo(cx + 2.5, cy); g.lineTo(cx, cy + 7); g.lineTo(cx - 2.5, cy); g.closePath(); g.stroke(); g.font = `${Math.max(6, W / 40)}px Georgia, serif`; g.fillStyle = INK; g.fillText('N', cx, cy - 9)
@@ -65,7 +70,7 @@ function paintBase(W, H, dpr, globe = false) {
 
 // ---- globe: orthographic view of the texture, centred on (lon0, lat0), north up ----
 const TW = 720, TH = Math.round(TW * (LAT1 - LAT0) / (2 * Math.PI)) // texture covers the lat band; the poles are plain meadow
-const POLE = [196, 214, 160]
+const POLE = [196, 214, 160], POLE_SEA = [90, 170, 210], POLE_PEAK = [214, 204, 186]
 function makeGlobe(D) {
   const tex = paintBase(TW, TH, 1, true), td = tex.c.getContext('2d').getImageData(0, 0, TW, TH).data
   const out = new ImageData(D, D), o = out.data, R2 = D / 2, cells = []
@@ -76,7 +81,7 @@ function makeGlobe(D) {
     for (let k = 0; k < C.length; k += 5) { const x = C[k + 2], y = C[k + 3], z = C[k + 4]
       const lat = Math.asin(Math.max(-1, Math.min(1, z * s0 + y * c0))), lon = lon0 + Math.atan2(x, z * c0 - y * s0)
       let r, g, b
-      if (lat > LAT1 || lat < LAT0) { [r, g, b] = POLE } else {
+      if (lat > LAT1 || lat < LAT0) { [r, g, b] = OLD_WORLD ? POLE : lat < 0 ? POLE_SEA : POLE_PEAK } else {
         const u = ((((lon + Math.PI) / (2 * Math.PI)) % 1 + 1) % 1) * TW | 0, v = Math.min(TH - 1, ((LAT1 - lat) / (LAT1 - LAT0)) * TH | 0), t = (v * TW + u) * 4
         r = td[t]; g = td[t + 1]; b = td[t + 2] }
       const l = (0.62 + 0.38 * z + 0.12 * Math.max(0, x * -0.4 + y * 0.6)) * dim // soft sphere shading, light from the upper left; dim at night

@@ -35,6 +35,14 @@ export function freeAt(x, z, r = 0.08, skip) {
     if (!b.obb) return false; const dx = x - b.cx, dz = z - b.cz, lx = dx * b.c - dz * b.s, lz = dx * b.s + dz * b.c; if (Math.abs(lx) < b.hw + r && Math.abs(lz) < b.hd + r) return false }
   return true
 }
+export function clearFloorLine(x, z, tx, tz, radius) {
+  const steps = Math.max(1, Math.ceil(Math.hypot(tx - x, tz - z) / 0.03))
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps
+    if (!freeAt(x + (tx - x) * t, z + (tz - z) * t, radius)) return false
+  }
+  return true
+}
 // push a circle out of walls + furniture (axis-aligned boxes)
 export function resolve(p, r = 0.08, skip) {
   const f = oval(p.x, p.z, r); if (f > 1) { const k = Math.pow(f, -1 / ROOM.n); p.x *= k; p.z *= k } // the oval is homogeneous: scale back onto it

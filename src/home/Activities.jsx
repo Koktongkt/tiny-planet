@@ -9,11 +9,11 @@ import * as THREE from 'three'
 import React, { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { HOME, ROOM, freeAt, roomToWorld } from './state.js'
+import { HOME, ROOM, DOOR, freeAt, clearFloorLine, roomToWorld } from './state.js'
 import { atRoom } from '../game/prompt/anchors.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { Box, W } from './interior.jsx'
-import { SPOTS, LAYOUT, polar, local, NIGHT_STAND } from './interior.jsx'
+import { SPOTS, LAYOUT, polar, local } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { T, q } from '../common.jsx'
 import { makeWalk, stepWalk, makeIdle, stepIdle, pickSpot, pickGlance, homeState, fireFlare, tossVel } from './homeLife.js'
@@ -26,7 +26,6 @@ import { CAT } from '../pets/catState.js'
 // ---------- layout (room-local) ----------
 // everything comes from the prop layout in interior.jsx
 const TUB = SPOTS.tub, STOOL = SPOTS.chair /* reading happens in the red armchair */, TABLE = SPOTS.table, BED = SPOTS.bed, BOWL = SPOTS.bowl, COOK = SPOTS.cook
-CAT.bowlPos = BOWL
 const toward = (x, z, d) => { const r = Math.hypot(x, z) || 1; return [x - x / r * d, z - z / r * d] } // a point d closer to the room's centre
 const STOOL_DIR = [Math.sin(STOOL.face), Math.cos(STOOL.face)], READ_STAND = [STOOL.x + STOOL_DIR[0] * 0.3, STOOL.z + STOOL_DIR[1] * 0.3] // in front of the chair
 const BED_SIDE = (() => { const [hx, hz] = BED.head; let px = -hz, pz = hx; if (px * -BED.x + pz * -BED.z < 0) { px = -px; pz = -pz } return [px, pz] })()
@@ -92,11 +91,8 @@ Object.assign(POSES, {
     B.root.position.y -= 0.07 * c * w; mix(B.root, 'x', 0.3 * c); mix(B.chest, 'x', 0.3 * c + 0.05); mix(B.head, 'x', 0.3 * c + 0.05)
     for (const k2 of ['L', 'R']) { mix(B['th' + k2], 'x', (k2 === 'L' ? -1.25 : -0.55) * c); mix(B['sh' + k2 + 'n'], 'x', (k2 === 'L' ? 1.55 : 1.05) * c); mix(B['ft' + k2], 'x', -0.25 * c) }
     for (const [k2, sd] of [['L', -1], ['R', 1]]) { mix(B['up' + k2], 'x', -0.9 - 0.35 * fwd - 0.2 * pick); mix(B['up' + k2], 'z', sd * -0.16 * hold); mix(B['fo' + k2], 'x', -0.9 * hold + 0.5 * fwd - 0.3) } },
-  toss(B, mix, st, t, w) { const k = st.actT || 0, sm = (a, b) => { const x = Math.min(1, Math.max(0, (k - a) / (b - a))); return x * x * (3 - 2 * x) }
-    const c = sm(0, 0.3) * (1 - sm(0.6, 0.9)), back = sm(0.85, 1.2) * (1 - sm(1.3, 1.45)), fling = sm(1.3, 1.5) * (1 - sm(1.8, 2.1))
-    B.root.position.y -= 0.07 * c * w; mix(B.root, 'x', 0.3 * c); mix(B.chest, 'x', 0.35 * c - 0.05 * back + 0.08 * fling); mix(B.head, 'x', 0.35 * c - 0.1 * fling)
-    for (const k2 of ['L', 'R']) { mix(B['th' + k2], 'x', (k2 === 'L' ? -1.25 : -0.55) * c); mix(B['sh' + k2 + 'n'], 'x', (k2 === 'L' ? 1.55 : 1.05) * c); mix(B['ft' + k2], 'x', -0.25 * c) }
-    mix(B.upR, 'x', -1.2 * c + 0.7 * back - 1.7 * fling); mix(B.upR, 'z', 0.1); mix(B.foR, 'x', -0.4 - 0.4 * back); mix(B.upL, 'x', -0.3 * c - 0.4 * fling); mix(B.foL, 'x', -0.5) },
+  toss(B, mix, st) { const fling = Math.min(1, (st.actT || 0) / 0.15)
+    mix(B.chest, 'x', 0.08 * fling); mix(B.upR, 'x', -0.4 - 1.3 * fling); mix(B.upR, 'z', 0.1); mix(B.foR, 'x', -1.2 + fling) },
 })
 
 // ---------- particles: soft steam, gold sparkles, sleepy z's (one Points call each, room-local) ----------
@@ -280,7 +276,7 @@ function stepIdleDirector(dt) {
   _last.x = hp.x; _last.z = hp.z; _last.yaw = hp.yaw
   if (HOME.idleAct && ACT.kind !== HOME.idleAct) HOME.cancelIdle() // it ran its course
   if (A.walk || HOME.idleAct) return // her own idle walk / pose: still the same idle stretch
-  const still = HOME.inside && !moved && !HOME.busy && !A.doing && !G.ui.panel
+  const still = HOME.inside && !moved && !HOME.busy && !A.doing && !G.ui.panel && !CAT.ball.held
   const blocked = /^cat/.test(G.near?.id || '') || CAT.state === 'rub' || CAT.state === 'petted' || (window.__herNoIdleWalk ?? false)
   if (stepIdle(IDLE, { still, blocked }, dt) !== 'walk') return
   const sp = pickSpot(hp, IDLE_SPOTS, { day: T.day, night: T.night, curt: (HOME.curtK ?? 1) > 0.5 }); if (sp) startIdle(sp)
@@ -313,7 +309,7 @@ const firstFreeOr = (cands) => firstFree(cands) || cands[0]
 const DESK = LAYOUT.desk, NS = LAYOUT.nightstand
 const LAMPS = {
   desk: { name: 'the desk lamp', stand: firstFreeOr([local(DESK, 0.17, 0.4), local(DESK, 0.24, 0.42), local(DESK, 0.12, 0.48)]), at: local(DESK, 0.07, -0.08), y: 0.42 },
-  night: { name: 'the bedside lamp', stand: firstFreeOr([NIGHT_STAND, local(NS, 0, 0.3), local(NS, 0.06, 0.36)]), at: [NS.x, NS.z], y: 0.27 },
+  night: { name: 'the bedside lamp', stand: local(NS, 0, 0.23), at: local(NS, -0.01, 0), y: 0.27 },
 }
 for (const k in LAMPS) { const l = LAMPS[k]; l.face = faceTo(l.stand, l.at[0], l.at[1]) }
 // the kitchen window (back wall, facing the camera; the sunny side window is edge-on to it): she draws them from the sink
@@ -346,15 +342,33 @@ async function stoveLog() {
     if (CAT.state !== 'nap' && CAT.state !== 'petted' && CAT.state !== 'eat' && !CAT.hop) Object.assign(CAT, { state: 'hearth', t: 0, dur: 28 + Math.random() * 10, target: null, sub: 0, sitT: null, forced: false }) }, 2350)
   await wait(3000); A.log = 0; A.turnTo = null; end()
 }
-const ballStand = () => { const b = CAT.ball, hp = HOME.hp, dx = hp.x - b.x, dz = hp.z - b.z, d = Math.hypot(dx, dz) || 1; return [b.x + dx / d * 0.13, b.z + dz / d * 0.13] }
-async function tossBall() {
-  if (!await begin('toss', 2.1, 'pick')) return
-  const b = CAT.ball, st = ballStand(); placeAt(st[0], st[1], faceTo(st, b.x, b.z))
-  setTimeout(() => { b.held = true; b.vx = b.vz = 0 }, 450)
-  setTimeout(() => { const hp = HOME.hp, [vx, vz] = tossVel(hp.yaw); b.held = false; b.x = hp.x + Math.sin(hp.yaw) * 0.12; b.z = hp.z + Math.cos(hp.yaw) * 0.12; if (!freeAt(b.x, b.z, 0.03)) { b.x = hp.x; b.z = hp.z } b.vx = vx; b.vz = vz
-    if (CAT.state === 'nap') { if (Math.random() < 0.5) toast(`${CAT.name} opens one eye… and closes it again.`, 'leaf', 2200); else Object.assign(CAT, { state: 'chase', t: 0, dur: 12, target: null, sub: 0, forced: false }) }
-    else if (!CAT.hop && CAT.state !== 'petted' && CAT.state !== 'eat') Object.assign(CAT, { state: 'chase', t: 0, dur: 12, target: null, sub: 0, forced: false }) }, 1450)
-  await wait(2100); end()
+const ballAtRest = (b) => !b.held && Math.hypot(b.vx, b.vz) < 0.05
+function ballStand(b, hp) {
+  const yaw = Math.atan2(hp.x - b.x, hp.z - b.z)
+  return firstFree([0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8, Math.PI].map(a => [
+    b.x + 0.15 * Math.sin(yaw + a), b.z + 0.15 * Math.cos(yaw + a),
+  ]).filter(([x, z]) => clearFloorLine(hp.x, hp.z, x, z, 0.085) && clearFloorLine(x, z, b.x, b.z, 0.03)))
+}
+async function pickUpBall() {
+  const b = CAT.ball, hp = HOME.hp
+  if (!HOME.inside || !ballAtRest(b) || Math.hypot(b.x - hp.x, b.z - hp.z) > 0.23 || !clearFloorLine(hp.x, hp.z, b.x, b.z, 0.03)) return
+  if (!await begin('pick', 0.8)) return
+  hp.yaw = Math.atan2(b.x - hp.x, b.z - hp.z)
+  await wait(340)
+  if (HOME.inside && ballAtRest(b) && Math.hypot(b.x - hp.x, b.z - hp.z) <= 0.23) {
+    Object.assign(b, { held: true, vx: 0, vz: 0, hx: hp.x, hy: 0.17, hz: hp.z })
+  }
+  await wait(460); end()
+}
+function tossBall() {
+  const b = CAT.ball, hp = HOME.hp
+  if (!HOME.inside || HOME.busy || !b.held) return
+  const [vx, vz] = tossVel(hp.yaw)
+  const x = hp.x + Math.sin(hp.yaw) * 0.12, z = hp.z + Math.cos(hp.yaw) * 0.12
+  const clear = freeAt(x, z, 0.03)
+  Object.assign(b, { held: false, x: clear ? x : hp.x, z: clear ? z : hp.z, vx, vz })
+  startAct('toss', { dur: 0.48, lock: 0, sound: 'pick' })
+  if (CAT.state !== 'eat') Object.assign(CAT, { state: 'chase', t: 0, dur: 12, target: null, sub: 0, forced: false, hits: 0 })
 }
 // the baked lamp / stove props in the room: per-instance materials so a switch or a flare never rebakes or recompiles
 const LIT = { found: false, lamps: {}, fire: [] }
@@ -377,8 +391,8 @@ function stepThings(dt, now) {
   if (f > 0.25 && FX && Math.random() < dt * 3 * f) FX.spark.emit(STOVE_FIRE[0], 0.15, STOVE_FIRE[1], 1, { spread: 0.05, up: 0.3, size: 0.025, life: 0.9 })
   if (A.turnTo != null) hp.yaw += Math.atan2(Math.sin(A.turnTo - hp.yaw), Math.cos(A.turnTo - hp.yaw)) * Math.min(1, dt * 8)
 }
-if (typeof window !== 'undefined') Object.assign(window.__homeAct, { lamp: lampSwitch, curtains, log: stoveLog, toss: tossBall, spotsC: { LAMPS, CURT, STOVE_STAND, hearth: SPOTS.hearth } })
-// leaving the house mid-toss: the ball drops where she stood
+if (typeof window !== 'undefined') Object.assign(window.__homeAct, { lamp: lampSwitch, curtains, log: stoveLog, pickUpBall, toss: tossBall, spotsC: { LAMPS, CURT, STOVE_STAND, hearth: SPOTS.hearth } })
+// Leave the yarn ball inside when stepping outside.
 const dropBall = () => { const b = CAT.ball; if (b.held) { b.held = false; b.x = HOME.hp.x; b.z = HOME.hp.z; b.vx = b.vz = 0 } A.log = 0; A.turnTo = null }
 
 // ---------- prompts ----------
@@ -386,6 +400,12 @@ if (!HOME.actHooked) { HOME.actHooked = true
   HOME.near.push((consider) => {
     if (!HOME.inside || HOME.busy || A.doing) return
     const hp = HOME.hp, d = (x, z) => Math.hypot(hp.x - x, hp.z - z)
+    const b = CAT.ball
+    if (b.held) {
+      const alt = d(DOOR.x, DOOR.z - 0.14) < 0.3 ? { verb: 'Step outside', icon: 'leaf', act: HOME.exit } : null
+      consider({ kind: 'ext', inside: true, id: alt ? 'yarn-throw-door' : 'yarn-throw', at: (out) => roomToWorld(hp.x, 0.42, hp.z, out), icon: 'hand', verb: 'Throw', name: 'the yarn ball', act: tossBall, alt }, 0, 1)
+      return
+    }
     consider({ kind: 'ext', inside: true, id: 'bed', at: atRoom(BED.x, BED.z, 0.45), icon: 'moon', verb: 'Sleep', name: 'till morning', chip: true, alt: { verb: 'Nap', icon: 'sun', key: 'F', act: () => GO.sleep(false) }, act: () => GO.sleep(true) }, d(BED_STAND[0], BED_STAND[1]), 0.26)
     const r = dish(); consider({ kind: 'ext', inside: true, id: 'stove' + r.id, at: atRoom(COOK.stand[0], COOK.stand[1], 0.75), icon: r.makes, verb: 'Cook', name: ITEMS[r.makes].name, chip: true, alt: { verb: 'Other dish', icon: 'rotate', key: 'F', act: () => { A.dish++; emit() } }, act: GO.cook }, d(COOK.stand[0], COOK.stand[1]), 0.22)
     consider({ kind: 'ext', inside: true, id: 'tub', at: atRoom(BATH_STAND[0], BATH_STAND[1], 0.6), icon: 'water', verb: 'Take', name: 'a bath', act: GO.bath }, d(BATH_STAND[0], BATH_STAND[1]), 0.3)
@@ -394,10 +414,16 @@ if (!HOME.actHooked) { HOME.actHooked = true
     for (const pl of PLANTS) consider({ kind: 'ext', inside: true, id: 'plant-' + pl.id, at: atRoom(pl.stand[0], pl.stand[1], 0.55), icon: 'can', verb: 'Water', name: A.watered()[pl.id] === G.s.day ? 'the happy plant' : 'the thirsty plant', act: () => GO.water(pl) }, d(pl.stand[0], pl.stand[1]), pl.lim)
     // part C
     const h = H()
-    for (const k of ['desk', 'night']) { const l = LAMPS[k]; consider({ kind: 'ext', inside: true, id: 'lamp-' + k, at: atRoom(l.at[0], l.at[1], l.y + 0.1), icon: h.lamps[k] ? 'moon' : 'sun', verb: h.lamps[k] ? 'Switch off' : 'Switch on', name: l.name, act: () => goThen(l.stand, l.face, () => lampSwitch(k)) }, d(l.stand[0], l.stand[1]), 0.22) }
+    for (const k of ['desk', 'night']) { const l = LAMPS[k], dist = d(l.stand[0], l.stand[1]), range = k === 'night' ? 0.3 : 0.22
+      if (dist >= range || (k === 'night' && !clearFloorLine(hp.x, hp.z, ...l.stand, 0.085))) continue
+      consider({ kind: 'ext', inside: true, id: 'lamp-' + k, at: atRoom(l.at[0], l.at[1], l.y + 0.1), icon: h.lamps[k] ? 'moon' : 'sun', verb: h.lamps[k] ? 'Switch off' : 'Switch on', name: l.name, act: () => goThen(l.stand, l.face, () => lampSwitch(k)) }, dist, range)
+    }
     consider({ kind: 'ext', inside: true, id: 'curtains', at: atRoom(CURT.pl.x * 0.95, CURT.pl.z * 0.95, 0.9), icon: h.curtains ? 'moon' : 'sun', verb: h.curtains ? 'Close' : 'Open', name: 'the curtains', act: () => goThen(CURT.stand, CURT.face, curtains) }, d(CURT.stand[0], CURT.stand[1]), 0.24)
     consider({ kind: 'ext', inside: true, id: 'stove-log', at: atRoom(STOVE_FIRE[0], STOVE_FIRE[1], 0.5), icon: 'leaf', verb: evening() ? 'Add a log' : 'Tidy', name: evening() ? 'to the fire' : 'the woodpile', act: () => goThen(STOVE_STAND, faceTo(STOVE_STAND, WOOD.x, WOOD.z), stoveLog) }, d(STOVE_STAND[0], STOVE_STAND[1]), 0.24)
-    const b = CAT.ball; if (!b.held && CAT.state !== 'chase' && CAT.state !== 'bat' && Math.hypot(b.vx, b.vz) < 0.05) { const bs = ballStand(); consider({ kind: 'ext', inside: true, id: 'yarn', at: atRoom(b.x, b.z, 0.25), icon: 'hand', verb: 'Toss', name: 'the yarn ball', act: () => goThen(bs, faceTo(bs, b.x, b.z), tossBall) }, d(b.x, b.z), 0.3) }
+    if (ballAtRest(b) && d(b.x, b.z) < 0.3) {
+      const stand = ballStand(b, hp)
+      if (stand) consider({ kind: 'ext', inside: true, id: 'yarn', at: atRoom(b.x, b.z, 0.25), icon: 'hand', verb: 'Pick up', name: 'the yarn ball', act: () => goThen(stand, faceTo(stand, b.x, b.z), pickUpBall) }, d(b.x, b.z), 0.3)
+    }
     consider({ kind: 'ext', inside: true, id: 'feedcat', at: atRoom(BOWL.x, BOWL.z, 0.3), icon: 'fish', verb: 'Feed', name: CAT.name, act: GO.feed }, d(FEED_STAND[0], FEED_STAND[1]), 0.22)
   })
 }
@@ -420,7 +446,12 @@ function Dynamic() {
     if (!HOME.inside) { if (HOME.idleAct) HOME.cancelIdle(); dropBall(); return }
     stepThings(dt, now)
     // part C: the ball in her right hand, the log in both hands (and on its way into the firebox)
-    { const o = HOME.playerObj, b = CAT.ball; if (b.held && o) { toRoom(o, 0.07, 0.17, 0.09, _l); b.hx = _l.x; b.hy = _l.y; b.hz = _l.z }
+    { const o = HOME.playerObj, b = CAT.ball; if (b.held && o) {
+        const hand = o.getObjectByName('right-hand')
+        if (hand) toRoom(hand, 0, -0.035, 0.02, _l)
+        else toRoom(o, 0.07, 0.17, 0.09, _l)
+        b.hx = _l.x; b.hy = _l.y; b.hz = _l.z
+      }
       logM.current.visible = !!A.log && !!o; if (logM.current.visible) { toRoom(o, 0, A.log === 2 ? 0.14 : 0.19, A.log === 2 ? 0.16 : 0.11, _l); if (A.log === 2) _l.lerp(_w.set(STOVE_FIRE[0], 0.1, STOVE_FIRE[1]), 0.35); logM.current.position.copy(_l); logM.current.rotation.set(0, HOME.hp.yaw + Math.PI / 2, 0) } }
     stepIdleDirector(dt); stepGlance(now)
     // steam: always a wisp from the tub, lots while she soaks; the kettle / pot while cooking or making tea

@@ -8,12 +8,17 @@ import { buildCoachGeometry, buildOpenCarGeometry, applyTrainSkin, RIDE_SEAT } f
 import { rideSit, holdRidePose, releaseRidePose } from '../../src/art/train/ridePose.js'
 import { POSES, ACT } from '../../src/act.js'
 import { fareText, stopName, rideStatus } from '../../src/ui/ride/fareText.js'
-import { R, TRAIN_LAT, dir } from '../../src/world.js'
+import { R, TRAIN_LAT, dir, height, waterAt, seaDepth, onBridge, distToCurve, pathDir } from '../../src/world.js'
+import { TRAIN_LAT as COAST_LAT } from '../../src/world/regions.js'
+import { riverNear } from '../../src/world/river.js'
+import { railLat, railDir, railPoint, railTangent, railHeight, railBehind, railOff, TRESTLE, onTrestle, deckHeight, RAIL_LEN, railSpan } from '../../src/world/railway.js'
 import { fare } from '../../src/systems/train.js'
 globalThis.window ??= {} // world/village.js publishes debug handles on window
 const { TRAIN_STOPS } = await import('../../src/world/village.js')
 const T = (g) => tris(g)
-const platformN = (id) => dir(TRAIN_LAT + 0.3 / R, TRAIN_STOPS.find(s => s.id === id).lon)
+const platformN = (id) => { const s = TRAIN_STOPS.find(x => x.id === id); return dir(railLat(s.lon) + 0.3 / R, s.lon) } // systems/liveC.js platformN
+const dry = (n) => !waterAt(n) && seaDepth(n) === 0
+const TAU = Math.PI * 2
 
 test('combine folds body + flipped ink hull + extras into one geometry', async () => {
   const { combine } = await import('../../src/art/train/kit.js')
@@ -29,12 +34,50 @@ test('kit merges parts into body / hull / glow with vertex colours (hull has non
 test('station: few draw calls, small tris, every stop on its platform facing the rails', () => {
   for (const touch of [false, true]) { const g = buildStationGeometry({ touch }); const t = T(g.body) + T(g.hull) + T(g.glow); assert.ok(t <= 600, `station ${t} tris`); assert.ok(T(g.glow) > 0) }
   for (const s of TRAIN_STOPS) { assert.ok(STATION_NAMES[s.id]); assert.equal(T(buildBoardsGeometry(s.id)), 8) }
-  const n = platformN('village'), f = platformFrame(n, 0.75), back = new THREE.Vector3(0, 0, -1).applyQuaternion(f.q), rail = dir(TRAIN_LAT, 0.75).multiplyScalar(R).sub(f.pos).normalize()
-  assert.ok(back.dot(rail) > 0.9, 'local -z points at the rails'); assert.ok(new THREE.Vector3(0, 1, 0).applyQuaternion(f.q).dot(n.clone().normalize()) > 0.999)
+  for (const s of TRAIN_STOPS) {
+    const n = platformN(s.id), f = platformFrame(n, s.lon), back = new THREE.Vector3(0, 0, -1).applyQuaternion(f.q), railN = railDir(s.lon), rail = railN.clone().multiplyScalar(R + railHeight(s.lon)).sub(f.pos).normalize() // the rails (zones.jsx ringPos)
+    assert.ok(back.dot(rail) > 0.9, `${s.id}: local -z points at the rails`); assert.ok(new THREE.Vector3(0, 1, 0).applyQuaternion(f.q).dot(n.clone().normalize()) > 0.999)
+  }
   const M = { body: new THREE.MeshBasicMaterial(), glow: new THREE.MeshBasicMaterial() }
   const root = createStations(TRAIN_STOPS, platformN, M); assert.equal(root.children.length, TRAIN_STOPS.length)
   for (const st of root.children) assert.equal(st.children.length, 2, '2 draw calls per station (body+ink+boards, glow)')
   assert.ok(root.userData.tris <= 600, `station ${root.userData.tris}`)
+})
+test('the train runs on the coast ring: TRAIN_LAT at the stops, eased round the Harbour bay', () => {
+  assert.equal(TRAIN_LAT, COAST_LAT); assert.equal(TRAIN_LAT, -0.62)
+  for (const s of TRAIN_STOPS) assert.equal(railLat(s.lon), TRAIN_LAT, `${s.id} stop on TRAIN_LAT`)
+  let far = 0; for (let i = 0; i < 2000; i++) { const lon = i / 2000 * TAU; if (railLat(lon) !== TRAIN_LAT) far++; assert.ok(Math.abs(railLat(lon) - TRAIN_LAT) <= 0.1 + 1e-12) }
+  assert.ok(far < 2000 * 0.12, 'the detour is local (the bay head)')
+  // carriages keep their spacing round the detour: a point 0.44 behind along the ring is ~0.44 away (a chord: <= the arc)
+  for (let i = 0; i < 400; i++) { const lon = i / 400 * TAU + 0.003, b = railBehind(lon, 0.44); assert.ok(b < lon); const d = railDir(lon).angleTo(railDir(b)) * R; assert.ok(d > 0.42 && d <= 0.4401, `spacing ${d.toFixed(3)} at ${lon.toFixed(2)}`) }
+  assert.ok(Math.abs(railBehind(10, 0) - 10) < 1e-9); assert.ok(RAIL_LEN > TAU * R * Math.cos(TRAIN_LAT))
+  for (let i = 0; i < 400; i++) { const lon = i / 400 * TAU, t = railTangent(lon), a = railDir(lon), b = railDir(lon + 1e-4).sub(a).normalize(); assert.ok(t.x * b.x + t.y * b.y + t.z * b.z > 0.9999, 'tangent') }
+  for (const off of [-0.3, 0.3]) for (let i = 0; i < 200; i++) { const lon = i / 200 * TAU; assert.ok(Math.abs(railOff(railPoint(lon, off)) * R - off) < 0.05, 'railOff measures across the track (first order: the ramps curve)') }
+})
+test('rails cross the river once on a trestle', () => {
+  // exactly one run of rail samples over the river (riverNear d < half), and the trestle is centred there and spans it
+  const q = { d: 9, u: 0, half: 0, side: 1 }, runs = [], step = 0.0005; let a = null
+  for (let lon = 0; lon < TAU; lon += step) { const wet = riverNear(railDir(lon), q).d < q.half; if (wet && a === null) a = lon; if (!wet && a !== null) { runs.push([a, lon - step]); a = null } }
+  if (a !== null) runs.push([a, TAU])
+  assert.equal(runs.length, 1, `rails cross the river ${runs.length} times`)
+  const [ra, rb] = runs[0]
+  assert.ok(TRESTLE && Math.abs(TRESTLE.lonC - (ra + rb) / 2) < 0.002, 'trestle centred on the crossing')
+  assert.ok(TRESTLE.lon0 < ra && TRESTLE.lon1 > rb, 'trestle spans the river'); assert.ok(railSpan(TRESTLE.lon0, TRESTLE.lon1) < 3.5, 'a short trestle')
+  // off the trestle the rails, sleepers and ballast stand on dry land (no rails on open harbour water or in the sea)
+  for (let i = 0; i < 6000; i++) { const lon = i / 6000 * TAU; if (onTrestle(lon)) continue; for (const off of [-0.2, 0, 0.2]) assert.ok(dry(railPoint(lon, off)), `rails in water at lon ${lon.toFixed(3)} (${off})`) }
+  // the deck meets the ground at both ends and clears the water beneath
+  for (const lon of [TRESTLE.lon0, TRESTLE.lon1]) assert.ok(Math.abs(deckHeight(lon) - height(railDir(lon))) < 1e-9, 'deck ends on the banks')
+  for (let lon = TRESTLE.lon0; lon <= TRESTLE.lon1; lon += 0.002) { const g = height(railDir(lon)); assert.ok(railHeight(lon) >= g - 0.02, 'deck above the ground'); if (lon > ra && lon < rb) assert.ok(railHeight(lon) - g > 0.12, `deck clears the water by ${(railHeight(lon) - g).toFixed(2)}`) }
+})
+test('stations on dry ground', () => {
+  for (const s of TRAIN_STOPS) {
+    const n = platformN(s.id), f = platformFrame(n, s.lon)
+    // the platform deck (1.3 x 0.34, x along the track, -z to the rails) and the rails in front of it
+    for (const x of [-0.65, 0, 0.65]) for (const z of [-0.3, -0.17, 0, 0.17]) { const p = new THREE.Vector3(x, 0, z).applyQuaternion(f.q).add(f.pos).normalize(); assert.ok(dry(p) && !onBridge(p), `${s.id} platform in water at ${x},${z}`) }
+    assert.ok(!onTrestle(s.lon) && !onTrestle(s.lon - 0.1) && !onTrestle(s.lon + 0.1), `${s.id} by the trestle`)
+    assert.ok(distToCurve(n, pathDir, 600) * R > 0.4, `${s.id} platform on the path`)
+    assert.ok(riverNear(n).d - riverNear(n).half > 0.5, `${s.id} platform by the river`)
+  }
 })
 test('carriage skin: 3 calls per car, open car last with the ride seat, restore puts the old coaches back', () => {
   for (const touch of [false, true]) for (const g of [buildCoachGeometry({ touch }), buildOpenCarGeometry({ touch })]) { const t = T(g.body) + T(g.hull) + T(g.glow); assert.ok(t <= 420, `car ${t}`); assert.ok(T(g.glow) > 0, 'glow windows / lanterns') }
