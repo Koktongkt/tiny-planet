@@ -27,11 +27,11 @@ const COLLAR = '#efe6d6'
 const FUKU_HAIR_OFF = new Float32Array(12)
 // her own jaw: wider, fuller and a touch lower than the shared CHEEK, so the lower face is broad and round and the
 // cheeks sit down toward the chin (same chin bottom). Used by the body bake (body.cheek) and the face decal.
-const FUKU_CHEEK = [0, -0.0405, 0.0120, 0.0505, 0.0150, 0.0390, 0.0180, 0.0120]
+const FUKU_CHEEK = [0, -0.0360, 0.0120, 0.0520, 0.0195, 0.0420, 0.0180, 0.0120]
 // pass 13, traced from the sheet's front face (A = face half-width): straight sides from the temples down to just
 // below the eyes, then a half-ellipse bottom 0.5A tall (no flat part, no corners), chin 0.84A below the eye line.
 // The jaw is an ellipsoid stretched up by h (8th value), so it has straight sides above its centre.
-const EYE_DX = 0 // eyes and brows this much further apart (each side), glasses follow
+const EYE_DX = 0.0030 // eyes and brows this much further apart (each side), glasses follow
 const FEAT_DY = -0.0033 // brows, eyes, nose, mouth, blush and glasses sit this much lower on the face
 const HEAD_W = 0.95, FUKU_HR = [HR[0] * HEAD_W, HR[1], HR[2]]
 
