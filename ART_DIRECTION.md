@@ -18,16 +18,29 @@
 ## Shading
 - Everything uses a **3-step toon ramp** (MeshToonMaterial plus a nearest-filtered gradient map), which gives flat painted light and shadow bands.
 - **Inverted-hull outlines** (drei `<Outlines>`) in warm dark brown `#4a3a35`, not black, so it reads like ink lines.
-- Ground uses **vertex colours** with noise patches, so the meadow looks dabbed with a brush.
+- Ground uses **vertex colours** with soft painted patches and the props' warm toon ramp; see *Ground and water* below.
 - Postprocessing: soft **bloom** (windows, lamps, fireflies, sun), a subtle **vignette**, and **paper grain** noise overlay.
 
-## Planet layout (radius 5)
-- North cap: a **village** of five cottages around a little square with a lamp post.
-- East: two **windmills** on a gentle rise.
-- A **winding sandy path** loops around the planet and links the village and windmills.
-- A **stream** meanders the other way and crosses under the path near the village.
-- Forest clusters of round and conifer trees are scattered across the rest (instanced).
+## Planet layout: one slope from the peak to the sea
+Full design: [`docs/superpowers/specs/2026-11-24-world-rework-design.md`](docs/superpowers/specs/2026-11-24-world-rework-design.md). Region data lives in `src/world/regions.js`; the old layout stays behind the dev-only `?world=old` flag until the new one is signed off.
+- **The slope:** the planet (R 10.4) runs downhill from **Keepers' Peak** at the north pole to a **sea** at the south cap. Everything in between sits where water, wind and people would put it.
+- **Four chains** tie the regions together so each place has a reason to be there:
+  - **Water:** a spring under the peak feeds one open **river**: over the **cliff** waterfall, through the **terraces**, past the **village**, into the **lake** (with **drowned ruins**) and out through a valley to the **harbour** and the sea.
+  - **Harvest:** rice terraces and meadow fields feed the village, and the **windmills** grind on the windward rise.
+  - **Wind:** the mills face the sea breeze; the lighthouse and harbour boats read it too.
+  - **The keepers:** an older people left a spiral on mossy stone at six sites (peak circle, torii footings by the **giant tree**, the lake ruins shore, the lighthouse base, the old bridge footings and the **museum** trench). Each one is a dig spot.
+- **Regions:** Peak, Cliff, Terraces, Village, Lake + Ruins, Museum (a restored keeper building on the lake shore), Harbour, Forest + Giant tree, Meadow + Mills, plus two open plots kept free for later regions.
+- **Path and river:** the sandy path is a closed loop; bridges sit wherever it crosses the river. The train circles the southern coast (eased inland around the harbour bay) and crosses the river on a **trestle**.
+- **Sea:** shallows along the shore are wadeable; deeper water stops her with a gentle toast. Gatherables, villagers and dig sites stay on dry ground.
 - **Soft lawn:** about 300 patches of short, rounded dome tufts (lobed edges, gentle wind sway), many with clumps of flowers, and smooth painted ground showing between them. No spiky blades.
+
+## Ground and water ("clay diorama", look A)
+Design: [`docs/superpowers/specs/2026-11-25-ground-water-look-design.md`](docs/superpowers/specs/2026-11-25-ground-water-look-design.md). Chosen next to her real cottage props so the ground matches her house: round and soft, ink outlines, warm colours.
+- **Ground** (`src/world/groundGeo.js`): one welded mesh, so light rolls smoothly over the hills (cliff rock keeps flat facets). Sunny yellow-green tops `#b8dc62`, grass `#82c34a`, cool hollows `#5aa26a`, soft painted patches; the same warm toon ramp as the props.
+- **Banks:** the ground within 0.6 of any shore is refined and carved into a rounded grass lip over a band of warm soil (`#d08f55` to `#a8673a`), like a slice of cake. All water is drawn 0.05 below its gameplay level so the bank stands proud. `?shore=coarse` turns the carving off (drawn-on soil ribbon instead).
+- **Shore kit** (`src/world/shoreKit.js`): a grass lip tube with an ink outline, puffy outlined foam beads along every waterline and a thin ink waterline; none on bridges, piers, the dock or stepping stones. Drawn in sector chunks so off-screen shores cost nothing.
+- **Sea coast:** cake bank all round except a few sandy coves (`#e9d9b0`) where she can walk into the shallows.
+- **Water** (`src/world/waterLook.js`): turquoise shallows `#86e2dc` to deep blue `#2f8fd0` by distance from shore, slow round ripple rings on still water, white flow marks on the river, lily pads with pink flowers on the lake; warm at dusk, deep blue at night.
 
 ## Lighting by time of day
 The day cycles on its own: one full day every 3 minutes. Phase φ=0 is noon and φ=π is midnight. In walk view the sun moves across the traveller's own local sky. In planet view it moves across the visible face. `?t=day|dusk|night`, `?phase=` and `window.__setPhase()` freeze the clock for screenshots.

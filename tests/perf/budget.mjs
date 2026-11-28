@@ -8,6 +8,8 @@ import { chromium, devices } from 'playwright'
 const B = JSON.parse(fs.readFileSync(new URL('./budget.json', import.meta.url)))
 const args = process.argv.slice(2), base = args.find(a => /^https?:/.test(a)) || 'http://localhost:4173/'
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null
+// --shore coarse: measure with the drawn-on banks (?shore=coarse) instead of the carved ones
+const shore = args.includes('--shore') ? args[args.indexOf('--shore') + 1] : null
 const rows = [], fails = [], warns = []
 // 1. startup chunk
 const dist = path.resolve('dist/assets')
@@ -20,7 +22,7 @@ if (fs.existsSync(dist)) {
   if (kb > B.startup.failKB) fails.push(`startup chunk ${kb.toFixed(2)} KB gz > ${B.startup.failKB}`); else if (kb > B.startup.targetKB) warns.push(`startup chunk ${kb.toFixed(2)} KB gz > target ${B.startup.targetKB}`)
 } else warns.push('no dist/assets: startup chunk not checked')
 // 2. views
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
+const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
 const report = {}
 for (const dev of ['desktop', 'mobile']) {
   if (only && only !== dev) continue
@@ -30,8 +32,10 @@ for (const dev of ['desktop', 'mobile']) {
     await p.addInitScript(() => { window.__snap = 1; window.__cb = []; const raf = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (f) => raf((t) => { const s = performance.now(); try { f(t) } finally { window.__cb.push(performance.now() - s) } }) })
     let m
     try {
-      await p.goto(base + qs)
+      await p.goto(base + qs + (shore ? `&shore=${shore}` : ''))
       await p.waitForFunction(() => window.__loadMarks?.frame && !document.getElementById('ld') && window.__calls > 0, null, { timeout: 200_000, polling: 500 })
+      // the look-A ground and shore kit arrive in idle slots after the first frame: wait for them (builds without them time out)
+      await p.waitForFunction(() => window.__groundReady && window.__shoreReady, null, { timeout: 40_000, polling: 500 }).catch(() => {})
       await p.waitForTimeout(3500) // cull + LOD settle
       await p.evaluate(() => { window.__cb.length = 0; window.__cs = []; window.__ts = []; const g = () => { window.__cs.push(window.__calls); window.__ts.push(window.__tris); requestAnimationFrame(g) }; requestAnimationFrame(g) })
       const t0 = Date.now(); await p.waitForTimeout(4000)

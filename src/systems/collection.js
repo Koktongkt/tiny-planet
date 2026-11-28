@@ -37,8 +37,8 @@ export function caseCount(s) {
   return { n, of: CASES }
 }
 export const HALL_LINE = 'Every plinth filled. The old library would be proud of you. I certainly am.'
-// ruins dig spots: DIG_SPOTS per day; each yields a seeded find (mostly shards/coins, sometimes a new relic)
-export const DIG_SPOTS = 5
+// keeper-site dig spots: DIG_SPOTS, each once per day; each yields a seeded find (mostly shards/coins, sometimes a new relic)
+export const DIG_SPOTS = 6 // one per keeper site (world/regions.js DIG_SITES)
 const hash = (n) => { let h = (n | 0) * 2654435761; h = (h ^ (h >>> 15)) * 2246822519; return ((h ^ (h >>> 13)) >>> 0) / 4294967296 }
 export function digFind(day, spot) {
   const r = hash(day * 31 + spot * 7 + 1)

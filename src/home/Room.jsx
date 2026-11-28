@@ -11,12 +11,13 @@ import { atRoom, atPlanet } from '../game/prompt/anchors.js'
 import { O, Merge, GEO, tm, OUT, canvasTex } from './kit.jsx'
 import { T, q, VIEW, setViewMode } from '../common.jsx'
 import { R, height } from '../world.js'
-import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, WindowLight, DoorWay, Smoke, BathWalls, LAMP, LAYOUT } from './interior.jsx'
+import { W, Box, Shell, Floor, Backdrop, Windows, Sunbeam, WindowLight, DoorWay, Smoke, Alcove, BathWalls, LAMP, LAYOUT } from './interior.jsx'
 import { Prop } from '../props/Prop.jsx'
 import { PAD, CAM, onTap } from '../touch.jsx'
 import { moveIntent, screenYaw, turnStep, walkFactor, clampInYaw, ZMIN } from '../camInput.js'
 import { G, emit, toast } from '../game/store.js'
 import { CAT } from '../pets/catState.js'
+import { BootMark } from '../boot.js'
 const Cat = React.lazy(() => import('../pets/Cat.jsx').then(m => ({ default: m.Cat })))
 // round7: home activities (sleep, cook, bath, tea, read, water plants, feed the pets) + the refined interior clutter: own chunk
 const Activities = React.lazy(() => import('./Activities.jsx'))
@@ -27,7 +28,7 @@ const LAYER = 5
 export { W, Box }
 
 // ---------- transitions ----------
-let snapFrames = 0
+let snapFrames = HOME.inside ? 3 : 0
 // rAF paints the iris; the timer finishes it on wall-clock time so a stalled frame cannot hold the door lock.
 function fadeTo(v, ms) { return new Promise(res => { const v0 = HOME.fade, t0 = performance.now(); let done = false; const step = () => { if (done) return; const k = Math.min(1, (performance.now() - t0) / ms); if (k < 1) { HOME.fade = v0 + (v - v0) * (k * k * (3 - 2 * k)); requestAnimationFrame(step); return } done = true; HOME.fade = v; res() }; setTimeout(step, ms); step() }) }
 const fading = () => HOME.fade > 0.02
@@ -173,9 +174,9 @@ export function Room() {
   const onDown = (e) => { if (!HOME.inside) return; e.stopPropagation(); const l = ref.current.worldToLocal(e.point.clone()); onTap(e.nativeEvent || e, () => { if (HOME.cancelIdle) HOME.cancelIdle(); HOME.hp.target = { x: l.x, z: l.z } }) } // a clean click / tap walks; a drag orbits
   return <group ref={ref} visible={HOME.inside} scale={ROOM.S}>
     <Backdrop /><Floor onDown={onDown} /><Windows /><Sunbeam /><DoorWay /><Smoke /><WindowLight /><Lamp /><NightGlow />
-    <Merge><Shell /></Merge><BathWalls />
-    <React.Suspense fallback={null}><Activities /></React.Suspense>
+    <Merge><Shell /></Merge><Alcove /><BathWalls />
+    <React.Suspense fallback={null}><Activities /><BootMark name="activities" /></React.Suspense>
     <InsideDecor />
-    <React.Suspense fallback={null}><Cat /></React.Suspense>
+    <React.Suspense fallback={null}><Cat /><BootMark name="cat" /></React.Suspense>
   </group>
 }

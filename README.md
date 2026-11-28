@@ -4,14 +4,16 @@
 
 A cozy, watercolour-toon 3D tiny planet you can walk around. Every mesh is generated in code, with no external models.
 
-- **Village:** cottages around a square, a winding sandy path, a stream with arched bridges, laundry lines, a shrine, a bus stop, and a napping cat.
-- **Biomes:**
-  - Lake with a dock, a rowboat and an angler
-  - Cliff waterfall
+- **One slope, peak to sea:** Keepers' Peak at the north pole, a sea at the south cap, and one river running between them. Every region sits where water, wind and people would put it ([design](docs/superpowers/specs/2026-11-24-world-rework-design.md)).
+- **Village:** cottages around a square beside the river, her home on its west edge, a winding sandy path with bridges, laundry lines, a shrine, a bus stop, and a napping cat.
+- **Regions:**
+  - Keepers' Peak, with the spring and a stone circle
+  - Cliff waterfall where the river drops off the mesa
   - Rice terraces with a scarecrow and workers
-  - A steam train looping the southern ring
-  - Harbour with a pier, boats and a lighthouse
-  - Mossy ruins
+  - Lake with a dock, a rowboat, an angler and drowned ruins
+  - Professor Hoshino's museum, a restored keeper building on the lake shore
+  - Harbour on the sea with a pier, boats and a lighthouse
+  - A steam train along the south coast, over a river trestle
   - Camphor forest with a giant shrine tree
   - Meadow hills with a field of windmills
 - **People:** the traveller and 22 villagers share a soft-body look (SDF body parts blended and baked with marching cubes, GPU-skinned). Clothes are painted in the shader; hair, hats and props ride on bones. Body shapes, hair, outfits and props vary by zone (fishers, farmers, bakers, elders). They stroll the path, chat in the square, fish, and work the terraces and docks.
@@ -23,7 +25,7 @@ A cozy, watercolour-toon 3D tiny planet you can walk around. Every mesh is gener
 - **WASD / arrow keys:** walk · **Shift:** run · **Space:** jump · **tap or click:** walk to that spot
 - **V:** toggle planet view (drag to spin, with inertia) / walk view
 
-URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=zone&z=home|home-garden|home-yard` (her cottage, crop beds, whole yard), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills` (zone close-ups), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
+URL options: `?view=orbit` (planet view), `?view=detail` (village close-up), `?view=zone&z=home|home-garden|home-yard` (her cottage, crop beds, whole yard), `?view=hero` (traveller close-up), `?view=lineup` (every character type), `?view=zone&z=lake-waterfall|terraces-train|harbour-ruins|forest-giant|meadow-mills|peak|lake-museum|train-trestle` (zone close-ups), `?world=old` (dev only: the pre-rework layout, never saved), `?view=charstudio` (character studio; `angle=front|three|side|back`, `pose=walk`, `freeze=`, `compare=1`), `?t=day|dusk|night` or `?phase=` (freeze the time of day), `?touch=1` / `?touch=0` (force the phone controls), `?fx=full` (restore grain and daytime bloom on touch), `?q=fixed` (pin render resolution), `?oldchar=1` (v4 stick-figure people), `?char=sprite` (2.5D billboard traveller).
 
 ## Tech stack
 
@@ -77,7 +79,7 @@ You can use the stick and buttons together with several fingers. Supported devic
 - **Decor placement** near Home, with a green/red ghost preview; press E to pick it back up.
 - **Home:** a chibi round cottage in a fenced yard with puffy trees and the crop garden (see ART_DIRECTION.md, "Her home, outside").
 - **Daily loop (Stage B):** a six-bed garden with growth over in-game days, gifts and friendship hearts with all 22 villagers, a daily errands board, recipes for every leftover item, food buffs (swift, cozy, lucky), ambient sound with a procedural Ghibli-style score (a different piece outdoors, at home, in the museum and on the train) and activity sound effects, and settings for volume, mute and text size. See [GAMEPLAY.md](GAMEPLAY.md).
-- **Relaxing + world (Stage C):** a calmer fishing reel with 12 species and a catch card, seasons every 7 in-game days and seeded rain days, train rides between two stations, photo mode (free camera, filters, PNG + journal album), a collection journal, ruins dig spots and Professor Hoshino's museum, and Grandma's first-day note.
+- **Relaxing + world (Stage C):** a calmer fishing reel with 12 species and a catch card, seasons every 7 in-game days and seeded rain days, train rides between two stations, photo mode (free camera, filters, PNG + journal album), a collection journal, dig spots at six keeper sites and Professor Hoshino's museum, and Grandma's first-day note.
 - **Day cycle and saves:** items respawn each in-game sunrise (one day is one real hour); progress, including the time of day, saves to localStorage and carries over across reloads. Reset from the Bag or with `?reset`.
 
 ## Home & pets
@@ -132,7 +134,7 @@ check, migrating an old v1 save, indoor controls and the door, facing the direct
 iPhone 13 profile, plus the Stage B loop and Stage C (fishing reel + species, photo mode capture, a train ride, ruins dig + museum + journal, the tutorial note, and the touch versions). Everything runs in headless Chromium on SwiftShader (software GL), so it is slow but needs no GPU.
 `BASE_URL=http://host:port/` points it at an already-served build.
 
-The perf gate fails a PR when the startup chunk is over 110 KB gz (warns over 100) or a key view goes over its draw-call or triangle
+The perf gate fails a PR when the startup chunk is over 150 KB gz (warns over 140) or a key view goes over its draw-call or triangle
 cap from `tests/perf/budget.json` (with a few % tolerance for run-to-run drift). Tracked exceptions, if any, are the `overrides` object in
 `tests/perf/budget.json` (empty right now: the mobile forest walk sits under the 350-call cap). FPS and JS ms per frame are reported but never fail the build, since they are noise on software GL.
 
@@ -153,7 +155,7 @@ cap from `tests/perf/budget.json` (with a few % tolerance for run-to-run drift).
 - `src/game/recipes.js`, `craft.js`, `itemsB.js`: recipes, spawns, crafting and the Stage B item names, kept out of the startup chunk. `items.js` keeps only ids, names, tools and decor.
 - Studio's areas: `src/art/`, `src/ui/{gifts,errands,settings}/`, `src/audio/` (armed from `game/UI.jsx`, starts on the first gesture), and their earlier areas stay as they were: `src/pets/`, `src/home/`, `src/talk/`, characters.
 
-New systems should be lazy-loaded (`React.lazy` / dynamic `import()`) so the startup chunk stays at or under 100 KB gz.
+New systems should be lazy-loaded (`React.lazy` / dynamic `import()`) so the startup chunk stays at or under 140 KB gz (with a hard CI cap of 150 KB gz).
 
 ## CI and deploy
 

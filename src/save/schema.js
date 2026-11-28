@@ -1,8 +1,9 @@
 // Save schema + ordered migrations. Pure (no DOM), so node unit tests can import it.
 import { MILESTONES } from '../systems/friendship.js'
+import { moveDecor } from './homeMove.js'
 // Every save carries an explicit `v`. A save without `v` is a v1 save (the original Gather & Craft format).
 // To change the format: bump SAVE_VERSION, add one step to MIGRATIONS (from = old version), and extend fresh().
-export const SAVE_VERSION = 7
+export const SAVE_VERSION = 8
 export const TAU = Math.PI * 2
 // clock phase (rot.a) the game starts at: 0 = noon, so 0.4 is early afternoon
 export const START_PHASE = 0.4
@@ -42,6 +43,9 @@ export const MIGRATIONS = [
   } },
   // v7: pickup chip reminders start empty (every item shows its chip for its first pickups again)
   { from: 6, up: (s) => ({ ...s, hints: {} }) },
+  // v8: the world rework moved her house; outdoor decor keeps its place around it. Garden plots are indexed and dig
+  // sites keep their indices, so neither changes.
+  { from: 7, up: (s) => ({ ...s, placed: moveDecor(s.placed) }) },
 ]
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)

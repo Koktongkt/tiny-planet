@@ -5,12 +5,12 @@
 <style>
 @font-face{font-family:TPSerif;src:url(/fonts/cormorant-500i.woff2) format("woff2");font-style:italic;font-weight:500;font-display:swap}
 @font-face{font-family:TPRound;src:url(/fonts/fredoka-600.woff2) format("woff2");font-weight:600;font-display:swap}@font-face{font-family:TPRound;src:url(/fonts/fredoka-400.woff2) format("woff2");font-weight:400;font-display:swap}
-@property --r{syntax:"<length>";inherits:false;initial-value:0px}
 /* loading screen: a daytime sky, the title card on the left, the planet floating on the right (stacked on portrait screens) */
 #ld{position:fixed;inset:0;z-index:50;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:min(6vw,90px);padding:0 4vw;box-sizing:border-box;color:#fff;
- font:600 16px TPRound,Fredoka,"Varela Round","Arial Rounded MT Bold",system-ui,sans-serif;background:linear-gradient(#73a1dc 0,#86b0e3 45%,#a9c8ec 100%);-webkit-user-select:none;user-select:none;--r:0px;--ix:50%;--iy:50%}
-#ld.out{-webkit-mask:radial-gradient(circle at var(--ix) var(--iy),transparent var(--r),#000 calc(var(--r) + 18vmax));mask:radial-gradient(circle at var(--ix) var(--iy),transparent var(--r),#000 calc(var(--r) + 18vmax));animation:iris 2.2s cubic-bezier(.6,0,.3,1) forwards;pointer-events:none}
-@keyframes iris{to{--r:180vmax}}
+ font:600 16px TPRound,Fredoka,"Varela Round","Arial Rounded MT Bold",system-ui,sans-serif;background:linear-gradient(#73a1dc 0,#86b0e3 45%,#a9c8ec 100%);-webkit-user-select:none;user-select:none}
+/* opacity is compositor-friendly; animating a full-screen radial mask repaints over WebGL every frame. */
+#ld.out{opacity:0;transition:opacity 1.1s cubic-bezier(.4,0,.2,1);pointer-events:none;will-change:opacity}
+#ld.out .dr,#ld.out .pu,#ld.out #pw:before,#ld.out #bf .bp,#ld.out #bf .wl,#ld.out #bf .wr,#ld.out #lit,#ld.out #lha{animation-play-state:paused}
 #ld .lay{position:absolute;inset:0;will-change:transform}#ld .lay svg{position:absolute;inset:0;width:100%;height:100%}#ld svg.defs{position:absolute;width:0;height:0}
 .bk{transition:transform 2.6s cubic-bezier(.3,0,.2,1)}
 .dr{animation:dr 19s ease-in-out infinite alternate}.dr.s{animation-duration:27s}@keyframes dr{to{transform:translateX(calc(28px*var(--s)))}}
@@ -52,7 +52,7 @@
 #go.on{opacity:1;pointer-events:auto;transform:translate(-50%,-16px);animation:br 3.2s ease-in-out 1.2s infinite alternate}#go:hover,#go:focus-visible{background:linear-gradient(#fffdf4,#ffedc4)}#go:focus{outline:none}#go:focus-visible{outline:3px solid #fff;outline-offset:4px}
 #go small{display:block;font-size:.46em;letter-spacing:.2em;text-transform:uppercase;opacity:.6;margin-top:.2em}
 @keyframes br{to{box-shadow:0 4px 0 #e5b979,0 10px 34px #fff8}}
-.out #tx,.out #go{opacity:0!important}.out #pw{transform:scale(1.12)!important;transition-duration:2.2s}
+.out .bk{transition-duration:1.1s}.out #tx,.out #go{opacity:0!important}.out #pw{transform:scale(1.12)!important;transition-duration:1.1s}
 /* portrait: planet on top, title card below */
 @media (max-aspect-ratio:1/1){#ld{flex-direction:column;gap:2vh;padding:calc(env(safe-area-inset-top,0px) + 3vh) 18px calc(env(safe-area-inset-bottom,0px) + 3vh)}
  #pw{width:min(74vw,40vh);order:-1}#tx{width:min(88vw,460px)}#tt h1{font-size:clamp(46px,12.5vw,84px)}#tt h1 span{display:inline}#tt p{font-size:clamp(15px,4.2vw,22px)}
@@ -84,7 +84,7 @@ html,body{overscroll-behavior:none}#ld{touch-action:none}
 var d=document,$=function(i){return d.getElementById(i)},ld=$("ld"),q=location.search,done=0,rm=matchMedia("(prefers-reduced-motion: reduce)").matches;
 // the planet art fades in once it has decoded; until then the sky, title and bar already show
 var pi=$("pi");function shown(){pi.classList.add("in")}if(pi.complete&&pi.naturalWidth)shown();else{pi.onload=function(){(pi.decode?pi.decode():Promise.resolve()).then(shown,shown)}}
-var W={js:20,fonts:1,world:31,bake:7,shaders:4,frame:37},L={js:"Gathering the scripts",fonts:"Setting the type",world:"Shaping the planet",bake:"Waking the traveller",shaders:"Mixing the paints",frame:"Painting the first light"},O=["js","fonts","world","bake","shaders","frame"],S={};
+var W={js:20,fonts:1,world:31,bake:7,shaders:4,frame:27,ready:10},L={js:"Gathering the scripts",fonts:"Setting the type",world:"Shaping the planet",bake:"Waking the traveller",shaders:"Mixing the paints",frame:"Painting the first light",ready:"Getting everything ready"},O=["js","fonts","world","bake","shaders","frame","ready"],S={};
 var SC=1,BK={};function fit(){SC=Math.max(innerWidth/1600,innerHeight/1000);ld.style.setProperty("--s",SC);for(var k in BK)bank(k,BK[k][0],BK[k][1])}
 function bank(id,x,y){BK[id]=[x,y];var n=$(id);if(n)n.style.transform="translate("+(x*SC).toFixed(2)+"px,"+(y*SC).toFixed(2)+"px)"}
 function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p);
@@ -93,13 +93,11 @@ function draw(){var p=0;for(var k in W)p+=W[k]*(S[k]||0);p/=100;var e=p*p*(3-2*p
  ld.setAttribute("aria-valuenow",Math.round(p*100));
  if((S.shaders||0)>=1)ld.classList.add("lit");var c=O.filter(function(k){return(S[k]||0)<1})[0];if(c&&!done)$("sl").textContent=L[c];window.__loader.p=p}
 var CH=/*__CHUNKS__*/null,tot=0,got={};if(CH){for(var f in CH)tot+=CH[f];try{new PerformanceObserver(function(l){l.getEntries().forEach(function(en){var n=en.name.split("/").pop().split("?")[0];if(CH[n]&&!got[n]){got[n]=1;var s=0;for(var k in got)s+=CH[k];if((S.js||0)<1)stage("js",Math.min(.99,s/tot))}})}).observe({type:"resource",buffered:true})}catch(x){}}
-function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="frame"&&v>=1)ready()}
+function stage(k,v){if(!(k in W))return;S[k]=Math.max(S[k]||0,v);draw();if(k=="ready"&&v>=1)ready()}
 function ready(){if(done)return;done=1;if((/[?&]touch=1/.test(q)||matchMedia("(pointer: coarse)").matches)&&!/[?&]touch=0/.test(q))$("go").querySelector("small").textContent="tap anywhere";$("ft").style.opacity=0;var b=$("go");setTimeout(function(){b.classList.add("on");b.focus({preventScroll:true})},rm?0:700);if(/[?&]enter/.test(q))setTimeout(enter,rm?0:900)}
 function enter(){if(!done||ld.classList.contains("out"))return;removeEventListener("keydown",key,true);
- // the iris opens from the planet, wherever the layout put it
- var r=$("pw").getBoundingClientRect();ld.style.setProperty("--ix",(r.left+r.width/2).toFixed(0)+"px");ld.style.setProperty("--iy",(r.top+r.height*.55).toFixed(0)+"px");
  ld.classList.add("out");if(rm)ld.style.opacity=0;
- bank("L1",-700,200);bank("R1",700,200);bank("L2",-600,80);bank("R2",600,80);setTimeout(function(){ld.remove()},rm?450:2300)}
+ bank("L1",-700,200);bank("R1",700,200);bank("L2",-600,80);bank("R2",600,80);setTimeout(function(){ld.remove();removeEventListener("resize",fit);dispatchEvent(new Event("tp:revealed"))},rm?450:1200)}
 function key(e){if(done&&!e.metaKey&&!e.ctrlKey){e.preventDefault();e.stopPropagation();enter()}}
 addEventListener("keydown",key,true);$("go").onclick=enter;ld.addEventListener("pointerup",function(){if(done)enter()});
 var TIPS=["Press E near anything that shimmers to gather it.","A fishing rod is two wood and three reeds.","The crafting bench waits beside the house marked Home.","Fireflies and glowing moss come out only at night.","Everything grows back by morning; gather freely.","The meadow sheep will share their wool.","A rope bridge opens a path up the waterfall cliff.","Decor can be placed anywhere around Home."],ti=Math.floor(Math.random()*TIPS.length),tp=$("tip");

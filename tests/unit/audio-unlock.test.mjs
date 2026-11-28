@@ -9,6 +9,7 @@ function iosWindow() {
   w.addEventListener = (e, f) => { (L[e] = L[e] || []).push(f) }
   w.removeEventListener = (e, f) => { L[e] = (L[e] || []).filter(g => g !== f) }
   const fire = (e, act, x = {}) => { w.act = act; for (const f of [...(L[e] || [])]) f({ type: e, ...x }); w.act = false }
+  w.reveal = () => fire('tp:revealed', false)
   // one finger tap on iOS: pointerdown + touchstart (no activation), then pointerup + touchend + click (activation)
   w.tap = () => { fire('pointerdown', false, { pointerType: 'touch' }); fire('touchstart', false); fire('pointerup', true, { pointerType: 'touch' }); fire('touchend', true); fire('click', true) }
   w.AudioContext = class { constructor() { this.state = 'suspended'; this.destination = {}; w.ctxs.push(this) }
@@ -43,4 +44,14 @@ test('muted: taps do not wake a context ambient.js suspended on purpose', () => 
 test('webkitAudioContext fallback (iOS < 14.5)', () => {
   const w = iosWindow(); w.webkitAudioContext = w.AudioContext; delete w.AudioContext; armAudio(opts(w), w); w.tap()
   assert.equal(w.ctxs[0].state, 'running')
+})
+
+test('the title gesture unlocks audio immediately but graph waits for reveal', async () => {
+  const w = iosWindow(); w.document = { getElementById: () => ({}) }; let starts = 0
+  armAudio({ load: async () => ({ startAudio() { starts++ } }) }, w)
+  w.tap(); await Promise.resolve()
+  assert.equal(w.ctxs[0].state, 'running')
+  assert.equal(starts, 0)
+  w.document = { getElementById: () => null }
+  w.reveal(); assert.equal(starts, 1)
 })

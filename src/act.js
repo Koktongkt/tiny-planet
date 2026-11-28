@@ -32,8 +32,8 @@ export function tickAct(st) {
   if (!ACT.kind) { if (st.act && st.actW > 0.01 && st.ownAct) { st.actW *= 0.8 } else if (st.ownAct) { st.act = null; st.actW = 0; st.ownAct = false } return false }
   const e = (performance.now() - ACT.t0) / 1000, k = Math.min(1, e / Math.max(0.001, ACT.dur))
   st.act = ACT.kind; st.actItem = ACT.item; st.actDur = ACT.dur; st.ownAct = true; st.actT = e; st.actW = ACT.ease ? Math.max(0, Math.min(1, e / ACT.ease, (ACT.dur - e) / ACT.ease)) : k < 0.16 ? k / 0.16 : k > 0.78 ? Math.max(0, (1 - k) / 0.22) : 1
-  if (e >= ACT.lock) { ACT.kind = null; return false }
-  return true
+  if (e >= Math.max(ACT.dur, ACT.lock)) ACT.kind = null
+  return e < ACT.lock
 }
 export const actLocked = () => !!ACT.kind && (performance.now() - ACT.t0) / 1000 < ACT.lock
 /** run fn after her hand reaches out (so the door / pop lands on the gesture) */

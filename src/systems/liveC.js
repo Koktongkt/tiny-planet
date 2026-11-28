@@ -17,7 +17,8 @@ import { TRAIN, TRAIN_STOPS } from '../world/village.js'
 import { T } from '../common.jsx'
 import { HOME } from '../home/state.js'
 import { CAM } from '../touch.jsx'
-import { wind, R, TRAIN_LAT, dir, height } from '../world.js'
+import { wind, R, dir, height } from '../world.js'
+import { railLat } from '../world/railway.js'
 import { SB } from './live.js'
 // the new relics' bag icons (Studio): loaded on first use — once she owns a relic (save or a dig); journal / museum register their own
 let relicIcons = null
@@ -35,8 +36,8 @@ tickWeather()
 export const SCH = Tr.buildSchedule(TRAIN_STOPS), TS = { lon: 0, stop: null }
 TRAIN.fn = (t) => Tr.trainState(SCH, t + SC.toff, TS).lon // toff: test / debug time shift
 export const STOP_NAME = { village: 'Lakeside (village)', forest: 'Forest Edge (ruins)' }
-// platform: a step north of the rails (toward the lake / ruins paths)
-export const platformN = (id) => { const s = TRAIN_STOPS.find(x => x.id === id); return dir(TRAIN_LAT + 0.3 / R, s.lon) }
+// platform: a step north of the rails (toward the lake / ruins paths), beside the coast ring (world/railway.js)
+export const platformN = (id) => { const s = TRAIN_STOPS.find(x => x.id === id); return dir(railLat(s.lon) + 0.3 / R, s.lon) }
 export const RIDE = { riding: false, from: null, to: null, progress: 0, cost: 0, car: 3, seat: 0.09, pin: null } // car/seat: TrainC sets Studio's RIDE_SEAT
 window.__scRide = RIDE
 const nextArrival = (id) => { const t = wind.time.value + SC.toff; for (let k = 0; k < SCH.period; k += 0.5) { if (Tr.trainState(SCH, t + k, _ns).stop === id) return k } return SCH.period }

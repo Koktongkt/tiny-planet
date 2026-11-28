@@ -1,21 +1,23 @@
 // Game state + persistence (localStorage) + tiny pub/sub. No React here; UI subscribes via useGame().
 import { ITEMS, TOOLS } from './items.js'
 import { fresh, migrate, TAU } from '../save/schema.js'
+import { OLD_WORLD } from '../world/flag.js'
 // the storage key keeps its historic name; the format version lives in the save's own `v` field (see save/schema.js)
 const KEY = 'tinyplanet.save.v1'
 const q = new URLSearchParams(location.search)
+const NOSAVE = q.has('nosave') || OLD_WORLD // ?world=old is dev-only: never reads or writes the save
 let S = fresh()
-try { if (!q.has('reset') && !q.has('nosave')) { const raw = localStorage.getItem(KEY); if (raw) S = migrate(JSON.parse(raw)) } } catch (e) { S = fresh() }
-if (q.has('reset')) localStorage.removeItem(KEY)
+try { if (!q.has('reset') && !NOSAVE) { const raw = localStorage.getItem(KEY); if (raw) S = migrate(JSON.parse(raw)) } } catch (e) { S = fresh() }
+if (q.has('reset') && !OLD_WORLD) localStorage.removeItem(KEY)
 export const G = { s: S, ui: { panel: q.get('ui') || null, toasts: [], prompt: null, fish: null, place: null, crafting: null, fly: [] }, near: null, phase: 0, night: 0 }
 const subs = new Set()
 export const subscribe = (f) => { subs.add(f); return () => subs.delete(f) }
 let dirty = false
 export const emit = () => { for (const f of subs) f(); if (!dirty) { dirty = true; setTimeout(() => { dirty = false; save() }, 400) } }
 // the Clock keeps G.s.clock.a current each frame; persist it now and then and when the tab goes away
-if (typeof window !== 'undefined' && !q.has('nosave')) { setInterval(() => save(), 15000); addEventListener('pagehide', () => save()); document.addEventListener('visibilitychange', () => { if (document.hidden) save() }) }
-export const save = () => { if (q.has('nosave')) return; try { localStorage.setItem(KEY, JSON.stringify(G.s)) } catch (e) {} }
-export const reset = () => { localStorage.removeItem(KEY); G.s = S = fresh(); const rot = window.__rot; if (rot) { rot.a = ((rot.a + Math.PI / 2) % TAU + TAU) % TAU - Math.PI / 2; S.clock.a = rot.a } // day 1 again, same time of day
+if (typeof window !== 'undefined' && !NOSAVE) { setInterval(() => save(), 15000); addEventListener('pagehide', () => save()); document.addEventListener('visibilitychange', () => { if (document.hidden) save() }) }
+export const save = () => { if (NOSAVE) return; try { localStorage.setItem(KEY, JSON.stringify(G.s)) } catch (e) {} }
+export const reset = () => { if (!OLD_WORLD) localStorage.removeItem(KEY); G.s = S = fresh(); const rot = window.__rot; if (rot) { rot.a = ((rot.a + Math.PI / 2) % TAU + TAU) % TAU - Math.PI / 2; S.clock.a = rot.a } // day 1 again, same time of day
   toast('A fresh start — the planet is yours again.', 'leaf'); emit() }
 
 let tid = 0

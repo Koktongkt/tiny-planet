@@ -4,13 +4,13 @@
 import { test, expect } from '@playwright/test'
 import { watchErrors, boot } from './helpers.js'
 const scReady = (page) => page.waitForFunction(() => window.__scReady && window.__sc && window.__scLayout && window.__sbLayout, null, { timeout: 150_000, polling: 250 })
-const stand = (page, fn) => page.evaluate(fn)
+const stand = (page, fn, arg) => page.evaluate(fn, arg)
 
 test('hooks: save v6, __T season + weather, deterministic rain days, tutorial note on day 0', async ({ page }) => {
   test.setTimeout(300_000)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home'); await scReady(page)
   const h = await page.evaluate(() => ({ v: window.__game.G.s.v, season: window.__T.season, w: window.__T.seasonW, kind: window.__T.kind, rain: window.__T.rain, wet: window.__T.wet, rainDays: Array.from({ length: 14 }, (_, d) => window.__sc.W.isRainDay(d)) }))
-  expect(h.v).toBe(7); expect(h.season).toBe('spring'); expect(h.w).toEqual([1, 0, 0, 0]); expect(h.kind).toBe('clear'); expect(h.rain).toBe(0); expect(h.wet).toBe(0)
+  expect(h.v).toBe(8); expect(h.season).toBe('spring'); expect(h.w).toEqual([1, 0, 0, 0]); expect(h.kind).toBe('clear'); expect(h.rain).toBe(0); expect(h.wet).toBe(0)
   expect(h.rainDays.filter(Boolean).length).toBe(2); expect(h.rainDays[0] || h.rainDays[1]).toBe(false)
   // a rain day at mid-morning: the hooks report rain
   const d = h.rainDays.findIndex(Boolean)
@@ -88,13 +88,19 @@ test('train: board at the village stop (free), ride, alight at the forest stop; 
 })
 
 test('ruins: dig spots, museum donation (+ Hoshino), journal relics; tutorial dismiss + reopen', async ({ page }) => {
-  test.setTimeout(300_000)
+  test.setTimeout(420_000) // (+ a stand at each of the six keeper-site dig spots)
   const w = watchErrors(page); await boot(page, '?enter&nosave&t=day&out&at=home&give=shard:1'); await scReady(page)
   await expect(page.locator('.tpt')).toBeVisible()
   await page.locator('.tpt-x').click(); await expect(page.locator('.tpt')).toBeHidden()
   expect(await page.evaluate(() => window.__game.G.s.tutorial.dismissed)).toBe(true)
   // Settings -> "Read again" brings the note back
   await page.locator('.tp-gearbtn').click(); await page.locator('.tps-note').click(); await expect(page.locator('.tpt')).toBeVisible(); await page.evaluate(() => window.__sc.tutorial(false))
+  // one dig spot per keeper site, each reachable: standing on it offers its prompt (5 first, so she ends at site 0)
+  expect(await page.evaluate(() => window.__scLayout.digs.length)).toBe(6)
+  for (const i of [5, 4, 3, 2, 1]) {
+    await stand(page, (i) => { const P = window.__player; P.n.copy(window.__scLayout.digs[i].n); P.target = null; window.__snap = 1 }, i)
+    await page.waitForFunction((i) => window.__game.G.near?.id === 'dig' + i, i, { timeout: 60_000 })
+  }
   await stand(page, () => { const P = window.__player; P.n.copy(window.__scLayout.digs[0].n); P.target = null; window.__snap = 1 })
   await page.waitForFunction(() => window.__game.G.near?.id === 'dig0', null, { timeout: 60_000 })
   await page.keyboard.press('e')
