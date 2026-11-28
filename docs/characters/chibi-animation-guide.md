@@ -301,3 +301,24 @@ Shots: [`ref/ishi-in-game.jpg`](ref/ishi-in-game.jpg).
 - The wide trouser legs now ride the thigh and shin bones (`trouserLegGeos`), so they fold over his knees when he sits; the seat piece stays on the hips.
 - Fuku and Hoshino stay dev-only drafts.
 - Size (KT: he looked small next to her): villager slots draw at scale 0.8 (sized for the old long-legged villagers), so Ishi stood 0.349 tall to her 0.434 (80%). KT: the same height as her: he is drawn at 0.995 (head top 0.434, the same as hers). `st.seatDrop = 0.035` keeps his seat on the bench where the old grandpa sat.
+
+## Professor Hoshino: curious, clever, excitable, passionate (approved list from KT)
+
+His own poses are in `src/art/chibi/hoshinoActs.js`. They run after `lifeStep` and add to the same bones. The profile is `HOSHINO_MOTION` in `motion.js`, and he fidgets often (`fidgetEvery [4, 9]`).
+
+| Fidget | s | What it shows |
+|---|---|---|
+| `eureka` | 3.2 | Sudden idea. He freezes, a finger goes up beside his head (forward, clear of the hair), he rises onto his toes, then gives a quick double nod. It plays at most once per idle spell; a second roll becomes `chin`. |
+| `peer` | 3.8 | Bends from the hips to look at something by his feet, pushes his glasses up halfway through, squints. |
+| `chin` | 4.2 | "Hmm." Hand on his chin, the other forearm across his middle, head tilted, eyes up and aside, fingers tapping. |
+| `lecture` | 4.4 | Explains to the air. One hand open and presenting on the beats, the other counting points, the mouth talking (excited and happy faces alternating). |
+| `behind` | 5.0 | Hands clasped behind his back, rocking gently heel to toe, gazing about. His calm default. |
+| `notebook` | 6.0 | Takes a small red pocket notebook and a pencil out of his jacket, scribbles (life.js writing pose, brought in to his middle), puts them back. The props sit on the forearm bones and are drawn only while out (`L.book`). |
+| `greet` | 2.8 | When she comes near (App's scholar walker, within 0.6 units, 65% of the time, at most every 30 s), he stops, turns to her, rises onto his toes with both hands up, then beckons, delighted. Studio: `window.__hoshinoGreet()`. |
+
+Rules found while building these:
+
+- **No head pitch up.** Tipping his big head back hid the face decal. The eyes do the looking up instead (`L.gy`).
+- **Keep raised arms forward.** Raise his arms forward rather than out to the side. Two new opt-in body knobs keep raised arms looking right: `armAO` lifts the rest-pose body shadow off the arms, so a raised sleeve does not turn pink, and `headStrict` binds everything above the neck to the head bone, so a turning head does not bury one eye under the skin.
+
+**Walk:** brisk, short steps with a forward lean, as if he is always off to something interesting: `rate 9.4, stride 0.38, lean 0.17, arm 0.3`.

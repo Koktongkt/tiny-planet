@@ -426,6 +426,9 @@ function bake(S, RES = 72) {
     // armStrict (opt-in): a vertex that clearly belongs to an arm (nearer the arm's surface than the torso's) follows only the
     // arm bones, so a forearm bent far from the body takes its hand along (by default the hips' wide falloff holds the hand back)
     if (S.b.armStrict) { const dL = armD(S, p, 'L'), dR = armD(S, p, 'R'), dc = core(S, p); if (Math.min(dL, dR) < dc - 0.003) { const k = dL < dR ? 'L' : 'R'; ws = ws.filter(w => w[2] === 'up' + k || w[2] === 'fo' + k) } }
+    // headStrict (opt-in): everything above the neck follows the head bone alone. A big, low head otherwise keeps a little
+    // chest weight across the face, so the skin lags a turning head and buries one side of the face decal (Hoshino)
+    if (S.b.headStrict && p.y > S.shY + 0.045 && Math.min(armD(S, p, 'L'), armD(S, p, 'R')) > 0.004) ws = ws.filter(w => w[2] === 'head')
     // skirt surface follows the hips more than the legs
     if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004 && !(S.b.skirt === 'jacket' && Math.min(armD(S, p, 'L'), armD(S, p, 'R')) < 0.004)) /* a jacket skirt leaves the arms on the arm bones */ ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
     ws.sort((a, b) => b[1] - a[1]); ws = ws.slice(0, 4)
@@ -433,6 +436,7 @@ function bake(S, RES = 72) {
     ws.forEach(([bi, w, nm], k) => { si[i * 4 + k] = bi; sw[i * 4 + k] = w / tot; if (nm.startsWith('up') || nm.startsWith('fo')) rA += w / tot; if (nm.startsWith('fo')) rF += w / tot; if (nm.startsWith('th') || nm.endsWith('n') || nm.startsWith('ft')) rL += w / tot })
     const dh = Math.min(p.distanceTo(S.hdL), p.distanceTo(S.hdR))
     reg.set([rA, rF, rL, 1 - THREE.MathUtils.smoothstep(dh, 0.016 * (S.b.foot ?? 1), 0.024 * (S.b.foot ?? 1))], i * 4)
+    if (S.b.armAO != null && rA > 0.5) ao[i] = Math.max(ao[i], S.b.armAO) // armAO (opt-in): arms raised clear of the body do not carry the rest pose's body shadow on their inner side
   }
   g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('aAO', new THREE.BufferAttribute(ao, 1)); g.setAttribute('aReg', new THREE.BufferAttribute(reg, 4))
   g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4))

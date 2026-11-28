@@ -87,18 +87,19 @@ export const FUKU_MOTION = motionProfile(HER_MOTION, {
 export const HOSHINO_MOTION = motionProfile(HER_MOTION, {
   name: 'hoshino',
   lively: 0.75,
-  fidgets: { glasses: 2.0 },
+  // his own poses live in hoshinoActs.js (eureka, peer, chin, lecture, behind, greet; notebook adds the book)
+  fidgets: { glasses: 2.0, eureka: 3.2, peer: 3.8, chin: 4.2, lecture: 4.4, behind: 5.0, notebook: 6.0, greet: 2.8 },
   sets: {
-    day: ['look', 'hands', 'glasses', 'look', 'hands'],
-    rain: ['look', 'glasses', 'shiver'],
-    night: ['yawn', 'look', 'hands'],
-    seated: ['look', 'hands', 'glasses'],
-    hungry: ['look', 'hands'],
-    indoor: ['look', 'hands', 'glasses', 'hands'],
-    stove: ['look', 'hands', 'hum'],
+    day: ['behind', 'peer', 'chin', 'lecture', 'glasses', 'notebook', 'look', 'behind', 'peer', 'eureka'],
+    rain: ['look', 'catch', 'chin', 'glasses'],
+    night: ['yawn', 'look', 'behind', 'chin'],
+    seated: ['look', 'chin', 'notebook', 'glasses'],
+    hungry: ['look', 'chin'],
+    indoor: ['behind', 'chin', 'notebook', 'lecture', 'glasses', 'eureka'],
+    stove: ['look', 'behind', 'hum'],
   },
   fidgetAfter: 3.0,
-  fidgetEvery: [6, 14],
+  fidgetEvery: [4, 9], // busy-minded: something catches his interest often
   sitAfter: 22,
   lieChance: 0,
   can: { skip: false, skid: false, wave: true, dodge: false, sit: true, lie: false, rainHunch: true, glanceAtCamera: true },

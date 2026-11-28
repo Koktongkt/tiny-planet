@@ -33,7 +33,7 @@ export function makeHairInk(uOff) {
 
 /** aSkin: 0 hair, 1 skin, 0.5..0.9 darker skin, 2 darker skin for a deep hollow (Fuku's ears).
  *  shade: optional hair shadow tint (default warm brown, for dark hair; white hair wants a light cool grey) */
-export function makeHairMat(skin, hair, band, uOff, shade = [0.68, 0.55, 0.5]) {
+export function makeHairMat(skin, hair, band, uOff, shade = [0.68, 0.55, 0.5], sculptedHighlights = false) {
   return new THREE.ShaderMaterial({
     uniforms: { uOff: { value: uOff }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim,
       uHair: { value: new THREE.Color(hair) }, uBand: { value: new THREE.Color(band) }, uSkin: { value: new THREE.Color(skin) }, uHShade: { value: new THREE.Vector3(...shade) } },
@@ -45,7 +45,7 @@ export function makeHairMat(skin, hair, band, uOff, shade = [0.68, 0.55, 0.5]) {
         vec3 base = mix(uHair, uSkin, sk) * (1. - .2*step(1.5, vSkin)), shade = base*mix(uHShade, vec3(.86,.68,.66), sk);
         vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
         vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
-        float band = 1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)));
+        float band = ${sculptedHighlights ? 'clamp(-vSkin, 0., 1.)' : '1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)))'};
         c = mix(c, uBand*uLight*(.75 + .25*lit), band*(1. - sk)*(.3 + .32*lit)*smoothstep(-.2, .5, dot(N, V)));
         c *= 1. - (1. - sk)*.3*smoothstep(.1, .38, vSkin);
         c *= 1. - sk*.24*(1. - step(.9, vSkin)); // aSkin 0.5..0.9: a darker skin tone (the inside of an ear); 1 = plain skin

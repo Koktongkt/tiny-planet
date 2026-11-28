@@ -29,6 +29,10 @@ const ChibiIshi = lazy(() => import('./art/chibi/ChibiIshi.jsx').then(m => ({ de
 // Grandma Fuku in the chibi look (lazy chunk, fetched when her walker mounts); rendered at her scale so she stands as tall as her
 const ChibiFuku = lazy(() => import('./art/chibi/ChibiFuku.jsx').then(m => ({ default: m.ChibiFuku })))
 const chibiGrandma = (w) => CHIBI && w.cfg.name === 'grandma'
+// Professor Hoshino in the chibi look (lazy chunk); drawn at 1.1 so he stands a head-tuft taller than her (KT)
+const ChibiHoshino = lazy(() => import('./art/chibi/ChibiHoshino.jsx').then(m => ({ default: m.ChibiHoshino })))
+const chibiScholar = (w) => CHIBI && w.cfg.name === 'scholar'
+const HOSHINO_SCALE = 1.1
 import { BOOT, bootStage, onBoot, useIdleSlot, nextPaint, BootMark, holdStartupVillagers } from './boot.js'
 import { TOUCH, PAD, CAM, TouchPad, useTouchCamera, onTap } from './touch.jsx'
 import { moveIntent, walkFactor, makeFollow, lazyFollow, sameIntent } from './camInput.js'
@@ -374,7 +378,7 @@ function Walker({ w, i }) {
   const ready = useIdleSlot(i), ref = useRef(), st = useMemo(() => ({ phase: rnd() * 6, move: 0, t: 0, wave: w.wave, look: w.look || 0, act: null, actW: 0, talkSeed: i * 1.3 }), [])
   const camera = useThree(s => s.camera)
   const L = useMemo(() => ({ clk: 0, pc: 0, cur: null, curF: new THREE.Vector3(), face: new THREE.Vector3() }), [])
-  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: 0.4 * (w.cfg.body?.H ?? 1) * (chibiGrandma(w) ? 1.2 : 1) }; NPCS.push(c); return c }, [])
+  const npc = useMemo(() => { const c = { key: w.key || w.cfg.name, w, obj: null, st, ready: false, h: chibiScholar(w) ? 0.425 * HOSHINO_SCALE /* his head top at scale 1 (studio cast: 0.98x hers) */ : 0.4 * (w.cfg.body?.H ?? 1) * (chibiGrandma(w) ? 1.2 : 1) }; NPCS.push(c); return c }, [])
   useEffect(() => () => { const k = NPCS.indexOf(npc); if (k >= 0) NPCS.splice(k, 1) }, [])
   useFrame((_, rawDt) => {
     // touch: past SLEEP_DIST, skip this whole step and replay the gap on wake (see npc/sleep.js)
@@ -419,11 +423,15 @@ function Walker({ w, i }) {
       if (npc.greetAt && t - npc.greetAt < 1.4 && !act) { act = 'wave'; mv = 0 }
       if (L.gT > 0) { act = 'wave'; mv = 0 } }
     npc.n = (npc.n || new THREE.Vector3()).copy(n); if (w.mode !== 'anchor') npc.stage = act || (mv > 0.2 ? 'walk' : 'idle')
+    // Hoshino: when she comes near he sometimes stops, turns to her and greets her, delighted (hoshinoActs 'greet')
+    if (chibiScholar(w) && !talking && P.n && ready) { const close = P.n.angleTo(n) * R < 0.6 && !(window.__home && window.__home.inside) && !(window.__museum && window.__museum.inside)
+      L.gH = (L.gH ?? 4) - dt; if (close && !L.herIn && L.gH <= 0) { L.gH = 30; if (Math.random() < 0.65) { st.greetN = (st.greetN || 0) + 1; L.greetT = 2.9 } } L.herIn = close
+      if (L.greetT > 0) { L.greetT -= dt; mv = 0; act = 'look'; L.face.copy(P.n).sub(n); L.face.addScaledVector(n, -L.face.dot(n)); if (L.face.lengthSq() > 1e-12) { L.face.normalize(); L.curF.lerp(L.face, Math.min(1, dt * 5)); fwd.copy(L.curF) } } }
     if (talking && P.n) { mv = 0; if (act !== 'sit') act = 'chat'; L.face.copy(P.n).sub(n); L.face.addScaledVector(n, -L.face.dot(n)); if (L.face.lengthSq() > 1e-12) { L.face.normalize(); L.curF.lerp(L.face, Math.min(1, dt * 5)); fwd.copy(L.curF) } }
     fwd.addScaledVector(n, -fwd.dot(n)).normalize()
     if (act && STATIC_ACTS.has(act) && !(w.mode === 'anchor' && act === 'sweep')) mv = 0
     if (act) st.act = act; st.actW += ((act ? 1 : 0) - st.actW) * Math.min(1, dt * 3.5); if (!act && st.actW < 0.02) st.act = null
-    st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (NEWCHAR ? (w.cfg.walk?.rate ?? RATE[w.cfg.age] ?? 8) : w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move * (w.mode === 'path' ? Math.max(0.7, Math.min(1.15, st.rate ?? 1)) : 1)
+    st.move += (mv - st.move) * Math.min(1, dt * 6); st.phase += dt * (NEWCHAR ? (chibiScholar(w) ? 9.4 /* ChibiHoshino walk.rate: brisk short steps */ : w.cfg.walk?.rate ?? RATE[w.cfg.age] ?? 8) : w.cfg.kid ? 11 : w.cfg.elder ? 6.5 : 8.5) * st.move * (w.mode === 'path' ? Math.max(0.7, Math.min(1.15, st.rate ?? 1)) : 1)
     const g = ref.current; g.quaternion.setFromRotationMatrix(_wm.makeBasis(_wx.crossVectors(n, fwd), n, fwd))
     g.position.copy(n).multiplyScalar(w.dock ? R + LAKE_W + 0.135 : R + height(n) + 0.005 + bridgeLift(n))
     if (planetRef.current) { // cull by distance (close views) and by horizon (anything on the planet's far side)
@@ -433,7 +441,7 @@ function Walker({ w, i }) {
     }
     L.placed = true
   })
-  return <group ref={ref}>{!ready ? null : chibiGrandma(w) ? <Suspense fallback={null}><ChibiFuku st={st} scale={1} res={TOUCH ? 40 : 52} /></Suspense> : CHIBI && npc.key === 'grandpa' ? <Suspense fallback={null}><ChibiIshi st={st} res={TOUCH ? 36 : 44} scale={0.995} /* her height (head top 0.434, KT): chibi villagers are not drawn at the old 0.8 */ /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
+  return <group ref={ref}>{!ready ? null : chibiGrandma(w) ? <Suspense fallback={null}><ChibiFuku st={st} scale={1} res={TOUCH ? 40 : 52} /></Suspense> : chibiScholar(w) ? <Suspense fallback={null}><ChibiHoshino st={st} scale={HOSHINO_SCALE} res={TOUCH ? 40 : 52} /></Suspense> : CHIBI && npc.key === 'grandpa' ? <Suspense fallback={null}><ChibiIshi st={st} res={TOUCH ? 36 : 44} scale={0.995} /* her height (head top 0.434, KT): chibi villagers are not drawn at the old 0.8 */ /></Suspense> : NEWCHAR ? <Character cfg={w.cfg} st={st} res={TOUCH ? 36 : 44} /* ship trim (was 40/48) */ scale={0.8} /> : <Person cfg={w.cfg} st={st} seed={i} />}</group>
 }
 // the square's bench (one merged mesh, two seats): grandma all day, grandpa joins her in the evening
 function Bench() {

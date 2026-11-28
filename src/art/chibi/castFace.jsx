@@ -27,7 +27,7 @@ const f5 = (x) => x.toFixed(6)
 
 function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
   // off (Fuku): mouth / nose extra drop, eyeDx (eyes and brows further apart), brow { color, edge, width } (her own brows)
-  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0, eDx = off.eyeDx ?? 0, bw = off.brow
+  const mDy = off.mouth ?? 0, mW = off.mouthW ?? 1, nDy = off.nose ?? 0, eDx = off.eyeDx ?? 0, bw = off.brow
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
@@ -51,8 +51,22 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
       g.restore(); return
     }
     const brow = () => { for (const sd of [-1, 1]) { g.beginPath(); const bx = 0.0029 * FT; g.moveTo(X(sd * (0.0192 - bx + eDx)), Y(by - 0.0012 + (name === 'focus' ? -0.0004 : 0))); g.quadraticCurveTo(X(sd * (0.0261 - bx + eDx)), Y(by + arc), X(sd * (0.0328 - bx + eDx)), Y(by - 0.0010)); g.stroke() } }
-    if (bw?.edge) { g.strokeStyle = bw.edge; g.lineWidth = (bw.width + 0.0012) * s; brow() } // thin darker rim round a soft brow
-    g.strokeStyle = BROW; g.lineWidth = (bw?.width ?? (fuku ? 0.0032 : 0.0056)) * s; brow()
+    if (kind === 'hoshino') {
+      const y = by + 0.0022
+      g.fillStyle = '#342921'
+      for (const side of [-1, 1]) {
+        const x = u => X(side * u)
+        g.beginPath()
+        g.moveTo(x(0.0145), Y(y))
+        g.bezierCurveTo(x(0.0147), Y(y + arc + 0.002), x(0.024), Y(y + arc + 0.004), x(0.030), Y(y + arc))
+        g.quadraticCurveTo(x(0.034), Y(y + 0.001), x(0.035), Y(y - 0.003))
+        g.quadraticCurveTo(x(0.024), Y(y + 0.0006), x(0.016), Y(y - 0.0007))
+        g.closePath(); g.fill()
+      }
+    } else {
+      if (bw?.edge) { g.strokeStyle = bw.edge; g.lineWidth = (bw.width + 0.0012) * s; brow() } // thin darker rim round a soft brow
+      g.strokeStyle = BROW; g.lineWidth = (bw?.width ?? (fuku ? 0.0032 : 0.0056)) * s; brow()
+    }
     if (fuku) { // soft grey-brown smile lines at the eye corners
       g.strokeStyle = 'rgba(120,100,90,0.62)'; g.lineWidth = 0.0011 * s
       for (const sd of [-1, 1]) {
@@ -61,17 +75,34 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
         g.beginPath(); g.moveTo(X(ex), Y(ey - 0.0014)); g.lineTo(X(ex + sd * 0.0046), Y(ey + 0.0004)); g.stroke()
       }
     }
-    g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10 - nDy), 0.0017 * s, 0.0011 * s); g.fill()
+    if (kind === 'hoshino') {
+      const nx = X(0), ny = Y(-0.0265 - nDy)
+      g.save(); g.translate(nx, ny); g.scale(0.0054*s, 0.0035*s)
+      const shade = g.createLinearGradient(0, -1, 0, 1)
+      shade.addColorStop(0, 'rgba(255,224,191,.65)')
+      shade.addColorStop(0.5, 'rgba(241,178,145,.32)')
+      shade.addColorStop(1, 'rgba(205,132,108,.55)')
+      g.fillStyle = shade; g.beginPath(); el(0, 0, 1, 1); g.fill(); g.restore()
+    } else {
+      g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10 - nDy), 0.0017 * s, 0.0011 * s); g.fill()
+    }
     const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10 - mDy
-    if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
+    if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088 * mW), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088 * mW), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084 * mW), Y(my - 0.0082), X(-0.0084 * mW), Y(my - 0.0082), X(-0.0088 * mW), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
-      mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke() }
+      mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke()
+      if (kind === 'hoshino') { g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
+        for (const sd of [-1, 1]) { const cx = sd * (0.0088 * mW + 0.0021), y = my + 0.0026; g.beginPath(); g.moveTo(X(cx), Y(y)); g.quadraticCurveTo(X(cx + sd * 0.0024), Y(y - 0.0009), X(cx + sd * 0.0027), Y(y - 0.0035)); g.stroke() } } }
     else { g.strokeStyle = fuku ? '#c45a48' : '#b05040'; g.lineWidth = (fuku ? 0.0020 : 0.0018) * s; g.beginPath()
       if (name === 'sleepy') { g.moveTo(X(-0.0042), Y(my - 0.0012)); g.quadraticCurveTo(X(0), Y(my + 0.0026), X(0.0042), Y(my - 0.0012)) }
       else if (name === 'focus') { g.moveTo(X(-0.0054), Y(my + 0.0004)); g.quadraticCurveTo(X(0), Y(my - 0.0018), X(0.0054), Y(my + 0.0004)) }
       else if (fuku) { g.moveTo(X(-0.0080), Y(my + 0.0014)); g.quadraticCurveTo(X(0), Y(my - 0.0034), X(0.0080), Y(my + 0.0014)) }
-      else { g.moveTo(X(-0.0074), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074), Y(my + 0.0012)) }
+      else { g.moveTo(X(-0.0074 * mW), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074 * mW), Y(my + 0.0012)) }
       g.stroke()
+      if (kind === 'hoshino' && name !== 'sleepy') { // gentle cheek lines curving down beside the mouth corners (golden sheet)
+        const corner = name === 'happy' ? 0.0074 * mW + 0.0020 : 0.0054 + 0.0027, y = my + 0.0015 // just outside the mouth corner, whatever its width; the line spans y+0.0006..y-0.0036, so the mouth sits at its middle
+        g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
+        for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * corner), Y(y + 0.0006)); g.quadraticCurveTo(X(sd * (corner + 0.0026)), Y(y - 0.0006), X(sd * (corner + 0.0028)), Y(y - 0.0036)); g.stroke() }
+      }
       if (fuku && name === 'happy') {
         g.strokeStyle = 'rgba(140,90,80,0.45)'; g.lineWidth = 0.00095 * s
         for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * 0.0078), Y(my + 0.0006)); g.quadraticCurveTo(X(sd * 0.0104), Y(my - 0.0004), X(sd * 0.0096), Y(my - 0.0026)); g.stroke() }
@@ -176,19 +207,26 @@ function bar(a, b, r, hex) {
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()))
   const m = A.add(B).multiplyScalar(0.5); g.translate(m.x, m.y, m.z); return tint(g, hex)
 }
-export function wireGlassesGeo({ r = 0.0152, wire = '#b5843e', ink = '#4a2e1c', ear = [0.0555, -0.017, 0.006], tilt = 0.32 } = {}) {
+export function wireGlassesGeo({ r = 0.0152, wire = '#b5843e', ink = '#4a2e1c', ear = [0.0555, -0.017, 0.006], tilt = 0.32, halfRim = false, sdf = null, rim = [0.00125, 0.00072] } = {}) {
   const parts = [], cy = EYE.y + 0.0006, z = 0.0548
   for (const sd of [-1, 1]) {
-    for (const [tube, hex, dz] of [[0.00125, ink, -0.0004], [0.00072, wire, 0.0003]]) {
-      const g = new THREE.TorusGeometry(r, tube, 6, 28); g.rotateY(sd * tilt); g.translate(sd * EYE.x, cy, z + dz); parts.push(tint(g, hex))
+    for (const [tube, hex, dz] of [[rim[0], ink, -0.0004], [rim[1], wire, 0.0003]]) {
+      const g = new THREE.TorusGeometry(r, tube, 6, 32, halfRim ? Math.PI : Math.PI * 2); if (halfRim) g.rotateZ(Math.PI); g.rotateY(sd * tilt); g.translate(sd * EYE.x, cy, z + dz); parts.push(tint(g, hex))
     }
     // arm: from the outer rim edge straight back to the ear
     const ox = sd * (EYE.x + r * Math.cos(tilt)), oz = z - r * Math.sin(tilt)
-    parts.push(bar([ox, cy + 0.0035, oz], [sd * ear[0], ear[1] + 0.009, ear[2]], 0.00085, ink))
+    const A = [ox, cy + (halfRim ? 0 : 0.0035), oz], B = [sd * ear[0], ear[1] + 0.009, ear[2]]
+    if (!sdf) parts.push(bar(A, B, 0.00085, ink))
+    else { // follow the cheek: each point pushed out sideways until it clears the head, so the arm never dips in and out of the face
+      const N = 10, pts = []
+      for (let i = 0; i <= N; i++) { const u = i / N, p = A.map((a, k) => a + (B[k] - a) * u)
+        for (let n = 0; n < 40 && sdf(p[0], p[1], p[2]) < 0.0016; n++) p[0] += sd * 0.0004
+        pts.push(p) }
+      for (let i = 0; i < N; i++) parts.push(bar(pts[i], pts[i + 1], 0.00085, ink)) }
   }
   // arched bridge between the inner rim edges, sitting a little high on the nose
   const ix = EYE.x - r * Math.cos(tilt), iz = z + r * Math.sin(tilt) + 0.0004, N = 6, pts = []
-  for (let i = 0; i <= N; i++) { const u = i / N, x = -ix + 2 * ix * u; pts.push([x, cy + 0.0030 + 0.0026 * Math.sin(Math.PI * u), iz + 0.0010 * Math.sin(Math.PI * u)]) }
+  for (let i = 0; i <= N; i++) { const u = i / N, x = -ix + 2 * ix * u; pts.push([x, cy + (halfRim ? 0 : 0.0030) + 0.0026 * Math.sin(Math.PI * u), iz + 0.0010 * Math.sin(Math.PI * u)]) }
   for (let i = 0; i < N; i++) { parts.push(bar(pts[i], pts[i + 1], 0.00100, ink)); parts.push(bar([pts[i][0], pts[i][1], pts[i][2] + 0.0004], [pts[i + 1][0], pts[i + 1][1], pts[i + 1][2] + 0.0004], 0.00060, wire)) }
   const g = mergeGeometries(parts.map(p => { for (const k of Object.keys(p.attributes)) if (!['position', 'normal', 'color'].includes(k)) p.deleteAttribute(k); return p }))
   g.computeVertexNormals(); return g
@@ -205,13 +243,13 @@ const faceMat = (kind, fy1, fy0, bl, dy, off) => new THREE.ShaderMaterial({ tran
 /** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy.
  *  wire: options for wireGlassesGeo (Hoshino's thin wire spectacles, replaces the plain rims). defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Fuku's options: blushAt { dx, dy, dr } (moves / grows the blush), featDy (moves brows, eyes, nose, mouth and blush down by this
- *  much, head frame), featOff { mouth, nose, eyeDx, brow: { color, edge, width } } (see drawFaces), glassesGeo (her own frames;
+ *  much, head frame), featOff { mouth, mouthW (width scale), nose, eyeDx, brow: { color, edge, width } } (see drawFaces), glassesGeo (her own frames;
  *  it must apply the same featDy). All default to the template. */
 export function makeFace({ kind, glasses: glassC, wire = null, defaultSquint = 0, blush = 1, shape, fy1, fy0, eyeS = 1, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) { // eyeS: eye size (1 = the template)
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
   let gGeo = null
   const geo = shape || fy1 || fy0 ? makeFaceGeo(makeHeadSDF(shape), fy1, fy0) : faceGeo
-  const wireG = wire ? wireGlassesGeo(wire) : null, wireM = wire ? wireMat() : null
+  const wireG = wire ? wireGlassesGeo({ sdf: makeHeadSDF(shape), ...wire }) : null, wireM = wire ? wireMat() : null
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind, fy1, fy0, bl, featDy, featOff), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })

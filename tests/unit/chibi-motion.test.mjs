@@ -32,6 +32,8 @@ test('Fuku and Hoshino profiles: every fidget in a set has a duration, her base 
   }
   for (const f of ['nod', 'fond', 'hum']) assert.ok(FUKU_MOTION.fidgets[f] > 0 && FUKU_MOTION.sets.day.includes(f), `fuku day: ${f}`)
   assert.ok(!FUKU_MOTION.sets.seated.includes('tea')) // the teacup is gone (pass 40)
-  assert.ok(HOSHINO_MOTION.fidgets.glasses > 0 && !Object.values(HOSHINO_MOTION.sets).some(s => s.includes('notebook')))
+  assert.ok(HOSHINO_MOTION.fidgets.glasses > 0) // KT (pass with his own acts): he does take out a notebook now and then
+  for (const f of ['eureka', 'peer', 'chin', 'lecture', 'behind', 'notebook']) assert.ok(HOSHINO_MOTION.sets.day.includes(f), `hoshino day: ${f}`)
+  assert.ok(HOSHINO_MOTION.fidgets.greet > 0)
   assert.ok(HOSHINO_MOTION.sets.day.includes('glasses'))
 })
