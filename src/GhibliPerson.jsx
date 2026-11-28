@@ -53,6 +53,7 @@ const VS = `#include <common>
 // outfit painter. uY = (waistY, neckY, shoeY, legHemY); uO = (type, longSleeve, bareLegs, apronW); uZ = (chestY, bellyZ, hipY, 0)
 const PAINT = `
   float aa(float d){ float w = fwidth(d)*1.1 + 1e-6; return smoothstep(-w, w, d); }
+  float sgd(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba*clamp(dot(pa, ba)/dot(ba, ba), 0., 1.)); }
   vec3 outfit(){
     float x = vO.x, ax = abs(x), y = vO.y, z = vO.z, front = aa(z - .004), back = 1. - front;
     float arm = smoothstep(.42,.58,vReg.x), fore = smoothstep(.42,.58,vReg.y), leg = smoothstep(.42,.58,vReg.z), hand = smoothstep(.4,.6,vReg.w);
@@ -102,25 +103,80 @@ const PAINT = `
     } else if (ty == 7) { // shirt: small V neckline
       float v = front * aa((y - uY.y + .022) - ax * 1.3);
       torso = mix(torso, uSkin, v * (1. - neck));
-    } else if (ty == 8) { // open jacket: lapelled open front shows vest/shirt (uTop), hem at uY.x, pockets
-      float open = front * aa(.014 + (uY.y - y) * .18 - ax);
-      torso = mix(uAcc, torso, open * aa(y - uY.x + .02) + waist);
-      float edge = .014 + (uY.y - y) * .18;
-      float lap = front * aa(.007 - abs(ax - edge)) * aa(y - uY.x + .02) * (1. - waist) * aa(uY.y - .008 - y);
-      torso = mix(torso, uAcc * .80, lap);
-      float pk = front * aa(.014 - abs(ax - .026)) * aa(.009 - abs(y - uY.x - .018)) * (1. - open);
-      torso = mix(torso, uAcc * .76, pk * .85);
+    } else if (ty == 8) { // open jacket (Hoshino), laid out from his golden sheet in t = 0 (neck) .. 1 (hem):
+      // a near-straight opening shows the shirt collar and a 4-button vest; big notch lapels break at t .58; two brown
+      // buttons on his right front; rounded flap pockets at t .62-.92; back collar band, centre seam and waist fold.
+      float J = 1. - waist, H = max(uY.y - uY.x, .01), t = (uY.y - y)/H;
+      float hw = .0215 + .003*clamp(t, 0., 1.);                              // opening half-width (fronts hang straight)
+      float open = front * aa(hw - ax) * J;
+      vec2 P = vec2(ax, y);
+      #define TY(v) (uY.y - (v)*H)
+      // inside the opening: white shirt down to the vest V, the vest, trousers below the vest points
+      float vTop = TY(.20) + ax*1.3, vBot = TY(.84) + (hw - ax)*.55;
+      vec3 inner = mix(uTop, uAcc2, aa(y - vTop));
+      inner = mix(inner, uBottom, aa(vBot - y));
+      float ink2 = aa(.0010 - abs(y - vTop)) * aa(y - vBot);                 // vest neckline
+      ink2 = max(ink2, aa(.0010 - abs(y - vBot)) * aa(vTop - y));             // vest points
+      // shirt collar: spread points with a placket and two small buttons
+      ink2 = max(ink2, aa(.0009 - sgd(P, vec2(.0005, TY(.03)), vec2(.0125, TY(.16)))));
+      ink2 = max(ink2, aa(.0009 - sgd(P, vec2(.0125, TY(.16)), vec2(.0160, TY(.01)))));
+      float sb = 0.; for (int i = 0; i < 2; i++) sb = max(sb, aa(.0017 - length(vec2(x, y - TY(.09 + float(i)*.065)))));
+      inner = mix(inner, uAcc2*.80, sb * aa(y - vTop));
+      // four gold vest buttons
+      float bt = 0., bg = 0.;
+      for (int i = 0; i < 4; i++) { float r = length(vec2(x, y - TY(.31 + float(i)*.135))); bt = max(bt, aa(.0036 - r)); bg = max(bg, aa(.0025 - r)); }
+      inner = mix(inner, vec3(.36,.25,.10), bt); inner = mix(inner, vec3(.88,.68,.34), bg);
+      inner = mix(inner, vec3(.22,.16,.10), ink2);
+      torso = mix(uAcc, inner, open);
+      // jacket ink: front edges neck to hem, the standing collar and notch lapels
+      float ink = front * J * aa(.0011 - abs(ax - hw)) * aa(uY.y - .002 - y);
+      float tN = .14, tB = .58;
+      vec2 c0 = vec2(hw + .003, TY(-.01)), c1 = vec2(hw + .0125, TY(tN)), c2 = vec2(hw + .0085, TY(tN + .035)), c3 = vec2(hw + .0245, TY(tN + .055)), c4 = vec2(hw, TY(tB));
+      float lap = min(min(sgd(P, c0, c1), sgd(P, c1, c2)), min(sgd(P, c2, c3), sgd(P, c3, c4)));
+      ink = max(ink, front * J * aa(.0011 - lap));
+      // two brown buttons on his right front (viewer's left), just outside the edge
+      for (int i = 0; i < 2; i++) { float r = length(vec2(x + hw + .0060, y - TY(.66 + float(i)*.24)));
+        torso = mix(torso, uAcc*.44, front*J*aa(.0047 - r)); torso = mix(torso, uAcc*.62, front*J*aa(.0032 - r)); }
+      // rounded flap pockets, wrapping the hip
+      vec2 pq = vec2((atan(ax, max(z - .008, 1e-4)) - .98)*.075, y - TY(.775)); vec2 pd = abs(pq) - vec2(.0195, .125*H) + .004;
+      float pr = length(max(pd, 0.)) + min(max(pd.x, pd.y), 0.) - .004;
+      float pk = J * (1. - open) * aa(z - .008);
+      ink = max(ink, pk * aa(.0011 - abs(pr)));
+      ink = max(ink, pk * aa(-pr) * aa(.0010 - abs(y - TY(.70))));           // flap edge
+      // hem, back collar band, centre back seam, waist fold
+      ink = max(ink, J * (1. - open) * aa(.0012 - abs(y - uY.x - .0012)));
+      ink = max(ink, back * aa(.0011 - abs(y - TY(.07) + ax*ax*2.)) * (1. - neck));
+      ink = max(ink, back * J * aa(.0010 - ax) * aa(TY(.07) - y));
+      ink = max(ink, back * J * aa(.0011 - abs(y - TY(.66) - ax*ax*4.)) * aa(.045 - ax));
+      torso = mix(torso, uAcc*.50, ink);
+      #undef TY
     }
     // arms
-    vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop;
+    vec3 sleeve = ty == 5 || ty == 8 ? uAcc : uTop; float armSeam = 0.;
     vec3 armC = mix(sleeve, uSkin, fore * (1. - uO.y));
+    if (ty == 8) { // sleeve seams painted from the arm's own shape (rest pose), so they run unbroken from the shoulder to the cuff:
+      // one down the inner front of each sleeve (its contour seen from the front) and one down the inner back
+      float sd = x < 0. ? -1. : 1.; vec3 dir = vec3(sd*sin(uArm.w), -cos(uArm.w), 0.), q = vO - vec3(sd*uArm.x, uArm.y, uArm.z);
+      float al = dot(q, dir); vec3 rv = q - al*dir; float rr = max(length(rv), 1e-5), u = clamp(al/uArm2.x, 0., 1.), R = mix(uArm2.y, uArm2.z, u);
+      // the join: where the surface sits just past the sleeve's own radius (only happens where the sleeve meets the body)
+      float on = aa(al + .010) * aa(.030 - al) * (1. - neck);                // shoulder only: below it the sleeve hangs clear and the ink hull outlines it
+      float sdv = abs(rr - R*1.16), sw = min(.0013, fwidth(rr)*1.7); // screen-sized so a gently sloping join stays a thin stroke
+      armSeam = on * (1. - smoothstep(sw*.45, sw, sdv));
+      float cw = fwidth(vReg.x)*1.5 + 1e-4;                                // below the shoulder: the crisp sleeve/body crease (armK [soft, crisp])
+      armSeam = max(armSeam, (1. - smoothstep(cw*.5, cw, abs(vReg.x - .5))) * aa(al - .020) * aa(uArm2.x + .004 - al));
+    }
+    if (ty == 8) { // white shirt cuff peeking from the jacket sleeve; uO.w = wrist height
+      float cy = uO.w - .0135; float cb = aa(.0050 - abs(y - cy)); armC = mix(armC, uAcc2, cb); armC = mix(armC, uAcc*.6, aa(.0010 - abs(y - cy - .0058))); } // cuff at the flared sleeve's open end
     // legs
     vec3 legC = mix(uBottom, uSkin, uO.z * aa(uY.w - y));
+    if (ty == 8) { float tu = aa(uY.z + .013 - y); legC = mix(legC, uBottom*.88, tu); legC = mix(legC, uBottom*.62, aa(.0010 - abs(y - uY.z - .013))); } // turn-ups
     vec3 c = mix(torso, legC, leg);
     c = mix(c, armC, arm);
+    if (ty == 8) hand *= aa(uO.w - .0185 - y); // flared sleeve covers the top of the hand: skin only below the cuff
     vec3 hq = (vO - uJC.xyz)/max(uJR.xyz, vec3(1e-4)); float headSk = uJR.w > .5 ? aa(1. - length(hq)) : 0.; // outfit.skinEll: the jaw stays skin where it dips below the neck line
     c = mix(c, uSkin, max(hand, max(neck, headSk) * (1. - arm)));
     c = mix(c, uShoe, aa(uY.z - y) * (1. - arm));
+    c = mix(c, uAcc*.36, armSeam);
     if (uZ.w > .5) { // detail pass (outfit.seams): a darker sole band with a thin welt line on the boots
       float boot = aa(uY.z - y) * (1. - arm);
       c = mix(c, uShoe*.42, boot * aa(.0098 - y));
@@ -132,7 +188,7 @@ const PAINT = `
 // a warm band where light turns to shadow on skin; sky fill from above and grass bounce from below (local up, so it
 // works anywhere on the planet); fine cloth / fur grain; and a strand texture + sheen ring on hair (aKind = 1).
 const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
-  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uJC, uJR;
+  uniform vec3 uSkin, uTop, uBottom, uShoe, uAcc, uAcc2; uniform vec4 uY, uO, uZ, uJC, uJR, uArm, uArm2;
   varying vec3 vN; varying vec3 vV; varying vec3 vO; varying float vAO; varying vec4 vReg; varying vec3 vCol; varying vec3 vUp; varying float vKind;
   ${PAINT}
   float h3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
@@ -169,6 +225,8 @@ const FS = `uniform vec3 uSun, uLight, uAmb, uRim, uShadeTint, uColor;
       c += ring*max(dot(N,V),0.)*lit*uLight*base*.75; }
     float fr = 1. - max(dot(N,V),0.); float rim = smoothstep(.62,.92,fr)*(.25+.55*lit);
     c += uRim*rim*.26;
+    #ifdef BODY
+    #endif
     gl_FragColor = vec4(c,1.);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -204,10 +262,13 @@ function bodyMat(cfg, S) {
   const hemY = o.hemY == null ? (o.type === 'yukata' || o.type === 'apron' || o.type === 'cardigan' ? S.bellyY + 0.012 : waist)
     : o.hemY === 'hip' ? S.hipY + 0.008
     : o.hemY === 'thigh' ? (S.hipY + S.knY) * 0.5
+    : o.hemY === 'skirt' ? S.skirt[2] + 0.0015
     : o.hemY
   const m = new THREE.ShaderMaterial({ defines: { BODY: 1 }, uniforms: { ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) }, ...u,
     uY: { value: new THREE.Vector4(hemY, S.neckY, o.shoeY ?? 0.03, o.bare ? (o.legHem ?? S.knY + 0.01) : -1) },
-    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) },
+    uArm: { value: new THREE.Vector4(S.shR.x, S.shR.y, S.shR.z, S.armA) }, // openJacket sleeve seams: shoulder joint, arm angle
+    uArm2: { value: new THREE.Vector4(S.shR.distanceTo(S.wrR), S.ar[0], S.ar[2], 0) }, // arm length to the wrist, radius at shoulder and wrist
+    uO: { value: new THREE.Vector4(TY[o.type] ?? 7, o.long ? 1 : 0, o.bare ? 1 : 0, o.type === 'overalls' ? o.bibW ?? 0.031 : o.type === 'openJacket' ? S.wrR.y : o.apronW ?? 0.04) }, uZ: { value: new THREE.Vector4(S.chestY + 0.01, o.buttons === false ? 1 : 0, S.hipY, o.seams ? 1 : 0) },
     uJC: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(0, 3) : [0, 0, 0]), 0) }, uJR: { value: new THREE.Vector4(...(o.skinEll ? o.skinEll.slice(3, 6) : [1, 1, 1]), o.skinEll ? 1 : 0) } }, vertexShader: VS, fragmentShader: FS }) // skinEll [cx, cy, cz, rx, ry, rz] (opt-in)
   if (dressy) m.uniforms.uBottom.value.copy(m.uniforms.uTop.value) // skirt in dress colour
   if (dressy && o.legs) m.uniforms.uBottom.value.set(o.legs)
@@ -263,15 +324,17 @@ export function spec(b = {}) {
   const aR = b.armR ?? [1, 1, 1]; S.ar = [0.017 * ar * aR[0], 0.0145 * ar * aR[1], 0.0115 * ar * aR[2]] // armR: optional per-joint radius scale (default = old)
   for (const sd of [-1, 1]) {
     const k = sd < 0 ? 'L' : 'R', dir = V3(sd * Math.sin(S.armA), -Math.cos(S.armA), 0)
-    S['sh' + k] = V3(sd * 0.05 * shw * (0.85 + 0.15 * gw) * (b.shX ?? 1), S.shY, -0.002 + 0.025 * hc); S['el' + k] = S['sh' + k].clone().addScaledVector(dir, 0.046 * al)
-    S['wr' + k] = S['el' + k].clone().addScaledVector(dir, 0.04 * al).add(V3(0, 0, 0.004)); S['hd' + k] = S['wr' + k].clone().addScaledVector(dir, 0.013 * fs)
+    S['sh' + k] = V3(sd * 0.05 * shw * (0.85 + 0.15 * gw) * (b.shX ?? 1), S.shY - (b.shDrop ?? 0), -0.002 + 0.025 * hc); /* shDrop: optional sloped shoulders */ S['el' + k] = S['sh' + k].clone().addScaledVector(dir, 0.046 * al)
+    S['wr' + k] = S['el' + k].clone().addScaledVector(dir, 0.04 * al).add(V3(0, 0, 0.004)); S['hd' + k] = S['wr' + k].clone().addScaledVector(dir, 0.013 * fs * (b.handL ?? 1))
     const hx = 0.034 * (0.8 + 0.2 * gw) * (b.legX ?? 1)
     S['hp' + k] = V3(sd * hx, S.hipY, 0.004); S['kn' + k] = V3(sd * (hx + 0.001), S.knY, 0.007); S['an' + k] = V3(sd * (hx + 0.002), S.anY, 0.004)
     S['ft' + k] = V3(sd * (hx + 0.002), b.footY ?? 0.014, 0.012); S['dir' + k] = dir
   }
-  S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map(r => r * (b.legR ?? 1))
-  S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn, 0.012 * fs * S.hn)
+  S.lr = [0.026 * (0.85 + 0.15 * gw), 0.022 * (0.9 + 0.1 * gw), 0.016].map((r, i) => r * (b.legR ?? 1) * (b.legRs?.[i] ?? 1)) // legRs: optional per-joint scale [thigh, knee, ankle]
+  S.fr = V3(0.017 * fs * (b.bootW ?? 1), 0.012 * (b.bootH ?? 1), 0.026 * fs * (b.bootL ?? 1)); S.hr = V3(0.013 * fs * S.hn, 0.0155 * fs * S.hn * (b.handL ?? 1), 0.012 * fs * S.hn) // handL: optional longer hand
   if (b.skirt) { S.skirt = [S.bellyY + 0.005, S.belly[1].x * (b.skirtTop ?? 0.96), b.skirt === 'long' ? S.anY + 0.012 : S.knY - 0.006, S.belly[1].x * (b.skirtFlare ?? (b.skirt === 'long' ? 1.12 : 1.3))] } // skirtFlare / skirtTop: optional hem / waist radius (x belly width)
+  // skirt 'jacket': a short flared jacket skirt with a flat hem; b.jacket = [hem drop below mid-thigh, flare]
+  if (b.skirt === 'jacket') { const [drop, flare] = b.jacket ?? [0, 1.06]; S.skirt = [S.bellyY + 0.005, S.belly[1].x * 0.96, (S.hipY + S.knY) * 0.5 - drop, S.belly[1].x * flare] }
   S.hemY = S.skirt ? S.skirt[2] : S.knY
   S.top = S.headC.y + S.headR.y
   specCache.set(key, S); return S
@@ -304,12 +367,14 @@ function legD(S, p, k) {
   if (b.soleY != null) f = -smin(-f, -(b.soleY - p.y), 0.002)
   return smin(l, f, 0.012)
 }
-export function sdf(S, p) { const c = core(S, p); return Math.min(smin(c, armD(S, p, 'L'), 0.014), smin(c, armD(S, p, 'R'), 0.014), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
+const armKAt = (S, p) => { const k = S.b.armK ?? 0.014; if (!Array.isArray(k)) return k // armK: optional arm-to-body blend; [shoulder, below] softens only the shoulder
+  const t = Math.min(1, Math.max(0, (S.shR.y - 0.012 - p.y) / 0.03)); return k[0] + (k[1] - k[0]) * t * t * (3 - 2 * t) }
+export function sdf(S, p) { const c = core(S, p), ak = armKAt(S, p); return Math.min(smin(c, armD(S, p, 'L'), ak), smin(c, armD(S, p, 'R'), ak), smin(c, legD(S, p, 'L'), 0.02), smin(c, legD(S, p, 'R'), 0.02)) }
 function sdfOcc(S, p) {
   let d = sdf(S, p)
   if (!S.b.bald) d = Math.min(d, ell(p, S.headC.clone().add(V3(0, 0.015, -0.02)), S.headR.clone().multiplyScalar(1.09))) // the hair helmet shades the scalp; bald: true (opt-in) leaves the scalp lit
   d = Math.min(d, torus(p, V3(0, S.neckY + 0.01, 0.004), 0.03, 0.009))
-  for (const k of ['L', 'R']) { d = Math.min(d, ell(p, S['sh' + k].clone().lerp(S['el' + k], 0.45), V3(0.028, 0.03, 0.028))); d = Math.min(d, torus(p, V3(S['an' + k].x, S.anY + 0.012, S['an' + k].z), 0.021, 0.007)) }
+  for (const k of ['L', 'R']) { if (S.b.armOcc !== false) d = Math.min(d, ell(p, S['sh' + k].clone().lerp(S['el' + k], 0.45), V3(0.028, 0.03, 0.028))); /* armOcc: false drops the upper-arm AO blob */ d = Math.min(d, torus(p, V3(S['an' + k].x, S.anY + 0.012, S['an' + k].z), 0.021, 0.007)) }
   return d
 }
 function bonesOf(S) {
@@ -362,7 +427,7 @@ function bake(S, RES = 72) {
     // arm bones, so a forearm bent far from the body takes its hand along (by default the hips' wide falloff holds the hand back)
     if (S.b.armStrict) { const dL = armD(S, p, 'L'), dR = armD(S, p, 'R'), dc = core(S, p); if (Math.min(dL, dR) < dc - 0.003) { const k = dL < dR ? 'L' : 'R'; ws = ws.filter(w => w[2] === 'up' + k || w[2] === 'fo' + k) } }
     // skirt surface follows the hips more than the legs
-    if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004) ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
+    if (S.skirt && p.y > S.skirt[2] - 0.004 && Math.min(legD(S, p, 'L'), legD(S, p, 'R')) > 0.004 && !(S.b.skirt === 'jacket' && Math.min(armD(S, p, 'L'), armD(S, p, 'R')) < 0.004)) /* a jacket skirt leaves the arms on the arm bones */ ws = ws.map(w => [w[0], w[2] === 'hips' ? w[1] + 3 * Math.max(...ws.map(x => x[1])) : w[1] * (w[2].startsWith('th') ? 0.5 : 1), w[2]])
     ws.sort((a, b) => b[1] - a[1]); ws = ws.slice(0, 4)
     const tot = ws.reduce((s, w) => s + w[1], 0); let rA = 0, rF = 0, rL = 0
     ws.forEach(([bi, w, nm], k) => { si[i * 4 + k] = bi; sw[i * 4 + k] = w / tot; if (nm.startsWith('up') || nm.startsWith('fo')) rA += w / tot; if (nm.startsWith('fo')) rF += w / tot; if (nm.startsWith('th') || nm.endsWith('n') || nm.startsWith('ft')) rL += w / tot })
@@ -549,7 +614,7 @@ export function Character({ cfg = TRAVELLER, st, res = 72, scale = 1 }) {
     for (const [k, sg] of [['L', 1], ['R', -1]]) {
       const lag = Math.sin(p - 0.5) * sg, up = B['up' + k], fo = B['fo' + k], side = k === 'L' ? -1 : 1, h = hold[k]
       const swingAmt = h === 'umbrella' || h === 'rod' ? 0.08 : h === 'cane' ? 0.25 : h === 'basket' ? 0.3 : W.arm
-      let ux = lag * swingAmt * m + 0.05 * i, uz = side * (-0.05 * i + Math.sin(t * 1.6 + side) * 0.03 * i - 0.08 * m), fx = -0.28 - Math.max(0, -lag) * 0.55 * m * (swingAmt / 0.75) - 0.1 * i
+      let ux = lag * swingAmt * m + 0.05 * i, uz = side * (-0.05 * i + Math.sin(t * 1.6 + side) * 0.03 * i - 0.08 * m), fx = (W.fore ?? -0.28) - Math.max(0, -lag) * 0.55 * m * (swingAmt / 0.75) - 0.1 * i * (W.fore != null ? 0.3 : 1) /* walk.fore: optional resting forearm bend */
       if (h === 'umbrella') { ux = -0.35; fx = -1.15 } else if (h === 'rod') { ux = -0.4; fx = -0.8 } else if (h === 'basket') { fx = -1.1; uz -= side * 0.12 } else if (h === 'cane') { ux = -0.2 + Math.sin(p) * 0.1 * m; fx = -0.35 }
       if (idle === 'wave' && k === 'R') { uz = side * -2.3 * i + uz * m; fx = -0.5 - Math.sin(t * 8) * 0.35 * i; ux *= m }
       if (st.carryYarn && k === 'R') { ux = -0.42 + 0.08 * lag * m; uz = 0.08; fx = -1.2 }

@@ -85,24 +85,17 @@ const hoshino = [
   custom('earSize','Ears',/EAR\.z\], (\[[^\]]+\])/,[
     n('ear.width','Ear thickness',.003,.010),n('ear.height','Ear height',.007,.018),n('ear.depth','Ear depth',.004,.012)
   ]),
-  custom('capSize','Hair cap',/\/\/ under-cap covers the scalp[^\n]*\n\s*part\(ball, \[[^\]]+\], (\[[^\]]+\])/,[
-    n('hair.cap.width','Cap width',.048,.072),n('hair.cap.height','Cap height',.039,.062),n('hair.cap.depth','Cap depth',.046,.068)
+  custom('hairCentre','Hair cloud',/const DOME = \{ c: (\[[^\]]+\])/,[
+    n('hair.cloud.x','Cloud sideways shift',-.008,.008,.0002),n('hair.cloud.y','Cloud height',-.004,.020,.0002),n('hair.cloud.z','Cloud forward / back',-.022,.002,.0002)
   ]),
-  custom('crownPosition','Hair crown',/\/\/ 2\. from the part[^\n]*\n\s*part\(ballS, (\[[^\]]+\])/,[
-    n('hair.crown.x','Crown lock horizontal position',-.010,.027),n('hair.crown.y','Crown lock height',.035,.065),n('hair.crown.z','Crown lock depth',-.010,.022)
+  custom('hairSize','Hair cloud',/const DOME = \{ c: \[[^\]]+\], r: (\[[^\]]+\])/,[
+    n('hair.cloud.width','Cloud width',.052,.072,.0002),n('hair.cloud.height','Cloud height radius',.042,.062,.0002),n('hair.cloud.depth','Cloud depth',.052,.072,.0002)
   ]),
-  custom('crownSize','Hair crown',/\/\/ 2\. from the part[^\n]*\n\s*part\(ballS, \[[^\]]+\], (\[[^\]]+\])/,[
-    n('hair.crown.width','Crown lock width',.024,.048),n('hair.crown.height','Crown lock thickness',.006,.024),n('hair.crown.depth','Crown lock depth radius',.016,.037)
-  ]),
-  custom('frontRight','Hairline',/\/\/ front hairline waves[^\n]*\n\s*part\(ballS, (\[[^\]]+\])/,[
-    n('hair.fringe.right.x','Right wave horizontal position',.001,.025),n('hair.fringe.right.y','Right wave height',.019,.047),n('hair.fringe.right.z','Right wave depth',.033,.058)
-  ]),
-  custom('frontLeft','Hairline',/\/\/ front hairline waves[^\n]*\n\s*part\(ballS,[^\n]*\n\s*part\(ballS, (\[[^\]]+\])/,[
-    n('hair.fringe.left.x','Left wave horizontal position',-.030,-.002),n('hair.fringe.left.y','Left wave height',.019,.047),n('hair.fringe.left.z','Left wave depth',.030,.055)
-  ]),
+  scalar('specR','Glasses','const SPEC = \\{ r:\\s*',n('glasses.size','Lens size',.011,.019,.0002)),
+  hex('specWire','Glasses wire colour',"const SPEC = \\{ r: "+N+", wire:\\s*"),
+  hex('specInk','Glasses rim ink',"const SPEC = \\{[^}\\n]*ink:\\s*"),
   hex('skin','Skin colour','const SKIN =\\s*'),hex('hairColor','Hair colour','const HAIR_C =\\s*'),
-  hex('hairGrey','Grey streak colour','const HAIR_GREY =\\s*'),hex('hairBand','Hair highlight colour','const HAIR_BAND =\\s*'),
-  hex('glasses','Glasses colour','const GLASS =\\s*')
+  hex('hairGrey','Grey streak colour','const HAIR_GREY =\\s*'),hex('hairBand','Hair highlight colour','const HAIR_BAND =\\s*')
 ]
 const groups = {her,fuku,ishi,hoshino}
 
@@ -111,7 +104,7 @@ const groups = {her,fuku,ishi,hoshino}
 function prepare(id, source) {
   if (id === 'hoshino') {
     if (source.includes('const HOSHINO_CHEEK =')) return source
-    const anchor = "const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, blush: 0.55 })"
+    const anchor = "const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55 })"
     if (!source.includes(anchor) || !source.includes('cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE')) throw new Error('Hoshino face adapter needs updating for this source revision.')
     return source.replace('import { CHEEK, MIDFACE, MID_FADE, makeFace }','import { makeFace }')
       .replace(anchor, [
@@ -119,7 +112,7 @@ function prepare(id, source) {
         'const HOSHINO_CHEEK = [0, -0.026, 0.012, 0.05, 0.0295, 0.035, 0.016]',
         'const HOSHINO_MIDFACE = [[-0.0278, 0.0397, 0.02, 0.0058, 0.014, 0.0012, 0.001], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]',
         'const HOSHINO_MID_FADE = 0',
-        "const Face = makeFace({ kind: 'hoshino', glasses: GLASS, defaultSquint: 0.06, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1 })"
+        "const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [0.0575, -0.021, 0.004] }, defaultSquint: 0.06, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1 })"
       ].join('\n'))
       .replace('cheek: CHEEK, midface: MIDFACE, midfaceFade: MID_FADE','headS: HOSHINO_HEAD_S, cheek: HOSHINO_CHEEK, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE')
   }
@@ -139,7 +132,10 @@ function locate(source, group) {
   if (tokens.length !== group.fields.length) throw new Error('Face Builder anchor shape changed: '+group.id)
   return {offset,tokens}
 }
+// Windows checkouts may have CRLF line endings: match on LF and write the file back in its own line endings.
+const lf = s => s.replace(/\r\n/g, '\n')
 export function inspect(id, raw) {
+  raw = lf(raw)
   if (!CHARACTERS[id]) throw new Error('Unknown character')
   const source=prepare(id,raw)
   return groups[id].flatMap(g=>locate(source,g).tokens.flatMap((t,i)=>{
@@ -163,7 +159,8 @@ export function validate(id,raw,values) {
 export function apply(id,raw,values,{preview=false}={}) {
   const changes=preview?{}:validate(id,raw,values)
   if (!preview && !Object.keys(changes).length) return raw
-  let source=prepare(id,raw)
+  const crlf=raw.includes('\r\n')
+  let source=prepare(id,lf(raw))
   const edits=[]
   for (const g of groups[id]) {
     const {offset,tokens}=locate(source,g)
@@ -175,6 +172,7 @@ export function apply(id,raw,values,{preview=false}={}) {
   }
   edits.sort((a,b)=>b.start-a.start)
   for(const e of edits) source=source.slice(0,e.start)+e.value+source.slice(e.end)
+  if(crlf) source=source.replace(/\n/g,'\r\n')
   if(preview) source='const __fbDraft = (() => { try { const d=JSON.parse(sessionStorage.getItem("tiny-planet-facebuilder")||"null"); return d?.character === '+JSON.stringify(id)+' ? d.values : null } catch { return null } })();\nconst __fbValue = (key, fallback) => __fbDraft?.[key] ?? fallback;\n'+source
   return source
 }

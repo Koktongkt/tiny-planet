@@ -167,6 +167,34 @@ function glassesGeo() {
 let GLASSES = null
 const glasses = () => GLASSES || (GLASSES = glassesGeo())
 
+// Thin round wire spectacles (Hoshino's sheet): lenses ~1.35x the eye, a warm gold wire inked by a dark
+// rim just behind it, a small arched bridge and arms running back to the ears. One vertex-coloured mesh.
+const tint = (g, hex) => { const c = new THREE.Color(hex), src = g.index ? g.toNonIndexed() : g, a = new Float32Array(src.attributes.position.count * 3)
+  for (let i = 0; i < a.length; i += 3) { a[i] = c.r; a[i + 1] = c.g; a[i + 2] = c.b } src.setAttribute('color', new THREE.BufferAttribute(a, 3)); return src }
+function bar(a, b, r, hex) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), g = new THREE.CylinderGeometry(r, r, A.distanceTo(B), 6, 1)
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()))
+  const m = A.add(B).multiplyScalar(0.5); g.translate(m.x, m.y, m.z); return tint(g, hex)
+}
+export function wireGlassesGeo({ r = 0.0152, wire = '#b5843e', ink = '#4a2e1c', ear = [0.0555, -0.017, 0.006], tilt = 0.32 } = {}) {
+  const parts = [], cy = EYE.y + 0.0006, z = 0.0548
+  for (const sd of [-1, 1]) {
+    for (const [tube, hex, dz] of [[0.00125, ink, -0.0004], [0.00072, wire, 0.0003]]) {
+      const g = new THREE.TorusGeometry(r, tube, 6, 28); g.rotateY(sd * tilt); g.translate(sd * EYE.x, cy, z + dz); parts.push(tint(g, hex))
+    }
+    // arm: from the outer rim edge straight back to the ear
+    const ox = sd * (EYE.x + r * Math.cos(tilt)), oz = z - r * Math.sin(tilt)
+    parts.push(bar([ox, cy + 0.0035, oz], [sd * ear[0], ear[1] + 0.009, ear[2]], 0.00085, ink))
+  }
+  // arched bridge between the inner rim edges, sitting a little high on the nose
+  const ix = EYE.x - r * Math.cos(tilt), iz = z + r * Math.sin(tilt) + 0.0004, N = 6, pts = []
+  for (let i = 0; i <= N; i++) { const u = i / N, x = -ix + 2 * ix * u; pts.push([x, cy + 0.0030 + 0.0026 * Math.sin(Math.PI * u), iz + 0.0010 * Math.sin(Math.PI * u)]) }
+  for (let i = 0; i < N; i++) { parts.push(bar(pts[i], pts[i + 1], 0.00100, ink)); parts.push(bar([pts[i][0], pts[i][1], pts[i][2] + 0.0004], [pts[i + 1][0], pts[i + 1][1], pts[i + 1][2] + 0.0004], 0.00060, wire)) }
+  const g = mergeGeometries(parts.map(p => { for (const k of Object.keys(p.attributes)) if (!['position', 'normal', 'color'].includes(k)) p.deleteAttribute(k); return p }))
+  g.computeVertexNormals(); return g
+}
+const wireMat = () => { const m = cel('#ffffff').clone(); m.uniforms = { ...m.uniforms, ...CEL_U, uColor: { value: new THREE.Color(1, 1, 1) } }; m.vertexColors = true; return m }
+
 const atlases = {}
 const faceMat = (kind, fy1, fy0, bl, dy, off) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   uniforms: { map: { value: atlases[kind] || (atlases[kind] = drawFaces(TOUCH ? 640 : 1024, kind, fy1, fy0, off)) }, uCellA: { value: 0 }, uCellB: { value: 0 }, uMix: { value: 1 }, uOpen: { value: 1 }, uSquint: { value: 0 },
@@ -174,14 +202,16 @@ const faceMat = (kind, fy1, fy0, bl, dy, off) => new THREE.ShaderMaterial({ tran
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
   fragmentShader: faceFS(fy1, fy0, bl, dy, off?.eyeDx ?? 0) })
 
-/** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy. defaultSquint: 0..1 added to the life squint (crinkled lids). */
+/** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy.
+ *  wire: options for wireGlassesGeo (Hoshino's thin wire spectacles, replaces the plain rims). defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Fuku's options: blushAt { dx, dy, dr } (moves / grows the blush), featDy (moves brows, eyes, nose, mouth and blush down by this
  *  much, head frame), featOff { mouth, nose, eyeDx, brow: { color, edge, width } } (see drawFaces), glassesGeo (her own frames;
  *  it must apply the same featDy). All default to the template. */
-export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, shape, fy1, fy0, eyeS = 1, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) { // eyeS: eye size (1 = the template)
+export function makeFace({ kind, glasses: glassC, wire = null, defaultSquint = 0, blush = 1, shape, fy1, fy0, eyeS = 1, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) { // eyeS: eye size (1 = the template)
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH
   let gGeo = null
   const geo = shape || fy1 || fy0 ? makeFaceGeo(makeHeadSDF(shape), fy1, fy0) : faceGeo
+  const wireG = wire ? wireGlassesGeo(wire) : null, wireM = wire ? wireMat() : null
   function Face({ st, lod }) {
     const mat = useMemo(() => faceMat(kind, fy1, fy0, bl, featDy, featOff), [])
     const s = useRef({ A: 0, B: 0, mix: 1, mo: 1, lash: 0, big: 1, idle: 0, blinkT: 2 })
@@ -208,7 +238,7 @@ export function makeFace({ kind, glasses: glassC, defaultSquint = 0, blush = 1, 
       U.uCellA.value = o.A; U.uCellB.value = o.B; U.uMix.value = o.mix; U.uOpen.value = open; U.uLash.value = o.lash; U.uBig.value = o.big * eyeS; U.uArc.value = arc
       U.uGaze.value.set(gx, gy); U.uSquint.value = squint; U.uBlush.value = blushU })
     return <group ref={lod(2)}><mesh geometry={geo} material={mat} renderOrder={2} />
-      {glassC && <mesh geometry={ownGlasses ? (gGeo || (gGeo = ownGlasses())) : glasses()} material={cel(glassC)} />}</group>
+      {wireG ? <mesh geometry={wireG} material={wireM} /> : glassC && <mesh geometry={ownGlasses ? (gGeo || (gGeo = ownGlasses())) : glasses()} material={cel(glassC)} />}</group>
   }
   return Face
 }

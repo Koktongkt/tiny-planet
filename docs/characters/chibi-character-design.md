@@ -316,6 +316,138 @@ Her is the same SDF soft-body, marching-cubes bake and GPU skin as every village
 
 Share the face painter and hair builder; swap locks, clump positions and colours rather than forking a new pipeline. Keep `?chibi=0` and every untouched villager visually identical. Do not start this work from this document alone.
 
+### Professor Hoshino (draft): head pass against the golden turnaround
+
+Golden reference: [`ref/hoshino-golden-turnaround.jpg`](ref/hoshino-golden-turnaround.jpg). Golden sheet, before and after: [`ref/hoshino-pass8-compare.jpg`](ref/hoshino-pass8-compare.jpg). This pass changes only the face, hair and glasses (`ChibiHoshino.jsx`, `castFace.jsx`).
+
+- **Hair:** a full rounded cloud replaces the small cap with 4 locks. Dome `DOME c [0, 0.009, -0.011] r [0.0605, 0.0505, 0.0605]` plus a nape fill, then wave locks placed by `lock(az, el, push, [len, wid, thk], roll)` on the dome: crown ring, silhouette ring (el ~0.4), lower ring (raised to el +0.02..0.10 over the ears), three nape locks, and a fringe that rises off the forehead and sweeps back toward his left. A smaller curl dips on his right. The forehead stays open. Still one cel mesh and one ink hull. The lock basis must be right-handed (`b = t × n`); a mirrored basis flips the winding and renders the hair near-black.
+- **Grey:** two soft locks per side at the temple and the sideburn in front of the ear (`#8c8379`), not a patch.
+- **Ears:** lowered to the eye-to-mouth line and slightly bigger (`EAR { x 0.0565, y -0.021, z 0.002 }`, radii `0.0068 / 0.0125 / 0.0074`), fully visible below the cloud in side view.
+- **Glasses:** opt-in `makeFace({ wire })` → `wireGlassesGeo`: round lenses `r 0.0152` (~1.35× the eye), a gold wire `#b5843e` inked by a dark rim `#4a2e1c` just behind it, an arched bridge, and arms running back to the ears. One vertex-coloured mesh. Fuku keeps the plain rims.
+- Rejected on the way: a first cloud at `DOME r 0.064` with fat locks read as an afro and buried the forehead.
+- Done in the outfit pass below.
+
+### Professor Hoshino (draft): outfit pass against the golden turnaround
+
+Golden sheet, before and after: [`ref/hoshino-outfit-compare.jpg`](ref/hoshino-outfit-compare.jpg).
+
+- **Removed:** the notebook and pencil, the rust scarf, the custom still-pose sleeves and mittens (`stillArmGeo`, `readHold`), and every add-on chest mesh. These floated off the belly in side view. The `notebook` fidget is out of `HOSHINO_MOTION`; he uses `hands` and `glasses` instead. The old `notebook` pose code is still in `life.js`, unused.
+- **Arms:** the rigged arms are back (`arm 1.12`, `armA 0.30`, `armR [1.10, 1.05, 1.00]`, `hand 0.86`): long khaki sleeves hang at his sides and swing in the walk.
+- **Painted, not modelled:** the `openJacket` branch of the outfit painter (only Hoshino uses it) now draws everything onto the body, so nothing floats:
+  - an opening that cuts away below the vest;
+  - notch lapels with an inked edge and a front-edge line;
+  - the white shirt V and collar points (`acc2`);
+  - a dark green vest (`#3d4630`) with five gold buttons and soft points;
+  - two brown jacket buttons on his right panel;
+  - flap pockets at the hips;
+  - the hem line, a back vent, a curved back waist seam and the back collar.
+  - The arm and leg sections add a white shirt cuff at the wrist (`uO.w` carries the wrist height for this type) and painted trouser turn-ups.
+- **Palette:** trousers `#66653f` (warmer than the vest; the cool cel shadow turned a darker olive muddy and camo-like), shoes `#7a4a26`.
+- **Rejected:** mesh turn-ups (`outfit.cuffs`) read as fat leg-warmers, so they are painted instead.
+
+### Professor Hoshino (draft): arms and ears pass
+
+Golden sheet, before and after: [`ref/hoshino-arms-compare.jpg`](ref/hoshino-arms-compare.jpg).
+
+- **New optional body knobs** in `GhibliPerson` (both default to the old look, so no other character changes):
+  - `shDrop` lowers the shoulder joint, for sloped shoulders.
+  - `handL` lengthens the hand ellipsoid and its offset from the wrist.
+- **Arms:** they hang more steeply from rounder, sloped shoulders: `shX 1.32`, `armA 0.22`, `shDrop 0.018`. The sleeves are puffier (`armR [1.36, 1.42, 1.34]`), so the white cuff reads as a band. Hands are slightly longer (`handL 1.18`).
+- **Sleeve seam:** steeper arms fused into the jacket sides. The `openJacket` painter now inks the sleeve/body seam where the arm weight crosses 0.5.
+- **Pockets:** placed by angle round the hip instead of by `|x|`, so they wrap toward the side. They show in 3/4; in the pure side view his hand still covers them.
+- **Ears:** they stand a little proud of the head (`EAR.x 0.059`), so the ink hull draws a full rim. The old half-hidden hull read as a closed eyelash on the cheek in side view. An inked C curl on the outer face uses hair-mesh `aSkin 0.47`, which draws as ink.
+- **Not yet matched:** no lapel or vest edge in the pure side view.
+
+### Professor Hoshino (draft): jacket skirt, sleeves and trousers pass
+
+Golden sheet, before and after: [`ref/hoshino-jacket-compare.jpg`](ref/hoshino-jacket-compare.jpg).
+
+- **Jacket bottom:** new optional body skirt type `skirt: 'jacket'` with `jacket: [drop, flare]`. It is a short skirt cone from the belly to a flat hem `drop` below mid-thigh. Hoshino uses `[0.013, 0.98]`: a straight jacket body with the hem below his hands. The outfit's `hemY: 'skirt'` paints the hem line on it. The front cutaway below the vest is narrower (`0.85` → `0.40`), so the fronts hang straight.
+- **Skinning fix (jacket only):** the skirt rule hands every vertex above the hem to the hips bone. For `'jacket'` it now skips vertices near the arms. Otherwise the arms lose their region (no cuffs or seams) and stop swinging. Other skirted villagers are unchanged.
+- **Shoulders and sleeves:** much steeper shoulders (`shoulder 1.00`, `shDrop 0.034`, `shX 1.38`, `armA 0.28`). The sleeves flare to their widest at the hand (`armR [1.05, 1.45, 1.85]`).
+- **Cuffs and hands:** the white cuff sits at the sleeve's open end (`wrist − 0.0135`). The hand's skin is clipped below it, because the bake's hand zone reaches up into a flared sleeve.
+- **Trousers:** they reach lower over the shoes (`shoeY 0.028`), and the turn-ups follow.
+- **Pitfall (twice this session):** a `//` comment added mid-line in `GhibliPerson.jsx` silently comments out the rest of that line. Use `/* */` inside a line.
+
+### Professor Hoshino (draft): proportion and sleeve-line pass
+
+Before and after, plus a check at equal head height: [`ref/hoshino-proportion-compare.jpg`](ref/hoshino-proportion-compare.jpg).
+
+- **Proportions:** the long jacket made the torso read too long (KT). At equal head height, the sheet has collar-to-hem ≈ hem-to-floor and the hands ending just above the hem. Changes: `torso 1.14 → 1.00`, `leg 0.92 → 1.10`, `arm 1.12 → 1.00`, with the jacket hem still below the hands. Measured on the normalised sheet:
+
+  | | Sheet | Before | After |
+  |---|---|---|---|
+  | Hands end | ~445 | ~470 | ~450 |
+  | Jacket hem | ~465 | ~490 | ~470 |
+  | Visible legs | ~115 | ~95 | ~115 |
+
+- **Sleeve lines:** the ink hull only draws against the background, so where a sleeve hangs in front of the jacket its inner edge had no line from about halfway down. For `openJacket` only, the final body shading now inks the sleeve's own contour (arm region, `dot(N, V) < ~0.2`).
+
+### Professor Hoshino (draft): trousers and shoulder-seam pass
+
+Before and after, plus a check at equal head height: [`ref/hoshino-trousers-compare.jpg`](ref/hoshino-trousers-compare.jpg).
+
+- **Trousers:** new optional body knob `legRs [thigh, knee, ankle]`, per-joint leg radius scales that default to 1. Hoshino uses `[1, 1, 1.30]`, so the trouser legs drop straight instead of tapering. The hem is lower (`shoeY 0.027`).
+- **Shoes:** wider and longer (`bootW 1.55`, `bootH 1.30`, `bootL 1.30`), so the trousers cover part of the shoe and the toes show, as on the sheet.
+- **Torso:** a little shorter again (`torso 0.95`), with longer legs (`leg 1.14`).
+- **Shoulder seams:** the weight-based sleeve seam followed the mesh and came out patchy and jagged on the shoulders. It is replaced by an analytic armhole: a line at `|x| ≈ shoulder.x − 0.012`, leaning out toward the armpit, running up the front, over the top and down the back. It is capped at the neck, because an uncapped first try drew across the face. A new uniform `uArm` (shoulder position, `armA`) feeds it. A first try as a ring perpendicular to the arm read as a short horizontal dash, the wrong direction.
+
+### Professor Hoshino (draft): shoulder pass (no pads, unbroken outline)
+
+Before and after, with shoulder close-ups: [`ref/hoshino-shoulder-compare.jpg`](ref/hoshino-shoulder-compare.jpg).
+
+- **Pads and broken outline:** the upper-arm cap sat at the dropped, pushed-out shoulder joint (`shX 1.38`, `armR[0] 1.05`). It bulged past the body as a shoulder pad. The sharp inward crease where it met the body hid part of the ink hull, so the outline broke there (KT circled both).
+- **Fix:** tuck the arm root inside the shoulder (`shX 1.22`) with a slimmer upper sleeve (`armR [0.80, 1.40, 1.85]`). Hang a little wider (`armA 0.34`) so the hands clear the jacket. The shoulder now flows straight into the sleeve and the outline is continuous. The sleeve still flares to the hand.
+- **Armhole seam:** it sits where the sleeve shows past the body (`|x| ≈ shoulder.x + 0.007`), not at the joint. The joint now sits inside the wider jacket body, so a seam placed at the joint ran down the chest like braces. Below the armpit, a soft line follows the sleeve/body weight boundary along the inner sleeve. It is wide and soft, so it does not break into steps like the old thin one.
+
+### Professor Hoshino (draft): jacket laid out from the sheet
+
+Golden sheet, before and after (front, 3/4, side, back): [`ref/hoshino-jacket-shape-compare.jpg`](ref/hoshino-jacket-shape-compare.jpg).
+
+- **Painter layout:** the `openJacket` painter now places everything in `t = (neckY − y) / (neckY − hem)`, so the layout keeps its proportions whatever the torso length. It uses a small segment-distance helper (`sgd`) for crisp ink lines.
+  - **Opening:** near-straight, half-width `0.0215 + 0.003·t`. The sheet's vest shows about 36% of the jacket front.
+  - **Shirt and vest:** white shirt down to the vest V at `t 0.20`, with spread collar points and two small shirt buttons. The vest has four big gold buttons (`t 0.31 + 0.135·i`) and points at `t 0.84`, with trousers below.
+  - **Lapels:** a standing collar edge, a notch at `t 0.14`, the lapel peak about 0.0245 out, and a break into the front edge at `t 0.58`.
+  - **Buttons:** two large brown buttons on his right front (`t 0.66`, `0.90`), between the vest and the pocket.
+  - **Pockets:** rounded flap pockets centred about 0.98 rad round the hip, `t 0.65–0.90`, flap line at `t 0.70`.
+  - **Back:** collar band at `t 0.07`, centre seam to the hem, and a curved waist fold at `t 0.66`.
+- **Sleeves as tubes:** new optional body knob `armK` (arm-to-body blend, default 0.014). Hoshino uses `0.006`, so each sleeve keeps its own surface, and a crisp ink line runs on the sharp sleeve/body crease below the armpit.
+- **Body and arms:** body slimmer (`girth 1.20 → 1.05`), sleeves fuller and more even (`armR [1.02, 1.45, 1.70]`). `shX 1.30`, `armA 0.30`, `shDrop 0.044`: the lower shoulder joint keeps the fuller sleeve top under the shoulder slope. Rejected: `armR[0] 1.20` at `shDrop 0.030` brought the shoulder-pad bumps back.
+- **Not yet matched:** the cel shading still lays brown-purple shadow bands across the chest and shoulders; the sheet is nearly flat. The side view has no lapel or vest edge.
+
+### Professor Hoshino (draft): upper body rebuilt (KT: "weird, contorted")
+
+Before and after, with upper-body close-ups: [`ref/hoshino-upperbody-compare.jpg`](ref/hoshino-upperbody-compare.jpg).
+
+- **What was wrong:**
+  - The chest ellipsoid rose almost to the neck, so the torso top was a flat box with square corners.
+  - The arms hung from below those corners (`shDrop 0.044`), leaving a step at each shoulder.
+  - The sleeves swelled to a club at the wrist (`armR[2] 1.70`).
+  - The shared rest pose bends every forearm forward by about 0.3–0.4 rad, so in side view the arm curled forward like a banana.
+- **New shape:** a rounded trapezoid like the sheet.
+  - Narrower chest top (`chestW 0.85`).
+  - Sleeves start at the collar slope (`shX 0.90`, `shDrop 0.012`, `armK 0.010`) and angle out (`armA 0.34`) toward the hem.
+  - Sleeves are an even tube, only slightly wider at the cuff (`armR [1.25, 1.30, 1.40]`), with `arm 1.08` so the hands still end above the hem.
+- **Forearm bend:** new optional walk knob `walk.fore`, the resting forearm bend (default `-0.28` keeps every other character). Hoshino uses `-0.06`, so his arms hang straight in side view.
+- **Tried on the way:** a narrow chest with low arms (`chestW 0.80`, `shX 1.15`) brought back the shoulder bumps. Arms rooted at `shX 1.00` with no drop still left rounded square corners.
+
+### Professor Hoshino (draft): shoulder colour, dent and continuous sleeve lines
+
+Before and after: [`ref/hoshino-sleeve-lines-compare.jpg`](ref/hoshino-sleeve-lines-compare.jpg).
+
+- **Different colour and pushed-in look:**
+  - The AO pass adds a hidden occluder blob round each upper arm (`sdfOcc`). With arms this close it shaded the chest and shoulder beside them darker, which read as a dent. New optional knob `armOcc: false` drops that blob.
+  - The sharp `armK 0.006` join also left a notch at the armpit.
+- **Arm blend per height:** `armK` can now be `[shoulder, below]`, blending from soft to crisp over the 0.03 below the shoulder joint. Hoshino uses `[0.016, 0.003]`, `armA 0.38`: a smooth, even-coloured shoulder, then a crisp sleeve/body crease.
+- **Sleeve lines, unbroken shoulder to cuff:**
+  - Round the shoulder: a line where the surface sits at `1.16×` the sleeve radius from the arm axis (uniform `uArm2` = arm length, shoulder and wrist radius). That traces the soft join over the shoulder. Its width comes from `fwidth(rr)`, so gentle slopes stay a thin stroke instead of smearing into blobs.
+  - Below the shoulder: a screen-width line on the crisp crease where the arm weight crosses 0.5.
+  - The two meet near the armpit and run on to the cuff.
+- **Removed:**
+  - The view-dependent sleeve contour and the soft weight-band line (patchy).
+  - The fixed-`x` armhole line (it drew down the chest).
+  - Tried on the way: a seam at a fixed angle round the sleeve. The sleeve's inner side is buried in the body, so that line was invisible.
+
 ## 5. Pitfalls
 
 - **Camera angle.** The follow camera looks down. Features behind the head centre (side buns especially) read higher in game than in an ortho front shot. Judge bun height in-game, at the blush-to-mouth line.
