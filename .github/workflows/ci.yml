@@ -27,13 +27,15 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Serve the build
+        id: serve
         run: |
           nohup npx vite preview --port 4173 --strictPort > preview.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:4173/ > /dev/null && exit 0; sleep 1; done; cat preview.log; exit 1
       - name: Perf budget (startup chunk + draw calls / triangles per view)
         run: npm run perf:budget -- http://localhost:4173/
       - name: Smoke tests
-        if: ${{ !cancelled() }}
+        # still runs when the perf budget fails, but not when nothing was built or served
+        if: ${{ !cancelled() && steps.serve.outcome == 'success' }}
         run: npm run test:smoke
         env:
           BASE_URL: http://localhost:4173/
