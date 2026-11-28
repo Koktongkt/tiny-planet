@@ -180,8 +180,15 @@ function hairLinesGeo() {
     return h && h.point.z > 0 ? h.point.add(new THREE.Vector3(0, 0, 0.0002)) : null }
   const along = (ctrl, d, n = 40) => { const c = new THREE.CatmullRomCurve3(ctrl.map(([x, y]) => new THREE.Vector3(d * x, y, 0)), false, 'centripetal'), pts = []
     for (let i = 0; i <= n; i++) { const q = c.getPoint(i / n), p = fromFront(q.x, q.y); if (p) pts.push(p) } return pts }
+  // more lock lines of the same shape, nested outward down both sides: each starts further along the hairline and
+  // curves up the same way (a little larger each time)
+  const hlY = (x) => { const top = HL.top - HL.dip * Math.exp(-((x / HL.dipW) ** 2)), cy = (top + HL.bot) / 2, hb = (top - HL.bot) / 2
+    return cy + hb * Math.max(0, 1 - Math.abs(x / HL.a) ** HL.p) ** (1 / HL.p) }
+  const NEST = [[0.0135, 1.08], [0.0255, 1.16], [0.0365, 1.24]]
+  const nested = NEST.map(([x0, k]) => PART.map(([x, y]) => [x0 + (x - PART[0][0]) * k, hlY(x0) + 0.0012 + (y - PART[0][1]) * k]))
   for (const d of [-1, 1]) {
     tube(along(PART, d), 0.0008)
+    for (const c of nested) tube(along(c, d), 0.0008)
     // sides: locks from above the ears sweeping back and up into the bun
     sweep(d * 0.95, 0.18, d * 2.95, BUN_EL - 0.12, 2.0)
     sweep(d * 1.45, -0.02, d * 3.02, BUN_EL - 0.18, 1.8)
