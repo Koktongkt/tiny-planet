@@ -27,7 +27,7 @@ const f5 = (x) => x.toFixed(6)
 
 function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
   // off (Fuku): mouth / nose extra drop, eyeDx (eyes and brows further apart), brow { color, edge, width } (her own brows)
-  const mDy = off.mouth ?? 0, nDy = off.nose ?? 0, eDx = off.eyeDx ?? 0, bw = off.brow
+  const mDy = off.mouth ?? 0, mW = off.mouthW ?? 1, nDy = off.nose ?? 0, eDx = off.eyeDx ?? 0, bw = off.brow
   const H = Math.round(W * (FY1 - FY0) / (2 * FX)), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2
   const g = c.getContext('2d'), s = W / (2 * FX)
   const el = (x, y, rx, ry, a0 = 0, a1 = Math.PI * 2, ccw = false) => g.ellipse(x, y, rx, ry, 0, a0, a1, ccw)
@@ -87,19 +87,19 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
       g.fillStyle = 'rgba(232,148,128,.9)'; g.beginPath(); el(X(0), Y(-0.0238 + FDY + 0.0005 * FT - 0.0026 * F10 - nDy), 0.0017 * s, 0.0011 * s); g.fill()
     }
     const my = -0.0351 + FDY + 0.0008 * FT - 0.0014 * F10 - mDy
-    if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084), Y(my - 0.0082), X(-0.0084), Y(my - 0.0082), X(-0.0088), Y(my + 0.0032)); g.closePath() }
+    if (name === 'excited') { const mouth = () => { g.beginPath(); g.moveTo(X(-0.0088 * mW), Y(my + 0.0032)); g.quadraticCurveTo(X(0), Y(my + 0.0042), X(0.0088 * mW), Y(my + 0.0032)); g.bezierCurveTo(X(0.0084 * mW), Y(my - 0.0082), X(-0.0084 * mW), Y(my - 0.0082), X(-0.0088 * mW), Y(my + 0.0032)); g.closePath() }
       mouth(); g.fillStyle = '#a3403a'; g.fill(); g.save(); g.clip(); g.fillStyle = '#ef8076'; g.beginPath(); el(X(0), Y(my - 0.0066), 0.0062 * s, 0.0036 * s); g.fill(); g.restore()
       mouth(); g.strokeStyle = '#7a2a24'; g.lineWidth = 0.0011 * s; g.stroke()
       if (kind === 'hoshino') { g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
-        for (const sd of [-1, 1]) { const cx = sd * 0.0109, y = my + 0.0026; g.beginPath(); g.moveTo(X(cx), Y(y)); g.quadraticCurveTo(X(cx + sd * 0.0024), Y(y - 0.0009), X(cx + sd * 0.0027), Y(y - 0.0035)); g.stroke() } } }
+        for (const sd of [-1, 1]) { const cx = sd * 0.0109 * mW, y = my + 0.0026; g.beginPath(); g.moveTo(X(cx), Y(y)); g.quadraticCurveTo(X(cx + sd * 0.0024), Y(y - 0.0009), X(cx + sd * 0.0027), Y(y - 0.0035)); g.stroke() } } }
     else { g.strokeStyle = fuku ? '#c45a48' : '#b05040'; g.lineWidth = (fuku ? 0.0020 : 0.0018) * s; g.beginPath()
       if (name === 'sleepy') { g.moveTo(X(-0.0042), Y(my - 0.0012)); g.quadraticCurveTo(X(0), Y(my + 0.0026), X(0.0042), Y(my - 0.0012)) }
       else if (name === 'focus') { g.moveTo(X(-0.0054), Y(my + 0.0004)); g.quadraticCurveTo(X(0), Y(my - 0.0018), X(0.0054), Y(my + 0.0004)) }
       else if (fuku) { g.moveTo(X(-0.0080), Y(my + 0.0014)); g.quadraticCurveTo(X(0), Y(my - 0.0034), X(0.0080), Y(my + 0.0014)) }
-      else { g.moveTo(X(-0.0074), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074), Y(my + 0.0012)) }
+      else { g.moveTo(X(-0.0074 * mW), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074 * mW), Y(my + 0.0012)) }
       g.stroke()
       if (kind === 'hoshino' && name !== 'sleepy') { // gentle cheek lines curving down beside the mouth corners (golden sheet)
-        const corner = name === 'happy' ? 0.0094 : 0.0081, y = my + 0.0008
+        const corner = (name === 'happy' ? 0.0094 : 0.0081) * mW, y = my + 0.0008
         g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
         for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * corner), Y(y + 0.0006)); g.quadraticCurveTo(X(sd * (corner + 0.0026)), Y(y - 0.0006), X(sd * (corner + 0.0028)), Y(y - 0.0036)); g.stroke() }
       }
@@ -243,7 +243,7 @@ const faceMat = (kind, fy1, fy0, bl, dy, off) => new THREE.ShaderMaterial({ tran
 /** Face component factory. kind: 'fuku' | 'hoshino' | 'ishi'. shape: { headS, cheek } when the head differs from the template. glasses: hex or falsy.
  *  wire: options for wireGlassesGeo (Hoshino's thin wire spectacles, replaces the plain rims). defaultSquint: 0..1 added to the life squint (crinkled lids). */
 /** Fuku's options: blushAt { dx, dy, dr } (moves / grows the blush), featDy (moves brows, eyes, nose, mouth and blush down by this
- *  much, head frame), featOff { mouth, nose, eyeDx, brow: { color, edge, width } } (see drawFaces), glassesGeo (her own frames;
+ *  much, head frame), featOff { mouth, mouthW (width scale), nose, eyeDx, brow: { color, edge, width } } (see drawFaces), glassesGeo (her own frames;
  *  it must apply the same featDy). All default to the template. */
 export function makeFace({ kind, glasses: glassC, wire = null, defaultSquint = 0, blush = 1, shape, fy1, fy0, eyeS = 1, blushAt, featDy = 0, featOff, glassesGeo: ownGlasses } = {}) { // eyeS: eye size (1 = the template)
   const bl = blushAt ? { x: BLUSH.x + (blushAt.dx ?? 0), y: BLUSH.y + (blushAt.dy ?? 0), r: BLUSH.r * (blushAt.dr ?? 1) } : BLUSH

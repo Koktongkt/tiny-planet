@@ -438,7 +438,7 @@ Before (top) and after (bottom): [`ref/hoshino-pass-face-fixes-compare.jpg`](ref
 - **Grey temples:** the grey was a flat band climbing from the temple toward the crown. Now there are four staggered strands per side, at the temple and over the ear only, tucked under the dark side waves (`hoshinoGrey`). They are rounder (depth 0.0062) and lighter silver (`#978E84`), with a dark band colour `#6f675e` that picks out the grooves.
 - **Glasses:** with `wireGlassesGeo({ sdf })`, each arm is a 10-segment path pushed out sideways until it clears the head SDF by 0.0016, so it runs along the cheek to the ear instead of dipping in and out of the face. `makeFace` passes the character's own head SDF. The new `rim: [ink, wire]` option sets the tube radii. Hoshino uses `[0.00095, 0.0006]`, which is thinner, so the far half-rim no longer reads as a heavy D at 3/4.
 - **Neck:** `headUp -0.011` sets the head down onto the collar. Less of the blurred, smooth-blended neck shows.
-- **Mouth:** `featOff.mouth 0.0025` moves it lower, away from the nose. The gentle cheek lines beside the mouth corners (first tried in f0c10f2) are back. They are drawn on the happy, focus and excited faces, but not sleepy.
+- **Mouth:** `featOff.mouth 0.0035` moves it lower, away from the nose. The new `featOff.mouthW 1.15` makes it slightly wider, and the cheek lines widen with it. The gentle cheek lines beside the mouth corners (first tried in f0c10f2) are back. They are drawn on the happy, focus and excited faces, but not sleepy.
 
 ### Professor Hoshino (draft): shoulder colour, dent and continuous sleeve lines
 

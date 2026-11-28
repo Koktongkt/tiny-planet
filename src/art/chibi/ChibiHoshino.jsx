@@ -32,7 +32,7 @@ const HOSHINO_MIDFACE = [[-0.0278, 0.044, 0.0095, 0.0022, 0.009, 0.0036, 0.0054]
 const HOSHINO_MID_FADE = 0
 // Carry cheek width below the temples before rounding the jaw into the chin.
 const HOSHINO_JAW = [...HOSHINO_CHEEK, 0.020]
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, halfRim: true, rim: [0.00095, 0.0006], ear: [0.0575, -0.021, 0.004] }, featOff: { mouth: 0.0025 }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, halfRim: true, rim: [0.00095, 0.0006], ear: [0.0575, -0.021, 0.004] }, featOff: { mouth: 0.0035, mouthW: 1.15 }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE }, eyeS: 1.08 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
