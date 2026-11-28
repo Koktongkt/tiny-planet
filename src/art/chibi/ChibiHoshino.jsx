@@ -15,9 +15,9 @@ import { q } from '../../common.jsx'
 const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').matches
 const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f0c7a4'
-const HAIR_C = '#4e3a2c'
-const HAIR_GREY = '#8c8379'
-const HAIR_BAND = '#7a5a44'
+const HAIR_C = '#493B31'
+const HAIR_GREY = '#8A8177'
+const HAIR_BAND = '#6B5848'
 const GLASS = '#2e2420'
 const JACKET = '#c09a66'
 const VEST = '#3d4630'
@@ -47,20 +47,51 @@ function wave(points, width, depth, lift = 0.003) {
     const direction = new THREE.Vector3(Math.sin(az)*Math.cos(el), Math.sin(el), Math.cos(az)*Math.cos(el))
     return direction.clone().multiply(new THREE.Vector3(...DOME.r)).add(center).addScaledVector(direction, lift + offset)
   }))
-  const geo = new THREE.SphereGeometry(1, 18, 24)
-  const pos = geo.attributes.position
-  for (let i = 0; i < pos.count; i++) {
-    const t = (1 - pos.getY(i)) / 2
+  const positions = [], indices = [], pigment = []
+  const rings = 28, sides = 24
+  for (let ring = 0; ring <= rings; ring++) {
+    const t = ring / rings
     const point = path.getPoint(t), tangent = path.getTangent(t)
-    const normal = point.clone().sub(center).normalize()
-    const across = new THREE.Vector3().crossVectors(normal, tangent).normalize()
-    normal.crossVectors(tangent, across).normalize()
-    const taper = 1.30 - 0.68*t
-    point.addScaledVector(across, pos.getX(i)*width*taper)
-    point.addScaledVector(normal, pos.getZ(i)*depth*(1 - 0.32*Math.abs(pos.getX(i))))
-    pos.setXYZ(i, point.x, point.y, point.z)
+    const radial = point.clone().sub(center).normalize()
+    const across = new THREE.Vector3().crossVectors(radial, tangent).normalize()
+    const normal = new THREE.Vector3().crossVectors(tangent, across).normalize()
+    const envelope = Math.max(0.008, Math.pow(Math.sin(Math.PI*t), 0.56)) * (1.19 - 0.37*t)
+    for (let j = 0; j < sides; j++) {
+      const angle = 2*Math.PI*j/sides
+      const lateral = Math.cos(angle), surface = Math.sin(angle)
+      const groove = Math.exp(-Math.pow((lateral - 0.23)/0.16, 2))
+      const ridge = Math.exp(-Math.pow((lateral + 0.19)/0.32, 2))
+      const vertex = point.clone().addScaledVector(across, width*envelope*lateral)
+      vertex.addScaledVector(normal, depth*envelope*surface*(1 + 0.12*ridge - 0.18*groove))
+      positions.push(vertex.x, vertex.y, vertex.z)
+      pigment.push(-Math.max(0,surface)*envelope*(0.13 + 0.70*ridge))
+      if (ring < rings) {
+        const a = ring*sides+j, b = ring*sides+(j+1)%sides
+        indices.push(a,b,a+sides,b,b+sides,a+sides)
+      }
+    }
   }
-  return part(geo, [0,0,0], [1,1,1])
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3))
+  geo.setAttribute('aSkin',new THREE.Float32BufferAttribute(pigment,1))
+  geo.setIndex(indices)
+  geo.computeVertexNormals()
+  return geo
+}
+
+// Spiral around an off-centre axis pointing through the back of the crown.
+function whorl(start, reach, turn, width, depth) {
+  const axis = new THREE.Vector3(0.14,0.28,-1).normalize()
+  const right = new THREE.Vector3(1,0,0).projectOnPlane(axis).normalize()
+  const up = new THREE.Vector3().crossVectors(right,axis)
+  const points = Array.from({length:8}, (_,i) => {
+    const t = i/7, radius = 0.11 + reach*t, angle = start + turn*t
+    const d = axis.clone().multiplyScalar(Math.cos(radius))
+      .addScaledVector(right,Math.sin(radius)*Math.cos(angle))
+      .addScaledVector(up,Math.sin(radius)*Math.sin(angle))
+    return [Math.atan2(d.x,d.z), Math.asin(d.y), 0.005*Math.sin(Math.PI*t)]
+  })
+  return wave(points,width,depth,0.003)
 }
 function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 18, 14), ballS = new THREE.SphereGeometry(1, 12, 9)
@@ -69,18 +100,19 @@ function hoshinoHair() {
     // the cloud body: crown, sides and the whole back of the head
     part(ball, DOME.c, DOME.r),
     // nape fill so no scalp shows from behind (ends above the collar)
-    part(ball, [0, -0.014, -0.028], [0.048, 0.028, 0.032]),
-    // The large forelock rises beside the part and rolls down over the left temple.
-    wave([[0.24,0.67],[0.04,0.89],[-0.40,0.79],[-0.74,0.47],[-1.12,0.30],[-1.42,0.37]],0.017,0.008),
-    wave([[0.30,0.71],[0.22,1.04],[-0.33,1.22],[-1.14,0.98],[-1.65,0.91]],0.015,0.008),
-    wave([[0.34,0.66],[0.57,0.76],[0.84,0.57],[1.12,0.31],[1.52,0.21],[1.77,0.30]],0.015,0.008),
-    // Overlapping arcs wrap the occiput and turn down into the nape.
-    ...[-1,1].flatMap(side => [0,1,2].map(row => wave(
-      [[0.64,1.16-row*0.37],[1.44,1.08-row*0.37],[2.14,0.77-row*0.37],
-       [2.77,0.59-row*0.37],[3.24,0.68-row*0.37]].map(([az,el]) => [side*az,el]),
-      0.016,0.007,0.003))),
-    ...[-1,1].map(side => wave([[side*1.25,0.30],[side*1.50,0.06,0.003],
-      [side*1.73,-0.24,0.003],[side*2.05,-0.53],[side*2.51,-0.62]],0.013,0.007)),
+    part(ball, [0, -0.014, -0.033], [0.0525, 0.036, 0.043]),
+    // Nest the roots at the part; the broad left crest falls and turns up above the temple.
+    wave([[0.25,0.59,-0.008],[0.12,0.85,0.006],[-0.28,0.89,0.010],[-0.64,0.57,0.008],[-0.94,0.30,0.010],[-1.15,0.27,0.015],[-1.30,0.39,0.022]],0.020,0.010),
+    wave([[0.29,0.65,-0.005],[0.29,1.03,0.008],[-0.23,1.31,0.009],[-1.06,1.20,0.008],[-1.51,0.90,0.007],[-1.78,0.98,0.004]],0.020,0.0085),
+    wave([[0.32,0.55],[0.57,0.75,0.004],[0.85,0.61,0.006],[1.15,0.32,0.008],[1.38,0.16,0.011],[1.55,0.24,0.015]],0.016,0.008),
+    wave([[0.46,0.85],[0.87,0.92,0.004],[1.31,0.67,0.006],[1.67,0.43,0.006],[1.93,0.51]],0.015,0.007),
+    whorl(0.1,1.68,1.64,0.019,0.009),
+    whorl(1.23,1.42,1.49,0.018,0.008),
+    whorl(2.39,1.52,1.68,0.014,0.006),
+    whorl(3.56,1.56,1.72,0.014,0.0065),
+    whorl(4.76,1.69,1.43,0.019,0.008),
+    ...[-1,1].map(side => wave([[side*0.91,0.40],[side*1.23,0.19,0.007],
+      [side*1.70,0.03,0.009],[side*2.02,-0.25,0.007],[side*2.49,-0.49]],0.014,0.007)),
     ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0060, 0.0128, 0.0080], [0, d * 0.55, d * 0.08], 1)),
     // inner ear curl: a C of ink on the outer face (aSkin 0.47 draws as ink in the hair shader)
     ...[-1, 1].map(d => part(curl, [d * (EAR.x + 0.0042), EAR.y + 0.0004, EAR.z + 0.0006], [1, 1, 1], [0, d * (Math.PI / 2 + 0.55), 0], 0.47)),
@@ -94,35 +126,20 @@ function hoshinoHair() {
 }
 function hoshinoGrey() {
   const parts = [-1,1].flatMap(side => [0,1,2].map(row => wave(
-    [[side*(0.84+row*0.13),0.32-row*0.08],[side*(0.99+row*0.15),0.06-row*0.07,0.003],
-     [side*(1.18+row*0.16),-0.12-row*0.07,0.006],[side*(1.32+row*0.17),-0.36-row*0.05,0.009]],
-    0.0075,0.0045,0.0035)))
+    [[side*(0.76+row*0.07),0.39-row*0.17],[side*(1.00+row*0.04),0.22-row*0.16,0.004],
+     [side*(1.38+row*0.04),0.03-row*0.14,0.007],[side*(1.77-row*0.10),-0.03-row*0.17,0.009]],
+    0.0085-row*0.0007,0.005-row*0.0005,0.0035)))
   for (const g of parts) tagAW(g, () => [2, 0.4])
   return mergeHair(parts)
 }
-// Raised, narrow ridges trace the same sweep as the underlying waves.
-function highlightRidges() {
-  const ridges = [
-    wave([[0.19,0.76],[-0.02,0.91],[-0.39,0.80],[-0.68,0.53],[-0.92,0.35]],0.0026,0.0014,0.014),
-    wave([[0.43,0.89],[0.75,0.82],[1.02,0.62],[1.36,0.51]],0.0021,0.001,0.013),
-    ...[-1,1].flatMap(side => [0,1].map(row => wave(
-      [[side*1.62,0.90-row*0.36],[side*1.97,0.82-row*0.36],[side*2.30,0.69-row*0.36],[side*2.71,0.62-row*0.36]],
-      0.0024,0.0011,0.0105))),
-  ]
-  for (const g of ridges) tagAW(g, () => [2,0.55])
-  return mergeHair(ridges)
-}
-const RIDGE_GEO = highlightRidges()
-const ridgeMat = makeHairMat(SKIN, '#695040', HAIR_BAND, HOSHINO_HAIR_OFF)
 const HAIR_GEO = hoshinoHair()
 const GREY_GEO = hoshinoGrey()
-const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, HOSHINO_HAIR_OFF)
-const greyMat = makeHairMat(SKIN, HAIR_GREY, '#9a948c', HOSHINO_HAIR_OFF)
+const hairMat = makeHairMat(SKIN, HAIR_C, HAIR_BAND, HOSHINO_HAIR_OFF, undefined, true)
+const greyMat = makeHairMat(SKIN, HAIR_GREY, '#9a948c', HOSHINO_HAIR_OFF, undefined, true)
 const hairInk = makeHairInk(HOSHINO_HAIR_OFF)
 function HoshinoHair({ set }) {
   return <group ref={set('hair')}>
     <mesh geometry={HAIR_GEO} material={hairMat} /><mesh geometry={HAIR_GEO} material={hairInk} />
-    <mesh geometry={RIDGE_GEO} material={ridgeMat} />
     <mesh geometry={GREY_GEO} material={greyMat} /><mesh geometry={GREY_GEO} material={hairInk} />
   </group>
 }
