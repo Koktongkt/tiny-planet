@@ -10,7 +10,10 @@ import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferG
 import { Character, cel, spec, sdf, mkOutline } from '../../GhibliPerson.jsx'
 import { ISHI_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
-import { envelope } from './lifeCore.js'
+import { envelope, triggerBlink } from './lifeCore.js'
+import { TALK } from '../../talk/state.js'
+import { T } from '../../common.jsx'
+import { ishiGesture } from './ishiTalk.js'
 import { MIDFACE, MID_FADE, makeFace } from './castFace.jsx'
 import { part, tagAW, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
@@ -491,9 +494,64 @@ function ishiActs(L, B, st, dt) {
     B.chest.scale.y *= 1 + 0.04 * ho; B.chest.scale.x *= 1 + 0.015 * ho; B.root.position.y += 0.004 * ho
     B.upR.rotation.x -= 0.1 * e; B.upR.rotation.z -= 0.3 * e; B.foR.rotation.x -= 0.25 * e + 0.2 * ho // the free hand on his belly
     B.upL.rotation.z += 0.04 * e; B.foL.rotation.x -= 0.06 * e
-    L.arc = sst(0.05, 0.4, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0042 * e + 0.0009 * ho; brow = 0.0024 * e }
+    L.arc = sst(0.05, 0.4, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0010 * e + 0.0014 * ho; brow = 0.0024 * e }
+  // nod: a slow "mm-hm", two or three soft nods with the eyes half closed, a little lean in
+  if (L.fid === 'nod' && idleOk) { const d = FID.nod, k = L.fu / d, e = envelope(L.fu, d, 0.35), n = Math.sin(k * Math.PI * 3) ** 2 * e
+    B.head.rotation.x += 0.05 * e + 0.13 * n; B.chest.rotation.x += 0.03 * e; B.root.position.y -= 0.0015 * n
+    L.squint = Math.max(L.squint, 0.5 * e); L.open = Math.min(L.open, 1 - 0.35 * e); brow = 0.0006 * e }
+  // ponder: "hmm...", strokes his mustache with the pipe hand (the pipe pose, short of the mouth), eyes up, head tilted
+  if (L.fid === 'ponder' && idleOk) { const d = FID.ponder, k = L.fu / d, e = envelope(L.fu, d, 0.5), a = sst(0.05, 0.25, k) * (1 - sst(0.78, 0.95, k)) * e
+    if (DRAW) { const [u, f] = DRAW, w = 0.82 * a; B.upR.rotation.x += (u[0] - B.upR.rotation.x) * w; B.upR.rotation.z += (u[2] - B.upR.rotation.z) * w; B.foR.rotation.x += (f[0] - B.foR.rotation.x) * w; B.foR.rotation.y += (f[1] - B.foR.rotation.y) * w }
+    B.foR.rotation.z += Math.sin(L.fu * 4.2) * 0.16 * a; B.head.rotation.x -= 0.1 * e; B.head.rotation.z += 0.1 * e; B.chest.rotation.x -= 0.03 * e
+    L.gy = 0.75 * e + L.gy * (1 - e); L.gx = 0.35 * e + L.gx * (1 - e); L.squint = Math.max(L.squint, 0.2 * e); brow = 0.0016 * e; lift = 0.0004 * Math.sin(L.fu * 4.2) * a
+    if (L.fu - dt < d * 0.5 && L.fu >= d * 0.5) triggerBlink(L.blink) }
+  // point: telling the story, he jabs the pipe toward you to make his point, leaning in, brows down
+  if (L.fid === 'point' && idleOk) { const d = FID.point, k = L.fu / d, e = envelope(L.fu, d, 0.35), jab = Math.abs(Math.sin(L.fu * 6.5)) * sst(0.25, 0.35, k) * (1 - sst(0.75, 0.85, k)) * e
+    // the arm reaches out in front (upper arm forward, the elbow opening), the stem aimed at you, jabbing on each beat
+    B.upR.rotation.x -= 1.15 * e + 0.12 * jab; B.upR.rotation.z -= 0.25 * e; B.foR.rotation.x += 0.55 * e - 0.15 * jab; B.foR.rotation.y += 0.45 * e
+    B.chest.rotation.y -= 0.2 * e; B.chest.rotation.x += 0.08 * e + 0.03 * jab; B.head.rotation.x += 0.06 * e + 0.05 * jab; B.head.rotation.y -= 0.08 * e; B.root.rotation.x += 0.03 * e
+    L.pipeTip = -1.1 * e; L.squint = Math.max(L.squint, 0.35 * e); brow = -0.0012 * e }
+  // thump: "Hmph!" lifts the cane and thumps it down twice, a little jolt each time, chin up, eyes shut
+  // chuckle: a gift he loves: pats his belly with the pipe fist, shoulders shaking, eyes ^ ^, cheeks pink
+  if (L.fid === 'chuckle' && idleOk) { const d = FID.chuckle, k = L.fu / d, e = envelope(L.fu, d, 0.3), pat = Math.max(0, Math.sin(L.fu * 11)) * sst(0.15, 0.25, k) * (1 - sst(0.8, 0.9, k)) * e, sh = Math.sin(L.fu * 15) * e
+    B.upR.rotation.x += (-0.05 - B.upR.rotation.x) * e; B.upR.rotation.z += (0.05 - B.upR.rotation.z) * e; B.foR.rotation.x += (-1.35 - 0.2 * pat - B.foR.rotation.x) * e; B.foR.rotation.y += (-0.55 - B.foR.rotation.y) * e
+    B.chest.rotation.x -= 0.08 * e; B.chest.scale.y *= 1 + 0.02 * Math.abs(sh); B.head.rotation.x -= 0.08 * e; B.head.rotation.z += 0.1 * e + 0.015 * sh; B.root.position.y += 0.0015 * Math.abs(sh)
+    L.arc = sst(0.05, 0.35, e); L.mood = 'laugh'; L.blush = Math.max(L.blush, e); lift = 0.0008 * Math.abs(sh); brow = 0.0018 * e }
+  if (L.fid === 'thump' && idleOk) { const d = FID.thump, k = L.fu / d, e = envelope(L.fu, d, 0.25), ph = Math.min(1, Math.max(0, (k - 0.15) / 0.6)) * 2
+    const up = Math.sin(Math.PI * (ph % 1)) ** 2 * (ph < 2 ? 1 : 0) * e, since = ph >= 2 ? (k - 0.75) * 3 : ph % 1, hit = ph >= 1 ? Math.exp(-9 * since) * e : 0 // contacts at ph = 1 and 2
+    B.upL.rotation.x -= 0.28 * up; B.foL.rotation.x -= 0.22 * up; B.chest.rotation.z -= 0.04 * up
+    B.root.position.y -= 0.003 * hit; B.head.rotation.x -= 0.1 * e - 0.05 * hit; B.head.rotation.y += 0.15 * e; B.chest.rotation.x -= 0.03 * e
+    L.open = Math.min(L.open, 1 - 0.9 * e); brow = -0.0016 * e }
+  // ---- dozing: roll once per idle spell; standing he leans on his cane and nods off, seated his head sinks to his chest.
+  // A slow deep breath, a droop that now and then catches itself. Talking to him snaps him awake with a start.
+  const seated = st.act === 'sit' && (st.actW ?? 1) > 0.5, talking = !!(TALK.open && TALK.open.key === 'grandpa')
+  L.dozeT = talking ? 0 : L.idle // idle time (fidgets do not reset it)
+  if (L.dozeT < 1) L.dozeRoll = -1
+  if (L.dozeT > L.P.dozeAfter && L.dozeRoll < 0) { const night = T.night > 0.6, pz = L.P.doze, p = seated ? (night ? pz.sitNight : pz.sitDay) : night ? pz.standNight : 0
+    L.dozeRoll = (typeof window !== 'undefined' && window.__ishiDoze) || L.rnd() < p ? 1 : 0 }
+  const was = L.doze || 0, dozeWant = L.dozeRoll === 1 && L.dozeT > L.P.dozeAfter && !talking
+  L.doze = was + ((dozeWant ? 1 : 0) - was) * Math.min(1, dt * (dozeWant ? 0.5 : 6))
+  if (was > 0.5 && !dozeWant && talking) { L.wakeU = 0; L.dozeRoll = 0 } // talked to: a start
+  if (L.doze > 0.01) { const z = L.doze * L.doze * (3 - 2 * L.doze), tt = L.dozeT, cyc = (tt % 6.5) / 6.5, sink = sst(0, 0.85, cyc), cat = sst(0.85, 0.9, cyc) * (1 - sst(0.9, 1, cyc)), br = Math.sin(tt * 1.3)
+    if (L.fid) { L.fid = null } L.fidN = 3
+    B.head.rotation.x += (0.22 + 0.12 * sink - 0.18 * cat) * z; B.head.rotation.z += 0.06 * z; B.chest.rotation.x += (seated ? 0.12 : 0.07) * z; B.chest.scale.y *= 1 + 0.02 * br * z
+    if (!seated) { B.root.rotation.x += 0.04 * z; B.upL.rotation.x -= 0.12 * z; B.foL.rotation.x -= 0.1 * z } // leans on the cane
+    B.foR.rotation.x += 0.35 * z; B.upR.rotation.x += 0.08 * z // the pipe hand drops into his lap
+    L.open = Math.min(L.open, 1 - z); L.mood = 'sleepy'; brow = -0.0006 * z; lift = 0.0005 * br * z }
+  L.wakeU = (L.wakeU ?? 9) + dt; const wk = L.wakeU < 1.1 ? envelope(L.wakeU, 1.1, 0.06) : 0
+  if (wk > 0) { const j = Math.exp(-L.wakeU * 6); B.head.rotation.x -= 0.14 * wk + 0.1 * j; B.chest.rotation.x -= 0.05 * wk; B.root.position.y += 0.004 * j; B.upR.rotation.z -= 0.15 * j
+    L.mood = 'excited'; L.squint = 0; brow = 0.003 * wk; L.blush = Math.max(L.blush, 0.6 * wk) }
   // hair groups: 0 = the mustache (lifts when he laughs), 3 = the brows (raise); the knot (2) keeps the life layer's spring
   const OFF = L.hairOff; OFF[0] = 0; OFF[1] = lift; OFF[2] = lift * 0.35; OFF[9] = 0; OFF[10] = brow; OFF[11] = 0
+}
+// talking to him: each dialogue page he says starts the gesture that fits the line (ishiTalk.js). Studio: window.__ishiSay(line)
+function startGesture(L, g) { L.fid = g; L.fu = 0; L.fidPrev = g; L.fidN = L.P.fidgetEvery[0] + 2; L.lastG = g }
+function talkGestures(L, st) {
+  const o = TALK.open, mine = o && o.key === 'grandpa' && TALK.lines && (!st.npcKey || st.npcKey === o.key)
+  if (mine) { const line = TALK.lines.pages[TALK.page] || '', key = TALK.page + '|' + line
+    if (key !== L.talkKey) { L.talkKey = key; startGesture(L, ishiGesture(line, L.lastG)) } }
+  else L.talkKey = null
+  if (typeof window !== 'undefined' && !window.__ishiSay && q.get('char') === 'ishi') window.__ishiSay = (line) => startGesture(L, ishiGesture(line, L.lastG))
 }
 const _w = new THREE.Vector3(), _u = new THREE.Vector3(), _sd = new THREE.Vector3(), _hq = new THREE.Quaternion(), _sc = new THREE.Vector3()
 function smokeStep(L, st, dt) {
@@ -580,6 +638,7 @@ export const ISHI = {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, ISHI_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = ISHI_HAIR_OFF
       if (typeof window !== 'undefined' && q.get('char') === 'ishi') window.__herLife = L // studio captures (tools/chibi-clip.mjs) drive the life layer through this
       const aw = st.act ? Math.min(1, st.actW ?? 1) : 0; restArms(B, st, 1 - aw)
+      talkGestures(L, st)
       if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); ishiActs(L, B, st, dt) } },
     post: (R_, st, dt, t) => { if (!LIFE_OFF) { lifePost(st.life, R_, st, dt, t); smokeStep(st.life, st, dt) } },
     Face, Hair: IshiHair,

@@ -110,12 +110,14 @@ export const HOSHINO_MOTION = motionProfile(HER_MOTION, {
 export const ISHI_MOTION = motionProfile(HER_MOTION, {
   name: 'ishi',
   lively: 0.6,
-  fidgets: { smoke: 6.5, laugh: 3.0 },
+  fidgets: { smoke: 6.5, laugh: 3.0, nod: 2.2, ponder: 3.4, point: 2.6, thump: 2.2, chuckle: 2.6 },
+  // dozing off (rolled once per idle spell after dozeAfter s still): standing at night, or sitting (more likely at night)
+  dozeAfter: 10, doze: { standNight: 0.4, sitNight: 0.75, sitDay: 0.35 },
   sets: {
-    day: ['smoke', 'look', 'laugh', 'smoke', 'look', 'laugh'],
+    day: ['smoke', 'look', 'laugh', 'ponder', 'smoke', 'look', 'laugh', 'nod'],
     rain: ['look', 'smoke', 'shiver'],
-    night: ['smoke', 'look', 'smoke', 'laugh'],
-    seated: ['smoke', 'look', 'laugh'],
+    night: ['smoke', 'look', 'smoke', 'ponder', 'laugh'],
+    seated: ['smoke', 'look', 'laugh', 'nod', 'ponder'],
     hungry: ['look', 'smoke'],
     indoor: ['smoke', 'look', 'laugh'],
     stove: ['smoke', 'look'],
