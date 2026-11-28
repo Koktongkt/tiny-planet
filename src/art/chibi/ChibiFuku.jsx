@@ -190,7 +190,7 @@ function hairLinesGeo() {
   const len = [0]; for (let i = 1; i < hl.length; i++) len.push(len[i - 1] + Math.hypot(hl[i][0] - hl[i - 1][0], hl[i][1] - hl[i - 1][1]))
   const atArc = (f) => { const L = f * len[len.length - 1]; let i = len.findIndex(v => v >= L); return hl[Math.max(0, i)] }
   // [fraction along the hairline, width scale, height scale]: outer lines rise more steeply so they stay on the head
-  const NEST = [[0.25, 1.10, 1.15], [0.50, 1.00, 1.30], [0.75, 0.80, 1.45], [1.00, 0.55, 1.60]]
+  const NEST = [[0.45, 1.05, 1.25], [1.00, 0.55, 1.60]]
   const nested = NEST.map(([f, kx, ky]) => { const [x0, y0] = atArc(f); return PART.map(([x, y]) => [x0 + (x - PART[0][0]) * kx, y0 + 0.0012 + (y - PART[0][1]) * ky]) })
   // lay a front-view point onto the cap radially (through a sphere round the cap centre), so lines near the sides
   // wrap round the head instead of falling off its edge

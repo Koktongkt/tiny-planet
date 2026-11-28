@@ -188,6 +188,7 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 **Grandma Fuku, pass 34** (KT: more curved lines like that down both sides): [`ref/fuku-front-locks.jpg`](ref/fuku-front-locks.jpg). Three more lines per side of the same traced shape (`NEST`), each starting further along the hairline (x 0.0135 / 0.0255 / 0.0365, on the hairline curve `hlY`) and a little larger (x1.08 / 1.16 / 1.24), so they nest outward down both sides like the sheet's locks. Side and back lines unchanged.
   - More spacing (KT): `NEST` starts at x 0.0175 / 0.0335 / 0.0475, scale x1.10 / 1.20 / 1.30 ([`ref/fuku-front-locks-spaced.jpg`](ref/fuku-front-locks-spaced.jpg)).
   - Spaced out to the ears (KT): four lines per side, starting evenly along the hairline (arc fractions 0.25 / 0.5 / 0.75 / 1.0) from the parting down to the temple just above the top of the ear; outer lines narrower and taller (width x1.10 / 1.00 / 0.80 / 0.55, height x1.15 / 1.30 / 1.45 / 1.60) so they rise up the side of the head. Laid on the cap radially (`radial`, through a sphere round the cap centre) so the side lines wrap round the head instead of falling off its edge.
+  - Fewer lines (KT): two per side besides the parting, `NEST = [[0.45, 1.05, 1.25], [1.00, 0.55, 1.60]]` (halfway along the hairline, and just above the ear).
 
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
