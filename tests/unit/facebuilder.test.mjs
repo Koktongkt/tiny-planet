@@ -28,7 +28,8 @@ for(const [id,cfg] of Object.entries(CHARACTERS)){
 test('Fuku custom jaw stays local and feeds both mesh and face decal',()=>{
   const result=apply('fuku',read(CHARACTERS.fuku),{'jaw.width':.051})
   assert.match(result,/const FUKU_CHEEK = \[/)
-  assert.match(result,/shape: \{ cheek: FUKU_CHEEK \}/)
+  assert.match(result,/FUKU_HEAD = \{ headS: \[HEAD_W, 1, 1\], cheek: FUKU_CHEEK \}/)
+  assert.match(result,/shape: FUKU_HEAD/)
   assert.match(result,/cheek: FUKU_CHEEK, midface: MIDFACE/)
 })
 

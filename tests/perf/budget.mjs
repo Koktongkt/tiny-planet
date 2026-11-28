@@ -34,9 +34,16 @@ for (const dev of ['desktop', 'mobile']) {
     try {
       await p.goto(base + qs + (shore ? `&shore=${shore}` : ''))
       await p.waitForFunction(() => window.__loadMarks?.frame && !document.getElementById('ld') && window.__calls > 0, null, { timeout: 200_000, polling: 500 })
-      // the look-A ground and shore kit arrive in idle slots after the first frame: wait for them (builds without them time out)
-      await p.waitForFunction(() => window.__groundReady && window.__shoreReady, null, { timeout: 40_000, polling: 500 }).catch(() => {})
-      await p.waitForTimeout(3500) // cull + LOD settle
+      // The look-A ground, shore kit and villager bakes arrive in idle slots after the first frame, for a minute or
+      // more on SwiftShader. Measure the loaded scene, not whatever a slow or fast runner has reached by a fixed time:
+      // wait for ground + shore, then for calls/tris to hold within 2% over 6 s (villagers and pets still move).
+      const settled = await p.waitForFunction(() => {
+        const h = window.__settle ??= []; h.push([window.__calls, window.__tris]); if (h.length > 6) h.shift()
+        if (!window.__groundReady || !window.__shoreReady || h.length < 6) return false
+        const flat = (i) => { const v = h.map(x => x[i]), hi = Math.max(...v); return hi - Math.min(...v) <= hi * 0.02 }
+        return flat(0) && flat(1)
+      }, null, { timeout: 180_000, polling: 1000 }).then(() => true, () => false)
+      if (!settled) warns.push(`${dev}.${v}: scene did not settle in 180 s (ground ${await p.evaluate(() => !!window.__groundReady)}, shore ${await p.evaluate(() => !!window.__shoreReady)}); measured as is`)
       await p.evaluate(() => { window.__cb.length = 0; window.__cs = []; window.__ts = []; const g = () => { window.__cs.push(window.__calls); window.__ts.push(window.__tris); requestAnimationFrame(g) }; requestAnimationFrame(g) })
       const t0 = Date.now(); await p.waitForTimeout(4000)
       m = await p.evaluate(() => ({ cs: window.__cs.filter(x => x != null), ts: window.__ts.filter(x => x != null), cb: window.__cb }))

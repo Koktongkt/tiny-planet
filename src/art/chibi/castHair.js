@@ -31,7 +31,8 @@ export function makeHairInk(uOff) {
   return m
 }
 
-/** shade: optional hair shadow tint (default warm brown, for dark hair; white hair wants a light cool grey) */
+/** aSkin: 0 hair, 1 skin, 0.5..0.9 darker skin, 2 darker skin for a deep hollow (Fuku's ears).
+ *  shade: optional hair shadow tint (default warm brown, for dark hair; white hair wants a light cool grey) */
 export function makeHairMat(skin, hair, band, uOff, shade = [0.68, 0.55, 0.5]) {
   return new THREE.ShaderMaterial({
     uniforms: { uOff: { value: uOff }, uSun: CEL_U.uSun, uLight: CEL_U.uLight, uAmb: CEL_U.uAmb, uRim: CEL_U.uRim,
@@ -41,7 +42,7 @@ export function makeHairMat(skin, hair, band, uOff, shade = [0.68, 0.55, 0.5]) {
     fragmentShader: `uniform vec3 uSun, uLight, uAmb, uRim, uHair, uBand, uSkin, uHShade; varying vec3 vN, vV, vO; varying float vSkin;
       void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize((viewMatrix*vec4(uSun,0.)).xyz);
         float ndl = dot(N, L), lit = smoothstep(-.04, .12, ndl), sk = step(.5, vSkin);
-        vec3 base = mix(uHair, uSkin, sk), shade = base*mix(uHShade, vec3(.86,.68,.66), sk);
+        vec3 base = mix(uHair, uSkin, sk) * (1. - .2*step(1.5, vSkin)), shade = base*mix(uHShade, vec3(.86,.68,.66), sk);
         vec3 c = mix(shade, base, lit)*uLight + base*uAmb;
         vec3 d = normalize(vO - vec3(0., .004, -.004)); float az = atan(d.x, d.z);
         float band = 1. - smoothstep(.02, .11, abs(d.y - .6 - .02*sin(az*7.) - .012*cos(az*13.)));

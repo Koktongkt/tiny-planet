@@ -1,5 +1,6 @@
 // node --test tests/unit — the ground mesh: welded and smooth on grass, faceted on rock, warm palette, same drawn shape
 import test from 'node:test'; import assert from 'node:assert/strict'
+import { budget } from './timing.mjs'
 import * as THREE from 'three'
 import { R } from '../../src/world.js'
 import { visualGround } from '../../src/world/shore.js'
@@ -93,5 +94,5 @@ test('a soil band shows above the drawn water, none in coves', () => {
 
 test('build time (coarse at startup, fine in an idle slot)', () => {
   const med = (fine) => { const t = []; for (let k = 0; k < 3; k++) { const t0 = performance.now(); buildGround({ fine, paint, isRock: noRock }); t.push(performance.now() - t0) } return t.sort((a, b) => a - b)[1] }
-  const c = med(false), f = med(true); assert.ok(c < 600, `coarse median ${c.toFixed(0)} ms`); assert.ok(f < 1000, `fine median ${f.toFixed(0)} ms`)
+  const c = med(false), f = med(true); assert.ok(c < budget(600), `coarse median ${c.toFixed(0)} ms`); assert.ok(f < budget(1000), `fine median ${f.toFixed(0)} ms`)
 })

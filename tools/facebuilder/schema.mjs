@@ -15,8 +15,9 @@ const array = (id, title, constant, fields) => ({ id, title, re: new RegExp('(?:
 const scalar = (id,title,anchor,f) => ({ id,title,re:new RegExp(anchor+'('+N+')'),fields:[f] })
 const hex = (id,title,anchor) => ({ id,title,re:new RegExp(anchor+"(['\"]#[0-9a-fA-F]{6}['\"])"),fields:[colour(id,title)],hex:true })
 const custom = (id,title,re,fields) => ({id,title,re,fields})
-const jaw = (constant) => array('jaw','Jaw / cheeks',constant,[
-  null,n('jaw.y','Vertical position',-.045,-.01),n('jaw.z','Forward position',.003,.026),n('jaw.width','Width',.036,.064),n('jaw.height','Height',.020,.041),n('jaw.depth','Depth',.025,.051),n('jaw.blend','Roundness / blend',.008,.035)
+const jaw = (constant, stretch = false) => array('jaw','Jaw / cheeks',constant,[
+  null,n('jaw.y','Vertical position',-.045,-.01),n('jaw.z','Forward position',.003,.026),n('jaw.width','Width',.036,.064),n('jaw.height','Height',.020,.041),n('jaw.depth','Depth',.025,.051),n('jaw.blend','Roundness / blend',.008,.035),
+  ...(stretch ? [n('jaw.stretch','Straight sides (stretch up)',0,.04)] : [])
 ])
 const ell = (id,title,name,range) => array(id,title,name,[
   n(id+'.y','Height position',range[0],range[1]),n(id+'.z','Depth position',range[2],range[3]),
@@ -47,12 +48,12 @@ const her = [
   // Her hair shader colour is separate from the body config; expose only verified linked controls.
 ]
 const fuku = [
-  jaw('FUKU_CHEEK'),ear(),
+  jaw('FUKU_CHEEK',true),ear(),
   faceScalar('eyeS','Eye size',.75,1.3),
   faceScalar('defaultSquint','Resting squint',0,.5),
   faceScalar('blush','Blush intensity',0,1),
-  custom('bunPosition','Hair',/part\(ball, (\[0,\s*[-.\d]+,\s*[-.\d]+\]), \[[^\]]+\]\),\n\s*part\(ring/,[
-    null,n('bun.y','Bun height',.05,.09),n('bun.z','Bun depth',-.025,.018)]),
+  custom('bunPosition','Hair',/const BUN_C = (\[[^\]]+\])/,[
+    null,n('bun.y','Bun height',.05,.09),n('bun.z','Bun depth',-.06,.018)]),
   hex('skin','Skin colour','const SKIN =\\s*'),hex('hairColor','Hair colour','const HAIR_C =\\s*'),hex('glasses','Glasses colour','const GLASS =\\s*')
 ]
 const ishi = [

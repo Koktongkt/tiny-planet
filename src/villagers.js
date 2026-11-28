@@ -23,7 +23,7 @@ export const VILLAGERS = [
     outfit: { type: 'jacket', skin: SK.c, top: '#8fae7a', bottom: '#6b5a48', shoe: '#4a3a35', long: true, sleeve: 'puff', cuffs: '#7d6a58' }, hold: { L: 'basket' }, walk: { rate: 7 } },
   // ---- village square ----
   { name: 'grandma', zone: 'square', age: 'elder', body: { ...ELDER, H: 0.92, girth: 1.2, skirt: 'long' }, hair: { style: 'bun', c: '#d8d4cf' }, face: { closed: true, glasses: '#8a6a4a' },
-    outfit: { type: 'cardigan', skin: SK.a, top: '#7d6a8c', acc: '#c9a0b8', acc2: '#f4ecd8', shoe: '#4a3a35', long: true, sleeve: 'puff', skirt: true }, hold: { R: 'basket' }, walk: { idle: 'sway' } },
+    outfit: { type: 'cardigan', skin: SK.a, top: '#7d6a8c', acc: '#c9a0b8', acc2: '#f4ecd8', shoe: '#4a3a35', long: true, sleeve: 'puff', skirt: true }, hold: { R: 'basket' }, walk: { idle: 'sway', rate: 6.0 } }, // rate: the chibi Fuku's gentle shuffle
   { name: 'grandpa', zone: 'square', age: 'elder', body: { ...ELDER, H: 1.02, girth: 0.88 }, hair: { style: 'bald', c: '#e2ded8', beard: true }, face: { glasses: '#4a3a35', eye: 0.7, browW: 1.6 },
     outfit: { type: 'shirt', skin: SK.b, top: '#c8b48a', bottom: '#6b5a48', shoe: '#3a2e2a', long: true, sleeve: 'puff', cuffs: '#5e4e3e' }, hold: { R: 'cane' }, walk: { idle: 'look' } },
   { name: 'baker', zone: 'square', age: 'adult', body: { ...ADULT, H: 1.02, girth: 1.3, skirt: 'short' }, hair: { style: 'ponytail', c: '#8a4a2a', tie: '#ffffff' },

@@ -79,7 +79,7 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
       L.bagKick = Math.sin(u * 10) * 0.22 * e * (1 - k) }
     else if (L.fid === 'hum') { // humming a little tune: head and body sway in time, hands clasped behind, eyes happily narrowed
       const sw = Math.sin(k * Math.PI * 4) * e; B.head.rotation.z += 0.14 * sw; B.chest.rotation.z -= 0.04 * sw; B.hips.rotation.z += 0.025 * sw; B.root.position.y += 0.002 * Math.abs(sw)
-      B.upL.rotation.x += 0.55 * e; B.upR.rotation.x += 0.55 * e; B.upL.rotation.z += 0.18 * e; B.upR.rotation.z -= 0.18 * e; B.foL.rotation.x -= 0.25 * e; B.foR.rotation.x -= 0.25 * e; L.fsq = 0.55 * e }
+      B.upL.rotation.x += 0.55 * e; B.upR.rotation.x += 0.55 * e; B.upL.rotation.z += 0.18 * e; B.upR.rotation.z -= 0.18 * e; B.foL.rotation.x -= 0.25 * e; B.foR.rotation.x -= 0.25 * e; L.fsq = (P.humEyes ?? 0.55) * e }
     else if (L.fid === 'pebble') { // eyes down, a couple of little kicks at a pebble with the right foot
       const kk = bump(Math.min(1, k * 1.25), 2) * e; B.head.rotation.x += 0.2 * e; fidLookY = -0.9 * e
       B.thR.rotation.x -= 0.9 * kk; B.shRn.rotation.x += 0.5 * kk; B.ftR.rotation.x -= 0.3 * kk; B.chest.rotation.x += 0.03 * e; B.upL.rotation.z -= 0.12 * kk; B.upR.rotation.z += 0.12 * kk }
@@ -110,6 +110,12 @@ export function lifeStep(L, B, st, dt, t, R_, camera) {
       const a = sst(0, 0.3, k) * (1 - sst(0.7, 1, k)), sg = sst(0.68, 0.9, k) * (1 - sst(0.9, 1, k))
       B.upR.rotation.x -= 0.85 * a; B.foR.rotation.x -= 1.2 * a; B.chest.rotation.y += 0.18 * a; B.head.rotation.x += 0.22 * a; B.head.rotation.y += 0.25 * a; fidLookY = -0.9 * a
       L.bagKick = Math.sin(u * 9) * 0.15 * a; B.chest.scale.y *= 1 + 0.03 * sg; B.head.rotation.x += 0.1 * sg }
+    else if (L.fid === 'nod') { // a knowing nod: two slow nods with a closed-eye smile and a slight tilt
+      const n = bump(Math.min(1, k * 1.1), 2) * e; B.head.rotation.x += 0.17 * n; B.chest.rotation.x += 0.03 * n; B.head.rotation.z += 0.05 * e; L.fsq = 0.85 * e }
+    else if (L.fid === 'fond') { // a fond look: turns slowly to one side, tilts her head, a warm smile, a little nod, then back
+      if (u0 === 0) L.fondSd = L.rnd() < 0.5 ? -1 : 1
+      const sd = L.fondSd || 1, y = 0.5 * sd * e; B.head.rotation.y += y; B.chest.rotation.y += 0.18 * y; B.head.rotation.z += 0.08 * sd * e
+      B.head.rotation.x += 0.05 * bump(k, 1) * e; fidLookX = 0.6 * sd * e; L.fsq = 0.45 * e }
     else if (L.fid === 'tea') { // both hands around a cup, a slow sip in the middle
       const sip = bump(Math.min(1, Math.max(0, (k - 0.35) / 0.45)), 1) * e
       B.upL.rotation.x -= 0.7 * e; B.upR.rotation.x -= 0.7 * e; B.foL.rotation.x -= 0.85 * e; B.foR.rotation.x -= 0.85 * e
