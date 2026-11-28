@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "character": "hoshino",
+  "submittedAt": "2026-11-28T09:48:13.818Z",
+  "source": "src/art/chibi/ChibiHoshino.jsx",
+  "sourceHashBefore": "2d8c4f28e993ce967ecff1466728a51e32741cbb0e6a79ce4c359d5508a5cbc3",
+  "sourceHashAfter": "21119d357205ff20e6cdcbd838af567e3e0521ca489c1d920c6ec0933ce62adc",
+  "changed": {
+    "head.depth": {
+      "before": 1,
+      "after": 1.05
+    },
+    "jaw.y": {
+      "before": -0.026,
+      "after": -0.0255
+    },
+    "jaw.z": {
+      "before": 0.012,
+      "after": 0.0125
+    },
+    "jaw.width": {
+      "before": 0.05,
+      "after": 0.047
+    },
+    "jaw.depth": {
+      "before": 0.035,
+      "after": 0.0295
+    },
+    "jaw.blend": {
+      "before": 0.016,
+      "after": 0.0185
+    },
+    "nose.z": {
+      "before": 0.0397,
+      "after": 0.0434
+    },
+    "nose.height": {
+      "before": 0.0058,
+      "after": 0.0055
+    },
+    "nose.depth": {
+      "before": 0.014,
+      "after": 0.013
+    },
+    "nose.blend": {
+      "before": 0.0012,
+      "after": 0.0026
+    },
+    "nose.edge": {
+      "before": 0.001,
+      "after": 0.0017
+    },
+    "eyeS": {
+      "before": 1,
+      "after": 1.08
+    },
+    "defaultSquint": {
+      "before": 0.06,
+      "after": 0.12
+    },
+    "ear.x": {
+      "before": 0.059,
+      "after": 0.0625
+    },
+    "ear.y": {
+      "before": -0.021,
+      "after": -0.018
+    },
+    "specWire": {
+      "before": "#b5843e",
+      "after": "#000000"
+    },
+    "specInk": {
+      "before": "#4a2e1c",
+      "after": "#000000"
+    }
+  },
+  "approvedValues": {
+    "head.width": 1,
+    "head.height": 1,
+    "head.depth": 1.05,
+    "jaw.y": -0.0255,
+    "jaw.z": 0.0125,
+    "jaw.width": 0.047,
+    "jaw.height": 0.0295,
+    "jaw.depth": 0.0295,
+    "jaw.blend": 0.0185,
+    "nose.y": -0.0278,
+    "nose.z": 0.0434,
+    "nose.width": 0.02,
+    "nose.height": 0.0055,
+    "nose.depth": 0.013,
+    "nose.blend": 0.0026,
+    "nose.edge": 0.0017,
+    "chin.y": -0.0345,
+    "chin.z": 0.0303,
+    "chin.width": 0.03,
+    "chin.height": 0.0162,
+    "chin.depth": 0.0243,
+    "chin.blend": 0.0055,
+    "profile.fade": 0,
+    "eyeS": 1.08,
+    "defaultSquint": 0.12,
+    "blush": 0.55,
+    "ear.x": 0.0625,
+    "ear.y": -0.018,
+    "ear.z": 0.002,
+    "ear.width": 0.006,
+    "ear.height": 0.0128,
+    "ear.depth": 0.008,
+    "hair.cloud.x": 0,
+    "hair.cloud.y": 0.009,
+    "hair.cloud.z": -0.011,
+    "hair.cloud.width": 0.0605,
+    "hair.cloud.height": 0.0505,
+    "hair.cloud.depth": 0.0605,
+    "glasses.size": 0.0152,
+    "specWire": "#000000",
+    "specInk": "#000000",
+    "skin": "#f0c7a4",
+    "hairColor": "#4e3a2c",
+    "hairGrey": "#8c8379",
+    "hairBand": "#7a5a44"
+  },
+  "lockedParameters": [
+    "head.width",
+    "head.height",
+    "head.depth",
+    "jaw.y",
+    "jaw.z",
+    "jaw.width",
+    "jaw.height",
+    "jaw.depth",
+    "jaw.blend",
+    "nose.y",
+    "nose.z",
+    "nose.width",
+    "nose.height",
+    "nose.depth",
+    "nose.blend",
+    "nose.edge",
+    "chin.y",
+    "chin.z",
+    "chin.width",
+    "chin.height",
+    "chin.depth",
+    "chin.blend",
+    "profile.fade",
+    "eyeS",
+    "defaultSquint",
+    "blush",
+    "ear.x",
+    "ear.y",
+    "ear.z",
+    "ear.width",
+    "ear.height",
+    "ear.depth",
+    "hair.cloud.x",
+    "hair.cloud.y",
+    "hair.cloud.z",
+    "hair.cloud.width",
+    "hair.cloud.height",
+    "hair.cloud.depth",
+    "glasses.size",
+    "specWire",
+    "specInk",
+    "skin",
+    "hairColor",
+    "hairGrey",
+    "hairBand"
+  ],
+  "editorLocks": [],
+  "notes": "",
+  "agentInstruction": "The user approved this appearance. Preserve the recorded values and existing rendering/animation pipeline. Review the source diff and regression screenshots; do not retune locked parameters without explicit user approval."
+}
