@@ -241,3 +241,20 @@ Do not start a villager until KT asks. When they do:
 5. Tune hair and scarf clamps for *their* hair and costume (a bob, a hat, or no satchel will need different limits than her side buns).
 6. Run the unit tests, the startup-chunk check, the glitch checklist, and a follow-camera capture (meadow or another open spot). Confirm reduced-motion still damps them.
 7. Commit, do not push, and wait for KT.
+
+## Grandma Fuku (pass 40): gentle, wise, caring, friendly
+
+Review: [`ref/fuku-animations-pass40.mp4`](ref/fuku-animations-pass40.mp4), stills [`ref/fuku-animations-pass40.jpg`](ref/fuku-animations-pass40.jpg).
+
+- **Arms that move.** Her sleeves are no longer one mesh on the chest: per side a static part (sloped shoulder, joint ball, yoke), an upper sleeve on a pivot at the shoulder joint and a forearm (cuff, hand) on a pivot at the elbow (`armsParts` / `attachLook` in `ChibiFuku.jsx`, stored on `chest.userData.fukuArms`). The skinned rig arms stay collapsed. `fukuArms` aims each piece at target directions in the chest frame (`aimArm`: shortest-arc rotation, blended from the clasped rest pose by a weight). Note: `Quaternion.slerpQuaternions(a, b)` copies `a` into the target first, so never pass the target as `b`.
+- **Wave hello** (6): right upper arm out and forward, forearm up, a slow small wave (6.5 rad/s, +-0.32). Fires on the shared wave trigger (`L.waveU`, villager nearby, `waveEvery`), 2.6 s.
+- **Delighted surprise** (11): both hands up to her chin, excited face, blush, a tiny bounce, 2.0 s. Fires when a chat starts (`st.act` becomes `chat`).
+- **Knowing nod** (3): new fidget `nod` (life.js): two slow nods, closed-eye smile, slight tilt.
+- **Fond look** (4): new fidget `fond`: turns slowly to one side, tilts, warm smile, a little nod, back.
+- **Contented hum** (2): the shared `hum` with her eyes nearly closed (new profile field `humEyes`, Fuku 0.85).
+- **Slow breathing and a soft sway** (1): `fukuSway`, on top of the shared breathing while idle (0.85 rad/s sway, slower deeper breath).
+- **Gentle shuffle** (14): `cfg.walk` rate 6.0, stride 0.30, knee 0.32, bounce 0.004, lean 0.15, sway 0.09; the clasped hands bob a little with the steps.
+- Profile: the teacup fidgets are gone; sets are built from `fond`, `hum`, `nod`, `look`, `rock` (and `yawn` at night).
+- Debug: `window.__fukuDo = 'wave' | 'delight'` starts a reaction; `window.__fukuLife` is her life state (the clip tool waits on `__herLife`; a copy that waits on `__fukuLife` films her alone).
+- Cost: the moving sleeves are 8 extra draw calls (studio ~24).
+

@@ -9,6 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Character, cel, spec, mkOutline, coreSDF } from '../../GhibliPerson.jsx'
 import { FUKU_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
+import { envelope, approach } from './lifeCore.js'
 import { HR, MIDFACE, MID_FADE, EYE, headSDF, makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
 import { q } from '../../common.jsx'
@@ -352,30 +353,31 @@ const ball = (c, r, sc, hex) => { const g = new THREE.SphereGeometry(r, 12, 10);
 // wide cuff, two mitten hands with the right resting over the left (chest-local)
 // sleeve shoulder x (the rig's own shoulder, body.shX, is pulled in so its hidden stub stays inside the torso)
 const SH_X = 0.060
+// arms (pass 40): built per side in three pieces so they can move. `stat` stays on the chest (the sloped shoulder, its
+// joint ball, the yoke); `up` (upper sleeve + elbow ball) turns about the shoulder joint; `fo` (forearm, cuff, hand)
+// turns about the elbow. The rest pose is the clasped hands at the waist.
 function armsParts(S, cy) {
-  const front = S.belly[0].z + S.belly[1].z, hy = S.bellyY + 0.012 - cy, parts = []
+  const front = S.belly[0].z + S.belly[1].z, hy = S.bellyY + 0.012 - cy, out = {}
   for (const sd of [-1, 1]) {
     const sh = [sd * SH_X, S.shY - cy - 0.024, S.shL.z]
     const el = [sd * (SH_X + 0.014), hy + 0.000, front * 0.26]
     const wr = [sd * 0.030, hy + 0.001, front + 0.010]
-    // clear slope: a long tapering tube from high at the neck base down and out to the (lowered) shoulder joint
     const nb = [sd * 0.018, S.neckY - cy - 0.002, S.shL.z - 0.004]
-    parts.push(ovalTube(nb, sh, 0.0130, 0.0225, [0, 0, 1], 1.15, CARDIGAN), ball(sh, 0.0225, [1, 1, 1.22], CARDIGAN))
+    // clear slope: a long tapering tube from high at the neck base down and out to the (lowered) shoulder joint;
     // yoke: fills the gap between the slope and the torso, where the body's own skin paint would peek through
-    parts.push(ball([sd * 0.045, S.shY - cy - 0.012, S.chest[0].z + 0.002], 0.020, [0.85, 1.3, 2.05], CARDIGAN))
+    const stat = [ovalTube(nb, sh, 0.0130, 0.0225, [0, 0, 1], 1.15, CARDIGAN), ball(sh, 0.0225, [1, 1, 1.22], CARDIGAN),
+      ball([sd * 0.045, S.shY - cy - 0.012, S.chest[0].z + 0.002], 0.020, [0.85, 1.3, 2.05], CARDIGAN)]
     // puffy oval sleeves: deep front-to-back above the elbow, tall below it, bulging between the joints
-    parts.push(ovalTube(sh, el, 0.0225, 0.0215, [0, 0, 1], 1.22, CARDIGAN, 0.22), ball(el, 0.0215, [1, 1.12, 1.18], CARDIGAN))
-    parts.push(ovalTube(el, wr, 0.0215, 0.0200, [0, 1, 0], 1.18, CARDIGAN, 0.24))
-    // cuff: a short wider band at the wrist
+    const up = [ovalTube(sh, el, 0.0225, 0.0215, [0, 0, 1], 1.22, CARDIGAN, 0.22), ball(el, 0.0215, [1, 1.12, 1.18], CARDIGAN)]
     const dir = new THREE.Vector3(...wr).sub(new THREE.Vector3(...el)).normalize()
     const cuffA = new THREE.Vector3(...wr).addScaledVector(dir, -0.007).toArray()
-    parts.push(ovalTube(cuffA, wr, 0.0228, 0.0232, [0, 1, 0], 1.14, CARDIGAN_HEM))
     const hand = [sd * 0.013, hy + (sd > 0 ? 0.004 : -0.003), front + 0.016 + (sd > 0 ? 0.005 : 0)]
-    parts.push(ball(hand, 0.0150, [1.22, 0.92, 0.92], SKIN))
+    const fo = [ovalTube(el, wr, 0.0215, 0.0200, [0, 1, 0], 1.18, CARDIGAN, 0.24), ovalTube(cuffA, wr, 0.0228, 0.0232, [0, 1, 0], 1.14, CARDIGAN_HEM),
+      ball(hand, 0.0150, [1.22, 0.92, 0.92], SKIN)]
+    out[sd < 0 ? 'L' : 'R'] = { sd, sh, el, wr, hand, stat, up, fo }
   }
-  return parts
+  return out
 }
-
 function attachLook(root) {
   const chest = root.getObjectByName('chest'), hips = root.getObjectByName('hips')
   if (!chest || !hips) return () => {}
@@ -394,9 +396,20 @@ function attachLook(root) {
   const pin = pincushionParts([0.044, S.bellyY - 0.034 - hy, front + 0.008], 1.42), arms = armsParts(S, cy)
   add(hips, merged([...apronParts(S, hy), ...hemParts(S, hy, HEM_Y(S)), ...pin]))
   add(hips, merged(pin.slice(0, 2).map(g => g.clone())), inkMat)
-  add(chest, merged([...collarGeo(S, cy), ...arms]))
-  add(chest, merged(arms.map(g => g.clone())), inkMat)
-  return () => { out.forEach(m => m.removeFromParent()) }
+  const stat = [...arms.L.stat, ...arms.R.stat]
+  add(chest, merged([...collarGeo(S, cy), ...stat]))
+  add(chest, merged(stat.map(g => g.clone())), inkMat)
+  // moving pieces: a pivot group at the shoulder holds the upper sleeve; a pivot at the elbow (inside it) the forearm
+  const rig = {}, V = (a) => new THREE.Vector3(...a)
+  const shifted = (parts, o) => merged(parts.map(g => { g = g.clone(); g.translate(-o[0], -o[1], -o[2]); return g }))
+  for (const k of ['L', 'R']) { const A = arms[k], up = new THREE.Group(), fo = new THREE.Group()
+    up.position.copy(V(A.sh)); fo.position.copy(V(A.el).sub(V(A.sh))); up.add(fo); chest.add(up); out.push(up)
+    for (const [grp, parts, o] of [[up, A.up, A.sh], [fo, A.fo, A.el]]) { const g = shifted(parts, o)
+      for (const mat of [vcMat, inkMat]) { const m = new THREE.Mesh(g, mat); m.layers.mask = root.layers.mask; grp.add(m) } }
+    up.layers.mask = fo.layers.mask = root.layers.mask
+    rig[k] = { sd: A.sd, up, fo, upRest: V(A.el).sub(V(A.sh)).normalize(), foRest: V(A.wr).sub(V(A.el)).normalize() } }
+  chest.userData.fukuArms = rig
+  return () => { out.forEach(m => m.removeFromParent()); delete chest.userData.fukuArms }
 }
 const HEM_Y = (S) => S.knY + 0.004
 
@@ -413,6 +426,42 @@ function chestHold(B, st) {
 // the skinned forearms and mitten hands are not drawn (the sleeves are chest-parented meshes): collapse them so the
 // tiny stub hands never peek out as skin under the arms
 function hideRigHands(B) { for (const k of ['upL', 'upR', 'foL', 'foR']) B[k].scale.setScalar(0.001) }
+
+// ---- her own arm poses (pass 40). Each side aims its upper sleeve and forearm at target directions in the chest frame;
+// weight 0 = the clasped rest pose. Wave: right arm out and forward, forearm up, a small slow wave from the wrist.
+// Delight: both hands come up toward her cheeks. Walk: the clasped hands bob a little with the steps.
+const _q0 = new THREE.Quaternion(), _qt = new THREE.Quaternion(), _qu = new THREE.Quaternion(), _qf = new THREE.Quaternion(), _qi = new THREE.Quaternion(), _d = new THREE.Vector3(), _x = new THREE.Vector3(1, 0, 0)
+function aimArm(a, upDir, foDir, w, bob) {
+  // (slerp from identity in place: slerpQuaternions(a, b) copies a into the target first, so b must be another object)
+  _qt.setFromUnitVectors(a.upRest, _d.copy(upDir).normalize()); _qu.copy(_q0).slerp(_qt, w)
+  _qi.copy(_qu).invert(); _qt.setFromUnitVectors(a.foRest, _d.copy(foDir).normalize().applyQuaternion(_qi)); _qf.copy(_q0).slerp(_qt, w)
+  if (bob) _qu.premultiply(_qi.setFromAxisAngle(_x, bob))
+  a.up.quaternion.copy(_qu); a.fo.quaternion.copy(_qf)
+}
+const _u = new THREE.Vector3(), _f = new THREE.Vector3()
+function fukuArms(L, B, st, dt, t) {
+  const rig = B.chest.userData.fukuArms; if (!rig) return
+  const W_ = typeof window !== 'undefined' ? window : null
+  if (W_ && W_.__fukuDo) { if (W_.__fukuDo === 'wave') L.waveU = 0; if (W_.__fukuDo === 'delight') L.delU = 0; W_.__fukuDo = null }
+  // delight when someone starts a chat with her
+  const chat = st.act === 'chat'; if (chat && !L.chatPrev) L.delU = 0; L.chatPrev = chat
+  L.delU = (L.delU ?? 9) + dt
+  const wv = envelope(L.waveU ?? 9, 2.6, 0.5), dl = envelope(L.delU, 2.0, 0.35)
+  if (dl > 0) { L.mood = 'excited'; L.blush = Math.max(L.blush, dl); B.root.position.y += 0.004 * dl * Math.max(0, Math.sin(L.delU * 7)); B.head.rotation.x -= 0.06 * dl }
+  const m = st.move || 0, bob = 0.05 * m * Math.sin((st.phase || 0) * 2)
+  for (const k of ['L', 'R']) { const a = rig[k], sd = a.sd
+    let w = 0
+    if (dl > 0) { w = dl; _u.set(sd * 0.30, -0.25, 0.92); _f.set(-sd * 0.45, 0.85, 0.25) }
+    if (k === 'R' && wv > dl) { w = wv; const sw = 0.32 * Math.sin((L.waveU ?? 0) * 6.5); _u.set(0.62, -0.42, 0.66); _f.set(0.10 + sw, 1, 0.30) }
+    aimArm(a, w > 0 ? _u : a.upRest, w > 0 ? _f : a.foRest, w, bob) }
+}
+// a soft, slow sway and deeper breathing while she stands still (on top of the shared breathing)
+function fukuSway(L, B, st, t) {
+  const k = Math.min(1, (L.idle || 0) / 1.5) * (st.act ? 0 : 1); if (!(k > 0)) return
+  const s = Math.sin(t * 0.85), br = Math.sin(t * 1.5)
+  B.hips.rotation.z += 0.022 * s * k; B.chest.rotation.z -= 0.014 * s * k; B.head.rotation.z += 0.018 * Math.sin(t * 0.85 - 0.6) * k
+  B.chest.scale.y *= 1 + 0.010 * br * k; B.head.rotation.x -= 0.010 * br * k
+}
 
 function seatedHold(B, st, e) {
   if (!(st.act === 'sit' || st.act === 'chat')) return
@@ -437,10 +486,12 @@ export const FUKU = {
   outfit: { type: 'cardigan', hemY: 0, buttons: false, skin: SKIN, top: SKIRT, acc: CARDIGAN, acc2: CARDIGAN, bottom: SKIRT, legs: SKIRT, shoe: '#5e3a22', long: true, sleeve: 'none', skirt: true },
   hold: {},
   seatDrop: 0.055,
-  walk: { rate: 7, stride: 0.42, knee: 0.55, bounce: 0.007, smooth: true, land: 0.25, arm: 0.4, lean: 0.1, twist: 0.08, sway: 0.06, idle: 'sway' },
+  // a gentle shuffle (pass 40): short, slow steps, feet kept low, a slight forward lean and a soft side-to-side sway
+  walk: { rate: 6.0, stride: 0.30, knee: 0.32, bounce: 0.004, smooth: true, land: 0.15, arm: 0, lean: 0.15, twist: 0.05, sway: 0.09, idle: 'sway' },
   ext: {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, FUKU_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = FUKU_HAIR_OFF
-      if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); seatedHold(B, st, 0.85) } else chestHold(B, st); hideRigHands(B) },
+      if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); seatedHold(B, st, 0.85); fukuSway(L, B, st, t); fukuArms(L, B, st, dt, t) } else chestHold(B, st); hideRigHands(B)
+      if (typeof window !== 'undefined') window.__fukuLife = L },
     post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) },
     Face, Hair: FukuHair,
   },
