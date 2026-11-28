@@ -99,7 +99,7 @@ function drawFaces(W, kind, FY1 = FY1_DEF, FY0 = FY0_DEF, off = {}) {
       else { g.moveTo(X(-0.0074 * mW), Y(my + 0.0012)); g.quadraticCurveTo(X(0), Y(my - 0.0030), X(0.0074 * mW), Y(my + 0.0012)) }
       g.stroke()
       if (kind === 'hoshino' && name !== 'sleepy') { // gentle cheek lines curving down beside the mouth corners (golden sheet)
-        const corner = name === 'happy' ? 0.0074 * mW + 0.0020 : 0.0054 + 0.0027, y = my + 0.0008 // just outside the mouth corner, whatever its width
+        const corner = name === 'happy' ? 0.0074 * mW + 0.0020 : 0.0054 + 0.0027, y = my + 0.0015 // just outside the mouth corner, whatever its width; the line spans y+0.0006..y-0.0036, so the mouth sits at its middle
         g.strokeStyle = 'rgba(150,88,65,0.42)'; g.lineWidth = 0.0007 * s
         for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(X(sd * corner), Y(y + 0.0006)); g.quadraticCurveTo(X(sd * (corner + 0.0026)), Y(y - 0.0006), X(sd * (corner + 0.0028)), Y(y - 0.0036)); g.stroke() }
       }

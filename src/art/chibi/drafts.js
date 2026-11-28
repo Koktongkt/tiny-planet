@@ -1,5 +1,5 @@
 // Chibi villager previews in the dev views (Grandma Fuku, Professor Hoshino, Grandpa Ishi), only with ?dev=chibi-drafts.
-// Fuku and Ishi also ship in the game (App.jsx renders them for the grandma / grandpa walkers); Hoshino is still a draft:
+// All three ship in the game (App.jsx renders them for the grandma / grandpa / scholar walkers); the flag only adds them to the dev views:
 //   ?view=charstudio&dev=chibi-drafts&char=fuku
 //   ?view=charstudio&dev=chibi-drafts&char=hoshino
 //   ?view=charstudio&dev=chibi-drafts&char=ishi

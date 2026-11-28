@@ -1,15 +1,18 @@
-// DRAFT Professor Hoshino — not used in the game. Preview: ?view=charstudio&dev=chibi-drafts&char=hoshino
+// Professor Hoshino (the ruins scholar). In the game App.jsx draws him for the 'scholar' walker at 1.1 (taller than her).
+// Studio: ?view=charstudio&dev=chibi-drafts&char=hoshino (window.__hoshinoGreet() plays the greeting)
 // A lazy chibi on the shared pipeline, matched to the golden turnaround (docs/characters/ref/hoshino-golden-turnaround.jpg):
 // a rounded cloud of dark wavy hair with grey temples, thick brows, thin gold wire glasses, a khaki notch-lapel
 // jacket open over a dark green five-button vest and white shirt collar, white shirt cuffs, olive trousers with
 // turn-ups and brown shoes. Arms hang at his sides. Stocky, about Fuku's height. No scarf, book or cane.
 import * as THREE from 'three'
-import React from 'react'
-import { Character } from '../../GhibliPerson.jsx'
+import React, { useEffect, useRef } from 'react'
+import { Character, cel, spec } from '../../GhibliPerson.jsx'
+import { hoshinoActs } from './hoshinoActs.js'
 import { HOSHINO_MOTION } from './motion.js'
 import { makeLife, lifeStep, lifePost } from './life.js'
 import { makeFace } from './castFace.jsx'
 import { part, tagAW, sm, mergeHair, makeHairMat, makeHairInk } from './castHair.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { q } from '../../common.jsx'
 
 const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').matches
@@ -148,7 +151,7 @@ function HoshinoHair({ set }) {
 
 export const HOSHINO = {
   name: 'scholar', age: 'elder', motion: HOSHINO_MOTION,
-  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.08, girth: 1.05, shoulder: 1.00, chestW: 0.85, bellyZ: 0.96, shX: 0.90, armA: 0.38, shDrop: 0.012, armK: [0.016, 0.003], armOcc: false, handL: 1.18,
+  body: { H: 0.90, head: 1.46, leg: 1.14, torso: 0.95, arm: 1.08, girth: 1.05, shoulder: 1.00, chestW: 0.85, bellyZ: 0.96, shX: 0.90, armA: 0.38, shDrop: 0.012, armK: [0.016, 0.003], armOcc: false, armAO: 0.85, headStrict: true, handL: 1.18,
     armR: [1.25, 1.30, 1.40], legR: 1.24, legRs: [1, 1, 1.30], legX: 1.06, foot: 1.20, bootW: 1.55, bootH: 1.30, bootL: 1.30, hand: 0.86,
     headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, midfaceFade: HOSHINO_MID_FADE, hunch: 0.16, headUp: -0.011, skirt: 'jacket', jacket: [0.013, 0.98],
     anY: 0.038, footY: 0.015, soleY: 0.0012 },
@@ -159,17 +162,50 @@ export const HOSHINO = {
   // bottom = olive trousers with painted turn-ups.
   outfit: { type: 'openJacket', hemY: 'skirt', skin: SKIN, top: VEST, acc: JACKET, acc2: SHIRT, bottom: TROUSER, shoe: '#7a4a26', shoeY: 0.027, long: true, sleeve: 'none', seams: true },
   hold: {},
-  walk: { fore: -0.06, rate: 8, stride: 0.48, knee: 0.6, bounce: 0.008, smooth: true, land: 0.28, arm: 0.45, lean: 0.12, twist: 0.1, sway: 0.07, idle: 'look' },
+  // brisk, short steps leaning a little forward, as if always off to something interesting; the arms swing less
+  walk: { fore: -0.06, rate: 9.4, stride: 0.38, knee: 0.55, bounce: 0.007, smooth: true, land: 0.24, arm: 0.3, lean: 0.17, twist: 0.08, sway: 0.05, idle: 'look' },
   ext: {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, HOSHINO_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = HOSHINO_HAIR_OFF
-      if (!LIFE_OFF) lifeStep(L, B, st, dt, t, R_, state.camera) },
+      if (typeof window !== 'undefined' && q.get('char') === 'hoshino') { window.__herLife = L; window.__hoshinoGreet = () => { st.greetN = (st.greetN || 0) + 1 } } // studio captures
+      if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); hoshinoActs(L, B, st, dt) }
+      if (st.hk) st.hk.book(L.book || 0) },
     post: (R_, st, dt, t) => { if (!LIFE_OFF) lifePost(st.life, R_, st, dt, t) },
     Face, Hair: HoshinoHair,
   },
 }
 
+// his pocket notebook (left hand) and pencil (right hand): one small vertex-coloured mesh on each forearm bone, scaled
+// from nothing while he takes it out of his jacket (L.book). Drawn only while it is out.
+const tinted = (g, hex) => { const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g.index ? g.toNonIndexed() : g }
+const box = (w, h, d, x, y, z, hex) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return tinted(g, hex) }
+function bookGeo() {
+  const parts = [box(0.030, 0.0035, 0.040, 0, 0, 0, '#7d3b2e'), box(0.027, 0.0018, 0.037, 0, 0.0025, 0, '#f6efdf'),
+    box(0.020, 0.0006, 0.0012, -0.002, 0.0035, -0.008, '#8a7a68'), box(0.016, 0.0006, 0.0012, -0.004, 0.0035, -0.002, '#8a7a68'), box(0.018, 0.0006, 0.0012, -0.003, 0.0035, 0.004, '#8a7a68'),
+    box(0.0025, 0.0010, 0.040, 0.0158, 0.0022, 0, '#c99a3e')]
+  return mergeGeometries(parts.map(g => { g.deleteAttribute('uv'); return g }))
+}
+function pencilGeo() {
+  const body = new THREE.CylinderGeometry(0.0017, 0.0017, 0.030, 6); const tip = new THREE.ConeGeometry(0.0017, 0.005, 6); tip.translate(0, 0.0175, 0)
+  return mergeGeometries([tinted(body, '#e2b13f'), tinted(tip, '#3b2f22')].map(g => { g.deleteAttribute('uv'); return g }))
+}
+const propMat = (() => { const m = cel('#ffffff').clone(); m.vertexColors = true; m.defines = { KIND: 1 }; return m })()
+function attachProps(root, st) {
+  const S = spec(HOSHINO.body), out = []
+  for (const k of ['L', 'R']) { const fo = root.getObjectByName('fo' + k); if (!fo) continue
+    const hand = new THREE.Group(); hand.position.copy(S['hd' + k].clone().sub(S['el' + k])); fo.add(hand)
+    const m = new THREE.Mesh(k === 'L' ? bookGeo() : pencilGeo(), propMat)
+    if (k === 'L') { m.rotation.set(1.0, 0.6, -0.1); m.position.set(0.008, 0.006, 0.012) } else { m.rotation.set(1.05, 0, 0.45); m.position.set(0, 0.002, 0.006) }
+    m.visible = false; m.traverse(o => { o.layers.mask = root.layers.mask }); hand.add(m); out.push(hand, m) }
+  const [, book, , pencil] = out
+  st.hk = { book: (v) => { for (const m of [book, pencil]) { if (!m) continue; m.visible = v > 0.01; m.scale.setScalar(Math.max(0.001, v)) } } }
+  return () => { st.hk = null; for (let i = 0; i < out.length; i += 2) out[i].removeFromParent() }
+}
+
 export function ChibiHoshino({ st, scale = 0.8, res }) {
-  const r = res ?? (TOUCH ? 40 : 52)
-  return <Character cfg={HOSHINO} st={st} res={r} scale={scale} />
+  const g = useRef(), r = res ?? (TOUCH ? 40 : 52)
+  useEffect(() => { let off = null, n = 0
+    const iv = setInterval(() => { const root = g.current; if (root && root.getObjectByName('foL') && root.getObjectByName('foR')) { off = attachProps(root, st); clearInterval(iv) } else if (++n > 50) clearInterval(iv) }, 80)
+    return () => { clearInterval(iv); off && off() } }, [])
+  return <group ref={g}><Character cfg={HOSHINO} st={st} res={r} scale={scale} /></group>
 }
 export default ChibiHoshino

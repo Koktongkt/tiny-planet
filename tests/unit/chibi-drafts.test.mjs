@@ -39,11 +39,13 @@ test('default game villagers do not use the draft Fuku or Hoshino looks', () => 
   assert.equal(chibiDraftName('ishi', '?dev=chibi-drafts'), 'ishi')
 })
 
-test('the play path renders chibi Fuku for grandma but not the draft chunk or Hoshino', () => {
+test('the play path renders chibi Fuku and Hoshino (own lazy chunks), not the draft chunk', () => {
   const app = src('App.jsx')
   assert.equal(app.includes('ChibiVillagers'), false)
   assert.equal(app.includes('ChibiVillager '), false)
-  assert.equal(app.includes('ChibiHoshino'), false)
+  assert.match(app, /lazy\(\(\) => import\('\.\/art\/chibi\/ChibiHoshino\.jsx'\)/) // KT: Hoshino ships in the game
+  assert.match(app, /chibiScholar\(w\) \? <Suspense fallback=\{null\}><ChibiHoshino st=\{st\} scale=\{HOSHINO_SCALE\}/)
+  assert.match(app, /const HOSHINO_SCALE = 1\.1/) // taller than her (KT)
   assert.match(app, /import\('\.\/art\/chibi\/ChibiFuku\.jsx'\)/)
   assert.match(app, /chibiGrandma\(w\) \? <Suspense fallback=\{null\}><ChibiFuku st=\{st\} scale=\{1\}/)
   assert.match(app, /NEWCHAR \? <Character cfg=\{w\.cfg\}/)
