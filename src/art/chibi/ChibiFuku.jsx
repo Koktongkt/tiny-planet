@@ -172,12 +172,11 @@ function hairLinesGeo() {
       const p = onCap(a, e); if (p) pts.push(p) }
     tube(pts, 0.0008) }
   const BUN_EL = 0.98
-  // centre parting: a short line up from the hairline dip
-  sweep(0, 0.40, 0, 0.80, 1)
+  // centre parting (pass 31): from the dip in the hairline, two lines rise up and outward in a soft V
+  const PART = { az: 0.45, el: 1.00, bow: 0.10 }
   for (const d of [-1, 1]) {
-    // front: the two big locks either side of the parting curve out and down, then back round the sides
-    sweep(d * 0.04, 0.50, d * 2.75, BUN_EL, 2.6, 0.10)
-    sweep(d * 0.35, 0.40, d * 2.85, BUN_EL - 0.05, 2.4, 0.08)
+    { const pts = []; for (let i = 0; i <= 28; i++) { const t = i / 28, a = d * (0.015 + PART.az * Math.pow(t, 1.5)), e = 0.40 + (PART.el - 0.40) * (1 - (1 - t) ** 1.6) - PART.bow * Math.sin(Math.PI * t) * 0
+        const p = onCap(a + d * PART.bow * Math.sin(Math.PI * t), e); if (p) pts.push(p) } tube(pts, 0.0008) }
     // sides: locks from above the ears sweeping back and up into the bun
     sweep(d * 0.95, 0.18, d * 2.95, BUN_EL - 0.12, 2.0)
     sweep(d * 1.45, -0.02, d * 3.02, BUN_EL - 0.18, 1.8)

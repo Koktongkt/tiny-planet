@@ -179,6 +179,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Hair lines (`hairLinesGeo`): thin tapered tubes laid on the shaped cap (curves in azimuth / elevation round the cap centre, projected by ray casting against the cap mesh) and a swirl on the bun facing up and back. A separate mesh with the hair material and no ink hull, aSkin 0.37 (~28% darker than the hair), polygon offset so it sits on the cap. Lines: a short centre parting; per side, two front locks curving out from the parting and round the sides, two side locks from above the ears, one from the nape, all running round the head first and rising into the bun at the back. +1 draw call.
   - Tried: lines climbing straight to the crown (read as melon stripes); a bun spiral round the vertical axis (seen only edge-on from the back).
 
+**Grandma Fuku, pass 31** (KT: front pattern wrong, start again from the centre parting): the front lock lines are removed; the front now has only the parting, two lines rising up and outward from the hairline dip in a soft V (`PART { az, el, bow }`). Ladder [`ref/fuku-parting-ladder.jpg`](ref/fuku-parting-ladder.jpg): A narrow 0.25 / 1.05 / 0.06, B medium 0.45 / 1.00 / 0.10 (in code), C wide 0.70 / 0.90 / 0.14. Side and back lines unchanged.
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)
