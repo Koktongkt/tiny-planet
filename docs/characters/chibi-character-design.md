@@ -190,6 +190,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
   - Spaced out to the ears (KT): four lines per side, starting evenly along the hairline (arc fractions 0.25 / 0.5 / 0.75 / 1.0) from the parting down to the temple just above the top of the ear; outer lines narrower and taller (width x1.10 / 1.00 / 0.80 / 0.55, height x1.15 / 1.30 / 1.45 / 1.60) so they rise up the side of the head. Laid on the cap radially (`radial`, through a sphere round the cap centre) so the side lines wrap round the head instead of falling off its edge.
   - Fewer lines (KT): two per side besides the parting, `NEST = [[0.45, 1.05, 1.25], [1.00, 0.55, 1.60]]` (halfway along the hairline, and just above the ear).
 
+**Grandma Fuku, pass 35** (KT: add the back lines, following the flow of the front): [`ref/fuku-hair-flow.jpg`](ref/fuku-hair-flow.jpg) (sheet top row; Fuku below). Every line now flows into the bun. Targets sit on a ring round the bun's base (`ring(phi)`, angular radius 0.40 round the bun direction); each line is continued from its last point to its target by a great-circle slerp of directions, projected onto the cap (`toBun`). Front parting and the two front locks continue over the top of the head into the crown side of the ring (delta 0.35 / 0.85 / 1.35); one side lock sweeps back from above the ear; two back locks rise from the nape (azimuth 1.95 / 2.55) into the underside of the bun (delta 2.05 / 2.55).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

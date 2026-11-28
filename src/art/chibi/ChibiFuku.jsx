@@ -199,14 +199,25 @@ function hairLinesGeo() {
     return h && h.point.distanceTo(cc) > 0.045 ? h.point.addScaledVector(dir, 0.0002) : null }
   const alongR = (ctrl, d, n = 40) => { const c = new THREE.CatmullRomCurve3(ctrl.map(([x, y]) => new THREE.Vector3(d * x, y, 0)), false, 'centripetal'), pts = []
     for (let i = 0; i <= n; i++) { const q = c.getPoint(i / n), p = radial(q.x, q.y); if (p) pts.push(p) } return pts }
+  // pass 35: every line flows on into the bun. Targets sit on a ring round the bun's base (angular radius 0.40 round
+  // the bun direction B); phi 90deg is the crown side of the ring, 0 / 180deg its sides, 270deg the nape side.
+  const B = new THREE.Vector3(...BUN_C).sub(cc).normalize(), U = new THREE.Vector3(1, 0, 0), V = new THREE.Vector3().crossVectors(U, B).normalize()
+  const ring = (phi) => B.clone().multiplyScalar(Math.cos(0.40)).addScaledVector(U, Math.sin(0.40) * Math.cos(phi)).addScaledVector(V, Math.sin(0.40) * Math.sin(phi))
+  const onDir = (v) => { dir.copy(v).normalize(); ray.set(cc.clone().addScaledVector(dir, 0.2), dir.clone().negate()); const h = ray.intersectObject(cap)[0]
+    return h && h.point.distanceTo(cc) > 0.045 ? h.point.addScaledVector(dir, 0.0002) : null }
+  // continue a line from its last point along the head to a ring target (great-circle slerp of directions)
+  const toBun = (pts, target, n = 30) => { const a = pts[pts.length - 1].clone().sub(cc).normalize(), q0 = new THREE.Quaternion(), q = new THREE.Quaternion().setFromUnitVectors(a, target.clone().normalize())
+    for (let i = 1; i <= n; i++) { const p = onDir(a.clone().applyQuaternion(q0.clone().slerp(q, i / n))); if (p) pts.push(p) } return pts }
+  const fromNape = (az, el, target) => toBun([onCap(az, el)].filter(Boolean), target, 36)
   for (const d of [-1, 1]) {
-    tube(along(PART, d), 0.0008)
-    for (const c of nested) tube(alongR(c, d), 0.0008)
+    const at = (delta) => ring(Math.PI / 2 - d * delta)
+    tube(toBun(along(PART, d), at(0.35)), 0.0008)
+    nested.forEach((c, i) => tube(toBun(alongR(c, d), at([0.85, 1.35][i])), 0.0008))
     // sides: locks from above the ears sweeping back and up into the bun
     sweep(d * 0.95, 0.18, d * 2.95, BUN_EL - 0.12, 2.0)
-    sweep(d * 1.45, -0.02, d * 3.02, BUN_EL - 0.18, 1.8)
-    // back: scallops curving up from the nape into the bun
-    sweep(d * 2.05, -0.28, d * 3.08, BUN_EL - 0.26, 1.4)
+    // back: locks rising from the nape into the underside of the bun, fanning in from the sides
+    tube(fromNape(d * 1.95, -0.30, at(2.05)), 0.0008)
+    tube(fromNape(d * 2.55, -0.36, at(2.55)), 0.0008)
   }
   // bun: a swirl facing up and back (as the sheet draws it), winding in from the rim to the centre
   { const A = new THREE.Vector3(0, 0.62, -0.78).normalize(), U = new THREE.Vector3(1, 0, 0), V = new THREE.Vector3().crossVectors(A, U)
