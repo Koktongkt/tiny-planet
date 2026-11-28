@@ -181,6 +181,8 @@ numbers, and changes only what its concept sheet asks for (see section 4). Golde
 
 **Grandma Fuku, pass 31** (KT: front pattern wrong, start again from the centre parting): the front lock lines are removed; the front now has only the parting, two lines rising up and outward from the hairline dip in a soft V (`PART { az, el, bow }`). Ladder [`ref/fuku-parting-ladder.jpg`](ref/fuku-parting-ladder.jpg): A narrow 0.25 / 1.05 / 0.06, B medium 0.45 / 1.00 / 0.10 (in code), C wide 0.70 / 0.90 / 0.14. Side and back lines unchanged.
 
+**Grandma Fuku, pass 32** (KT: C wide enough, curve it more and continue it down; then: curve outward, not inward): [`ref/fuku-parting-curve.jpg`](ref/fuku-parting-curve.jpg). Each parting line is a smooth curve through `PART` control points (azimuth, elevation), smoothed in angle space (centripetal Catmull-Rom) and projected onto the cap. It leaves the hairline dip heading outward, bows outward as it sweeps up and round, and carries on down the side of the head toward the ear, outlining the big front lock: `[[0.015, 0.40], [0.22, 0.50], [0.52, 0.66], [0.86, 0.74], [1.15, 0.62], [1.38, 0.38], [1.50, 0.14]]`. First try rose steeply from the dip then bent out (KT: curving inward).
+
 These images are documentation only. They are not imported by the game and are not part of the app bundle or the GitHub Pages build.
 
 ![Concept B — her](ref/her-B-chibi.jpg)

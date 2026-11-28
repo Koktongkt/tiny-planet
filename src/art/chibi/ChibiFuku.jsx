@@ -172,11 +172,14 @@ function hairLinesGeo() {
       const p = onCap(a, e); if (p) pts.push(p) }
     tube(pts, 0.0008) }
   const BUN_EL = 0.98
-  // centre parting (pass 31): from the dip in the hairline, two lines rise up and outward in a soft V
-  const PART = { az: 0.45, el: 1.00, bow: 0.10 }
+  // centre parting (pass 32): from the dip in the hairline each line heads outward first, bowing outward as it sweeps up, and
+  // carries on round and down the side of the head toward the ear, outlining the big front lock. Control points are
+  // (azimuth, elevation) round the cap centre, smoothed in angle space and then projected onto the cap.
+  const PART = [[0.015, 0.40], [0.22, 0.50], [0.52, 0.66], [0.86, 0.74], [1.15, 0.62], [1.38, 0.38], [1.50, 0.14]]
+  const along = (ctrl, d, n = 48) => { const c = new THREE.CatmullRomCurve3(ctrl.map(([a, e]) => new THREE.Vector3(d * a, e, 0)), false, 'centripetal'), pts = []
+    for (let i = 0; i <= n; i++) { const q = c.getPoint(i / n), p = onCap(q.x, q.y); if (p) pts.push(p) } return pts }
   for (const d of [-1, 1]) {
-    { const pts = []; for (let i = 0; i <= 28; i++) { const t = i / 28, a = d * (0.015 + PART.az * Math.pow(t, 1.5)), e = 0.40 + (PART.el - 0.40) * (1 - (1 - t) ** 1.6) - PART.bow * Math.sin(Math.PI * t) * 0
-        const p = onCap(a + d * PART.bow * Math.sin(Math.PI * t), e); if (p) pts.push(p) } tube(pts, 0.0008) }
+    tube(along(PART, d), 0.0008)
     // sides: locks from above the ears sweeping back and up into the bun
     sweep(d * 0.95, 0.18, d * 2.95, BUN_EL - 0.12, 2.0)
     sweep(d * 1.45, -0.02, d * 3.02, BUN_EL - 0.18, 1.8)
