@@ -275,3 +275,13 @@ Clips: [`ref/ishi-anim-pass3.jpg`](ref/ishi-anim-pass3.jpg).
 - **Chuckle** (2.6 s): a gift he loves ("I love this!", "For me?", "How thoughtful" -> `ishiGesture` 'chuckle'): pats his belly with the pipe fist, shoulders shaking, eyes ^ ^, cheeks pink, the mustache jiggling.
 - **Doze**: rolled once per idle spell after `dozeAfter` (10 s) of idle time (fidgets do not reset it): standing at night 40%, seated at night 75%, seated by day 35% (`ISHI_MOTION.doze`), never standing by day. Standing he leans on his cane; his head sinks over ~5.5 s, catches itself, sinks again (6.5 s cycle); slow deep breaths; eyes shut, the pipe hand drops. Fidgets stop while he dozes. Talking to him wakes him with a start (a jolt, wide eyes, brows up, a blush) and that idle spell does not roll again. Studio: `window.__ishiDoze = 1` forces the roll.
 - Seated is the game's bench `sit` act; the studio's `act=sit` preview does not bend his legs, so check the seated doze on the bench once he is in the game.
+
+### Ishi in the game (KT: put him in the real game)
+
+Shots: [`ref/ishi-in-game.jpg`](ref/ishi-in-game.jpg).
+
+- `App.jsx` renders `ChibiIshi` (lazy chunk) in the grandpa walker's slot when `CHIBI` is on (`?chibi=0` keeps the old grandpa). He keeps grandpa's routine: morning stretch, chatting at the square by day, the bench with Fuku in the evening and at night (`sit` act), and dialogue (`TALK.open.key === 'grandpa'`) drives his talk gestures. Startup entry 98.3 -> 98.4 KB gz.
+- Fix in the shared life layer: a chibi villager is in `NPCS` too, so the look-at scan skips its own entry (it looked at, and waved at, itself).
+- The wide trouser legs now ride the thigh and shin bones (`trouserLegGeos`), so they fold over his knees when he sits; the seat piece stays on the hips.
+- Fuku and Hoshino stay dev-only drafts.
+- Size (KT: he looked small next to her): villager slots draw at scale 0.8 (sized for the old long-legged villagers), so Ishi stood 0.349 tall to her 0.434 (80%). KT: the same height as her: he is drawn at 0.995 (head top 0.434, the same as hers). `st.seatDrop = 0.035` keeps his seat on the bench where the old grandpa sat.

@@ -45,10 +45,17 @@ test('the play path does not load the draft villager chunk', () => {
   assert.equal(app.includes('ChibiVillager'), false)
   assert.equal(app.includes('ChibiFuku'), false)
   assert.equal(app.includes('ChibiHoshino'), false)
-  assert.equal(app.includes('ChibiIshi'), false)
   assert.match(app, /NEWCHAR \? <Character cfg=\{w\.cfg\}/)
   const lineup = src('debug/Lineup.jsx')
   assert.match(lineup, /chibi-drafts/)
   assert.match(src('debug/Studio.jsx'), /chibi-drafts/)
   assert.match(src('art/chibi/ChibiVillagers.jsx'), /DRAFT/)
+})
+
+test('Grandpa Ishi ships in the game as a lazy chunk (not through the drafts)', () => {
+  const app = src('App.jsx')
+  assert.match(app, /lazy\(\(\) => import\('\.\/art\/chibi\/ChibiIshi\.jsx'\)/)
+  assert.match(app, /CHIBI && npc\.key === 'grandpa' \?/)
+  assert.match(app, /<ChibiIshi st=\{st\}[^>]*scale=\{0\.995\}/) // her height, not the old villagers' 0.8
+  assert.equal(/^import .*ChibiIshi/m.test(app), false) // never a static import (startup chunk)
 })

@@ -384,6 +384,17 @@ function shellGeo(rows, th, hex, hexIn) { // each row opens from its own angle r
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx)
   g.computeVertexNormals(); return g.toNonIndexed()
 }
+// wide trouser legs in two pieces per leg, in bone space: hip -> knee on the thigh bone, knee -> the hem (mid-calf, a
+// darker cuff) on the shin bone, overlapping at the knee so the bend never opens a gap
+function trouserLegGeos(S, k) {
+  const sd = k === 'L' ? -1 : 1, hp = S['hp' + k], kn = S['kn' + k], an = S['an' + k], hem = S.anY + (S.knY - S.anY) * 0.35, ox = sd * 0.003
+  const r0 = S.lr[0] * 1.32, rk = S.lr[1] * 1.45, r1 = S.lr[1] * 1.55
+  const thigh = merged([tubeBetween([ox, S.hipY + 0.006 - hp.y, 0.002], [kn.x - hp.x + ox, kn.y - hp.y - 0.004, kn.z - hp.z + 0.002], r0, rk, TROUSER, 18), ballAt([kn.x - hp.x + ox, kn.y - hp.y, kn.z - hp.z + 0.002], rk * 0.98, TROUSER)])
+  const at = (y) => { const t = (kn.y - y) / (kn.y - an.y); return [(an.x - kn.x) * t + ox, y - kn.y, (an.z - kn.z) * t + 0.002] }
+  const cuff = new THREE.CylinderGeometry(r1 * 1.03, r1 * 1.05, 0.006, 18); cuff.translate(...at(hem + 0.003))
+  const shin = merged([tubeBetween(at(kn.y + 0.004), at(hem), rk, r1, TROUSER, 18), paint(cuff, '#3b3129')])
+  return [thigh, shin]
+}
 function clothesGeo(S, hipsY) {
   const parts = [], sh = haoriShell(S)
   // haori: the flared lower body, open at the front (the eri runs down its edges), a darker lining inside
@@ -401,9 +412,7 @@ function clothesGeo(S, hipsY) {
   const hem = S.anY + (S.knY - S.anY) * 0.35
   // the seat: joins the two legs over the hips and crotch, so no body shows between them under the sash
   { const r = bodyRing(S, S.hipY); parts.push(ballAt([0, S.hipY - 0.004, r.zc], 1, TROUSER, [r.rx + 0.006, 0.034, r.rz + 0.005])) }
-  for (const sd of [-1, 1]) { const hp = sd < 0 ? S.hpL : S.hpR, an = sd < 0 ? S.anL : S.anR, top = S.hipY + 0.006, len = top - hem
-    const leg = new THREE.CylinderGeometry(S.lr[0] * 1.32, S.lr[1] * 1.55, len, 18); leg.translate((hp.x + an.x) / 2 + sd * 0.003, hem + len / 2, (hp.z + an.z) / 2 + 0.002); parts.push(paint(leg, TROUSER))
-    const cuff = new THREE.CylinderGeometry(S.lr[1] * 1.6, S.lr[1] * 1.62, 0.006, 18); cuff.translate((hp.x + an.x) / 2 + sd * 0.003, hem + 0.003, (hp.z + an.z) / 2 + 0.002); parts.push(paint(cuff, '#3b3129')) }
+  // (the trouser legs themselves ride the thigh and shin bones: trouserLegGeos, so they bend when he sits)
   const g = mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p).map(p => { for (const k of Object.keys(p.attributes)) if (!['position', 'normal', 'color'].includes(k)) p.deleteAttribute(k); return p }))
   g.translate(0, -hipsY, 0); return g
 }
@@ -590,6 +599,9 @@ function attachLook(root, st) {
   const collars = collarsGeo(SM, chestY); add(chest, collars); add(chest, collars, [0, 0, 0], collarInk)
   // sash round the belly, across the opening
   const clothes = clothesGeo(SM, hipsY); add(hips, clothes, [0, 0, 0], plainMat); add(hips, clothes, [0, 0, 0], collarInk)
+  // trouser legs on the leg bones
+  for (const k2 of ['L', 'R']) { const th = root.getObjectByName('th' + k2), sn = root.getObjectByName('sh' + k2 + 'n'); if (!th || !sn) continue
+    const [gt, gs] = trouserLegGeos(S, k2); add(th, gt, [0, 0, 0], plainMat); add(th, gt, [0, 0, 0], collarInk); add(sn, gs, [0, 0, 0], plainMat); add(sn, gs, [0, 0, 0], collarInk) }
   // sandals on the bare feet
   for (const k2 of ['L', 'R']) { const ft = root.getObjectByName('ft' + k2); if (ft) add(ft, sandalGeo(S, k2), [0, 0, 0], plainMat) }
   // arms (pass 11): the wide haori sleeves, the cane and the pipe ride the arm bones, so every pose moves them
@@ -637,6 +649,7 @@ export const ISHI = {
   ext: {
     life: (B, st, dt, t, R_, mem, state) => { const L = mem.life || (mem.life = makeLife(Math.random, ISHI_MOTION)); st.life = L; L.B = B; L.R = R_; L.hairOff = ISHI_HAIR_OFF
       if (typeof window !== 'undefined' && q.get('char') === 'ishi') window.__herLife = L // studio captures (tools/chibi-clip.mjs) drive the life layer through this
+      st.seatDrop = 0.035 // in the game he is drawn at 0.995 (her height): this puts his seat on the bench where the old grandpa sat
       const aw = st.act ? Math.min(1, st.actW ?? 1) : 0; restArms(B, st, 1 - aw)
       talkGestures(L, st)
       if (!LIFE_OFF) { lifeStep(L, B, st, dt, t, R_, state.camera); ishiActs(L, B, st, dt) } },
