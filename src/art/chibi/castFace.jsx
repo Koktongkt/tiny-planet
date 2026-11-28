@@ -188,7 +188,7 @@ export function wireGlassesGeo({ r = 0.0152, wire = '#000000', ink = '#000000', 
   const endY = cy + r * Math.sin(overlap)
   const endZ = r * Math.cos(overlap) * Math.sin(tilt)
   for (const side of [-1, 1]) {
-    const rim = new THREE.TorusGeometry(r, 0.00098, 8, 28, Math.PI + 2 * overlap)
+    const rim = new THREE.TorusGeometry(r, 0.00061, 10, 44, Math.PI + 2 * overlap)
     rim.rotateZ(-Math.PI - overlap)
     rim.rotateY(side * tilt)
     rim.translate(side * EYE.x, cy, z)
@@ -199,7 +199,7 @@ export function wireGlassesGeo({ r = 0.0152, wire = '#000000', ink = '#000000', 
     const bend = hinge.clone().lerp(tip, 0.5)
     bend.x += side * 0.014
     const arm = new THREE.QuadraticBezierCurve3(hinge, bend, tip)
-    parts.push(tint(new THREE.TubeGeometry(arm, 12, 0.00077, 6), wire))
+    parts.push(tint(new THREE.TubeGeometry(arm, 12, 0.00064, 8), wire))
   }
   const innerX = EYE.x - endX, innerZ = z + endZ
   const bridge = new THREE.QuadraticBezierCurve3(
@@ -207,11 +207,11 @@ export function wireGlassesGeo({ r = 0.0152, wire = '#000000', ink = '#000000', 
     new THREE.Vector3(0, endY + 0.0052, innerZ + 0.002),
     new THREE.Vector3(innerX, endY, innerZ),
   )
-  parts.push(tint(new THREE.TubeGeometry(bridge, 12, 0.00082, 8), wire))
+  parts.push(tint(new THREE.TubeGeometry(bridge, 12, 0.00068, 10), wire))
   const g = mergeGeometries(parts.map(p => { for (const k of Object.keys(p.attributes)) if (!['position', 'normal', 'color'].includes(k)) p.deleteAttribute(k); return p }))
   g.computeVertexNormals(); return g
 }
-const wireMat = new THREE.MeshBasicMaterial({ vertexColors: true })
+const wireMat = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.28, roughness: 0.34 })
 
 const atlases = {}
 const faceMat = (kind, fy1, fy0, bl, dy, off) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,

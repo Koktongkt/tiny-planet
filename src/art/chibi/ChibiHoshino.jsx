@@ -16,7 +16,7 @@ const TOUCH = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').m
 const LIFE_OFF = q.has('still') && !q.has('life')
 const SKIN = '#f0c7a4'
 const HAIR_C = '#4e3a2c'
-const HAIR_GREY = '#8c8379'
+const HAIR_GREY = '#88776a'
 const HAIR_BAND = '#7a5a44'
 const GLASS = '#2e2420'
 const JACKET = '#c09a66'
@@ -25,16 +25,16 @@ const SHIRT = '#f4eee6'
 const TROUSER = '#66653f'
 const HOSHINO_HAIR_OFF = new Float32Array(12)
 // Thin black lower half-rims. The arms meet the upper edge of the ears.
-const SPEC = { r: 0.0152, wire: '#000000', ink: '#000000' } // wire glasses: lens radius, wire and rim-ink colours
-const HOSHINO_HEAD_S = [0.96, 1.01, 0.99]
-const HOSHINO_CHEEK = [0, -0.0255, 0.0125, 0.047, 0.0295, 0.0295, 0.0185]
-const HOSHINO_JAW = [...HOSHINO_CHEEK, 0.012] // a short straight section above the rounded jaw
+const SPEC = { r: 0.0142, wire: '#5a4436', ink: '#382b24' } // wire glasses: lens radius, wire and rim-ink colours
+const HOSHINO_HEAD_S = [0.92, 1.055, 1.015]
+const HOSHINO_CHEEK = [0, -0.0255, 0.0125, 0.0435, 0.026, 0.031, 0.0185]
+const HOSHINO_JAW = [...HOSHINO_CHEEK, 0.006] // a short straight section above the rounded jaw
 // A shallow, wide chin keeps the lower contour full in front and brings it forward in profile.
-const HOSHINO_CHIN = [-0.0445, 0.022, 0.0315, 0.013, 0.023, 0.010]
+const HOSHINO_CHIN = [-0.046, 0.024, 0.027, 0.013, 0.023, 0.010]
 const HOSHINO_MIDFACE = [[-0.0278, 0.0434, 0.02, 0.0055, 0.013, 0.0026, 0.0017], [-0.0345, 0.0303, 0.03, 0.0162, 0.0243, 0.0055]]
 const HOSHINO_MID_FADE = 0
 const EAR = { x: 0.0625, y: -0.018, z: 0.002 }
-const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [EAR.x - 0.003, EAR.y, EAR.z + 0.002] }, defaultSquint: 0.12, blush: 0.55, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE, chin: HOSHINO_CHIN }, eyeS: 1.08 })
+const Face = makeFace({ kind: 'hoshino', glasses: GLASS, wire: { ...SPEC, ear: [EAR.x - 0.003, EAR.y, EAR.z + 0.002] }, defaultSquint: 0.12, blush: 0.36, shape: { headS: HOSHINO_HEAD_S, cheek: HOSHINO_JAW, midface: HOSHINO_MIDFACE, fade: HOSHINO_MID_FADE, chin: HOSHINO_CHIN }, eyeS: 0.87 })
 
 // skull HR is ~[0.058, 0.050, 0.055]. Golden sheet: a full, rounded cloud of soft waves, about 1.3x the
 // face width, covering the crown and the whole back down to the nape. Forehead open in a soft arch;
@@ -55,6 +55,27 @@ function lock(geo, az, el, push, [len, wid, thk], roll = 0, skin = 0) {
   const g = part(geo, [0, 0, 0], [1, 1, 1], [0, 0, 0], skin)
   _m.makeBasis(t.multiplyScalar(len), _n.clone().multiplyScalar(thk), b.multiplyScalar(wid)).setPosition(...pos)
   g.applyMatrix4(_m); return g
+}
+// A changing elliptical cross section gives each wave a lifted root and a fine swept tip.
+function sweptWave(points, width, depth) {
+  const path = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)))
+  const section = new THREE.SphereGeometry(1, 26, 18)
+  const positions = section.attributes.position
+  for (let i = 0; i < positions.count; i++) {
+    const t = (1 - positions.getY(i)) / 2
+    const center = path.getPoint(t)
+    const tangent = path.getTangent(t)
+    const radial = center.clone().sub(new THREE.Vector3(...DOME.c)).normalize()
+    const across = new THREE.Vector3().crossVectors(tangent, radial).normalize()
+    const normal = new THREE.Vector3().crossVectors(across, tangent).normalize()
+    center.addScaledVector(across, positions.getX(i) * width * (1.3 - t))
+    center.addScaledVector(normal, positions.getZ(i) * depth)
+    positions.setXYZ(i, center.x, center.y, center.z)
+  }
+  // Sphere latitude runs from root to tip (opposite its local Y axis).
+  const indices = section.index.array
+  for (let i = 0; i < indices.length; i += 3) [indices[i], indices[i+1]] = [indices[i+1], indices[i]]
+  return part(section, [0,0,0], [1,1,1])
 }
 function hoshinoHair() {
   const ball = new THREE.SphereGeometry(1, 18, 14), ballS = new THREE.SphereGeometry(1, 12, 9)
@@ -77,15 +98,12 @@ function hoshinoHair() {
     L(2.55, -0.50, 0.93, [0.022, 0.014, 0.009], 0.3), L(3.15, -0.55, 0.93, [0.022, 0.014, 0.009], 0.2), L(3.75, -0.50, 0.93, [0.022, 0.014, 0.009], -0.3),
     // fringe: one big wave rising off the forehead and sweeping back toward his left (open forehead),
     // with a smaller curl dipping on his right (viewer's left)
-    L(-0.15, 0.80, 1.02, [0.026, 0.020, 0.012], 1.05),
-    L(0.30, 0.74, 1.0, [0.022, 0.016, 0.010], 0.75),
-    L(-0.45, 0.46, 1.0, [0.018, 0.014, 0.010], 0.25),
-    L(0.62, 0.50, 1.0, [0.019, 0.014, 0.009], 0.40),
-    L(-0.80, 0.18, 0.99, [0.017, 0.015, 0.009], 0.9),
-    L(0.86, 0.16, 0.99, [0.017, 0.015, 0.009], 1.0),
-    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0060, 0.0128, 0.0080], [0, d * 0.55, d * 0.08], 1)),
+    sweptWave([[0.010,0.043,0.034],[-0.003,0.057,0.028],[-0.031,0.050,0.032],[-0.049,0.028,0.030],[-0.061,0.032,0.012]],0.022,0.012),
+    sweptWave([[0.013,0.044,0.035],[0.029,0.046,0.032],[0.046,0.031,0.027],[0.057,0.021,0.012],[0.063,0.025,0.002]],0.018,0.010),
+    sweptWave([[0.014,0.045,0.025],[0.007,0.059,0.016],[-0.016,0.064,0.004],[-0.039,0.055,-0.011],[-0.047,0.059,-0.014]],0.018,0.009),
+    ...[-1, 1].map(d => part(ballS, [d * EAR.x, EAR.y, EAR.z], [0.0085, 0.0132, 0.0100], [0, d * 0.55, d * 0.08], 1)),
     // inner ear curl: a C of ink on the outer face (aSkin 0.47 draws as ink in the hair shader)
-    ...[-1, 1].map(d => part(curl, [d * (EAR.x + 0.0042), EAR.y + 0.0004, EAR.z + 0.0006], [1, 1, 1], [0, d * (Math.PI / 2 + 0.55), 0], 0.47)),
+    ...[-1, 1].map(d => part(curl, [d * (EAR.x + 0.007), EAR.y + 0.0004, EAR.z + 0.0006], [1, 1, 1], [0, d * (Math.PI / 2 + 0.55), 0], 0.47)),
   ]
   const n = parts.length
   tagAW(parts[0], () => [3, 0])
